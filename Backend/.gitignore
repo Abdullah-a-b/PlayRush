@@ -5,3 +5,5 @@
 *.pyc
 users.db
 .DS_Store
+.venv/
+.vscode/
