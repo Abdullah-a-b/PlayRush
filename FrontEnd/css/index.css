@@ -1,0 +1,214 @@
+/* 🚀 استدعاء الخطوط محلياً لسرعة البرق */
+@font-face {
+    font-family: 'Tajawal';
+    src: url('../assets/fonts/Tajawal-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Tajawal';
+    src: url('../assets/fonts/Tajawal-Bold.ttf') format('truetype');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Tajawal';
+    src: url('../assets/fonts/Tajawal-Black.ttf') format('truetype');
+    font-weight: 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+:root {
+    --bg-color: #0f172a; /* كحلي غامق */
+    --primary-yellow: #facc15;
+    --primary-pink: #f43f5e;
+    --text-light: #f8fafc;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Tajawal', sans-serif;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-light);
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+}
+
+/* خلفية متحركة تعطي إحساس بالسرعة (Rush) */
+.background-animation {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(45deg, #0f172a, #1e1b4b, #312e81, #0f172a);
+    background-size: 400% 400%;
+    animation: gradientBG 10s ease infinite;
+    z-index: -1;
+}
+
+@keyframes gradientBG {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.landing-container {
+    text-align: center;
+    padding: 40px;
+    background: rgba(15, 23, 42, 0.7);
+    border-radius: 24px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    max-width: 500px;
+    width: 90%;
+    transform: translateY(0);
+    animation: float 4s ease-in-out infinite;
+}
+
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
+}
+
+.logo {
+    font-size: 4rem;
+    font-weight: 900;
+    margin-bottom: 10px;
+    letter-spacing: 2px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    direction: ltr;
+}
+
+.logo .play {
+    color: var(--primary-yellow);
+    text-shadow: 0 0 15px rgba(250, 204, 21, 0.5);
+}
+
+.logo .rush {
+    color: var(--primary-pink);
+    font-style: italic;
+    text-shadow: 0 0 15px rgba(244, 63, 94, 0.5);
+}
+
+.slogan {
+    font-size: 1.5rem;
+    color: #cbd5e1;
+    margin-bottom: 40px;
+    font-weight: 700;
+    word-spacing: 5px;
+}
+
+.slogan span {
+    color: var(--primary-yellow);
+}
+
+.buttons-group {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.btn {
+    padding: 15px 30px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    border-radius: 12px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    border: none;
+}
+
+.btn-register {
+    background: linear-gradient(45deg, var(--primary-pink), #e11d48);
+    color: white;
+    box-shadow: 0 4px 15px rgba(244, 63, 94, 0.4);
+}
+
+.btn-register:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(244, 63, 94, 0.6);
+}
+
+.btn-login {
+    background: transparent;
+    color: white;
+    border: 2px solid var(--primary-yellow);
+}
+
+.btn-login:hover {
+    background: var(--primary-yellow);
+    color: #000;
+    box-shadow: 0 4px 15px rgba(250, 204, 21, 0.4);
+}
+
+.circle {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    z-index: -1;
+}
+.circle-1 {
+    width: 300px; height: 300px;
+    background: var(--primary-pink);
+    top: -100px; right: -100px;
+    opacity: 0.3;
+}
+.circle-2 {
+    width: 250px; height: 250px;
+    background: var(--primary-yellow);
+    bottom: -50px; left: -50px;
+    opacity: 0.2;
+}
+
+.stars {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.star {
+    position: absolute;
+    background: rgba(255, 235, 59, 0.8);
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    box-shadow: 0 0 20px 2px rgba(255, 235, 59, 0.5),
+                0 0 40px 4px rgba(106, 27, 154, 0.3);
+    animation: twinkle 1.5s infinite alternate;
+}
+
+.star.purple {
+    background: rgba(106, 27, 154, 0.8);
+    box-shadow: 0 0 20px 2px rgba(106, 27, 154, 0.5),
+                0 0 40px 4px rgba(255, 235, 59, 0.3);
+}
+
+@keyframes twinkle {
+    from { opacity: 0.3; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1.2); }
+}

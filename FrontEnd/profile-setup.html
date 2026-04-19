@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>إعداد الملف الشخصي - PlayRush</title>
+  <link rel="stylesheet" href="css/profile-setup.css" />
+  <link rel="stylesheet" href="css/all.min.css">
+</head>
+<body>
+  <div class="stars" id="stars"></div>
+
+  <div class="login-container">
+    <h2>هويتك في PlayRush</h2>
+    <p style="text-align: center; color: #cbd5e1; font-size: 14px; margin-bottom: 25px;">
+      اضغط على الصورة لاختيار شخصيتك واسمك
+    </p>
+
+    <div class="profile-picture-container" id="openModalBtn">
+      <img id="mainProfileImg" src="../assets/avatars/avatar_1.svg" alt="Avatar">
+      <div class="edit-badge">
+        <i class="fa fa-pen"></i>
+      </div>
+    </div>
+
+    <form id="profileForm">
+      <div class="input-group">
+        <i class="icon fa fa-user"></i>
+        <input type="text" id="playerName" required autocomplete="off"/>
+        <label for="playerName">اسم اللاعب</label>
+      </div>
+      <div class="input-group" style="margin-top: 30px; position: relative;" id="countryWrapper">
+        <i class="icon fa fa-globe" style="position: absolute; top: 16px; right: 15px; color: rgba(255,255,255,0.5); font-size: 18px; z-index: 2; pointer-events: none;"></i>
+        
+        <input type="text" id="countrySearchInput" placeholder="ابحث عن بلدك..." autocomplete="off" class="country-input" required>
+        <input type="hidden" id="playerCountry" required>
+        
+        <div id="countryDropdown" class="custom-dropdown">
+            <div style="padding: 10px; color: #bbb; text-align: center;">جاري تحميل الدول... ⏳</div>
+        </div>
+        
+        <label style="position: absolute; top: -11px; right: 12px; font-size: 13px; color: #00d2ff; background: #131129; padding: 0 8px; pointer-events: none; border-radius: 4px;">البلد / الجنسية</label>
+      </div>
+      
+      <div style="display: flex; gap: 15px; justify-content: center; margin-top: 10px;">
+          <button type="submit" style="flex: 1; padding: 12px; font-size: 16px;">دخول للوبي 🚀</button>
+          
+          <button type="button" id="cancelRegistrationBtn" style="flex: 1; background: #f43f5e; color: white; border: none; border-radius: 8px; cursor: pointer; padding: 12px; font-size: 16px; font-weight: bold; transition: 0.3s;" onmouseover="this.style.background='#e11d48'" onmouseout="this.style.background='#f43f5e'">
+              إلغاء التسجيل
+          </button>
+      </div>
+
+      <div class="message" id="profileMessage" style="text-align: center; margin-top: 15px;"></div>
+    </form>
+  </div>
+
+  <div class="modal-overlay" id="avatarModal">
+    <div class="modal-content">
+      <i class="fa fa-times close-modal" id="closeModalBtn"></i>
+      <h3 style="color: #facc15; margin-bottom: 10px;">اختر صورتك الرمزية</h3>
+      
+      <div class="avatars-grid" id="avatarsGrid">
+        </div>
+
+      <div class="modal-actions">
+        <label class="btn-action btn-upload">
+          <i class="fa fa-upload"></i> رفع صورة من جهازي
+          <input type="file" id="customFileInput" accept="image/*" hidden>
+        </label>
+        <button class="btn-action btn-remove" id="removeCustomBtn">
+          <i class="fa fa-trash"></i> حذف الصورة
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js" defer></script>
+  <script src="js/utils.js" defer></script>
+  <script src="js/profile-setup.js" defer></script>
+  <script src="js/anti_cheat.js" defer></script>
+</body>
+</html>

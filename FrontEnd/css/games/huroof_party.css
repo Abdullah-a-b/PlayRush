@@ -1,0 +1,305 @@
+html, body { overflow: hidden; height: 100%; margin: 0; padding: 0; }
+
+body {
+    font-family: 'Arial', sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    background: linear-gradient(45deg, #2a0a3d, #4b1b6a);
+    position: relative; min-height: 100vh;
+}
+
+.title {
+    color: #ffeb3b; font-size: 2.5em;
+    text-shadow: 3px 3px 0 #6a1b9a; margin: 15px 0;
+    animation: titleGlow 2s infinite alternate;
+    position: relative; z-index: 4;
+}
+
+.stars { position: fixed; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+
+.star {
+    position: absolute; background: rgba(255,235,59,0.8);
+    width: 3px; height: 3px; border-radius: 50%;
+    box-shadow: 0 0 20px 2px rgba(255,235,59,0.5), 0 0 40px 4px rgba(106,27,154,0.3);
+    animation: twinkle 1.5s infinite alternate;
+}
+.star.purple {
+    background: rgba(106,27,154,0.8);
+    box-shadow: 0 0 20px 2px rgba(106,27,154,0.5), 0 0 40px 4px rgba(255,235,59,0.3);
+}
+
+.main-container {
+    position: relative;
+    width: 75vmin; height: 75vmin;
+    max-width: 700px; max-height: 700px;
+    margin: auto;
+}
+
+/* طبقة 1: السداسي البنفسجي */
+.purple-hex {
+    position: absolute; width: 100%; height: 100%;
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    background: #6a1b9a;
+    filter: drop-shadow(0 0 15px rgba(0,0,0,0.4));
+}
+
+/* طبقة 2: برتقالي + مثلثان أخضران */
+.border-hex {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 88%; height: 88%;
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    background: #ff8c00;
+    z-index: 1;
+}
+
+.border-hex::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: #006400;
+    clip-path: polygon(50% 0%, 100% 25%, 0% 25%);
+}
+
+.border-hex::after {
+    content: "";
+    position: absolute;
+    bottom: 0; left: 0;
+    width: 100%; height: 100%;
+    background: #006400;
+    clip-path: polygon(0% 75%, 100% 75%, 50% 100%);
+}
+
+.cells-container { 
+    position: absolute; 
+    top: 50%; 
+    left: 50%; 
+    transform: translate(-50%, -50%) scale(0.83); 
+    width: 84%; 
+    height: 84%; 
+    clip-path: polygon( 50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25% ); 
+    background: linear-gradient( 
+    to bottom, 
+    transparent 0%, 
+    transparent 20%, /* 👈 هنا يختفي المثلث العلوي */ 
+    #ff8c00 20%, /* يبدأ البرتقالي */ 
+    #ff8c00 80%, /* ينتهي */ 
+    transparent 80%, /* 👈 يختفي المثلث السفلي */ 
+    transparent 100% 
+    );
+    z-index: 2; 
+    overflow: hidden; 
+}
+
+/* شريط أخضر علوي وسفلي فقط بين الخلايا والحافة */
+.cells-container::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 22%;
+    width: 56%; height: 21%;
+    background: #006400;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.cells-container::after {
+    content: "";
+    position: absolute;
+    bottom: 0; left: 22%;
+    width: 56%; height: 21%;
+    background: #006400;
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* الـ GRID — نفس الكود الأصلي */
+.grid {
+    position: absolute; top: 47.5%; left: 50%;
+    transform: translate(-53%, -30%);
+    width: 100%; height: 100%; z-index: 3;
+}
+
+.hex-row {
+    display: flex; justify-content: center; margin: -3px 0;
+    transform: translateY(calc(50% - (var(--hex-size) * 2.3)));
+}
+
+.hex {
+    --hex-size: 8.5vmin;
+    width: var(--hex-size);
+    height: calc(var(--hex-size) * 1.1547);
+    background: white;
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    border: 2px solid #333;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 4vmin; font-weight: bold;
+    cursor: pointer; margin: 0 0.05vmin;
+    transition: all 0.2s ease; color: #1a0030;
+}
+
+/* الصف الأول والأخير: خلفية الخلية خضراء — الفراغات بينها ستكون خضراء تلقائياً */
+.hex-row.top-row .hex,
+.hex-row.bottom-row .hex {
+    background: #e8f5e8;  /* أبيض مخضر خفيف للحروف تبقى واضحة */
+}
+
+.hex-row.top-row .hex:hover,
+.hex-row.bottom-row .hex:hover {
+    background: #c8e6c9;
+}
+
+.hex-row:nth-child(even) { transform: none; }
+.hex-row:nth-child(2),
+.hex-row:nth-child(3),
+.hex-row:nth-child(4),
+.hex-row:nth-child(5) { transform: none; }
+
+.hex:hover { background: #f0f0f0; transform: scale(1.05); z-index: 2; }
+
+.hex-row:nth-child(2) { transform: translateX(37px) translateY(-15px); }
+.hex-row:nth-child(3) { transform: translateX(3px) translateY(-30px); }
+.hex-row:nth-child(4) { transform: translateX(37px) translateY(-45px); }
+.hex-row:nth-child(5) { transform: translateX(3px) translateY(-60px); }
+
+.triangle-filler { display: none; }
+
+.color-options {
+    position: absolute; display: none; flex-direction: column;
+    background: white; border: 1px solid black;
+    padding: 5px; z-index: 10;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+.color-option { padding: 8px 12px; cursor: pointer; text-align: center; transition: background 0.2s; }
+.color-option:hover { background: #f0f0f0; }
+
+.win-message-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.7); display: none;
+    justify-content: center; align-items: center; z-index: 1000;
+}
+.win-message-box {
+    background-color: #f4f1de; color: #2a0a3d;
+    padding: 30px; border-radius: 10px; text-align: center;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5); animation: fadeIn 0.5s ease-out;
+    width: 80%; max-width: 500px;
+}
+.win-message-box h2 { font-size: 2.2em; margin-top: 0; color: #6a1b9a; text-shadow: 1px 1px #ffeb3b; }
+.win-message-box p { font-size: 1.2em; margin-bottom: 20px; }
+.win-message-button {
+    background-color: #ffeb3b; color: #2a0a3d; border: none;
+    padding: 12px 25px; border-radius: 5px; font-size: 1em;
+    cursor: pointer; transition: background-color 0.3s ease;
+}
+.win-message-button:hover { background-color: #e0d830; }
+
+.confetti-container {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 1001; overflow: hidden;
+}
+.confetti {
+    position: absolute; width: 10px; height: 15px;
+    background-color: #fce18a; opacity: 0;
+    animation: confettiFall 5s linear infinite, confettiRotate 3s linear infinite;
+    transform-origin: center;
+}
+.confetti:nth-child(even) { background-color: #ff8c00; }
+.confetti:nth-child(3n)   { background-color: #006400; }
+
+.back-to-lobby-btn {
+    position: fixed; top: 20px; right: 20px;
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.8); padding: 10px 20px; border-radius: 50px;
+    cursor: pointer; font-size: 15px; display: flex; align-items: center;
+    gap: 8px; transition: all 0.3s ease; z-index: 2000;
+}
+.back-to-lobby-btn:hover {
+    background: rgba(244,67,54,0.9); color: white;
+    border-color: #f44336; transform: translateY(-2px);
+}
+
+.question-sidebar {
+    position: fixed; right: 2%; left: auto; top: 50%;
+    width: 300px; max-height: 80vh;
+    background: rgba(255,255,255,0.97); border-radius: 15px; padding: 20px;
+    display: flex; flex-direction: column;
+    box-shadow: -5px 5px 25px rgba(0,0,0,0.5);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    opacity: 0; pointer-events: none; transform: translate(60px, -50%);
+    color: #2a0a3d; z-index: 50;
+    border-right: 5px solid #ffeb3b; border-left: none;
+}
+.question-sidebar.active { opacity: 1; pointer-events: all; transform: translate(0, -50%); }
+
+.letter-indicator {
+    font-size: 35px; color: #6a1b9a; text-align: center;
+    margin: 0 0 10px 0; border-bottom: 2px solid #eee; padding-bottom: 10px;
+}
+.question-box {
+    background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 10px;
+    text-align: center; font-weight: bold; font-size: 16px; border: 1px solid #ddd;
+    min-height: 70px; display: flex; align-items: center; justify-content: center;
+    color: #333; line-height: 1.4;
+}
+.answer-box { background: #22c55e; border: 2px solid #16a34a; animation: popIn 0.3s ease; }
+.answer-box::before { content: "الإجابة:"; font-size: 13px; color: #dcfce7; margin-bottom: 8px; font-weight: normal; }
+.answer-box p { color: white; margin: 0; font-size: 24px; font-weight: 900; }
+
+#answer-container {
+    display: none; width: 100%; min-height: 70px; padding: 12px; margin-top: 10px;
+    border-radius: 8px; border: 1px solid #16a34a;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: white; align-items: center; justify-content: center;
+    flex-direction: column; box-sizing: border-box; text-align: center;
+    animation: answerFade 0.2s ease;
+}
+#answer-container::before { content: "الإجابة"; font-size: 12px; color: #dcfce7; margin-bottom: 4px; }
+#answerText { font-size: 18px; font-weight: bold; margin: 0; }
+
+.sidebar-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.party-action-btn {
+    padding: 10px; font-size: 14px; border-radius: 6px;
+    background: #6a1b9a; color: #ffeb3b; border: none;
+    cursor: pointer; font-weight: bold; transition: all 0.2s ease;
+}
+.party-action-btn:hover { background: #4b1b6a; transform: translateY(-2px); }
+.party-action-btn.disabled,
+.party-action-btn:disabled { background: #ccc; color: #888; cursor: not-allowed; transform: none; }
+
+@keyframes fadeIn    { from { opacity:0; transform:scale(0.9); } to { opacity:1; transform:scale(1); } }
+@keyframes confettiFall  { 0% { top:-10%; opacity:1; } 100% { top:110%; opacity:0; } }
+@keyframes confettiRotate{ 0% { transform:rotate(0deg); } 100% { transform:rotate(360deg); } }
+@keyframes twinkle   { from { opacity:0.3; transform:scale(0.8); } to { opacity:1; transform:scale(1.2); } }
+@keyframes titleGlow { from { text-shadow:3px 3px 0 #6a1b9a; } to { text-shadow:5px 5px 0 #6a1b9a; } }
+@keyframes answerFade{ from { opacity:0; transform:translateY(6px) scale(0.96); } to { opacity:1; transform:translateY(0) scale(1); } }
+@keyframes popIn     { 0% { transform:scale(0.9); opacity:0; } 100% { transform:scale(1); opacity:1; } }
+
+/* ===== Moved from HTML ===== */
+/* يمنع تحديد الحرف باللون الأزرق عند الدبل كليك */
+    .hex {
+        user-select: none; 
+        -webkit-user-select: none;
+    }
+    
+    /* التصميم الفخم لقائمة الألوان المنسدلة */
+    .color-menu {
+        position: absolute; display: flex; flex-direction: column; gap: 8px;
+        background: rgba(20, 20, 30, 0.95); border: 1px solid #00d2ff;
+        padding: 10px; border-radius: 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.8);
+        z-index: 1000; animation: popIn 0.2s ease-out;
+    }
+    @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .color-btn {
+        padding: 10px 20px; border: none; border-radius: 8px; color: white;
+        font-weight: bold; cursor: pointer; font-size: 15px; transition: 0.2s;
+    }
+    .color-btn.green { background: #4CAF50; }
+    .color-btn.orange { background: #FF9800; }
+    .color-btn.cancel { background: #555; font-size: 13px; margin-top: 5px; }
+    .color-btn:hover { filter: brightness(1.2); transform: scale(1.05); }
+
+    @keyframes fadeInOut {
+        0% { opacity: 0; top: 0px; }
+        10% { opacity: 1; top: 20px; }
+        90% { opacity: 1; top: 20px; }
+        100% { opacity: 0; top: 0px; }
+    }

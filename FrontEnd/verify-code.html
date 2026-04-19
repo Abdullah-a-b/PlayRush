@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>التحقق من الرمز - PlayRush</title>
+  <link rel="stylesheet" href="css/verify-code.css" />
+  <link rel="stylesheet" href="css/all.min.css">
+</head>
+<body>
+  <div class="stars" id="stars"></div>
+
+  <div class="verify-container">
+    <h2>التحقق من الرمز</h2>
+    <p style="text-align: center; color: #cbd5e1; font-size: 14px; margin-bottom: 10px;">
+      أدخل الرمز المكون من 6 أرقام المرسل لبريدك
+    </p>
+    
+    <form class="verify-form" id="verifyCodeForm">
+      <div class="otp-inputs" dir="ltr">
+        <input type="text" class="field-box" maxlength="1" required />
+        <input type="text" class="field-box" maxlength="1" required />
+        <input type="text" class="field-box" maxlength="1" required />
+        <input type="text" class="field-box" maxlength="1" required />
+        <input type="text" class="field-box" maxlength="1" required />
+        <input type="text" class="field-box" maxlength="1" required />
+      </div>
+
+      <button type="submit">تحقق</button>
+
+      <div id="resendWrapper" style="margin-top: 20px; font-size: 14px; color: #aaa;">
+            <span id="resendTimerText">يمكنك طلب رمز جديد بعد <span id="countdown" style="color: #facc15; font-weight: bold; font-size: 16px;">60</span> ثانية</span>
+            <button type="button" id="resendBtn" class="play-btn" style="display: none; width: 100%; background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.1);">إعادة إرسال الرمز</button>
+        </div>
+    </form>
+    
+    <div class="message" id="verifyMessage" style="text-align: center; margin-top: 15px;"></div>
+  </div>
+
+  <script src="js/config.js" defer></script>
+  <script src="js/utils.js" defer></script>
+  <script src="js/verify-code.js" defer></script>
+  <script src="js/anti_cheat.js" defer></script>
+</body>
+</html>

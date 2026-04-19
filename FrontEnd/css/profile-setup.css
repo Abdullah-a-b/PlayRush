@@ -1,0 +1,128 @@
+body {
+  font-family: 'Tajawal', sans-serif; display: flex; flex-direction: column; align-items: center;
+  background: linear-gradient(45deg, #2a0a3d, #4b1b6a); position: relative; min-height: 100vh; color: #fff; margin: 0;
+}
+
+/* 🚀 استدعاء الخطوط محلياً لسرعة البرق */
+@font-face {
+    font-family: 'Tajawal';
+    src: url('../assets/fonts/Tajawal-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Tajawal';
+    src: url('../assets/fonts/Tajawal-Bold.ttf') format('truetype');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Tajawal';
+    src: url('../assets/fonts/Tajawal-Black.ttf') format('truetype');
+    font-weight: 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* الآن يمكنك استخدام الخط في أي مكان بكل ثقة */
+* {
+    font-family: 'Tajawal', sans-serif;
+}
+
+/* النجوم */
+.stars { position: fixed; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+.star { position: absolute; background: rgba(255, 235, 59, 0.8); width: 3px; height: 3px; border-radius: 50%; box-shadow: 0 0 20px 2px rgba(255, 235, 59, 0.5); animation: twinkle 1.5s infinite alternate; }
+@keyframes twinkle { from { opacity: 0.3; transform: scale(0.8); } to { opacity: 1; transform: scale(1.2); } }
+
+/* الفورم الزجاجي الموحد */
+.login-container {
+  width: 90%; max-width: 420px; margin: 60px auto; padding: 40px 30px;
+  background-color: rgba(255, 255, 255, 0.06); border-radius: 15px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4); backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1); z-index: 2; position: relative; box-sizing: border-box;
+}
+
+h2 { text-align: center; margin-bottom: 5px; color: #facc15; font-weight: 900; letter-spacing: 1px; }
+
+/* الدائرة المركزية (الصورة) */
+.profile-picture-container {
+  width: 120px; height: 120px; margin: 0 auto 30px auto; position: relative; border-radius: 50%;
+  cursor: pointer; border: 3px solid rgba(255, 255, 255, 0.2); transition: 0.3s;
+}
+.profile-picture-container:hover { border-color: #facc15; box-shadow: 0 0 20px rgba(250, 204, 21, 0.4); transform: scale(1.05); }
+.profile-picture-container img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background: rgba(0,0,0,0.3); }
+.edit-badge {
+  position: absolute; bottom: 0; right: 0; background: #facc15; color: #2a0a3d; width: 35px; height: 35px;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 3px solid #2a0a3d; transition: 0.3s;
+}
+.profile-picture-container:hover .edit-badge { background: #fff; transform: rotate(15deg); }
+
+/* الحقول والأزرار */
+.input-group { position: relative; margin: 25px 0; width: 100%; }
+.input-group input { width: 100%; box-sizing: border-box; height: 50px; padding: 14px 45px 14px 40px; font-size: 15px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; background: rgba(0, 0, 0, 0.2); color: #fff; outline: none; transition: 0.3s; font-family: inherit; }
+.input-group input:focus { border-color: #facc15; box-shadow: 0 0 10px rgba(250, 204, 21, 0.2); }
+.input-group label { position: absolute; top: 50%; right: 45px; transform: translateY(-50%); color: #cbd5e1; font-size: 15px; pointer-events: none; transition: 0.3s; }
+.input-group input:focus + label, .input-group input:valid + label { top: 0; right: 35px; font-size: 13px; color: #facc15; background-color: #3b1554; border-radius: 4px; padding: 2px 8px; }
+.icon { position: absolute; top: 50%; right: 15px; transform: translateY(-50%); color: #ba68c8; font-size: 18px; }
+button[type="submit"] { width: 100%; padding: 14px; background: linear-gradient(45deg, #f43f5e, #e11d48); border: none; color: white; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; font-family: inherit; transition: 0.2s; }
+button[type="submit"]:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(225, 29, 72, 0.4); }
+
+/* النافذة المنبثقة (Modal) */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(5px); display: none; justify-content: center; align-items: center; z-index: 100; opacity: 0; transition: opacity 0.3s ease;
+}
+.modal-overlay.active { display: flex; opacity: 1; }
+.modal-content {
+  background: rgba(30, 10, 50, 0.95); border: 1px solid rgba(255,255,255,0.2); border-radius: 15px; width: 90%; max-width: 450px;
+  padding: 25px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); text-align: center; position: relative; transform: translateY(-20px); transition: 0.3s ease;
+}
+.modal-overlay.active .modal-content { transform: translateY(0); }
+.close-modal { position: absolute; top: 15px; right: 20px; font-size: 22px; cursor: pointer; color: #cbd5e1; transition: 0.2s; }
+.close-modal:hover { color: #f43f5e; transform: scale(1.1); }
+
+/* شبكة الصور */
+.avatars-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 12px;
+  margin-top: 20px; max-height: 250px; overflow-y: auto; padding: 5px; direction: ltr;
+}
+.avatars-grid::-webkit-scrollbar { width: 6px; }
+.avatars-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+.avatar-item {
+  width: 100%; aspect-ratio: 1; border-radius: 50%; cursor: pointer; border: 3px solid transparent;
+  transition: 0.2s; object-fit: cover; background: rgba(255,255,255,0.05);
+}
+.avatar-item:hover { transform: scale(1.1); }
+.avatar-item.selected { border-color: #00ff88; box-shadow: 0 0 15px rgba(0, 255, 136, 0.4); transform: scale(1.1); }
+
+/* أزرار النافذة المنبثقة */
+.modal-actions { display: flex; justify-content: center; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+.btn-action {
+  padding: 10px 15px; border-radius: 8px; color: white; border: none; cursor: pointer; font-family: inherit;
+  font-weight: bold; font-size: 14px; transition: 0.2s; display: flex; align-items: center; gap: 8px;
+}
+.btn-upload { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; }
+.btn-upload:hover { background: rgba(255, 255, 255, 0.2); }
+.btn-remove { background: rgba(244, 63, 94, 0.2); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.5); display: none; }
+.btn-remove:hover { background: #f43f5e; color: #fff; }
+
+/* ===== Country dropdown styles (moved from HTML) ===== */
+.country-input {
+            width: 100%; height: 50px; padding: 10px 45px 10px 15px;
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px; color: #fff; font-size: 16px; outline: none; transition: all 0.3s;
+        }
+        .country-input:focus { border-color: #00d2ff; }
+        .custom-dropdown {
+            display: none; position: absolute; top: 55px; left: 0; right: 0;
+            background: #1a1a2e; border: 1px solid #00d2ff; border-radius: 8px;
+            max-height: 200px; overflow-y: auto; z-index: 100; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+        .dropdown-item {
+            padding: 10px 15px; cursor: pointer; color: #fff; transition: 0.2s;
+            display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .dropdown-item:last-child { border-bottom: none; }
+        .dropdown-item:hover { background: rgba(0, 210, 255, 0.2); }

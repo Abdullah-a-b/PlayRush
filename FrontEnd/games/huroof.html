@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>حروف</title>
+    <link rel="stylesheet" href="../css/games/huroof.css" />
+    <link rel="stylesheet" href="../css/all.min.css">
+</head>
+<body>
+    
+    <div class="top-bar">
+        <div class="player-profile left" id="myProfileBtn">
+            <div class="avatar"><img id="myAvatarImg" src="../assets/avatars/avatar_1.svg" alt="Avatar"></div>
+            <div class="info">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span id="myPlayerName">أنت</span>
+                    <img id="myFlagImg" src="../assets/flags/SA.svg" alt="Flag" class="country-flag">
+                </div>
+            </div>
+            <div class="my-color-box" id="myColorIndicator">
+                <div class="color-circle"></div>
+            </div>
+        </div>
+
+        <div class="center-info">
+            <div class="rounds-display" id="rounds-display" style="display: none;">
+                <div class="team-score" id="team-green-score">
+                    <span class="score-dot" data-round="1"></span>
+                    <span class="score-dot" data-round="2"></span>
+                </div>
+                <div class="round-text" id="round-indicator">الجولة 1</div>
+                <div class="team-score" id="team-orange-score">
+                    <span class="score-dot" data-round="1"></span>
+                    <span class="score-dot" data-round="2"></span>
+                </div>
+            </div>
+            <div id="turn-status-badge" class="turn-badge">جاري التحميل...</div>
+        </div>
+
+        <div class="player-profile right" id="opponentProfileBtn">
+            <div class="my-color-box" id="opponentColorIndicator">
+                <div class="color-circle"></div>
+            </div>
+            <div class="info">
+                <div style="display: flex; align-items: center; gap: 8px; justify-content: flex-end;">
+                    <img id="opponentFlagImg" src="../assets/flags/AE.svg" alt="Flag" class="country-flag">
+                    <span id="opponentName">الخصم</span>
+                </div>
+            </div>
+            <div class="avatar opponent"><img id="opponentAvatarImg" src="../assets/avatars/avatar_2.svg" alt="Avatar"></div>
+        </div>
+    </div>
+
+    <div class="stars" id="stars"></div>
+
+    <div class="game-layout">
+        <div class="main-container">
+            <div class="purple-hex"></div>
+            <div class="border-hex"></div>
+            <div class="cells-container">
+                <div class="grid">
+                    <div class="hex-row">
+                        <div class="hex"></div><div class="hex"></div><div class="hex"></div><div class="hex"></div><div class="hex"></div>
+                    </div>
+                    <div class="hex-row">
+                        <div class="hex"></div><div class="hex"></div><div class="hex"></div><div class="hex"></div><div class="hex"></div>
+                    </div>
+                    <div class="hex-row">
+                        <div class="hex"></div><div class="hex"></div><div class="hex"></div><div class="hex"></div><div class="hex"></div>
+                    </div>
+                    <div class="hex-row">
+                        <div class="hex"></div><div class="hex"></div><div class="hex"></div><div class="hex"></div><div class="hex"></div>
+                    </div>
+                    <div class="hex-row">
+                        <div class="hex"></div><div class="hex"></div><div class="hex"></div><div class="hex"></div><div class="hex"></div>
+                    </div>
+                </div>
+                <div class="triangle-filler top"></div>
+                <div class="triangle-filler bottom"></div>
+                <div class="triangle-filler left"></div>
+                <div class="triangle-filler right"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="question-sidebar" id="questionSidebar">
+        <div class="sidebar-content">
+            <h3 class="letter-indicator" id="currentLetterDisplay">انتظر دورك...</h3>
+            
+            <div class="question-box">
+                <div id="globalTimer" style="color: #ff5722; font-weight: bold; font-size: 20px; margin-bottom: 10px; display: none;">⏳ 40</div>
+                <p id="questionText">اختر حرفاً من اللوحة للبدء!</p>
+            </div>
+            
+            <div id="systemMessageDisplay" style="color: #00d2ff; font-weight: bold; margin: 15px 0; min-height: 24px; text-align: center;"></div>
+
+            <button id="buzzerBtn" class="party-action-btn" style="background: #ff9800; font-size: 24px; padding: 15px; margin: 15px 0; display: none; width: 100%; box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);">
+                <i class="fa-solid fa-hand-pointer"></i> أنا أعرف!
+            </button>
+
+            <div id="answerSection" style="display: none; width: 100%;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span style="color: #4CAF50; font-weight: bold;">اكتب إجابتك:</span>
+                    <span id="playerTimer" style="color: #ff5722; font-weight: bold; font-size: 18px;">⏱️ 15</span>
+                </div>
+                <input type="text" id="playerAnswerInput" placeholder="أدخل الإجابة هنا..." style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #00d2ff; background: #111; color: white; font-family: inherit; font-size: 16px; margin-bottom: 10px; text-align: center;">
+                <button id="submitAnswerBtn" class="party-action-btn" style="background: #4CAF50; width: 100%;">إرسال الإجابة</button>
+            </div>
+
+            <div class="question-box answer-box" id="answer-container" style="display: none; margin-top: 15px;">
+                <p id="answerText"></p>
+            </div>
+
+            <div class="sidebar-actions">
+                <button id="voteSkipBtn" class="party-action-btn" style="background: #607d8b; display: none;">
+                    <i class="fa-solid fa-forward-step"></i> اقتراح تغيير السؤال
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <button id="surrenderBtn" class="surrender-btn" title="انسحاب">
+        <i class="fa-solid fa-flag"></i>
+    </button>
+
+    <div id="cheatWarningModal" class="cheat-modal">
+        <div class="cheat-box">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <h3>تحذير!</h3>
+            <p>محاولة الغش أو الخروج من الصفحة ستؤدي إلى خسارتك فوراً.</p>
+            <button id="closeCheatWarning">فهمت</button>
+        </div>
+    </div>
+
+    <div id="surrenderModal" class="win-message-overlay">
+        <div class="win-message-box">
+            <h2 style="color: #ff4757;">هل تود الانسحاب؟</h2>
+            <p>سيتم إعلان فوز الخصم فوراً، ولا يمكنك التراجع.</p>
+            <div class="modal-buttons">
+                <button id="confirmSurrenderBtn" class="win-message-button surrender-confirm">نعم، انسحب</button>
+                <button id="cancelSurrenderBtn" class="win-message-button surrender-cancel">تراجع</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="playerProfileModal" class="profile-modal-overlay" style="display: none;">
+        <div class="profile-modal-box">
+            <button class="close-modal-btn" id="closeProfileBtn"><i class="fa-solid fa-xmark"></i></button>
+            <div class="profile-header">
+                <img id="modalAvatar" src="../assets/avatars/avatar_1.svg" alt="Avatar" class="modal-avatar">
+                <h2 id="modalPlayerName">اسم اللاعب</h2>
+                <img id="modalFlag" src="../assets/flags/SA.svg" alt="Flag" class="modal-flag">
+                <div id="modalRank" class="modal-rank"><i class="fa-solid fa-trophy" style="color: gold;"></i> التصنيف العالمي: #<span id="rankValue">1</span></div>
+            </div>
+            
+            <div class="stats-container">
+                <div class="stats-card">
+                    <h3>إحصائيات "حروف"</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item"><span class="stat-value win" id="huroofWins">0</span><span class="stat-label">فوز</span></div>
+                        <div class="stat-item"><span class="stat-value loss" id="huroofLosses">0</span><span class="stat-label">خسارة</span></div>
+                        <div class="stat-item"><span class="stat-value total" id="huroofTotal">0</span><span class="stat-label">لعب</span></div>
+                    </div>
+                </div>
+                <div class="stats-card">
+                    <h3>الإحصائيات العامة (كل الألعاب)</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item"><span class="stat-value win" id="globalWins">0</span><span class="stat-label">فوز</span></div>
+                        <div class="stat-item"><span class="stat-value loss" id="globalLosses">0</span><span class="stat-label">خسارة</span></div>
+                        <div class="stat-item"><span class="stat-value total" id="globalTotal">0</span><span class="stat-label">لعب</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions" id="modalActionButtons">
+                <button class="action-btn add-friend"><i class="fa-solid fa-user-plus"></i> إضافة صديق</button>
+                <button class="action-btn block-user"><i class="fa-solid fa-ban"></i> حظر</button>
+                <button class="action-btn report-user"><i class="fa-solid fa-flag"></i> إبلاغ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ⏳ انتظار الجولة التالية -->
+    <div id="waiting-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.88); z-index:3000; justify-content:center; align-items:center; flex-direction:column;">
+        <div id="overlay-message" style="text-align:center; color:white; font-family:'Tajawal',sans-serif; font-size:20px; line-height:1.8;"></div>
+        <div class="spinner" style="display:none; margin-top:25px; width:45px; height:45px; border:4px solid rgba(255,255,255,0.15); border-top-color:#00d2ff; border-radius:50%; animation:overlaySpinner 0.8s linear infinite;"></div>
+    </div>
+
+    <!-- 🏆 الفائز النهائي بالمباراة -->
+    <div id="winner-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.92); z-index:3000; justify-content:center; align-items:center; flex-direction:column; text-align:center;">
+        <div style="background:#1a1a2e; padding:45px 50px; border-radius:20px; border:2px solid #ffd700; color:white; font-family:'Tajawal',sans-serif; box-shadow:0 0 40px rgba(255,215,0,0.3);">
+            <div style="font-size:60px; margin-bottom:10px;">🏆</div>
+            <h1 style="color:#ffd700; font-size:36px; margin-bottom:15px;">بطل المباراة!</h1>
+            <p style="font-size:26px; margin-bottom:8px;">اللاعب <span id="winner-color" style="font-weight:bold;"></span> فاز</p>
+            <p id="winner-reason" style="color:#aaa; font-size:16px; margin-bottom:25px;"></p>
+            <button onclick="sessionStorage.removeItem('gameRoomCode'); window.location.href='../lobby.html'" style="background:#00d2ff; color:#000; padding:13px 30px; border:none; border-radius:10px; font-weight:bold; cursor:pointer; font-size:18px; font-family:'Tajawal',sans-serif; transition:0.2s;" onmouseover="this.style.filter='brightness(1.15)'" onmouseout="this.style.filter='brightness(1)'">العودة للوبي</button>
+        </div>
+    </div>
+
+    <script src="../js/config.js" defer></script>
+    <script src="../js/utils.js" defer></script>
+    <script src="../js/socket.io.min.js" defer></script>
+    <script src="../js/purify.min.js" defer></script>
+
+    <script src="../js/games/huroof.js" defer></script>
+    <script src="../js/anti_cheat.js" defer></script>
+</body>
+</html>

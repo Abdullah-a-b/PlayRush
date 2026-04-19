@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>وضع الجَمَعات - حروف</title>
+    <link rel="stylesheet" href="../css/games/huroof_party.css">
+    <link rel="stylesheet" href="../css/all.min.css">
+</head>
+<body>
+    <div id="scoreSidebar" style="position: fixed; left: 20px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.8); padding: 20px; border-radius: 15px; border: 2px solid #333; color: white; text-align: center; z-index: 10;">
+    <h3 style="margin-bottom: 15px; color: #00d2ff; border-bottom: 1px solid #444; padding-bottom: 10px;">🏆 الجولات</h3>
+    <div style="margin-bottom: 15px;">
+        <span style="display: block; color: #4CAF50; font-weight: bold; font-size: 18px;">الأخضر 🟢</span>
+        <span id="scoreGreen" style="font-size: 30px; font-weight: bold;">0</span>
+    </div>
+    <div style="margin-top: 15px;">
+        <span style="display: block; color: #FF9800; font-weight: bold; font-size: 18px;">البرتقالي 🟠</span>
+        <span id="scoreOrange" style="font-size: 30px; font-weight: bold;">0</span>
+    </div>
+</div>
+
+<div id="tutorialModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; justify-content: center; align-items: center;">
+    <div style="background: #1a1a2e; padding: 30px; border-radius: 15px; border: 2px solid #00d2ff; width: 90%; max-width: 500px; text-align: center; color: white; box-shadow: 0 0 30px rgba(0,210,255,0.3);">
+        <h2 style="color: #ff9800; margin-bottom: 15px;">🎮 أهلاً بك في وضع الجمعات!</h2>
+        <ul style="text-align: right; line-height: 2; font-size: 16px; margin-bottom: 25px; list-style-type: none; padding: 0;">
+            <li>🏆 <b>نظام اللعب:</b> أفضل 3 جولات (الفريق اللي يفوز بجولتين هو البطل).</li>
+            <li>🤖 <b>السرية:</b> الإجابات تصل للمدير سرياً عبر بوت تليجرام.</li>
+            <li>🖱️ <b>ضغطة واحدة:</b> لتحديد الحرف وعرض السؤال.</li>
+            <li>🖱️🖱️ <b>دبل كليك (ضغطة مزدوجة):</b> لتلوين الخلية بعد الإجابة.</li>
+        </ul>
+        <button onclick="document.getElementById('tutorialModal').style.display='none'" style="background: #00d2ff; color: #000; padding: 12px 25px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px;">فهمت، ابدأ التحدي! 🚀</button>
+    </div>
+</div>
+    <div style="position: fixed; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 15px; z-index: 100;">
+        <button id="backToLobbyBtn" class="back-to-lobby-btn" style="position: relative; top: 0; right: 0; margin: 0; width: 100%;">
+            <i class="fa-solid fa-right-from-bracket"></i> <span>الخروج للوبي</span>
+        </button>
+        <button id="changeHostBtn" class="back-to-lobby-btn" style="position: relative; top: 0; right: 0; margin: 0; background: rgba(0, 210, 255, 0.1); border: 1px solid #00d2ff; color: #fff; width: 100%;">
+            <i class="fa-solid fa-rotate"></i> <span>تغيير المدير</span>
+        </button>
+        <select id="categorySelector" class="back-to-lobby-btn" style="position: relative; top: 0; right: 0; margin: 0; background: rgba(156, 39, 176, 0.2); border: 1px solid #9c27b0; color: #fff; width: 100%; font-family: inherit; font-size: 14px; cursor: pointer; padding: 10px; outline: none;">
+            <option value="عام" style="background: #1a1a2e;">🌐 تصنيف عام (عشوائي)</option>
+            <option value="إسلاميات وسيرة نبوية" style="background: #1a1a2e;">🕋 إسلاميات وسيرة</option>
+            <option value="ألغاز وفوازير ذكية" style="background: #1a1a2e;">🧩 ألغاز وفوازير</option>
+            <option value="تاريخ" style="background: #1a1a2e;">📜 تاريخ</option>
+            <option value="جغرافيا" style="background: #1a1a2e;">🌍 جغرافيا</option>
+            <option value="علوم" style="background: #1a1a2e;">🔬 علوم</option>
+            <option value="رياضة" style="background: #1a1a2e;">⚽ رياضة</option>
+        </select>
+    </div>
+
+    <div id="hostModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; justify-content: center; align-items: center;">
+        <div style="background: #1a1a2e; padding: 30px; border-radius: 15px; border: 2px solid #00d2ff; width: 90%; max-width: 450px; text-align: center; color: white; box-shadow: 0 0 30px rgba(0,210,255,0.3);">
+            <h2 style="color: #00d2ff; margin-bottom: 15px;">🔄 تغيير مدير الجلسة</h2>
+            <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin: 15px 0; text-align: right; font-size: 14px; line-height: 1.6; border-right: 4px solid #00d2ff;">
+                <h4 style="color: #00d2ff; margin-bottom: 8px;">📋 تعليمات الربط للمدير الجديد:</h4>
+                1. ابحث عن البوت في تليجرام واضغط <b>بدء (/start)</b>.<br>
+                2. اضغط على الزر بالأسفل لإنشاء رمز جديد.<br>
+                3. أرسل الـ 4 أرقام في البوت لربط جلستك.
+            </div>
+            
+            <h1 id="newHostCodeDisplay" style="font-size: 45px; color: #ff9800; letter-spacing: 8px; margin: 20px 0; display: none;">----</h1>
+            
+            <button id="generateNewCodeBtn" style="background: #4CAF50; color: white; padding: 12px 25px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; width: 100%; margin-bottom: 10px; transition: 0.3s;">
+                <i class="fa-solid fa-key"></i> إنشاء رمز جديد
+            </button>
+            <button onclick="document.getElementById('hostModal').style.display='none'" style="background: #555; color: white; padding: 10px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; width: 100%;">إلغاء</button>
+        </div>
+    </div>
+
+    <h1 class="title">اختر حرفاً</h1>
+    <div class="stars" id="stars"></div>
+
+    <div class="main-container">
+        <div class="purple-hex"></div>
+        <div class="border-hex"></div>
+        <div class="cells-container">
+            <div class="grid">
+                <div class="hex-row">
+                    <div class="hex"></div><div class="hex"></div><div class="hex"></div><div class="hex"></div><div class="hex"></div>
+                </div>
+                <div class="hex-row">
+                    <div class="hex"></div><div class="hex"></div><div class="hex"></div><div class="hex"></div><div class="hex"></div>
+                </div>
+                <div class="hex-row">
+                    <div class="hex"></div><div class="hex"></div><div class="hex"></div><div class="hex"></div><div class="hex"></div>
+                </div>
+                <div class="hex-row">
+                    <div class="hex"></div><div class="hex"></div><div class="hex"></div><div class="hex"></div><div class="hex"></div>
+                </div>
+                <div class="hex-row">
+                    <div class="hex"></div><div class="hex"></div><div class="hex"></div><div class="hex"></div><div class="hex"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="winMessageOverlay" class="win-message-overlay">
+        <div class="win-message-box">
+            <h2 id="winMessageTitle"></h2>
+            <p id="winMessageText"></p>
+            <button onclick="closeSessionAndLeave('../lobby.html'); return false;" style="background: #f44336; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 18px; margin-top: 15px;">
+    العودة للوبي
+</button>
+        </div>
+    </div>
+
+    <div class="confetti-container" id="confettiContainer"></div>
+
+    <div class="question-sidebar" id="questionSidebar">
+        <div class="sidebar-content">
+            <h3 class="letter-indicator" id="currentLetterDisplay">أ</h3>
+            
+            <div class="question-box">
+                <p id="questionText">جاري جلب السؤال...</p>
+            </div>
+            
+            <div class="question-box answer-box" id="answer-container" style="display: none;">
+                <p id="answerText"></p>
+            </div>
+
+            <div class="sidebar-actions">
+                <button id="changeQuestionBtn" class="party-action-btn">تغيير السؤال</button>
+                <button id="reportQuestionBtn" class="party-action-btn" style="background: #f44336; margin-top: 10px; display: none;">الإبلاغ عن خطأ 🚩</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="reportModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2500; justify-content: center; align-items: center;">
+        <div style="background: #1a1a2e; padding: 30px; border-radius: 15px; border: 2px solid #f44336; width: 90%; max-width: 450px; text-align: center; color: white; box-shadow: 0 0 30px rgba(244, 67, 54, 0.3);">
+            <h2 style="color: #f44336; margin-bottom: 15px;">🚩 الإبلاغ عن سؤال خاطئ</h2>
+            <p style="font-size: 14px; color: #ccc; margin-bottom: 15px;">إذا كنت تعتقد أن إجابة السؤال خاطئة، اكتب الإجابة الصحيحة وسيقوم الذكاء الاصطناعي بالتحقق منها فوراً.</p>
+            <input type="text" id="reportAnswerInput" placeholder="اكتب الإجابة الصحيحة من وجهة نظرك..." style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #555; background: #111; color: white; margin-bottom: 15px; font-family: inherit;">
+            
+            <p id="reportFeedback" style="color: #ff9800; font-size: 14px; margin-bottom: 15px; display: none;"></p>
+
+            <button id="submitReportBtn" style="background: #f44336; color: white; padding: 12px 25px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; width: 100%; margin-bottom: 10px;">إرسال للتحقق 🤖</button>
+            <button onclick="document.getElementById('reportModal').style.display='none'" style="background: #555; color: white; padding: 10px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; width: 100%;">إلغاء</button>
+        </div>
+    </div>
+
+    <script src="../js/config.js" defer></script>
+    <script src="../js/utils.js" defer></script>
+    <script src="../js/socket.io.min.js" defer></script>
+    <script src="../js/purify.min.js" defer></script>
+
+    <script src="../js/games/huroof_party.js" defer></script>
+    <script src="../js/anti_cheat.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,273 @@
+body {
+  font-family: 'Tajawal', sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: linear-gradient(45deg, #2a0a3d, #4b1b6a);
+  position: relative;
+  min-height: 100vh;
+  color: #fff;
+  margin: 0;
+}
+
+/* 🚀 استدعاء الخطوط محلياً لسرعة البرق */
+@font-face {
+    font-family: 'Tajawal';
+    src: url('../assets/fonts/Tajawal-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Tajawal';
+    src: url('../assets/fonts/Tajawal-Bold.ttf') format('truetype');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Tajawal';
+    src: url('../assets/fonts/Tajawal-Black.ttf') format('truetype');
+    font-weight: 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* الآن يمكنك استخدام الخط في أي مكان بكل ثقة */
+* {
+    font-family: 'Tajawal', sans-serif;
+}
+
+/* النجوم الخلفية */
+.stars {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.star {
+  position: absolute;
+  background: rgba(255, 235, 59, 0.8);
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  box-shadow: 0 0 20px 2px rgba(255, 235, 59, 0.5),
+              0 0 40px 4px rgba(106, 27, 154, 0.3);
+  animation: twinkle 1.5s infinite alternate;
+}
+
+@keyframes twinkle {
+  from { opacity: 0.3; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1.2); }
+}
+
+/* فورم التسجيل (الزجاجي الفخم) */
+.register-form {
+  width: 90%;
+  max-width: 420px;
+  margin: 60px auto;
+  padding: 40px 30px;
+  background-color: rgba(255, 255, 255, 0.06);
+  border-radius: 15px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 2;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* العنوان */
+.register-form h2 {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #facc15; /* أصفر نيون */
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+/* مجموعة الحقل */
+.input-group {
+  position: relative;
+  margin: 25px 0;
+  width: 100%;
+  animation: slideIn 0.6s ease forwards;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.input-group:nth-child(1) { animation-delay: 0.1s; }
+.input-group:nth-child(2) { animation-delay: 0.2s; }
+.input-group:nth-child(3) { animation-delay: 0.3s; }
+
+/* الحقول (تم ضبط الـ Padding لليمين) */
+.input-group input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 50px;
+  padding: 14px 45px 14px 40px; /* مسافة للأيقونة يمين ويسار */
+  font-size: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  color: #fff;
+  outline: none;
+  transition: all 0.3s ease;
+  font-family: 'Tajawal', sans-serif;
+}
+
+.input-group input:focus {
+  border-color: #facc15;
+  box-shadow: 0 0 10px rgba(250, 204, 21, 0.2);
+}
+
+/* الليبل (تم ضبطه لليمين) */
+.input-group label {
+  position: absolute;
+  top: 50%;
+  right: 45px;
+  transform: translateY(-50%);
+  background-color: transparent;
+  padding: 0 5px;
+  color: #cbd5e1;
+  font-size: 15px;
+  pointer-events: none;
+  transition: 0.3s ease all;
+}
+
+/* حركة الليبل عند التركيز */
+.input-group input:focus + label,
+.input-group input:valid + label {
+  top: 0;
+  right: 35px;
+  font-size: 13px;
+  color: #facc15;
+  background-color: #3b1554; /* لون يقارب الخلفية لتبدو مقطوعة */
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+/* الأيقونة الرئيسية (يمين) */
+.icon {
+  position: absolute;
+  top: 50%;
+  right: 15px;
+  transform: translateY(-50%);
+  color: #ba68c8;
+  font-size: 18px;
+}
+
+/* أيقونة العين (يسار) */
+.toggle-password {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #94a3b8;
+  font-size: 16px;
+  transition: 0.3s;
+}
+
+.toggle-password:hover {
+  color: #fff;
+}
+
+/* مربع الشروط */
+.terms-group {
+  display: flex;
+  align-items: center;
+  margin-bottom: 25px;
+  font-size: 14px;
+  color: #cbd5e1;
+}
+
+.terms-group input {
+  margin-left: 10px;
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  accent-color: #facc15;
+}
+
+.terms-group a {
+  color: #facc15;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.terms-group a:hover {
+  text-decoration: underline;
+}
+
+/* زر التسجيل */
+.register-form button[type="submit"] {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(45deg, #f43f5e, #e11d48);
+  border: none;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  font-family: 'Tajawal', sans-serif;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.register-form button[type="submit"]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(225, 29, 72, 0.4);
+}
+
+/* زر قوقل */
+.google-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: #ffffff;
+  color: #333;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: bold;
+  font-family: 'Tajawal', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s;
+}
+
+.google-btn:hover {
+  background-color: #f1f5f9;
+}
+
+/* الخط الفاصل */
+hr {
+  margin: 25px 0;
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* رابط تسجيل الدخول */
+.login-link {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 14px;
+  color: #cbd5e1;
+}
+
+.login-link a {
+  color: #facc15;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.login-link a:hover {
+  text-decoration: underline;
+}

@@ -1,0 +1,35 @@
+# إطار العمل الأساسي والخادم
+fastapi
+uvicorn[standard]
+
+# Scalability: تشغيل متعدد العمليات (workers)
+gunicorn
+
+# محرك الألعاب (WebSockets)
+python-socketio
+
+# قواعد البيانات
+sqlalchemy
+
+# Scalability (اختياري للإنتاج): PostgreSQL بدل SQLite
+# asyncpg
+# psycopg2-binary
+
+# Scalability (اختياري للإنتاج): Redis لـ OTP cooldowns وSocket.IO multi-process
+# redis[asyncio]
+# aioredis
+
+# الحماية والتشفير (JWT و Passwords)
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
+
+# قراءة الإعدادات (.env)
+python-dotenv
+
+# التحقق من صحة البيانات والايميلات (Schemas)
+pydantic[email]
+
+# طلبات الـ HTTP الخارجية (تسجيل دخول جوجل، وبوت تليجرام)
+httpx
+requests

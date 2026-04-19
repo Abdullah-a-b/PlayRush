@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>اللوبي الرئيسي</title>
+  <link rel="stylesheet" href="css/lobby.css" />
+  <link rel="stylesheet" href="css/categories.css" />
+  <link rel="stylesheet" href="css/all.min.css">
+</head>
+<body>
+  <div id="toastContainer" class="toast-container"></div>
+
+  <div class="confirm-overlay" id="customConfirm">
+      <div class="confirm-box">
+          <i class="fa-solid fa-triangle-exclamation" style="font-size: 40px; color: #facc15; margin-bottom: 15px;"></i>
+          <h3 id="confirmTitle">تأكيد الإجراء</h3>
+          <p id="confirmMessage">هل أنت متأكد؟</p>
+          <div class="confirm-btns">
+              <button class="btn-no" id="confirmNo">إلغاء</button>
+              <button class="btn-yes" id="confirmYes">نعم، متأكد</button>
+          </div>
+      </div>
+  </div>
+
+  <div class="background-animation">
+    <div class="particle"></div><div class="particle"></div><div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+  </div>
+
+  <div class="lobby-container" id="mainLobbyContainer">
+    <header class="top-bar">
+      <div class="player-section" style="cursor: pointer;" id="openProfileSettings">
+        <div class="player-avatar">
+          <img src="" alt="صورة اللاعب" id="playerAvatar" style="background-color: #18181b; object-fit: cover;">
+        </div>
+        <div class="player-info">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 2px;">
+              <h3 id="playerName" style="margin: 0;">جاري التحميل...</h3>
+              <span id="playerFlag" style="font-size: 18px; background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 6px; display: none; box-shadow: 0 2px 5px rgba(0,0,0,0.2);"></span>
+          </div>
+          
+          <div id="playerIdDisplay" style="color: #00d2ff; font-size: 13px; font-weight: bold; margin-bottom: 5px; letter-spacing: 1px;"></div>
+          
+          <div class="player-level">
+            <span>المستوى <span id="playerLevel">0</span></span>
+            <div class="xp-bar"><div class="xp-fill" id="xpFill" style="width: 0%;"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="currency-section">
+        <div class="currency-item"><i class="fa-solid fa-coins" style="color:#facc15"></i> <span id="coins">0</span></div>
+        <div class="currency-item"><i class="fa-solid fa-gem" style="color:#00d2ff"></i> <span id="gems">0</span></div>
+      </div>
+
+      <div class="controls-section">
+        <button class="control-btn" id="notificationsBtn" title="التنبيهات"><i class="fa-solid fa-bell"></i></button>
+        <button class="control-btn" id="globalSettingsBtn" title="الإعدادات"><i class="fa-solid fa-gear"></i></button>
+      </div>
+    </header>
+
+    <nav class="main-navigation">
+      <button class="nav-btn active" data-section="games"><i class="fa-solid fa-gamepad"></i> <span>ساحة الألعاب</span></button>
+      <button class="nav-btn" data-section="store"><i class="fa-solid fa-store"></i> <span>المتجر</span></button>
+      <button class="nav-btn" data-section="friends"><i class="fa-solid fa-user-group"></i> <span>الأصدقاء</span></button>
+    </nav>
+
+    <main class="main-content">
+      <section id="games-section" class="content-section active">
+        <div class="welcome-panel" style="text-align: right; background: transparent; padding: 0;">
+          <h1 style="color: #fff; font-size: 28px; border-right: 4px solid #facc15; padding-right: 15px;">اختر ساحة المعركة</h1>
+          <p style="color: #aaa; margin-top: 5px;">تحدى لاعبين آخرين وارفع مستواك في مختلف الألعاب</p>
+        </div>
+
+        <div class="games-grid">
+          
+          <div class="game-card" data-game="huroof">
+            <div class="game-icon">🔠</div>
+            <h3 class="game-title">حروف</h3>
+            <p class="game-desc">لعبة السيطرة الاستراتيجية على لوحة الحروف السداسية.</p>
+            <button type="button" class="play-btn"><i class="fa-solid fa-play"></i> الذهاب الى اللوبي</button>
+          </div>
+
+          <div class="game-card" data-game="bank">
+            <div class="game-icon">🏦</div>
+            <h3 class="game-title">بنك</h3>
+            <p class="game-desc">سلسلة إجابات متتالية تبني رصيدك، قل "بنك" لحفظ النقاط قبل أن تخطئ وتخسر كل شيء.</p>
+            <button type="button" class="play-btn"><i class="fa-solid fa-play"></i> الذهاب الى اللوبي</button>
+          </div>
+
+          <div class="game-card" data-game="career">
+            <div class="game-icon">⚽</div>
+            <h3 class="game-title">مسيرة لاعب</h3>
+            <p class="game-desc">خمن اسم اللاعب من خلال الأندية التي لعب لها بالترتيب.</p>
+            <button type="button" class="play-btn"><i class="fa-solid fa-play"></i> الذهاب الى اللوبي</button>
+          </div>
+
+          <div class="game-card" data-game="whoami">
+            <div class="game-icon">🕵️‍♂️</div>
+            <h3 class="game-title">من أنا؟</h3>
+            <p class="game-desc">تلميحات تدريجية لمعرفة الشخصية المطلوبة، خمن أسرع لتحصل على نقاط أعلى.</p>
+            <button type="button" class="play-btn"><i class="fa-solid fa-play"></i> الذهاب الى اللوبي</button>
+          </div>
+
+          <div class="game-card" data-game="whatdo">
+            <div class="game-icon">🧠</div>
+            <h3 class="game-title">ماذا تعرف؟</h3>
+            <p class="game-desc">مبارزة معلوماتية سريعة، اذكر إجابات صحيحة بدون تكرار، 3 أخطاء وتخسر.</p>
+            <button type="button" class="play-btn"><i class="fa-solid fa-play"></i> الذهاب الى اللوبي</button>
+          </div>
+
+        </div>
+      </section>
+      
+      <section id="store-section" class="content-section">
+          <div style="text-align: center; margin-top: 100px; color: #aaa;">
+              <i class="fa-solid fa-cart-shopping" style="font-size: 60px; margin-bottom: 20px; color: #555;"></i>
+              <h2>المتجر سيفتح أبوابه قريباً!</h2>
+          </div>
+      </section>
+      <section id="friends-section" class="content-section">
+          <div style="text-align: center; margin-top: 100px; color: #aaa;">
+              <i class="fa-solid fa-users" style="font-size: 60px; margin-bottom: 20px; color: #555;"></i>
+              <h2>نظام الأصدقاء قيد التطوير</h2>
+          </div>
+      </section>
+    </main>
+
+    <aside class="sidebar">
+      <div class="chat-panel">
+        <h4><i class="fa-solid fa-earth-americas"></i> الدردشة العالمية</h4>
+        <div class="chat-messages" id="globalChatMessages"></div>
+        <div class="chat-input">
+          <input type="text" placeholder="تحدث مع الجميع..." id="globalChatInput" maxlength="100">
+          <button id="sendGlobalChatBtn"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+      </div>
+      <div class="online-players">
+        <h4><i class="fa-solid fa-signal" style="color:#00ff88"></i> المتصلون حالياً (<span id="globalOnlineCount">0</span>)</h4>
+        <div class="players-list" id="globalPlayersList">
+            <p style="text-align:center; color:#777; font-size: 12px; margin-top:20px;">جاري جلب اللاعبين...</p>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div id="settingsModal" class="modal">
+    <div class="modal-content" style="max-width: 700px; width: 90%;">
+      <span class="close-modal" id="closeSettingsModal">&times;</span>
+      <h2 style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-top: 0;">إعدادات الحساب</h2>
+      
+      <div class="settings-layout">
+          <div class="settings-sidebar">
+              <button class="setting-tab active" data-tab="profileTab"><i class="fa-solid fa-user-pen"></i> الملف الشخصي</button>
+              <button class="setting-tab" data-tab="securityTab"><i class="fa-solid fa-shield-halved"></i> الأمان والمرور</button>
+              <button class="setting-tab" data-tab="audioTab"><i class="fa-solid fa-volume-high"></i> الصوت والإشعارات</button>
+              <button class="setting-tab" data-tab="supportTab"><i class="fa-solid fa-headset"></i> المساعدة والدعم</button>
+              <button class="setting-tab logout-tab" id="logoutSettingsBtn"><i class="fa-solid fa-power-off"></i> تسجيل الخروج</button>
+          </div>
+
+          <div class="settings-content-area">
+              
+              <div id="profileTab" class="setting-panel active">
+                  <h3>تعديل الهوية</h3>
+                  <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px;">
+                      <img src="" id="settingsAvatarPreview" style="width: 80px; height: 80px; border-radius: 50%; background: #18181b; border: 2px solid #facc15; transition: 0.3s; object-fit: cover;">
+                      <button class="play-btn" id="changeAvatarBtn" style="width: auto; font-size: 13px;">تغيير الصورة</button>
+                  </div>
+                  <div class="input-group" style="margin-bottom: 15px; margin-top: 15px;">
+                      <label style="color:#aaa; font-size: 13px;">اسم اللاعب</label>
+                      <input type="text" id="editPlayerName" class="fancy-code-input" style="font-size: 18px; letter-spacing: 2px; text-transform: none; text-align: right;" value="">
+                  </div>
+                  <button class="play-btn" id="saveProfileBtn" style="background: #00d2ff; color:#000;">حفظ التغييرات</button>
+              </div>
+
+              <div id="securityTab" class="setting-panel">
+                  
+                  <div id="securityMainView" class="view-fade-in">
+                      <h3>الأمان وكلمة المرور</h3>
+                      
+                      <div id="googleAuthBadge" style="display: none; background: rgba(0, 255, 136, 0.1); border: 1px solid rgba(0, 255, 136, 0.3); padding: 15px; border-radius: 8px; text-align: center; margin-top: 20px;">
+                          <i class="fa-brands fa-google" style="font-size: 30px; color: #00ff88; margin-bottom: 10px;"></i>
+                          <h4 style="color: #fff; margin: 0;">حسابك مرتبط بجوجل</h4>
+                          <p style="color: #aaa; font-size: 13px; margin-top: 5px;">تم التسجيل عبر جوجل. لا تحتاج لإدارة كلمات المرور هنا.</p>
+                      </div>
+
+                      <div id="localAuthFields" style="display: none;">
+                          <div class="security-flow" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-top: 20px;">
+                              <h4 style="margin-top:0; margin-bottom: 10px; color:#facc15;"><i class="fa-solid fa-envelope"></i> البريد الإلكتروني</h4>
+                              <p style="color:#aaa; font-size:14px; margin-bottom: 15px;" id="currentEmailDisplay">user@example.com</p>
+                              <button type="button" class="play-btn" id="btnOpenEmailChange" style="background:rgba(255,255,255,0.1); color:#fff; width:auto; font-size:13px; margin:0;">إدارة البريد الإلكتروني</button>
+                          </div>
+
+                          <div class="security-flow" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-top: 20px;">
+                              <h4 style="margin-top:0; margin-bottom: 10px; color:#facc15;"><i class="fa-solid fa-lock"></i> كلمة المرور</h4>
+                              <p style="color:#aaa; font-size:13px; margin-bottom: 15px;">يُنصح بتغيير كلمة المرور بشكل دوري لحماية حسابك.</p>
+                              <button type="button" class="play-btn" id="btnOpenPassChange" style="background:rgba(255,255,255,0.1); color:#fff; width:auto; font-size:13px; margin:0;">إدارة كلمة المرور</button>
+                          </div>
+                      </div>
+                  </div>
+
+                  <div id="emailChangeView" style="display: none;" class="view-fade-in">
+                      <button type="button" class="back-settings-btn" id="backFromEmailBtn"><i class="fa-solid fa-arrow-right"></i> رجوع للأمان</button>
+                      <h3 style="color: #00d2ff; border-bottom: none; padding-bottom: 0;">تغيير البريد الإلكتروني</h3>
+                      <p style="color: #aaa; font-size: 13px; margin-bottom: 20px;">سنقوم بإرسال رمز تحقق إلى بريدك الحالي للتأكد من هويتك.</p>
+                      
+                      <button type="button" class="play-btn" id="reqEmailOtpBtn" style="background:rgba(255,255,255,0.1); color:#fff; width: 100%; box-sizing: border-box;">إرسال رمز التحقق</button>
+                      
+                      <div id="emailOtpFlow" style="display: none; margin-top: 20px; background: rgba(0,0,0,0.3); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); width: 100%; max-width: 100%; box-sizing: border-box; overflow: hidden;">
+                          
+                          <label style="color:#aaa; font-size:12px; margin-bottom:8px; display:block;">رمز التحقق (المرسل لإيميلك القديم):</label>
+                          <input type="text" id="emailOtpInput" placeholder="الرمز (6 أرقام)" style="width:100%; max-width: 100%; min-width: 0; padding:12px; margin-bottom:15px; border-radius:8px; background:rgba(0,0,0,0.5); color:#fff; border:1px solid #555; box-sizing: border-box; text-align: center; letter-spacing: 2px; font-size: 16px; outline:none;">
+                          
+                          <label style="color:#aaa; font-size:12px; margin-bottom:8px; display:block;">البريد الجديد:</label>
+                          <input type="email" id="newEmailInput" placeholder="الإيميل الجديد" style="width:100%; max-width: 100%; min-width: 0; padding:12px; margin-bottom:20px; border-radius:8px; background:rgba(0,0,0,0.5); color:#fff; border:1px solid #555; box-sizing: border-box; outline:none;">
+                          
+                          <div style="display: flex; gap: 10px; width: 100%; box-sizing: border-box;">
+                              <button type="button" class="play-btn" id="confirmEmailChangeBtn" style="background:#00ff88; color:#000; margin: 0; flex: 1 1 0%; box-sizing: border-box; font-size: 14px; padding: 12px 0;">تأكيد</button>
+                              <button type="button" class="play-btn" id="cancelEmailFlowBtn" style="background:rgba(255,255,255,0.1); color:#fff; margin: 0; flex: 1 1 0%; box-sizing: border-box; font-size: 14px; padding: 12px 0;">إلغاء</button>
+                          </div>
+                      </div>
+                  </div>
+
+                  <div id="passChangeView" style="display: none;" class="view-fade-in">
+                      <button type="button" class="back-settings-btn" id="backFromPassBtn"><i class="fa-solid fa-arrow-right"></i> رجوع للأمان</button>
+                      <h3 style="color: #f43f5e; border-bottom: none; padding-bottom: 0;">تغيير كلمة المرور</h3>
+                      <p style="color: #aaa; font-size: 13px; margin-bottom: 20px;">سيتم إرسال رمز أمان إلى بريدك الإلكتروني الحالي.</p>
+                      
+                      <button type="button" class="play-btn" id="reqPassOtpBtn" style="background:rgba(255,255,255,0.1); color:#fff; width: 100%; box-sizing: border-box;">إرسال رمز التحقق</button>
+                      
+                      <div id="passOtpFlow" style="display: none; margin-top: 20px; background: rgba(0,0,0,0.3); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); width: 100%; max-width: 100%; box-sizing: border-box; overflow: hidden;">
+                          
+                          <label style="color:#aaa; font-size:12px; margin-bottom:8px; display:block;">رمز التحقق:</label>
+                          <input type="text" id="passOtpInput" placeholder="الرمز (6 أرقام)" style="width:100%; max-width: 100%; min-width: 0; padding:12px; margin-bottom:15px; border-radius:8px; background:rgba(0,0,0,0.5); color:#fff; border:1px solid #555; box-sizing: border-box; text-align: center; letter-spacing: 2px; font-size: 16px; outline:none;">
+                          
+                          <label style="color:#aaa; font-size:12px; margin-bottom:8px; display:block;">كلمة المرور الجديدة:</label>
+                          <input type="password" id="newPassInput" placeholder="كلمة المرور الجديدة" style="width:100%; max-width: 100%; min-width: 0; padding:12px; margin-bottom:20px; border-radius:8px; background:rgba(0,0,0,0.5); color:#fff; border:1px solid #555; box-sizing: border-box; outline:none;">
+                          
+                          <div style="display: flex; gap: 10px; width: 100%; box-sizing: border-box;">
+                              <button type="button" class="play-btn" id="confirmPassChangeBtn" style="background:#f43f5e; color:#fff; margin: 0; flex: 1 1 0%; box-sizing: border-box; font-size: 14px; padding: 12px 0;">تحديث</button>
+                              <button type="button" class="play-btn" id="cancelPassFlowBtn" style="background:rgba(255,255,255,0.1); color:#fff; margin: 0; flex: 1 1 0%; box-sizing: border-box; font-size: 14px; padding: 12px 0;">إلغاء</button>
+                          </div>
+                      </div>
+                  </div>
+
+              </div>
+
+              <div id="audioTab" class="setting-panel">
+                  <h3>إعدادات اللعب</h3>
+                  
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                      <span style="display: flex; align-items: center; gap: 10px;">
+                          <i id="musicIcon" class="fa-solid fa-volume-high" style="color: #facc15; width: 20px;"></i> الموسيقى الخلفية
+                      </span>
+                      <div style="display: flex; align-items: center; gap: 15px; width: 50%;">
+                          <input type="range" id="musicSlider" min="0" max="100" value="100" class="volume-slider">
+                          <span id="musicValue" style="color: #aaa; width: 35px; text-align: left; font-size: 13px;">100%</span>
+                      </div>
+                  </div>
+
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                      <span style="display: flex; align-items: center; gap: 10px;">
+                          <i id="sfxIcon" class="fa-solid fa-volume-high" style="color: #00d2ff; width: 20px;"></i> مؤثرات اللعب
+                      </span>
+                      <div style="display: flex; align-items: center; gap: 15px; width: 50%;">
+                          <input type="range" id="sfxSlider" min="0" max="100" value="100" class="volume-slider">
+                          <span id="sfxValue" style="color: #aaa; width: 35px; text-align: left; font-size: 13px;">100%</span>
+                      </div>
+                  </div>
+              </div>
+
+              <div id="supportTab" class="setting-panel">
+                  <h3>تواصل معنا</h3>
+                  <p style="color: #aaa; font-size: 14px; line-height: 1.6;">نحن هنا لمساعدتك دائماً!</p>
+                  <a href="mailto:playrush.online@gmail.com" style="display: block; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; text-decoration: none; color: #00d2ff; text-align: center; margin-top: 15px; border: 1px solid rgba(0, 210, 255, 0.3);">
+                      <i class="fa-solid fa-envelope"></i> playrush.online@gmail.com
+                  </a>
+                  <div style="display: flex; gap: 15px; margin-top: 15px;">
+                      <button class="play-btn" style="background: #000; color: #fff; border: 1px solid #333;"><i class="fa-brands fa-x-twitter"></i> حسابنا في X</button>
+                      <button class="play-btn" style="background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color: #fff;"><i class="fa-brands fa-instagram"></i> انستغرام</button>
+                  </div>
+              </div>
+              
+              <div class="settings-danger-zone" style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #3f3f46; text-align: right;">
+                <h4 style="color: #f43f5e; margin-bottom: 10px; font-size: 1.05rem;">
+                    <i class="fa-solid fa-triangle-exclamation"></i> منطقة الخطر
+                </h4>
+                <p style="color: #a1a1aa; font-size: 0.85rem; margin-bottom: 15px;">
+                    بمجرد حذف حسابك، لن تتمكن من استعادته أو استعادة نقاطك أبداً.
+                </p>
+                <button type="button" onclick="deleteAccount()" style="background-color: transparent; color: #f43f5e; border: 1px solid #f43f5e; padding: 10px; border-radius: 8px; cursor: pointer; transition: all 0.3s; width: 100%; font-weight: bold;" onmouseover="this.style.backgroundColor='#f43f5e'; this.style.color='#fff'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#f43f5e'">
+                    حذف الحساب نهائياً
+                </button>
+              </div>
+          </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="avatarModal" class="modal" style="z-index: 10005; display: none;">
+      <div class="modal-content" style="max-width: 600px; width: 90%; text-align: center; background: linear-gradient(145deg, #18181b, #09090b); border: 1px solid rgba(255,255,255,0.1);">
+          <span class="close-modal" id="closeAvatarModal">&times;</span>
+          <h2 style="color: #facc15; margin-top: 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px;">تغيير الصورة الرمزية</h2>
+          
+          <div class="upload-section" style="margin: 20px 0; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px dashed rgba(255,255,255,0.2);">
+              <input type="file" id="customAvatarInput" accept="image/png, image/jpeg, image/jpg" style="display: none;">
+              <button class="play-btn" id="triggerAvatarUpload" style="background: #00d2ff; color: #000; width: auto; padding: 10px 20px; font-size: 14px;"><i class="fa-solid fa-cloud-arrow-up"></i> رفع صورة من جهازي</button>
+              <p style="color: #888; font-size: 12px; margin-top: 10px;">الحد الأقصى 2 ميجابايت (PNG, JPG)</p>
+          </div>
+
+          <p style="color: #aaa; font-size: 14px; margin-bottom: 15px;">أو اختر من الصور الجاهزة:</p>
+          <div class="avatars-wrapper" id="modalAvatarsWrapper" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 15px; max-height: 250px; overflow-y: auto; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+              </div>
+          
+          <button class="play-btn" id="confirmAvatarSelection" style="margin-top: 20px; background: #00ff88; color: #000; display: none;">تأكيد اختيار الصورة</button>
+      </div>
+  </div>
+
+  <div id="notificationsModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 400px;">
+      <span class="close-modal" id="closeNotifications">&times;</span>
+      <h2 style="color: #fff; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 20px;">التنبيهات</h2>
+      <div id="notificationsList" style="color: #aaa; text-align: center; padding: 20px 0;">
+        لا توجد تنبيهات جديدة حالياً.
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js" defer></script>
+  <script src="js/utils.js" defer></script>
+  <script src="js/settings.js" defer></script>
+  <script src="js/socket.io.min.js" defer></script>
+  <script src="js/purify.min.js" defer></script>
+  
+  <script src="js/categories.js" defer></script> 
+  <script src="js/anti_cheat.js" defer></script>
+</body>
+</html>

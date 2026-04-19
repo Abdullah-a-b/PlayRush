@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>تسجيل الدخول - PlayRush</title>
+  <link rel="stylesheet" href="css/login.css" />
+  <link rel="stylesheet" href="css/all.min.css">
+</head>
+<body>
+  <div class="stars" id="stars"></div>
+
+  <div class="login-container">
+    <h2>تسجيل الدخول</h2>
+    <form id="loginForm">
+      <div class="input-group">
+        <i class="icon fa fa-envelope"></i>
+        <input type="email" id="email" name="email" required />
+        <label for="email">البريد الإلكتروني</label>
+      </div>
+
+      <div class="input-group">
+        <i class="icon fa fa-lock"></i>
+        <input type="password" id="password" name="password" required />
+        <label for="password">كلمة المرور</label>
+        <i class="fa fa-eye toggle-password" id="togglePassword"></i>
+      </div>
+
+      <button type="submit">دخول</button>
+    </form>
+    
+    <div class="links-group">
+      <p>ليس لديك حساب؟ <a href="register.html">إنشاء حساب</a></p>
+      <p style="margin-top: 10px;"><a href="forgot-password.html">نسيت كلمة المرور؟</a></p>
+    </div>
+
+    <hr>
+    <a href="#" id="google-login-btn" style="text-decoration: none;">
+      <button class="google-btn">
+        <i class="fab fa-google" style="margin-left: 8px;"></i> الدخول بواسطة Google
+      </button>
+    </a>
+
+    <div class="message" id="loginMessage" style="text-align: center; margin-top: 15px;"></div>
+  </div>
+
+  <script src="js/config.js" defer></script>
+  <script src="js/utils.js" defer></script>
+  <script src="js/login.js" defer></script>
+  <script src="js/anti_cheat.js" defer></script>
+</body>
+</html>
