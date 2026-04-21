@@ -8,6 +8,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 import socketio
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from app.core.limiter import limiter
 
 logging.basicConfig(
     level=logging.INFO,
@@ -46,6 +50,13 @@ app = FastAPI(
     docs_url="/docs" if os.environ.get("ENV") != "production" else None,
     redoc_url=None,
 )
+
+# ==========================================
+# ✅ تفعيل Rate Limiting (SlowAPI)
+# ==========================================
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 # ==========================================
 # ✅ CORS محكم — يقرأ من .env

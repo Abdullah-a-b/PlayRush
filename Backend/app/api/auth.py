@@ -13,6 +13,7 @@ from jose import jwt, JWTError
 from app.core.security import get_db, get_current_user, get_password_hash, verify_password, create_access_token, SECRET_KEY, ALGORITHM
 from app.services.email_service import send_real_email, send_password_changed_email, send_email_changed, send_welcome_email
 from app.core.database import User
+from app.core.limiter import limiter
 
 router = APIRouter()
 
@@ -32,19 +33,6 @@ MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024  # 2 MB
 
 UPLOAD_DIR = "uploads/avatars"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-# ==========================================
-# Rate Limiting — في الذاكرة
-# للإنتاج: استبدل بـ Redis
-# ==========================================
-otp_cooldowns: dict[str, float] = {}
-COOLDOWN_SECONDS = 60
-
-# rate limiting للـ login: ip -> [timestamps]
-login_attempts: dict[str, list[float]] = {}
-LOGIN_MAX_ATTEMPTS = 10    # أقصى عدد محاولات
-LOGIN_WINDOW_SECONDS = 300  # خلال 5 دقائق
-LOGIN_BLOCK_SECONDS = 900   # حظر 15 دقيقة بعد التجاوز
 
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
@@ -124,63 +112,18 @@ def get_client_ip(request: Request) -> str:
         return forwarded.split(",")[0].strip()
     return request.client.host if request.client else "unknown"
 
-
-def check_login_rate_limit(ip: str):
-    """
-    ✅ Rate limiting للـ login بناءً على IP
-    10 محاولات خلال 5 دقائق → حظر 15 دقيقة
-    """
-    now = time.time()
-
-    if ip not in login_attempts:
-        login_attempts[ip] = []
-
-    # احذف المحاولات القديمة خارج الـ window
-    login_attempts[ip] = [t for t in login_attempts[ip] if now - t < LOGIN_WINDOW_SECONDS]
-
-    attempts = login_attempts[ip]
-
-    # إذا تجاوز الحد → تحقق من الحظر
-    if len(attempts) >= LOGIN_MAX_ATTEMPTS:
-        oldest = attempts[0]
-        block_remaining = int(LOGIN_BLOCK_SECONDS - (now - oldest))
-        if block_remaining > 0:
-            minutes = block_remaining // 60
-            seconds = block_remaining % 60
-            raise HTTPException(
-                status_code=429,
-                detail=f"تم تجاوز الحد المسموح من المحاولات. حاول مجدداً بعد {minutes}:{seconds:02d} دقيقة."
-            )
-        # انتهى وقت الحظر، أعد الضبط
-        login_attempts[ip] = []
-
-    # سجّل هذه المحاولة
-    login_attempts[ip].append(now)
-
-
-def record_failed_login(ip: str):
-    """لا نفعل شيئاً إضافياً — المحاولة سُجّلت في check_login_rate_limit"""
-    pass
-
-
 # ==========================================
 # Routes
 # ==========================================
 
 @router.post("/register")
 async def register(
+    request: Request,
     background_tasks: BackgroundTasks,
     email: str = Form(...),
     password: str = Form(...),
     db: Session = Depends(get_db)
 ):
-    current_time = time.time()
-    if email in otp_cooldowns:
-        time_passed = current_time - otp_cooldowns[email]
-        if time_passed < COOLDOWN_SECONDS:
-            remaining = int(COOLDOWN_SECONDS - time_passed)
-            raise HTTPException(status_code=429, detail=f"الرجاء الانتظار {remaining} ثانية قبل طلب رمز جديد.")
-
     db_user = db.query(User).filter(User.email == email).first()
     if db_user:
         raise HTTPException(status_code=400, detail="البريد الإلكتروني مسجل مسبقاً!")
@@ -202,7 +145,6 @@ async def register(
     db.commit()
 
     background_tasks.add_task(send_real_email, email, verification_code)
-    otp_cooldowns[email] = current_time
 
     return {"message": "تم التسجيل بنجاح، يرجى التحقق من بريدك الإلكتروني"}
 
@@ -233,23 +175,16 @@ async def verify_code(
 
 
 @router.post("/login")
+@limiter.limit("10/minute")
 async def login(
     request: Request,
     background_tasks: BackgroundTasks,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
-    ip = get_client_ip(request)
-
-    # ✅ Rate limiting قبل أي عملية
-    check_login_rate_limit(ip)
-
     user = db.query(User).filter(User.email == form_data.username).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=400, detail="البريد الإلكتروني أو كلمة المرور غير صحيحة")
-
-    # نجح الدخول — أعد ضبط المحاولات
-    login_attempts.pop(ip, None)
 
     if not user.is_verified:
         new_code = generate_otp()  # ✅ secrets
@@ -275,7 +210,9 @@ async def login(
 
 
 @router.post("/forgot-password")
+@limiter.limit("3/minute")
 async def forgot_password(
+    request: Request,
     background_tasks: BackgroundTasks,
     email: str = Form(...),
     db: Session = Depends(get_db)
@@ -526,17 +463,11 @@ async def cancel_registration(current_user: User = Depends(get_current_user), db
 
 @router.post("/resend-otp")
 async def resend_otp(
+    request: Request,
     background_tasks: BackgroundTasks,
     email: str = Form(...),
     db: Session = Depends(get_db)
 ):
-    current_time = time.time()
-    if email in otp_cooldowns:
-        time_passed = current_time - otp_cooldowns[email]
-        if time_passed < COOLDOWN_SECONDS:
-            remaining = int(COOLDOWN_SECONDS - time_passed)
-            raise HTTPException(status_code=429, detail=f"الرجاء الانتظار {remaining} ثانية قبل طلب رمز جديد.")
-
     user = db.query(User).filter(User.email == email).first()
     if not user:
         raise HTTPException(status_code=404, detail="البريد الإلكتروني غير مسجل لدينا")
@@ -549,6 +480,5 @@ async def resend_otp(
     db.commit()
 
     background_tasks.add_task(send_real_email, email, new_code, "رمز تفعيل جديد - PlayRush")
-    otp_cooldowns[email] = current_time
 
     return {"message": "تم إرسال رمز جديد بنجاح"}
