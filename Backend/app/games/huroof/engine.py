@@ -1,4 +1,5 @@
 import random
+import time
 
 ARABIC_LETTERS = list('أبتثجحخدذرزسشصضطظعغفقكلمنهوي')
 
@@ -34,6 +35,9 @@ class HuroofGameState:
         self.reset_board()
         self.state_version = 0
 
+        self.question_start_time = 0.0  # وقت بدء السؤال
+        self.last_action_time = 0.0     # وقت آخر حركة للاعب
+
     def reset_board(self):
         letters = random.sample(ARABIC_LETTERS, 25)
         self.board = [{'index': i, 'letter': letters[i], 'color': None} for i in range(25)]
@@ -44,6 +48,7 @@ class HuroofGameState:
         self.buzzed_player = None
         self.failed_attempts = [] 
         self.skip_votes = set()   
+        self.answer_start_time = 0.0
 
     def reset_round_state(self, starting_turn=None):
         letters = random.sample(ARABIC_LETTERS, 25)

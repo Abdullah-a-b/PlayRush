@@ -2,6 +2,7 @@ import asyncio
 import html
 import random
 import json
+import time
 
 # ==========================================
 # 🔄 الاستيرادات من الهيكلة الجديدة (تأكد من مطابقتها لمساراتك)
@@ -15,6 +16,8 @@ from app.services.telegram_bot import send_secret_to_mobile
 from app.sockets.state import connected_players, disconnect_timers
 # 💡 دالة العودة للوبي يجب أن تكون في ملف اللوبي
 from app.sockets.lobby import return_players_to_lobby
+
+from app.games.huroof.engine import HuroofGameState
 
 # ==========================================
 # 🛠️ الفلاتر والدوال المساعدة للعبة حروف
@@ -61,6 +64,14 @@ def check_answer_fast_track(player_ans, correct_ans, accepted_list, required_let
     # 4. إذا مرت من كل هذا، نحيلها للمحكمة العليا (الذكاء الاصطناعي)
     return False, "إجابة خاطئة"
 
+
+# --- دالة التحقق من التوقيت (Anti-Cheat) ---
+def is_bot_or_speedhack(start_time: float, min_human_reaction: float = 0.3) -> bool:
+    """تتحقق مما إذا كانت سرعة الاستجابة أسرع من البشر (أقل من 300 مللي ثانية)"""
+    if start_time == 0:
+         return False # حماية في حالة عدم التسجيل
+    elapsed = time.time() - start_time
+    return elapsed < min_human_reaction
 
 # ==========================================
 # 🎮 تسجيل أحداث السوكيت للعبة حروف
@@ -359,6 +370,7 @@ def register_huroof_events(sio):
             return
         
         gs.buzzed_player = sid
+        gs.answer_start_time = time.time()
         if not hasattr(gs, 'attempts'): gs.attempts = 1
 
         if gs.attempts == 1:
@@ -383,13 +395,39 @@ def register_huroof_events(sio):
         room = get_room_state(room_code)
         if not room: return
         gs = room['game_state']
+
+        # 🛡️ 1. حماية تدفق اللعبة (State Validation)
+        # نمنع الإجابة إذا لم تكن اللعبة في مرحلة الإجابة، أو إذا كان اللاعب ليس هو من ضغط الجرس
+        if gs.stage not in ['answer_r1', 'answer_r2', 'answer_r3', 'answer_r4']: 
+            return 
+        if sid != gs.buzzed_player: 
+            return 
+
+        # 🛡️ 2. حماية التوقيت (Speed Hack / Bot Prevention)
+        # هل كتب وأرسل الكلمة في أقل من 0.4 ثانية من ضغطة الجرس؟ (مستحيل بشرياً)
+        if is_bot_or_speedhack(gs.answer_start_time, min_human_reaction=0.4):
+            print(f"⚠️ [Anti-Cheat] سرعة غير طبيعية من اللاعب {sid}")
+            await sio.emit("cheat_warning", {"message": "سرعة إجابة غير طبيعية! يرجى اللعب بشكل عادل."}, to=sid)
+            return 
+
+        # 🛡️ 3. حماية الإجابة (Payload Validation)
+        if not player_ans:
+            return # تجاهل الإجابة الفارغة
         
-        if gs.stage not in ['answer_r1', 'answer_r2', 'answer_r3', 'answer_r4']: return
-        if sid != gs.buzzed_player: return 
+        req_letter = gs.current_question['letter']
         
+        # نستخدم دالة التنظيف الموجودة عندك لضمان عدم تلاعب الهاكر بالمسافات أو الهمزات
+        p_clean = clean_text_for_match(player_ans)
+        req_clean = clean_text_for_match(req_letter)
+        
+        if not p_clean.startswith(req_clean):
+            # محاولة غش بتخطي الحرف الإجباري
+            print(f"⚠️ [Anti-Cheat] محاولة تجاوز حرف {req_clean} من اللاعب {sid}")
+            return
+        
+        # ✅ إذا اجتاز الهاكر كل هذه الفلاتر، نحيل الإجابة للتحكيم الطبيعي
         correct_ans = gs.current_question['answer']
         accepted_list = gs.current_question['accepted_answers']
-        req_letter = gs.current_question['letter']
         
         is_correct, reason = check_answer_fast_track(player_ans, correct_ans, accepted_list, req_letter)
         
