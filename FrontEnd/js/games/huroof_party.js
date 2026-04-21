@@ -253,7 +253,24 @@ function showRoundWinModal(color) {
     let countdown  = 3;
 
     const updateText = () => {
-        if (text) text.innerHTML = `فاز الفريق ${teamName} بهذه الجولة!<br><br><span style="color:#00d2ff;font-size:18px;">تبدأ الجولة التالية خلال <b style="font-size:24px;color:#fff;">${countdown}</b>...</span>`;
+        if (!text) return;
+        text.innerHTML = '';
+        // teamName مصدره منطق داخلي فقط (ثابت)، لكن نبني بـ DOM API لأفضل ممارسة
+        const winLine = document.createTextNode(`فاز الفريق ${sanitizeText(teamName)} بهذه الجولة!`);
+        const br1 = document.createElement('br');
+        const br2 = document.createElement('br');
+        const subSpan = document.createElement('span');
+        subSpan.style.cssText = 'color:#00d2ff;font-size:18px;';
+        subSpan.textContent   = 'تبدأ الجولة التالية خلال ';
+        const boldCount = document.createElement('b');
+        boldCount.style.cssText  = 'font-size:24px;color:#fff;';
+        boldCount.textContent    = countdown;
+        subSpan.appendChild(boldCount);
+        subSpan.appendChild(document.createTextNode('...'));
+        text.appendChild(winLine);
+        text.appendChild(br1);
+        text.appendChild(br2);
+        text.appendChild(subSpan);
     };
     updateText();
 
@@ -338,7 +355,11 @@ socket.on('host_linked_success', () => {
     if (hostModal) hostModal.style.display = 'none';
 
     const toast = document.createElement('div');
-    toast.innerHTML  = '<i class="fa-solid fa-check-circle"></i> تم ربط المدير الجديد بنجاح!';
+    toast.innerHTML  = '';
+    const toastIcon = document.createElement('i');
+    toastIcon.className = 'fa-solid fa-check-circle';
+    toast.appendChild(toastIcon);
+    toast.appendChild(document.createTextNode(' تم ربط المدير الجديد بنجاح!'));
     toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#4CAF50;color:white;padding:15px 30px;border-radius:8px;font-weight:bold;z-index:9999;box-shadow:0 4px 15px rgba(0,0,0,0.5);display:flex;gap:10px;align-items:center;font-size:16px;';
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);

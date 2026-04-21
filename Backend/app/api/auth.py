@@ -14,6 +14,7 @@ from app.core.security import get_db, get_current_user, get_password_hash, verif
 from app.services.email_service import send_real_email, send_password_changed_email, send_email_changed, send_welcome_email
 from app.core.database import User
 from app.core.limiter import limiter
+from app.core.security import sanitize_text
 
 router = APIRouter()
 
@@ -333,7 +334,13 @@ async def setup_profile(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    existing_user = db.query(User).filter(User.player_name == player_name).first()
+    safe_player_name = sanitize_text(player_name, max_length=20)
+    safe_country = sanitize_text(country, max_length=50)
+
+    if not safe_player_name:
+         raise HTTPException(status_code=400, detail="اسم اللاعب غير صالح")
+
+    existing_user = db.query(User).filter(User.player_name == safe_player_name).first()
     if existing_user and existing_user.email != current_user.email:
         raise HTTPException(status_code=400, detail="الاسم مستخدم مسبقاً")
 
@@ -363,8 +370,8 @@ async def setup_profile(
         cleanup(old_avatar)
         new_path = avatar_url.replace("../", "")
 
-    current_user.player_name = player_name
-    current_user.country = country
+    current_user.player_name = safe_player_name 
+    current_user.country = safe_country
     current_user.avatar = new_path
     db.commit()
     return {"message": "Success", "new_avatar": new_path}

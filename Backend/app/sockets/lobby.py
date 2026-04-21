@@ -9,7 +9,7 @@ async def return_players_to_lobby(sio, room):
         p_sid = player.get('sid')
         if not p_sid: continue
         p_name = player.get('name', 'لاعب')
-        # 👈 تنظيف أفاتار الخصم قبل إرجاعه للوبي لحل المشكلة الثالثة
+        # 👈 تنظيف أفاتار الخصم قبل إرجاعه للوبي
         p_avatar = get_clean_avatar(player.get('avatar', ''), p_name)
         
         connected_players[p_sid] = {'name': p_name, 'avatar': p_avatar, 'location': game_mode}
@@ -20,7 +20,9 @@ async def return_players_to_lobby(sio, room):
         await sio.emit('update_game_lobby_players', players_list, to=p_sid)
     await sio.emit('update_online_players', list(connected_players.values()))
 
+
 def register_lobby_events(sio):
+    
     @sio.on('join_global_lobby')
     async def join_global_lobby(sid, data):
         player_name = data.get('name', 'لاعب')
@@ -47,21 +49,53 @@ def register_lobby_events(sio):
         for p_sid in list(game_lobby_players[game_mode].keys()):
             await sio.emit('update_game_lobby_players', players_list, to=p_sid)
 
-    # 👈 إضافة الحدث المفقود: الآن عند تغيير الأفاتار سيتحدث فوراً للجميع بدون تحديث الصفحة
-    # في ملف app/sockets/lobby.py
-
     @sio.on('update_player_info')
     async def update_player_info(sid, data):
         if sid in connected_players:
-            # 1. جلب البيانات القديمة (التي تحتوي على الـ location والـ token)
             player_data = connected_players[sid]
-            
-            # 2. تحديث الاسم والأفاتار فقط
             player_data['name'] = data.get('name', player_data['name'])
             player_data['avatar'] = get_clean_avatar(data.get('avatar', ''), player_data['name'])
-            
-            # 3. حفظ الكائن كاملاً لضمان عدم فقدان الـ location
             connected_players[sid] = player_data
-            
-            # 4. بث القائمة المحدثة للجميع
             await sio.emit('update_online_players', list(connected_players.values()))
+
+    # ==========================================
+    # 💬 أحداث الدردشة (تم استرجاعها وتأمينها)
+    # ==========================================
+
+    @sio.on('send_chat_message')
+    async def send_chat_message(sid, data):
+        raw_text = str(data.get('text', ''))
+        
+        # 🛡️ الجدار الناري: منع أكواد XSS وقص النصوص الطويلة جداً (أقصى حد 200 حرف للرسالة)
+        clean_text = html.escape(raw_text.strip())[:200] 
+        
+        # إذا كانت الرسالة فارغة بعد التنظيف نتجاهلها
+        if not clean_text: return
+        
+        msg = {'sender': data.get('sender'), 'text': clean_text, 'isSystem': False}
+        global_chat_history.append(msg)
+        
+        if len(global_chat_history) > 50: global_chat_history.pop(0)
+        await sio.emit('new_chat_message', msg)
+
+    @sio.on('send_game_chat_message')
+    async def send_game_chat_message(sid, data):
+        game_mode = data.get('gameMode')
+        raw_text = str(data.get('text', ''))
+        
+        # 🛡️ الجدار الناري
+        clean_text = html.escape(raw_text.strip())[:200] 
+        if not clean_text: return
+        
+        msg = {'sender': data.get('sender'), 'text': clean_text, 'isSystem': False}
+        
+        if game_mode not in game_chat_history:
+            game_chat_history[game_mode] = []
+            
+        game_chat_history[game_mode].append(msg)
+        if len(game_chat_history[game_mode]) > 50: 
+            game_chat_history[game_mode].pop(0)
+            
+        if game_mode in game_lobby_players:
+            for p_sid in list(game_lobby_players[game_mode].keys()):
+                await sio.emit('new_game_chat_message', msg, to=p_sid)

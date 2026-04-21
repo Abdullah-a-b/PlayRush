@@ -81,16 +81,36 @@ window.addEventListener('DOMContentLoaded', async () => {
             div.className = 'online-player-item';
             if (userDataCache && p.name === userDataCache.player_name) div.classList.add('is-me');
 
-            div.innerHTML = `
-                <img src="${getCorrectAvatarUrl(p.avatar)}" class="online-player-avatar" alt="Avatar">
-                <div class="online-player-info">
-                    <span class="online-player-name">${p.name}</span>
-                    <span class="online-player-status">
-                        <div class="status-dot" style="background-color:${statusColor};"></div>
-                        <span style="color:${statusColor};">${locationText}</span>
-                    </span>
-                </div>
-            `;
+            // نبني العنصر بـ DOM API لمنع XSS من بيانات اللاعبين
+            const img = document.createElement('img');
+            img.src       = getCorrectAvatarUrl(p.avatar);
+            img.className = 'online-player-avatar';
+            img.alt       = 'Avatar';
+
+            const info     = document.createElement('div');
+            info.className = 'online-player-info';
+
+            const nameSpan     = document.createElement('span');
+            nameSpan.className = 'online-player-name';
+            nameSpan.textContent = sanitizeText(p.name);
+
+            const statusSpan     = document.createElement('span');
+            statusSpan.className = 'online-player-status';
+
+            const dot = document.createElement('div');
+            dot.className            = 'status-dot';
+            dot.style.backgroundColor = sanitizeText(statusColor);
+
+            const locSpan = document.createElement('span');
+            locSpan.style.color  = sanitizeText(statusColor);
+            locSpan.textContent  = sanitizeText(locationText);
+
+            statusSpan.appendChild(dot);
+            statusSpan.appendChild(locSpan);
+            info.appendChild(nameSpan);
+            info.appendChild(statusSpan);
+            div.appendChild(img);
+            div.appendChild(info);
             list.appendChild(div);
         });
     });
@@ -102,14 +122,22 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     socket.on('new_game_chat_message', (msg) => {
-        const safeSender = sanitizeHTML(msg.sender);
-        const safeText   = sanitizeHTML(msg.text);
+        const safeSender = sanitizeText(msg.sender);
+        const safeText   = sanitizeText(msg.text);
 
         const chatMessages = document.getElementById('chatMessages');
         if (chatMessages) {
             const el = document.createElement('div');
             el.className = `chat-message ${msg.isSystem ? 'system' : ''}`;
-            el.innerHTML = `<span class="sender">${safeSender}:</span> <span class="text">${safeText}</span>`;
+            const senderSpan = document.createElement('span');
+            senderSpan.className = 'sender';
+            senderSpan.textContent = `${safeSender}:`;
+            const textSpan = document.createElement('span');
+            textSpan.className = 'text';
+            textSpan.textContent = safeText;
+            el.appendChild(senderSpan);
+            el.appendChild(document.createTextNode(' '));
+            el.appendChild(textSpan);
             chatMessages.appendChild(el);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
@@ -583,15 +611,22 @@ window.addEventListener('DOMContentLoaded', async () => {
         slots.innerHTML = '';
 
         safePlayers.forEach((p, i) => {
-            const color     = p.color || p.team || (i === 0 ? 'green' : 'orange');
+            const color      = sanitizeText(p.color || p.team || (i === 0 ? 'green' : 'orange'));
             const colorEmoji = color === 'green' ? '🟢' : '🟠';
-            const slot      = document.createElement('div');
-            slot.className  = 'player-slot';
-            slot.innerHTML  = `
-                <img src="${p.avatar || '../assets/avatars/avatar_1.svg'}"
-                     style="width:60px;height:60px;border-radius:50%;border:2px solid ${GAME_THEMES[selectedGameMode].color};margin-bottom:10px;object-fit:cover;">
-                <span style="color:#fff;font-size:14px;font-weight:bold;display:block;">${p.name} ${colorEmoji}</span>
-            `;
+            const themeColor = sanitizeText(GAME_THEMES[selectedGameMode]?.color || '#fff');
+            const slot       = document.createElement('div');
+            slot.className   = 'player-slot';
+
+            const img = document.createElement('img');
+            img.src   = p.avatar ? sanitizeText(p.avatar) : '../assets/avatars/avatar_1.svg';
+            img.style.cssText = `width:60px;height:60px;border-radius:50%;border:2px solid ${themeColor};margin-bottom:10px;object-fit:cover;`;
+
+            const nameSpan = document.createElement('span');
+            nameSpan.style.cssText = 'color:#fff;font-size:14px;font-weight:bold;display:block;';
+            nameSpan.textContent   = `${sanitizeText(p.name)} ${colorEmoji}`;
+
+            slot.appendChild(img);
+            slot.appendChild(nameSpan);
             slots.appendChild(slot);
         });
 
@@ -713,13 +748,27 @@ window.addEventListener('DOMContentLoaded', async () => {
     socket.on('host_linked_success', () => {
         if (codeInterval) clearInterval(codeInterval);
         if (partyModeModal) {
-            partyModeModal.innerHTML = `
-                <div style="background:#1a1a2e;padding:40px;border-radius:20px;color:white;width:90%;max-width:500px;box-shadow:0 0 30px rgba(0,255,136,0.5);border:2px solid #00ff88;">
-                    <h1 style="color:#00ff88;font-size:60px;margin:0;">✅</h1>
-                    <h2 style="color:white;margin-top:10px;">تم ربط المضيف بنجاح!</h2>
-                    <p style="color:#bbb;">تبدأ اللعبة الآن...</p>
-                </div>
-            `;
+            partyModeModal.innerHTML = '';
+            const box = document.createElement('div');
+            box.style.cssText = 'background:#1a1a2e;padding:40px;border-radius:20px;color:white;width:90%;max-width:500px;box-shadow:0 0 30px rgba(0,255,136,0.5);border:2px solid #00ff88;';
+
+            const icon = document.createElement('h1');
+            icon.style.cssText = 'color:#00ff88;font-size:60px;margin:0;';
+            icon.textContent   = '✅';
+
+            const title = document.createElement('h2');
+            title.style.cssText = 'color:white;margin-top:10px;';
+            title.textContent   = 'تم ربط المضيف بنجاح!';
+
+            const sub = document.createElement('p');
+            sub.style.color  = '#bbb';
+            sub.textContent  = 'تبدأ اللعبة الآن...';
+
+            box.appendChild(icon);
+            box.appendChild(title);
+            box.appendChild(sub);
+            partyModeModal.appendChild(box);
+
             setTimeout(() => {
                 partyModeModal.style.display = 'none';
                 window.location.href = 'games/huroof_party.html';

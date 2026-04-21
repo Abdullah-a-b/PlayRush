@@ -217,7 +217,10 @@ const countryWrapper = document.getElementById('countryWrapper');
 function renderCountryOptions(countries) {
     dropdown.innerHTML = '';
     if(countries.length === 0) {
-        dropdown.innerHTML = '<div style="padding:10px;color:#bbb;text-align:center;">لا توجد نتائج 🧐</div>';
+        const empty = document.createElement('div');
+        empty.style.cssText = 'padding:10px;color:#bbb;text-align:center;';
+        empty.textContent = 'لا توجد نتائج 🧐';
+        dropdown.appendChild(empty);
         return;
     }
 
@@ -225,13 +228,19 @@ function renderCountryOptions(countries) {
         const item = document.createElement('div');
         item.className = 'dropdown-item';
         
-        // 🚀 السحر هنا: قمنا بتضمين علامة <img> تشير للمجلد المحلي
-        item.innerHTML = `
-            <img src="../assets/flags/${c.code}.svg" 
-                 alt="${c.name} flag" 
-                 style="width: 28px; height: auto; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); margin-left: 10px;"
-                 onerror="this.style.display='none';"> <span>${c.name}</span>
-        `;
+        // 🔒 نبني العنصر بـ DOM API لتجنب XSS في الـ attributes
+        const flagImg = document.createElement('img');
+        flagImg.src   = `../assets/flags/${sanitizeText(c.code)}.svg`;
+        flagImg.alt   = `${sanitizeText(c.name)} flag`;
+        flagImg.style.cssText = 'width:28px;height:auto;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,0.2);margin-left:10px;';
+        flagImg.addEventListener('error', () => { flagImg.style.display = 'none'; });
+
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = sanitizeText(c.name);
+
+        item.appendChild(flagImg);
+        item.appendChild(document.createTextNode(' '));
+        item.appendChild(nameSpan);
         
         item.onclick = () => {
             searchInput.value = `${c.name}`; 

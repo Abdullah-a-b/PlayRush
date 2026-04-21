@@ -72,16 +72,36 @@ window.addEventListener('DOMContentLoaded', async () => {
 
             const div = document.createElement('div');
             div.className = 'online-player-item';
-            div.innerHTML = `
-                <img src="${getCorrectAvatarUrl(p.avatar)}" class="online-player-avatar" alt="Avatar">
-                <div class="online-player-info">
-                    <span class="online-player-name">${p.name}</span>
-                    <span class="online-player-status">
-                        <div class="status-dot" style="background-color:${statusColor};"></div>
-                        <span style="color:${statusColor};">${locationText}</span>
-                    </span>
-                </div>
-            `;
+
+            const img = document.createElement('img');
+            img.src       = getCorrectAvatarUrl(p.avatar);
+            img.className = 'online-player-avatar';
+            img.alt       = 'Avatar';
+
+            const info     = document.createElement('div');
+            info.className = 'online-player-info';
+
+            const nameSpan     = document.createElement('span');
+            nameSpan.className = 'online-player-name';
+            nameSpan.textContent = sanitizeText(p.name);
+
+            const statusSpan     = document.createElement('span');
+            statusSpan.className = 'online-player-status';
+
+            const dot = document.createElement('div');
+            dot.className             = 'status-dot';
+            dot.style.backgroundColor = sanitizeText(statusColor);
+
+            const locSpan = document.createElement('span');
+            locSpan.style.color = sanitizeText(statusColor);
+            locSpan.textContent = sanitizeText(locationText);
+
+            statusSpan.appendChild(dot);
+            statusSpan.appendChild(locSpan);
+            info.appendChild(nameSpan);
+            info.appendChild(statusSpan);
+            div.appendChild(img);
+            div.appendChild(info);
             list.appendChild(div);
         });
     });
@@ -93,14 +113,22 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     socket.on('new_chat_message', (msg) => {
-        const safeSender = sanitizeHTML(msg.sender);
-        const safeText   = sanitizeHTML(msg.text);
+        const safeSender = sanitizeText(msg.sender);
+        const safeText   = sanitizeText(msg.text);
 
         const chatMessages = document.getElementById('chatMessages');
         if (chatMessages) {
             const el = document.createElement('div');
             el.className = `chat-message ${msg.isSystem ? 'system' : ''}`;
-            el.innerHTML = `<span class="sender">${safeSender}:</span> <span class="text">${safeText}</span>`;
+            const senderSpan = document.createElement('span');
+            senderSpan.className = 'sender';
+            senderSpan.textContent = `${safeSender}:`;
+            const textSpan = document.createElement('span');
+            textSpan.className = 'text';
+            textSpan.textContent = safeText;
+            el.appendChild(senderSpan);
+            el.appendChild(document.createTextNode(' '));
+            el.appendChild(textSpan);
             chatMessages.appendChild(el);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }

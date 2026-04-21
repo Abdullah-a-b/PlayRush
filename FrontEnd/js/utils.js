@@ -77,15 +77,37 @@ function fixLobbyAvatar(avatarValue, fallbackName) {
 // ============================================================
 
 /**
- * ينظّف النص من أكواد HTML الخطرة.
- * يستخدم DOMPurify إن وُجد، وإلا يعتمد على textContent كاحتياط.
+ * ينظّف النص من أكواد HTML الخطرة باستخدام DOMPurify.
+ * إذا لم يكن DOMPurify محملاً بعد (تأخر defer)، يُعيد النص كـ plain text آمن.
+ * @param {string} str - النص المراد تنظيفه
+ * @returns {string} نص آمن خالٍ من XSS
  */
 function sanitizeHTML(str) {
-    if (!str) return '';
-    if (typeof DOMPurify !== 'undefined') return DOMPurify.sanitize(str);
+    if (str === null || str === undefined) return '';
+    const s = String(str);
+    if (typeof DOMPurify !== 'undefined' && DOMPurify.isSupported) {
+        return DOMPurify.sanitize(s, { USE_PROFILES: { html: true } });
+    }
+    // احتياط: تحويل المحارف الخطرة إلى HTML entities
+    return s
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;')
+        .replace(/\//g, '&#x2F;');
+}
+
+/**
+ * ينظّف النص ويُعيده كنص عادي فقط (بدون أي HTML) — للأسماء والقيم الحرجة.
+ * @param {string} str
+ * @returns {string}
+ */
+function sanitizeText(str) {
+    if (str === null || str === undefined) return '';
     const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
+    div.textContent = String(str);
+    return div.textContent;
 }
 
 
@@ -109,8 +131,15 @@ function showToast(message, type = 'info') {
 
     const iconMap = { success: 'fa-circle-check', error: 'fa-circle-xmark', info: 'fa-circle-info' };
     const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.innerHTML = `<i class="fa-solid ${iconMap[type] || iconMap.info}"></i> <span>${message}</span>`;
+    toast.className = `toast ${sanitizeText(type)}`;
+    // نبني الـ toast بـ DOM API لمنع XSS بدلاً من innerHTML
+    const icon = document.createElement('i');
+    icon.className = `fa-solid ${iconMap[type] || iconMap.info}`;
+    const span = document.createElement('span');
+    span.textContent = message; // النص الخام — لا نريد HTML في الـ toast
+    toast.appendChild(icon);
+    toast.appendChild(document.createTextNode(' '));
+    toast.appendChild(span);
     container.appendChild(toast);
 
     setTimeout(() => {
@@ -165,9 +194,26 @@ function addGlobalChatMessage(sender, text, isSystem = false) {
 
     if (isSystem) {
         msgDiv.style.borderRightColor = '#00ff88';
-        msgDiv.innerHTML = `<span class="user" style="color:#00ff88">${sender}:</span> <span style="color:#fff">${text}</span>`;
+        const userSpan = document.createElement('span');
+        userSpan.className = 'user';
+        userSpan.style.color = '#00ff88';
+        userSpan.textContent = `${sanitizeText(sender)}:`;
+        const textSpan = document.createElement('span');
+        textSpan.style.color = '#fff';
+        textSpan.textContent = sanitizeText(text);
+        msgDiv.appendChild(userSpan);
+        msgDiv.appendChild(document.createTextNode(' '));
+        msgDiv.appendChild(textSpan);
     } else {
-        msgDiv.innerHTML = `<span class="user">${sender}:</span> <span style="color:#ddd">${text}</span>`;
+        const userSpan = document.createElement('span');
+        userSpan.className = 'user';
+        userSpan.textContent = `${sanitizeText(sender)}:`;
+        const textSpan = document.createElement('span');
+        textSpan.style.color = '#ddd';
+        textSpan.textContent = sanitizeText(text);
+        msgDiv.appendChild(userSpan);
+        msgDiv.appendChild(document.createTextNode(' '));
+        msgDiv.appendChild(textSpan);
     }
 
     container.appendChild(msgDiv);
@@ -215,15 +261,19 @@ function calcXpProgress(totalXp) {
 function renderPlayerFlag(el, country, flagPrefix = '../') {
     if (!el || !country) return;
 
-    const code       = country.split(' ')[0].toUpperCase();
-    const arabicName = COUNTRY_NAMES[code] || code;
+    const code       = sanitizeText(country.split(' ')[0].toUpperCase());
+    const arabicName = sanitizeText(COUNTRY_NAMES[code] || code);
 
-    el.innerHTML = `
-        <img src="${flagPrefix}assets/flags/${code}.svg"
-             alt="${arabicName}" title="${arabicName}"
-             style="width:28px; height:auto; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.2);"
-             onerror="this.style.display='none';">
-    `;
+    // نبني العنصر بـ DOM API لتجنب injection في attributes
+    const img = document.createElement('img');
+    img.src   = `${flagPrefix}assets/flags/${code}.svg`;
+    img.alt   = arabicName;
+    img.title = arabicName;
+    img.style.cssText = 'width:28px; height:auto; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.2);';
+    img.addEventListener('error', () => { img.style.display = 'none'; });
+
+    el.innerHTML = '';
+    el.appendChild(img);
     el.style.display = 'inline-block';
 }
 

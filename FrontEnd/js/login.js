@@ -103,9 +103,16 @@ window.addEventListener('load', () => {
                 
                 if (typeof errorMsg === 'object') {
                     // إذا كان الخطأ مصفوفة من السيرفر (Error 422)، نستخرج اسم الحقل الناقص
-                    errorMsg = Array.isArray(errorMsg) 
-                        ? "بيانات غير صالحة أو ناقصة في حقل: " + errorMsg.map(e => e.loc[e.loc.length - 1]).join(", ") 
-                        : "خطأ غير معروف في البيانات";
+                    try {
+                        errorMsg = Array.isArray(errorMsg)
+                            ? "بيانات غير صالحة أو ناقصة في حقل: " + errorMsg.map(e => {
+                                const loc = Array.isArray(e?.loc) ? e.loc : [];
+                                return sanitizeText(String(loc[loc.length - 1] ?? '؟'));
+                              }).join("، ")
+                            : "خطأ غير معروف في البيانات";
+                    } catch (_) {
+                        errorMsg = "خطأ غير معروف في البيانات";
+                    }
                 }
 
                 loginMessage.textContent = errorMsg;

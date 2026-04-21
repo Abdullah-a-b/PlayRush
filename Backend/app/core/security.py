@@ -4,6 +4,7 @@ from fastapi import Request, HTTPException, Depends
 from jose import jwt, JWTError
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
+import html
 
 # 🔄 الاستيرادات الصحيحة من الهيكلة الجديدة
 from app.core.database import SessionLocal
@@ -95,3 +96,24 @@ def get_user_from_token(db: Session, token: str):
         return user
     except JWTError:
         return None
+
+def sanitize_text(text: str, max_length: int = 255) -> str:
+    """
+    فلتر أمني لتنظيف أي نص قادم من المستخدم
+    1. يزيل المسافات الزائدة
+    2. يقص النص إذا كان طويلاً جداً (لمنع هجمات إغراق الذاكرة)
+    3. يحول الأقواس والرموز الخطيرة إلى نصوص عادية (HTML Escaping)
+    """
+    if not text:
+        return ""
+    
+    # تحويل النص لـ String احتياطياً وإزالة المسافات
+    cleaned = str(text).strip()
+    
+    # قص النص حسب الحد المسموح
+    cleaned = cleaned[:max_length]
+    
+    # السحر هنا: تحويل <script> إلى &lt;script&gt; لكي لا يعمل ككود
+    cleaned = html.escape(cleaned)
+    
+    return cleaned

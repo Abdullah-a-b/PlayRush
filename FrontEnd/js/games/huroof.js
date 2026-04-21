@@ -3,6 +3,15 @@
 // المتطلبات: config.js → utils.js (يوفر API_URL, sanitizeHTML, getToken)
 // ============================================================
 
+// دالة مساعدة: تضع أيقونة FontAwesome ونصاً في زر بدون innerHTML
+function setButtonWithIcon(btn, iconClass, label) {
+    if (!btn) return;
+    btn.innerHTML = '';
+    const i = document.createElement('i');
+    i.className = iconClass;
+    btn.appendChild(i);
+    btn.appendChild(document.createTextNode(' ' + label));
+}
 
 // ============================================================
 // 🚀 الاتصال والجلسة
@@ -174,7 +183,7 @@ socket.on('huroof_new_question', (data) => {
     if (voteSkipBtn) {
         voteSkipBtn.style.display    = 'inline-block';
         voteSkipBtn.disabled         = false;
-        voteSkipBtn.innerHTML        = '<i class="fa-solid fa-forward-step"></i> اقتراح تغيير السؤال';
+        setButtonWithIcon(voteSkipBtn, 'fa-solid fa-forward-step', 'اقتراح تغيير السؤال');
         voteSkipBtn.style.background = '#607d8b';
     }
 
@@ -229,7 +238,7 @@ socket.on('huroof_chance_transfer', (data) => {
 
 socket.on('huroof_last_chance', (data) => {
     clearInterval(playerTimerInterval);
-    systemMessageDisplay.innerHTML   = '🚨 الفرصة الأخيرة! من يضغط أولاً؟';
+    systemMessageDisplay.textContent = '🚨 الفرصة الأخيرة! من يضغط أولاً؟';
     systemMessageDisplay.style.color = '#f44336';
     answerSection.style.display      = 'none';
     buzzerBtn.style.display          = 'block';
@@ -238,7 +247,7 @@ socket.on('huroof_last_chance', (data) => {
     if (voteSkipBtn) {
         voteSkipBtn.style.display    = 'inline-block';
         voteSkipBtn.disabled         = false;
-        voteSkipBtn.innerHTML        = '<i class="fa-solid fa-forward-step"></i> اقتراح تغيير السؤال';
+        setButtonWithIcon(voteSkipBtn, 'fa-solid fa-forward-step', 'اقتراح تغيير السؤال');
         voteSkipBtn.style.background = '#607d8b';
     }
     startGlobalTimer(data.timer);
@@ -249,13 +258,13 @@ socket.on('huroof_answer_result', (data) => {
     const cell = cells[data.hexIndex];
     if (data.correct) {
         if (cell) { cell.classList.remove('active'); cell.classList.add(data.color); }
-        systemMessageDisplay.innerHTML   = `✅ إجابة صحيحة! (${sanitizeHTML(data.answer)})`;
+        systemMessageDisplay.textContent = `✅ إجابة صحيحة! (${sanitizeText(data.answer)})`;
         systemMessageDisplay.style.color = '#4CAF50';
         buzzerBtn.style.display          = 'none';
         answerSection.style.display      = 'none';
         if (voteSkipBtn) voteSkipBtn.style.display = 'none';
     } else {
-        systemMessageDisplay.innerHTML   = `❌ إجابة خاطئة: ${sanitizeHTML(data.answer)}`;
+        systemMessageDisplay.textContent = `❌ إجابة خاطئة: ${sanitizeText(data.answer)}`;
         systemMessageDisplay.style.color = '#f44336';
     }
 });
@@ -272,7 +281,7 @@ socket.on('huroof_timeout_info', (data) => {
 
 socket.on('huroof_skip_voted', (data) => {
     if (data.sid === socket.id && voteSkipBtn) {
-        voteSkipBtn.innerHTML        = '<i class="fa-solid fa-check"></i> بانتظار الخصم...';
+        setButtonWithIcon(voteSkipBtn, 'fa-solid fa-check', 'بانتظار الخصم...');
         voteSkipBtn.style.background = '#4CAF50';
         voteSkipBtn.disabled         = true;
     }
@@ -301,12 +310,17 @@ socket.on('huroof_round_over', (data) => {
     const waitingOverlay = document.getElementById('waiting-overlay');
     if (waitingOverlay) {
         waitingOverlay.style.display = 'flex';
-        document.getElementById('overlay-message').innerHTML = `
-            <h2 style="color:${winnerColor};margin-bottom:10px;font-family:'Tajawal',sans-serif;">
-                فاز اللاعب ${teamName} بالجولة!
-            </h2>
-            <p>استعد للجولة القادمة...</p>
-        `;
+        const overlayMsg = document.getElementById('overlay-message');
+        overlayMsg.innerHTML = '';
+        const h2 = document.createElement('h2');
+        h2.style.color        = sanitizeText(winnerColor);
+        h2.style.marginBottom = '10px';
+        h2.style.fontFamily   = "'Tajawal',sans-serif";
+        h2.textContent        = `فاز اللاعب ${sanitizeText(teamName)} بالجولة!`;
+        const p = document.createElement('p');
+        p.textContent = 'استعد للجولة القادمة...';
+        overlayMsg.appendChild(h2);
+        overlayMsg.appendChild(p);
         document.querySelector('.spinner').style.display = 'block';
     }
 });
@@ -524,9 +538,14 @@ function resetUIForNewTurn() {
 
     const qText = document.getElementById('questionText');
     if (qText) {
-        qText.innerHTML = currentTurnSid === socket.id
-            ? '🎯 <strong>دورك! اختر حرفاً من اللوحة للبدء.</strong>'
-            : '⏳ <strong>دور الخصم لاختيار حرف...</strong>';
+        qText.innerHTML = '';
+        const qStrong = document.createElement('strong');
+        qStrong.textContent = currentTurnSid === socket.id
+            ? 'دورك! اختر حرفاً من اللوحة للبدء.'
+            : 'دور الخصم لاختيار حرف...';
+        const qEmoji = document.createTextNode(currentTurnSid === socket.id ? '🎯 ' : '⏳ ');
+        qText.appendChild(qEmoji);
+        qText.appendChild(qStrong);
         qText.style.display = 'block';
     }
 
