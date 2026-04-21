@@ -5,9 +5,6 @@ if (tokenFromUrl) {
     sessionStorage.setItem('token', tokenFromUrl);
     window.history.replaceState({}, document.title, window.location.pathname);
 }
-// ملف config.js
-const isLocal = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost";
-const API_URL = isLocal ? CONFIG.API_URL : "https://api.your-real-domain.com";
 
 let customAvatarFile = null;
 

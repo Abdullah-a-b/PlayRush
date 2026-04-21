@@ -1,9 +1,7 @@
 // نضع هذا السطر في بداية الملف
 document.getElementById('google-login-btn').href = `${CONFIG.API_URL}/auth/google/login`;
-// تعريف رابط السيرفر الثابت
-// ملف config.js
-const isLocal = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost";
-const API_URL = isLocal ? CONFIG.API_URL : "https://api.your-real-domain.com";
+
+
 let lastSubmitTime = 0;
 const COOLDOWN_MS = 3000; // 3 ثوانٍ انتظار بين كل محاولة
 
