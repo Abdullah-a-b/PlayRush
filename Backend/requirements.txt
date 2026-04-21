@@ -23,6 +23,7 @@ sqlalchemy
 python-jose[cryptography]
 passlib[bcrypt]
 python-multipart
+slowapi
 
 # قراءة الإعدادات (.env)
 python-dotenv
