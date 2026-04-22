@@ -44,7 +44,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     // ----------------------------------------
     // 🌍 السوكيت: اللاعبين المتصلين
     // ----------------------------------------
-    socket.on('update_online_players', (allPlayers) => {
+    // ✅ نحتفظ بآخر قائمة وصلت لإعادة رسمها بعد تحميل userDataCache
+    let lastPlayersSnapshot = [];
+
+    function renderLobbyPlayers(allPlayers) {
         const lobbyPlayers = allPlayers.filter(p =>
             p.location === selectedGameMode ||
             p.location === `playing_${selectedGameMode}` ||
@@ -113,6 +116,13 @@ window.addEventListener('DOMContentLoaded', async () => {
             div.appendChild(info);
             list.appendChild(div);
         });
+    }
+
+    socket.on('update_online_players', (allPlayers) => {
+        // ✅ احفظ آخر snapshot دائماً
+        lastPlayersSnapshot = allPlayers;
+        // ارسم فقط لو userDataCache جاهز، وإلا يرسم بعدين
+        renderLobbyPlayers(allPlayers);
     });
 
     socket.on('game_chat_history', (history) => {
@@ -230,6 +240,12 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         if (socket.connected) joinLobby();
         else socket.once('connect', joinLobby);
+
+        // ✅ إعادة رسم القائمة بعد تحميل بيانات المستخدم
+        // (قد تكون update_online_players وصلت قبل userDataCache)
+        if (lastPlayersSnapshot.length > 0) {
+            renderLobbyPlayers(lastPlayersSnapshot);
+        }
 
     } catch {
         showToast('خطأ في الاتصال بالسيرفر', 'error');
@@ -498,10 +514,10 @@ window.addEventListener('DOMContentLoaded', async () => {
                 const color = p.color || p.team || (i === 0 ? 'green' : 'orange');
                 if (color === 'green') {
                     document.getElementById('mmGreenName').textContent = p.name || 'لاعب';
-                    document.getElementById('mmGreenAvatar').src       = p.avatar || 'assets/avatars/avatar_1.svg';
+                    document.getElementById('mmGreenAvatar').src  = getCorrectAvatarUrl(p.avatar);
                 } else {
                     document.getElementById('mmOrangeName').textContent = p.name || 'لاعب';
-                    document.getElementById('mmOrangeAvatar').src       = p.avatar || 'assets/avatars/avatar_1.svg';
+                    document.getElementById('mmOrangeAvatar').src = getCorrectAvatarUrl(p.avatar);
                 }
             });
 
@@ -618,7 +634,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             slot.className   = 'player-slot';
 
             const img = document.createElement('img');
-            img.src   = p.avatar ? sanitizeText(p.avatar) : '../assets/avatars/avatar_1.svg';
+            img.src = getCorrectAvatarUrl(p.avatar);
             img.style.cssText = `width:60px;height:60px;border-radius:50%;border:2px solid ${themeColor};margin-bottom:10px;object-fit:cover;`;
 
             const nameSpan = document.createElement('span');

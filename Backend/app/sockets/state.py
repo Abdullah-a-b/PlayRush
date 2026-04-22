@@ -20,3 +20,5 @@ disconnect_timers = {}
 STATS_CACHE = {}
 CACHE_TTL = 15
 TOPICS = ['إسلاميات وسيرة نبوية', 'ألغاز وفوازير ذكية', 'تاريخ', 'جغرافيا', 'علوم', 'ثقافة عامة', 'رياضة']
+
+cheat_strikes = {}

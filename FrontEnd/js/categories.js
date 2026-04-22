@@ -45,13 +45,41 @@ window.addEventListener('DOMContentLoaded', async () => {
     // ----------------------------------------
     socket.on('update_online_players', (players) => {
         const countEl = document.getElementById('globalOnlineCount');
-        if (countEl) countEl.textContent = players.length;
-
         const list = document.getElementById('globalPlayersList');
         if (!list) return;
 
+        // 🛡️ استخراج مصفوفة اللاعبين بشكل قوي جداً (Bulletproof)
+        let playersArray = [];
+        try {
+            let parsed = players;
+            if (typeof players === 'string') parsed = JSON.parse(players);
+
+            if (Array.isArray(parsed)) {
+                playersArray = parsed;
+            } else if (parsed && typeof parsed === 'object') {
+                // البحث في الأنماط الشائعة للباك إند
+                if (Array.isArray(parsed.players)) playersArray = parsed.players;
+                else if (Array.isArray(parsed.data)) playersArray = parsed.data;
+                else {
+                    // استخراج اللاعبين إذا كان السيرفر يرسلهم ككائن (Object)
+                    playersArray = Object.values(parsed).filter(v => v && typeof v === 'object' && v.name);
+                }
+            }
+        } catch (e) {
+            console.error("خطأ في تحليل بيانات اللاعبين:", e);
+        }
+
+        if (countEl) countEl.textContent = playersArray.length;
         list.innerHTML = '';
-        players.forEach(p => {
+
+        if (playersArray.length === 0) {
+            list.innerHTML = '<p style="text-align:center; color:#777; font-size: 12px; margin-top:20px;">لا يوجد لاعبين حالياً</p>';
+            return;
+        }
+
+        playersArray.forEach(p => {
+            if (!p || !p.name) return; // تخطي أي بيانات غير صالحة
+
             let locationText = 'الساحة العامة';
             let statusColor  = '#00ff88';
 
@@ -72,11 +100,16 @@ window.addEventListener('DOMContentLoaded', async () => {
 
             const div = document.createElement('div');
             div.className = 'online-player-item';
+            if (userDataCache && p.name === userDataCache.player_name) {
+                div.classList.add('is-me');
+            }
 
             const img = document.createElement('img');
             img.src       = getCorrectAvatarUrl(p.avatar);
             img.className = 'online-player-avatar';
             img.alt       = 'Avatar';
+            // صورة احتياطية فورية في حال فشل تحميل مسار السيرفر
+            img.onerror   = () => { img.src = 'assets/avatars/avatar_1.svg'; };
 
             const info     = document.createElement('div');
             info.className = 'online-player-info';
@@ -140,7 +173,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (userDataCache) {
             socket.emit('join_global_lobby', {
                 name:   userDataCache.player_name,
-                avatar: userDataCache.avatar,
+                avatar: userDataCache.avatar, // ✅ المسار الخام — السيرفر يعرف يتعامل معه
             });
         }
     }

@@ -13,11 +13,13 @@ from app.services.reward_service import record_match_result
 from app.services.telegram_bot import send_secret_to_mobile
 
 # 💡 ملاحظة هامة: القواميس العالمية مثل connected_players يجب أن تكون في ملف مشترك (مثلاً app/sockets/state.py)
-from app.sockets.state import connected_players, disconnect_timers
+from app.sockets.state import connected_players, disconnect_timers, cheat_strikes
 # 💡 دالة العودة للوبي يجب أن تكون في ملف اللوبي
 from app.sockets.lobby import return_players_to_lobby
 
 from app.games.huroof.engine import HuroofGameState
+from app.core.database import SessionLocal
+from app.models.user import User
 
 # ==========================================
 # 🛠️ الفلاتر والدوال المساعدة للعبة حروف
@@ -406,9 +408,31 @@ def register_huroof_events(sio):
         # 🛡️ 2. حماية التوقيت (Speed Hack / Bot Prevention)
         # هل كتب وأرسل الكلمة في أقل من 0.4 ثانية من ضغطة الجرس؟ (مستحيل بشرياً)
         if is_bot_or_speedhack(gs.answer_start_time, min_human_reaction=0.4):
-            print(f"⚠️ [Anti-Cheat] سرعة غير طبيعية من اللاعب {sid}")
-            await sio.emit("cheat_warning", {"message": "سرعة إجابة غير طبيعية! يرجى اللعب بشكل عادل."}, to=sid)
-            return 
+            player_name = connected_players.get(sid, {}).get('name', 'مجهول')
+            
+            # تسجيل مخالفة جديدة للاعب
+            current_strikes = cheat_strikes.get(player_name, 0) + 1
+            cheat_strikes[player_name] = current_strikes
+            
+            if current_strikes == 1:
+                # المخالفة الأولى: إنذار شديد اللهجة ومنع الإجابة
+                print(f"⚠️ [إنذار أول] سرعة غير طبيعية من اللاعب {player_name}")
+                await sio.emit("cheat_warning", {"message": "تحذير 🚨: تم اكتشاف سرعة إجابة غير بشرية (احتمال استخدام بوت). إذا تكرر ذلك سيتم حظر حسابك نهائياً!"}, to=sid)
+                return # إيقاف الإجابة
+            else:
+                # المخالفة الثانية: حظر نهائي من قاعدة البيانات
+                print(f"🚫 [حظر نهائي] تكرار الغش من اللاعب {player_name}")
+                
+                db = SessionLocal()
+                db_user = db.query(User).filter(User.player_name == player_name).first()
+                if db_user:
+                    db_user.is_banned = True
+                    db.commit()
+                db.close()
+                
+                await sio.emit("force_logout", {"message": "تم حظر حسابك نهائياً بسبب استخدام برامج مساعدة (Bots) بشكل متكرر."}, to=sid)
+                await sio.disconnect(sid)
+                return
 
         # 🛡️ 3. حماية الإجابة (Payload Validation)
         if not player_ans:

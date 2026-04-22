@@ -1,6 +1,8 @@
 import html
 from app.sockets.state import connected_players, global_chat_history, game_lobby_players, game_chat_history
 from app.services.reward_service import get_clean_avatar
+from app.core.database import SessionLocal
+from app.models.user import User
 
 async def return_players_to_lobby(sio, room):
     game_mode = room.get('game_mode', 'huroof')
@@ -22,32 +24,73 @@ async def return_players_to_lobby(sio, room):
 
 
 def register_lobby_events(sio):
-    
+    # ==========================================
+    # 🌍 إضافة اللاعبين في الساحة الرئيسية (categories)
+    # ==========================================
     @sio.on('join_global_lobby')
     async def join_global_lobby(sid, data):
-        player_name = data.get('name', 'لاعب')
-        avatar = get_clean_avatar(data.get('avatar', ''), player_name)
-        connected_players[sid] = {'name': player_name, 'avatar': avatar, 'location': 'global'}
-        await sio.emit('chat_history', global_chat_history, to=sid)
-        await sio.emit('update_online_players', list(connected_players.values()))
+        player_name = data.get('name')
+        
+        # 🛡️ جلب البيانات من قاعدة البيانات للتأكد من هويته
+        db = SessionLocal()
+        user_in_db = db.query(User).filter(User.player_name == player_name).first()
+        
+        if not user_in_db:
+            db.close()
+            return
 
+        # أخذ الصورة من السيرفر مباشرة لتجنب أي تلاعب
+        correct_avatar = user_in_db.avatar if user_in_db.avatar else "assets/avatars/avatar_1.svg"
+        db.close()
+
+        # تسجيل اللاعب كمتصل في اللوبي العام
+        connected_players[sid] = {
+            'name': player_name, 
+            'avatar': correct_avatar,
+            'location': 'global'
+        }
+        
+        # 🚀 إرسال التحديث لجميع المتصلين لإظهاره في القائمة
+        await sio.emit('update_online_players', list(connected_players.values()))
+    
     @sio.on('join_game_lobby')
     async def join_game_lobby(sid, data):
-        game_mode, player_name, token = data.get('gameMode'), data.get('name', 'لاعب'), data.get('token', None)
-        avatar = get_clean_avatar(data.get('avatar', ''), player_name)
+        player_name = data.get('name')
+        game_mode = data.get('gameMode', 'huroof')
         
-        if game_mode not in game_lobby_players: game_lobby_players[game_mode] = {}
-        if game_mode not in game_chat_history: game_chat_history[game_mode] = []
+        # 🛡️ الحقيقة المطلقة: جلب البيانات من قاعدة البيانات فوراً
+        db = SessionLocal()
+        user_in_db = db.query(User).filter(User.player_name == player_name).first()
         
-        game_lobby_players[game_mode][sid] = {'name': player_name, 'avatar': avatar}
-        connected_players[sid] = {'name': player_name, 'avatar': avatar, 'location': game_mode, 'token': token}
+        if not user_in_db:
+            db.close()
+            return # أو تعامل مع الخطأ
+
+        # نأخذ الصورة المخزنة في السيرفر حصراً
+        correct_avatar = user_in_db.avatar if user_in_db.avatar else "assets/avatars/avatar_1.svg"
+        db.close()
+
+        # تحديث الحالة العامة المتصلة
+        connected_players[sid] = {
+            'name': player_name, 
+            'avatar': correct_avatar, # فرض الصورة الصحيحة
+            'location': game_mode
+        }
         
-        await sio.emit('update_online_players', list(connected_players.values()))
-        await sio.emit('game_chat_history', game_chat_history[game_mode], to=sid)
+        # تحديث قائمة لاعبي اللوبي الخاص باللعبة
+        if game_mode not in game_lobby_players:
+            game_lobby_players[game_mode] = {}
         
+        game_lobby_players[game_mode][sid] = {'name': player_name, 'avatar': correct_avatar}
+
+        # 🚀 إرسال التحديث لجميع المتواجدين في هذا اللوبي (بما فيهم اللاعب نفسه)
         players_list = list(game_lobby_players[game_mode].values())
-        for p_sid in list(game_lobby_players[game_mode].keys()):
-            await sio.emit('update_game_lobby_players', players_list, to=p_sid)
+        
+        # نستخدم room لضمان وصول التحديث لكل من في اللوبي
+        await sio.emit('update_game_lobby_players', players_list, room=game_mode)
+        
+        # تحديث القائمة العامة للمتصلين (للشريط الجانبي مثلاً)
+        await sio.emit('update_online_players', list(connected_players.values()))
 
     @sio.on('update_player_info')
     async def update_player_info(sid, data):
@@ -99,3 +142,21 @@ def register_lobby_events(sio):
         if game_mode in game_lobby_players:
             for p_sid in list(game_lobby_players[game_mode].keys()):
                 await sio.emit('new_game_chat_message', msg, to=p_sid)
+
+    @sio.on('severe_security_breach')
+    async def handle_security_breach(sid, data):
+        player = connected_players.get(sid)
+        if player and 'name' in player:
+            print(f"🚨 [أمان] محاولة اختراق من اللاعب: {player['name']} - السبب: {data.get('reason')}")
+            
+            # الاتصال بقاعدة البيانات وحظر اللاعب بناءً على اسمه الفريد
+            db = SessionLocal()
+            db_user = db.query(User).filter(User.player_name == player['name']).first()
+            if db_user:
+                db_user.is_banned = True
+                db.commit()
+            db.close()
+            
+            # طرده من السوكيت
+            await sio.emit('force_logout', {'message': 'تم حظر حسابك نهائياً لمحاولة اختراق المنصة.'}, to=sid)
+            await sio.disconnect(sid)

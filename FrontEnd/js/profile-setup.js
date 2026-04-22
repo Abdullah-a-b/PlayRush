@@ -36,7 +36,7 @@ window.addEventListener('load', () => {
     // 3. توليد الصور المحلية
     const defaultAvatars = [];
     for (let i = 1; i <= 60; i++) {
-        defaultAvatars.push(`../assets/avatars/avatar_${i}.svg`);
+        defaultAvatars.push(`assets/avatars/avatar_${i}.svg`);
     }
 
     let currentAvatarData = defaultAvatars[0];
@@ -150,9 +150,16 @@ window.addEventListener('load', () => {
 
             // 🚀 السحر هنا: نرسل الملف تحت اسم "avatar_file"، أو النص تحت اسم "avatar"
             if (typeof customAvatarFile !== 'undefined' && customAvatarFile) {
-                formData.append('avatar_file', customAvatarFile); // نرسل الملف للباك اند
+                formData.append('avatar_file', customAvatarFile); 
+                formData.append('file', customAvatarFile); // مفتاح احتياطي
             } else {
-                formData.append('avatar', currentAvatarData); // نرسل المسار (مثل ../assets/...)
+                let finalAvatarName = currentAvatarData;
+                if (finalAvatarName !== 'custom') {
+                    // استخراج اسم الصورة فقط (مثل avatar_5.svg) لتجنب رفض السيرفر للمسار الطويل
+                    finalAvatarName = finalAvatarName.split('/').pop(); 
+                }
+                formData.append('avatar', finalAvatarName); 
+                formData.append('avatar_url', finalAvatarName); // مفتاح احتياطي
             }
 
             const response = await fetch(`${API_URL}/auth/setup-profile`, {
@@ -165,7 +172,8 @@ window.addEventListener('load', () => {
                 profileMessage.textContent = "تم الحفظ! جاري توجيهك للوبي...";
                 profileMessage.style.color = "#00ff88";
                 
-                const finalAvatar = data.avatar || currentAvatarData;
+                let finalAvatar = data.new_avatar || data.avatar || currentAvatarData;
+                if (finalAvatar === 'custom') finalAvatar = 'assets/avatars/avatar_1.svg';
 
                 sessionStorage.setItem('playerName', playerName);
                 sessionStorage.setItem('playerAvatar', finalAvatar);

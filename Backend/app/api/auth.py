@@ -187,6 +187,10 @@ async def login(
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=400, detail="البريد الإلكتروني أو كلمة المرور غير صحيحة")
 
+    # 🛡️ التحقق من الحظر
+    if getattr(user, 'is_banned', False):
+        raise HTTPException(status_code=403, detail="تم حظر حسابك لانتهاك سياسات اللعب العادل والأمان.")
+
     if not user.is_verified:
         new_code = generate_otp()  # ✅ secrets
         user.verification_code = new_code
@@ -289,6 +293,13 @@ async def google_callback(code: str, background_tasks: BackgroundTasks, db: Sess
     email = user_info.get("email")
     user = db.query(User).filter(User.email == email).first()
     needs_profile_setup = False
+
+    # 🛡️ الحماية من الحظر للاعبي جوجل
+    if user and getattr(user, 'is_banned', False):
+        raise HTTPException(
+            status_code=403, 
+            detail="تم حظر حسابك لانتهاك سياسات الأمان. يرجى التواصل مع الدعم."
+        )
 
     if not user:
         needs_profile_setup = True

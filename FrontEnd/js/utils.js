@@ -45,15 +45,19 @@ const GAME_THEMES = {
  * @param {string} path - المسار المخزّن في قاعدة البيانات
  * @param {string} [prefix='../'] - البادئة المناسبة لمجلد الصفحة الحالية
  */
-function getCorrectAvatarUrl(path, prefix = '../') {
-    if (!path || path === 'undefined' || path === 'null' || path.trim() === '') {
-        return `${prefix}assets/avatars/avatar_1.svg`;
+function getCorrectAvatarUrl(path) {
+    // إذا لم يكن هناك مسار، أو كان المسار به خلل، نرجع الصورة الافتراضية الأولى
+    if (!path || path === 'undefined' || path === 'null' || path === 'custom' || path.trim() === '') {
+        return `assets/avatars/avatar_1.svg`;
     }
+    // إذا كان رابط خارجي أو Base64
     if (path.startsWith('http') || path.startsWith('data:')) return path;
+    // إذا كان ملف مرفوع على السيرفر
     if (path.startsWith('/uploads')) return `${API_URL}${path}`;
 
-    const cleanPath = path.replace(/^\.\.\//, '');
-    return `${prefix}${cleanPath}`;
+    // استخراج اسم الملف فقط لضمان المسار الصحيح دائماً (بدون ../)
+    const fileName = path.split('/').pop();
+    return `assets/avatars/${fileName}`;
 }
 
 /**

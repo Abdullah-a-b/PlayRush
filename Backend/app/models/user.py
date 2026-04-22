@@ -31,6 +31,7 @@ class User(Base):
     losses = Column(Integer, default=0)          
     seen_question_ids = Column(Text, default="[]")
     game_stats = relationship("GameStat", back_populates="user")
+    is_banned = Column(Boolean, default=False)
 
 class GameStat(Base):
     __tablename__ = "game_stats"
