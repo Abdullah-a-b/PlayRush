@@ -123,13 +123,13 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
 app.include_router(shop_router, prefix="/shop", tags=["Shop"])
 
+# 1. إنشاء مدير الاتصالات الذي يربط السيرفرات ببعضها عبر Redis
+# (نستخدم localhost:6379 لأن Redis سيعمل على جهازك)
+redis_mgr = socketio.AsyncRedisManager('redis://127.0.0.1:6379/0')
+
 # ==========================================
 # Socket.IO
 # ==========================================
-# ✅ بدون AsyncRedisManager — هذا سيرفر واحد (single-process)
-# AsyncRedisManager مصمم لتوزيع الرسائل بين عدة سيرفرات (multi-node) فقط
-# استخدامه هنا يضيف 2-3ms لكل emit بسبب Redis pub/sub round-trip بدون أي فائدة
-# النتيجة بعد الإزالة: emit_gather ينتقل من 12ms → 0.2ms
 sio = socketio.AsyncServer(
     async_mode='asgi',
     cors_allowed_origins=[],
@@ -137,6 +137,7 @@ sio = socketio.AsyncServer(
     ping_timeout=20,
     ping_interval=25,
     max_http_buffer_size=1 * 1024 * 1024,
+    client_manager=redis_mgr,
 )
 socket_app = socketio.ASGIApp(sio, socketio_path='socket.io')
 
