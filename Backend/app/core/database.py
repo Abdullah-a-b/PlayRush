@@ -2,8 +2,14 @@ from sqlalchemy import create_engine, event, pool
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
+from pathlib import Path
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./users.db")
+BACKEND_ROOT = Path(__file__).resolve().parent.parent.parent
+DEFAULT_DB_PATH = BACKEND_ROOT / "users.db"
+DATABASE_URL = os.environ.get(
+    "DATABASE_URL",
+    f"sqlite:///{DEFAULT_DB_PATH}"  # مطلق، ليس نسبي
+)
 
 # ==========================================
 # Scalability: إعدادات قاعدة البيانات

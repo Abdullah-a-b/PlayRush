@@ -5,21 +5,76 @@ import json
 import time
 
 # ==========================================
-# 🔄 الاستيرادات من الهيكلة الجديدة (تأكد من مطابقتها لمساراتك)
+# 🔄 الاستيرادات (متوافقة مع الهيكلة الموزعة)
 # ==========================================
-from app.core.database import SessionLocal, Question, User
-from app.games.core_manager import get_room_state, rooms
+from app.core.database import SessionLocal, User
+# استيراد Question (حسب مسارك، غالباً في database أو models)
+try:
+    from app.core.database import Question
+    from app.models.user import GameStat
+except ImportError:
+    pass
+
+from app.games.huroof.engine import HuroofGameEngine
 from app.services.reward_service import record_match_result
 from app.services.telegram_bot import send_secret_to_mobile
 
-# 💡 ملاحظة هامة: القواميس العالمية مثل connected_players يجب أن تكون في ملف مشترك (مثلاً app/sockets/state.py)
-from app.sockets.state import connected_players, disconnect_timers, cheat_strikes
-# 💡 دالة العودة للوبي يجب أن تكون في ملف اللوبي
+from app.sockets.state import (
+    get_active_room, delete_active_room, get_connected_player, get_all_online_players,
+    add_connected_player, cheat_strikes, redis_db
+)
 from app.sockets.lobby import return_players_to_lobby
 
-from app.games.huroof.engine import HuroofGameState
-from app.core.database import SessionLocal
-from app.models.user import User
+# ============================================================
+# 🧠 QUESTIONS CACHE — يُحمَّل مرة واحدة عند تشغيل السيرفر
+# جميع الأسئلة في الذاكرة مُجمَّعة حسب الحرف → صفر DB queries أثناء اللعبة
+# ============================================================
+_QUESTIONS_BY_LETTER: dict = {}
+
+def _build_questions_cache():
+    from collections import defaultdict
+    db = SessionLocal()
+    by_letter = defaultdict(list)
+    skipped = 0
+    raw_count = 0
+    try:
+        rows = db.query(Question).filter(
+            Question.game_mode.in_(["huroof", "Huroof", "HUROOF", "حروف"])
+        ).all()
+        raw_count = len(rows)
+        print(f"📥 [Cache] تم جلب {raw_count} صف خام من DB")
+        for q in rows:
+            try:
+                extra = json.loads(q.extra_data) if q.extra_data else {}
+                letter_raw = extra.get("letter") or (q.correct_answer.strip().lstrip("ال")[0] if q.correct_answer.strip() else "")
+                letter = normalize_letter(letter_raw)
+                if not letter:
+                    skipped += 1
+                    continue
+                by_letter[letter].append({
+                    "id": q.id, "question": q.question_text, "answer": q.correct_answer,
+                    "accepted_answers": extra.get("accepted_answers", []),
+                    "category": q.category or "",
+                })
+            except Exception as ex:
+                skipped += 1
+                if skipped <= 5:
+                    print(f"   ⚠️ صف #{getattr(q,'id','?')} فشل: {ex}")
+    except Exception as e:
+        print(f"⚠️ [Cache] فشل الاستعلام: {e}")
+    finally:
+        _QUESTIONS_BY_LETTER.update(by_letter)
+        total = sum(len(v) for v in by_letter.values())
+        print(f"✅ [Cache] حُمّل {total} سؤال لـ {len(by_letter)} حرف (raw={raw_count}, skipped={skipped})")
+        db.close()
+
+# متغيرات وضع الجمعات (Party Mode) مؤقتة في الذاكرة
+party_session_sid = None
+party_session_used_ids = set()
+
+# ✅ Ready tracker في الذاكرة — يستبدل Redis ready_set (أسرع بكثير)
+# { room_code: { player_name: sid } }
+_room_ready: dict = {}
 
 # ==========================================
 # 🛠️ الفلاتر والدوال المساعدة للعبة حروف
@@ -32,11 +87,14 @@ NORMALIZE_LETTER = {
 def normalize_letter(ch):
     return NORMALIZE_LETTER.get(ch, ch)
 
-def advance_state(game_state, new_stage):
-    """تحديث حالة اللعبة وزيادة رقم النسخة لمنع تداخل المؤقتات"""
-    game_state.stage = new_stage
-    game_state.state_version += 1
-    return game_state.state_version
+_build_questions_cache()
+
+def advance_state(engine, new_stage):
+    """تحديث حالة اللعبة وزيادة رقم النسخة — بدون حفظ Redis (المستدعي يحفظ مرة واحدة فقط)"""
+    engine.room_data['stage'] = new_stage
+    version = engine.room_data.get('state_version', 0) + 1
+    engine.room_data['state_version'] = version
+    return version
 
 def clean_text_for_match(t):
     """فلتر تنظيف النصوص للتحكيم اللحظي"""
@@ -49,29 +107,23 @@ def check_answer_fast_track(player_ans, correct_ans, accepted_list, required_let
     p_clean = clean_text_for_match(player_ans)
     req_clean = clean_text_for_match(required_letter)
     
-    # 1. فلتر الإعدام الفوري (الكلمة لا تبدأ بالحرف المطلوب)
     if not p_clean.startswith(req_clean):
         return False, "wrong_letter"
         
-    # 2. فلتر الفوز الفوري (تطابق مع الإجابة الرسمية)
     c_clean = clean_text_for_match(correct_ans)
     if p_clean == c_clean:
         return True, "exact_match"
         
-    # 3. فلتر الفوز الفوري (تطابق مع قائمة المرادفات المسموحة)
     for acc in accepted_list:
         if p_clean == clean_text_for_match(acc):
             return True, "accepted_match"
             
-    # 4. إذا مرت من كل هذا، نحيلها للمحكمة العليا (الذكاء الاصطناعي)
     return False, "إجابة خاطئة"
 
-
-# --- دالة التحقق من التوقيت (Anti-Cheat) ---
 def is_bot_or_speedhack(start_time: float, min_human_reaction: float = 0.3) -> bool:
     """تتحقق مما إذا كانت سرعة الاستجابة أسرع من البشر (أقل من 300 مللي ثانية)"""
     if start_time == 0:
-         return False # حماية في حالة عدم التسجيل
+        return False 
     elapsed = time.time() - start_time
     return elapsed < min_human_reaction
 
@@ -79,312 +131,458 @@ def is_bot_or_speedhack(start_time: float, min_human_reaction: float = 0.3) -> b
 # 🎮 تسجيل أحداث السوكيت للعبة حروف
 # ==========================================
 def register_huroof_events(sio):
-    """تغليف الدوال والأحداث لكي تتمكن من استخدام كائن sio"""
 
     async def huroof_timer_task(room_code, version, seconds, timeout_type):
         await asyncio.sleep(seconds)
-        # 🕵️ رادار: هل الغرفة لا تزال موجودة وبحالة لعب؟
-        room = get_room_state(room_code)
-        if not room or room.get('state') != 'playing' or not room.get('game_state'):
-            return 
+        # 🕵️ رادار: هل الغرفة لا تزال موجودة في Redis وبحالة لعب؟
+        room_data = await get_active_room(room_code)
+        if not room_data or room_data.get('state') != 'playing': return 
             
-        gs = room['game_state']
-        if gs.state_version != version: return
+        engine = HuroofGameEngine(room_code, room_data)
+        gs = engine.room_data
         
-        # التحقق أن الحالة لم تتغير
-        if gs.state_version == version:
-            print(f"⏰ [Timeout] الغرفة {room_code} | النوع: {timeout_type}")
+        if gs.get('state_version') != version: return
+        
+        print(f"⏰ [Timeout] الغرفة {room_code} | النوع: {timeout_type}")
+        
+        if timeout_type == 'timeout_buzz_r1':
+            gs['attempts'] = 2
+            new_version = advance_state(engine, 'question')
+            gs['buzzed_player'] = None
+            await engine._save_state()
+            await sio.emit('huroof_last_chance', {'timer': 30}, room=room_code)
+            sio.start_background_task(huroof_timer_task, room_code, new_version, 30, 'timeout_buzz_r3')
+
+        elif timeout_type == 'timeout_answer_r1':
+            new_version = advance_state(engine, 'answer_r2')
+            gs['buzzed_player'] = engine.p2 if gs.get('buzzed_player') == engine.p1 else engine.p1
+            await engine._save_state()
+            await sio.emit('huroof_chance_transfer', {'to_sid': gs['buzzed_player'], 'timer': 20, 'round': 'r2'}, room=room_code)
+            sio.start_background_task(huroof_timer_task, room_code, new_version, 20, 'timeout_answer_r2')
             
-            if timeout_type == 'timeout_buzz_r1':
-                # 0️⃣ لم يضغط أحد الجرس في الـ 40 ثانية -> فرصة أخيرة مباشرة
-                gs.attempts = 2
-                version = advance_state(gs, 'question')
-                gs.buzzed_player = None
-                await sio.emit('huroof_last_chance', {'timer': 30}, room=room_code)
-                sio.start_background_task(huroof_timer_task, room_code, version, 30, 'timeout_buzz_r3')
+        elif timeout_type == 'timeout_answer_r2':
+            gs['attempts'] = 2 
+            new_version = advance_state(engine, 'question') 
+            gs['buzzed_player'] = None
+            await engine._save_state()
+            await sio.emit('huroof_last_chance', {'timer': 30}, room=room_code)
+            sio.start_background_task(huroof_timer_task, room_code, new_version, 30, 'timeout_buzz_r3')
+            
+        elif timeout_type == 'timeout_answer_r3':
+            new_version = advance_state(engine, 'answer_r4')
+            gs['buzzed_player'] = engine.p2 if gs.get('buzzed_player') == engine.p1 else engine.p1
+            await engine._save_state()
+            await sio.emit('huroof_chance_transfer', {'to_sid': gs['buzzed_player'], 'timer': 12, 'round': 'r4'}, room=room_code)
+            sio.start_background_task(huroof_timer_task, room_code, new_version, 12, 'timeout_answer_r4')
 
-            elif timeout_type == 'timeout_answer_r1':
-                # 1️⃣ اللاعب الأول أضاع الـ 15 ثانية -> ينتقل للخصم بـ 20 ثانية (المحاولة الأولى)
-                version = advance_state(gs, 'answer_r2')
-                gs.buzzed_player = gs.p2 if gs.buzzed_player == gs.p1 else gs.p1
-                await sio.emit('huroof_chance_transfer', {'to_sid': gs.buzzed_player, 'timer': 20, 'round': 'r2'}, room=room_code)
-                sio.start_background_task(huroof_timer_task, room_code, version, 20, 'timeout_answer_r2')
-                
-            elif timeout_type == 'timeout_answer_r2':
-                # 2️⃣ الخصم أضاع الـ 20 ثانية -> فشل الكل في الأولى، نفتح المحاولة الثانية
-                gs.attempts = 2 
-                version = advance_state(gs, 'question') 
-                gs.buzzed_player = None
-                await sio.emit('huroof_last_chance', {'timer': 30}, room=room_code)
-                sio.start_background_task(huroof_timer_task, room_code, version, 30, 'timeout_buzz_r3')
-                
-            elif timeout_type == 'timeout_answer_r3':
-                # 3️⃣ اللاعب أضاع الـ 12 ثانية (في المحاولة الثانية) -> ينتقل للخصم بـ 12 ثانية
-                version = advance_state(gs, 'answer_r4')
-                gs.buzzed_player = gs.p2 if gs.buzzed_player == gs.p1 else gs.p1
-                await sio.emit('huroof_chance_transfer', {'to_sid': gs.buzzed_player, 'timer': 12, 'round': 'r4'}, room=room_code)
-                sio.start_background_task(huroof_timer_task, room_code, version, 12, 'timeout_answer_r4')
+        elif timeout_type == 'timeout_answer_r4' or timeout_type == 'timeout_buzz_r3':
+            advance_state(engine, 'selecting')
+            gs['attempts'] = 1 
+            gs['turn'] = engine.p2 if gs.get('turn') == engine.p1 else engine.p1
+            await engine._save_state()
+            await sio.emit('huroof_timeout_info', {'msg': 'انتهى الوقت! نعود لاختيار الحروف.'}, room=room_code)
+            await asyncio.sleep(2)
+            await sio.emit('huroof_turn_changed', {'turn_sid': gs['turn']}, room=room_code)
 
-            elif timeout_type == 'timeout_answer_r4' or timeout_type == 'timeout_buzz_r3':
-                # 4️⃣ انتهت كل الفرص أو لم يضغط أحد في الفرصة الثانية -> تغيير السؤال
-                advance_state(gs, 'selecting')
-                gs.attempts = 1 
-                gs.turn = gs.p2 if gs.turn == gs.p1 else gs.p1
-                await sio.emit('huroof_timeout_info', {'msg': 'انتهى الوقت! نعود لاختيار الحروف.'}, room=room_code)
-                await asyncio.sleep(2)
-                await sio.emit('huroof_turn_changed', {'turn_sid': gs.turn}, room=room_code)
 
-    async def trigger_new_question(room_code):
-        print(f"\n🔄 [السيرفر] طلب سؤال جديد للغرفة: {room_code}")
-        room = get_room_state(room_code)
-        if not room or not room.get('game_state'): return
-        gs = room['game_state']
-        gs.attempts = 1
+    async def trigger_new_question(room_code, room_data=None):
+        _tq0 = time.perf_counter()
+        if room_data is None:
+            room_data = await get_active_room(room_code)
+        if not room_data: return
+        engine = HuroofGameEngine(room_code, room_data)
+        gs = engine.room_data
 
-        norm_letter = normalize_letter(gs.active_hex['letter'])
-        print(f"🎯 [السيرفر] تم الضغط على الحرف: {norm_letter}")
+        gs['attempts'] = 1
+        active_hex = gs.get('active_hex', {})
+        norm_letter = normalize_letter(active_hex.get('letter', ''))
 
-        db = SessionLocal()
-        combined_seen = set()  
-        player_db_ids = {}     
+        # ⚡ الكاش أولاً — صفر DB queries أثناء اللعبة
+        all_qs_for_letter = _QUESTIONS_BY_LETTER.get(norm_letter, [])
 
-        try:
-            for player in room.get('players', []):
-                p_sid = player.get('sid')
-                if not p_sid:
-                    continue
-                token = connected_players.get(p_sid, {}).get('token')
-                user = None
-                if token:
-                    user = db.query(User).filter(User.session_token == token).first() # تأكد من اسم الحقل أو استخدم auth_provider logic
-                if user:
-                    try:
-                        seen_ids = json.loads(user.seen_question_ids or "[]")
-                        combined_seen.update(seen_ids)
-                        player_db_ids[p_sid] = user.id
-                        print(f"📖 [{player.get('name')}] سجله: {len(seen_ids)} سؤال مشاهَد")
-                    except Exception:
-                        pass
+        used_qs = set(gs.get('used_questions', []))
 
-            valid_qs = []
-            query = db.query(Question).filter(Question.game_mode == "huroof")
-            for q in query.all():
-                if hasattr(gs, 'used_questions') and q.id in gs.used_questions:
-                    continue
-                if q.id in combined_seen:
-                    continue
-                try:
-                    ans = q.correct_answer.strip()
-                    if ans.startswith("ال"):
-                        ans = ans[2:]
-                    extra = json.loads(q.extra_data) if q.extra_data else {}
-                    letter_from_extra = normalize_letter(extra.get("letter", ""))
-                    letter_from_ans = normalize_letter(ans[0]) if ans else ""
-                    if letter_from_extra == norm_letter or letter_from_ans == norm_letter:
-                        valid_qs.append(q)
-                except:
-                    pass
+        # أسئلة لم تُستخدم في هذه المباراة بعد
+        valid_qs = [q for q in all_qs_for_letter if q['id'] not in used_qs]
 
-            print(f"📊 [السيرفر] أسئلة جديدة لكليهما لهذا الحرف: {len(valid_qs)}")
-
-            if not valid_qs:
-                print(f"⚠️ نفدت الأسئلة الجديدة لحرف '{norm_letter}' بالنسبة لهذين اللاعبَين.")
-                fallback = {
-                    "question": f"نفدت الأسئلة الجديدة لحرف ({norm_letter}) لكلاكما. اختاروا حرفاً آخر.",
-                    "answer": "لا يوجد",
-                    "category": "نفدت الأسئلة",
-                    "letter": norm_letter,
-                    "accepted_answers": []
-                }
-                await sio.emit('receive_ai_question', fallback, room=room_code)
-                return
-
-            chosen = random.choice(valid_qs)
-
-            if hasattr(gs, 'used_questions'):
-                gs.used_questions.append(chosen.id)
-                gs.used_answers.append(chosen.correct_answer)
-
-            for p_sid, user_id in player_db_ids.items():
-                user = db.query(User).filter(User.id == user_id).first()
-                if user:
-                    try:
-                        seen_ids = json.loads(user.seen_question_ids or "[]")
-                        if chosen.id not in seen_ids:
-                            seen_ids.append(chosen.id)
-                            user.seen_question_ids = json.dumps(seen_ids)
-                    except Exception:
-                        user.seen_question_ids = json.dumps([chosen.id])
-            db.commit()
-            print(f"💾 [سجل] تم حفظ ID={chosen.id} في سجل اللاعبَين")
-
-            extra = json.loads(chosen.extra_data) if chosen.extra_data else {}
-            gs.current_question = {
-                "question": chosen.question_text,
-                "answer": chosen.correct_answer,
-                "accepted_answers": extra.get("accepted_answers", []),
-                "category": chosen.category,
-                "letter": norm_letter
+        if not valid_qs:
+            fallback = {
+                "question": f"نفدت الأسئلة الجديدة لحرف ({norm_letter}) لكلاكما. اختاروا حرفاً آخر.",
+                "answer": "لا يوجد", "category": "نفدت الأسئلة", "letter": norm_letter, "accepted_answers": []
             }
+            await sio.emit('huroof_new_question', {'questionData': fallback, 'round': 'r1', 'timer': 40}, room=room_code)
+            return
 
-            version = advance_state(gs, 'buzz_r1')
-            gs.buzzed_player = None
-            gs.skip_votes.clear()
+        chosen = random.choice(valid_qs)
 
-            asyncio.create_task(send_secret_to_mobile(gs.current_question['question'], gs.current_question['answer']))
+        result = {
+            "question":         chosen['question'],
+            "answer":           chosen['answer'],
+            "accepted_answers": chosen.get('accepted_answers', []),
+            "category":         chosen.get('category', ''),
+            "letter":           norm_letter,
+            "id":               chosen['id'],
+        }
 
-            print(f"✅ [السيرفر] إرسال السؤال للمتصفح: {gs.current_question['question']}")
-            await sio.emit('huroof_new_question', {
-                'questionData': gs.current_question,
-                'round': 'r1',
-                'timer': 40
-            }, room=room_code)
+        gs.setdefault('used_questions', []).append(result['id'])
+        gs.setdefault('used_answers', []).append(result['answer'])
+        gs['current_question'] = result
 
-            sio.start_background_task(huroof_timer_task, room_code, version, 40, 'timeout_buzz_r1')
+        version = advance_state(engine, 'buzz_r1')
+        gs['buzzed_player'] = None
+        gs['skip_votes'] = []
+        # حفظ واحد فقط لـ Redis بعد كل التعديلات
+        await engine._save_state()
 
-        finally:
-            db.close()
+        # تحديث seen_question_ids في DB في الخلفية — لا يوقف اللعبة
+        async def _update_seen_async():
+            def _write():
+                db = SessionLocal()
+                try:
+                    for player in gs.get('players', []):
+                        p_name = player.get('name')
+                        if not p_name: continue
+                        user = db.query(User).filter(User.player_name == p_name).first()
+                        if not user: continue
+                        try:
+                            seen_ids = json.loads(user.seen_question_ids or "[]")
+                            if result['id'] not in seen_ids:
+                                seen_ids.append(result['id'])
+                                user.seen_question_ids = json.dumps(seen_ids)
+                        except:
+                            user.seen_question_ids = json.dumps([result['id']])
+                    db.commit()
+                except: pass
+                finally: db.close()
+            await asyncio.to_thread(_write)
+
+        asyncio.ensure_future(_update_seen_async())
+        asyncio.create_task(send_secret_to_mobile(result['question'], result['answer']))
+
+        print(f"⏱️ [trigger_question:{room_code}] TOTAL: {(time.perf_counter()-_tq0)*1000:.1f}ms")
+        await sio.emit('huroof_new_question', {'questionData': result, 'round': 'r1', 'timer': 40}, room=room_code)
+        sio.start_background_task(huroof_timer_task, room_code, version, 40, 'timeout_buzz_r1')
+
 
     async def process_answer_result(room_code, is_correct, player_ans):
-        room = get_room_state(room_code)
-        if not room or not room.get('game_state'): return
-        gs = room['game_state']
-        sid = gs.buzzed_player
-        player_color = 'green' if sid == gs.p1 else 'orange'
+        room_data = await get_active_room(room_code)
+        if not room_data: return
+        engine = HuroofGameEngine(room_code, room_data)
+        gs = engine.room_data
+        
+        sid = gs.get('buzzed_player')
+        player_color = 'green' if sid == engine.p1 else 'orange'
         
         if is_correct:
-            gs.active_hex['color'] = player_color
-            await sio.emit('huroof_answer_result', {'correct': True, 'answer': player_ans, 'hexIndex': gs.active_hex['index'], 'color': player_color}, room=room_code)
+            hex_idx = gs['active_hex']['index']
+            await sio.emit('huroof_answer_result', {'correct': True, 'answer': player_ans, 'hexIndex': hex_idx, 'color': player_color}, room=room_code)
             
-            if gs.check_win(player_color):
-                await asyncio.sleep(1.5) 
-                room = get_room_state(room_code)
+            # تسجيل الخلية والمحرك يفحص الفوز
+            is_win = await engine.claim_hex_and_check(hex_idx, player_color)
+            
+            if is_win:
+                await asyncio.sleep(1.5)
+                # ✅ جلب room_data طازج بعد claim_hex_and_check لأن المحرك يحدّث الحالة
+                room_data = await get_active_room(room_code)
+                if not room_data: return
                 
-                if room:
-                    gs.points[player_color] += 1
+                if room_data.get('state') == 'finished':
+                    # نهاية المباراة بالكامل
+                    winner_p = next((p for p in room_data['players'] if p.get('sid') == engine.p1), None) if player_color == 'green' else next((p for p in room_data['players'] if p.get('sid') == engine.p2), None)
+                    loser_p = next((p for p in room_data['players'] if p.get('sid') == engine.p2), None) if player_color == 'green' else next((p for p in room_data['players'] if p.get('sid') == engine.p1), None)
                     
-                    if gs.points[player_color] >= gs.points_to_win_match:
-                        winner_player = next((p for p in room['players'] if p['color'] == player_color), None)
-                        loser_player = next((p for p in room['players'] if p['color'] != player_color), None)
-                        loser_color = 'orange' if player_color == 'green' else 'green'
-                        
-                        record_match_result(winner_player, loser_player, room.get('game_mode', 'huroof'), extra={
-                            'winner_rounds': gs.points[player_color],
-                            'loser_rounds':  gs.points[loser_color]
+                    try:
+                        record_match_result(winner_p, loser_p, room_data.get('mode', 'huroof'), extra={
+                            'winner_rounds': room_data.get(f'{player_color}_wins', 0),
+                            'loser_rounds': room_data.get(f'{"orange" if player_color == "green" else "green"}_wins', 0)
                         })
+                    except: pass
 
-                        await sio.emit('huroof_match_over', {
-                            'winner': player_color,
-                            'points': gs.points,
-                            'reason': 'normal'
-                        }, room=room_code)
+                    await sio.emit('huroof_match_over', {
+                        'winner': player_color, 'points': room_data.get('points', {}), 'reason': 'normal'
+                    }, room=room_code)
 
-                        await asyncio.sleep(2)  
-                        room['state'] = 'finished'
-                        if room.get('game_state'):
-                            room['game_state'].state_version += 9999  
-                        await return_players_to_lobby(sio, room)
-                        if room_code in rooms:
-                            del rooms[room_code]
-                            print(f"🗑️ تم حذف الغرفة {room_code} بعد انتهاء المباراة.")
+                    await asyncio.sleep(2)
+                    await return_players_to_lobby(sio, {'players': room_data['players'], 'game_mode': room_data.get('mode', 'huroof')})
+                    await delete_active_room(room_code)
+                    print(f"🗑️ تم حذف الغرفة {room_code} بعد انتهاء المباراة.")
+                else:
+                    # نهاية جولة فقط وبدء جولة جديدة
+                    await sio.emit('huroof_round_over', {
+                        'winner': player_color, 'points': room_data.get('points', {}), 'next_round': room_data.get('round_number')
+                    }, room=room_code)
                     
-                    else:
-                        gs.round_number += 1
-                        
-                        await sio.emit('huroof_round_over', {
-                            'winner': player_color,
-                            'points': gs.points,
-                            'next_round': gs.round_number
-                        }, room=room_code)
-                        
-                        await asyncio.sleep(3)
-                        
-                        gs.reset_round_state(starting_turn=player_color) 
-                        
-                        await sio.emit('huroof_board_init', {'board': gs.board}, room=room_code)
-                        await sio.emit('huroof_new_round_started', {
-                            'turn': gs.turn
-                        }, room=room_code)
+                    await asyncio.sleep(3)
+                    await sio.emit('huroof_board_init', {'board': room_data['board']}, room=room_code)
+                    await sio.emit('huroof_new_round_started', {'turn': room_data['turn']}, room=room_code)
             else:
-                advance_state(gs, 'selecting')
-                gs.turn = sid
-                await asyncio.sleep(2) 
-                await sio.emit('huroof_turn_changed', {'turn_sid': sid}, room=room_code)
-                
+                # لم يفز بعد — نعود لاختيار الحرف
+                await asyncio.sleep(1.5)
+                # ✅ جلب حالة طازجة بعد claim_hex
+                room_data = await get_active_room(room_code)
+                if not room_data: return
+                engine2 = HuroofGameEngine(room_code, room_data)
+                gs2 = engine2.room_data
+                # تحويل الدور للخصم
+                gs2['stage'] = 'selecting'
+                gs2['attempts'] = 1
+                gs2['turn'] = engine2.p2 if gs2.get('turn') == engine2.p1 else engine2.p1
+                await engine2._save_state()
+                await sio.emit('huroof_turn_changed', {'turn_sid': gs2['turn']}, room=room_code)
         else:
-            await sio.emit('huroof_answer_result', {'correct': False, 'answer': player_ans, 'hexIndex': gs.active_hex['index']}, room=room_code)
+            hex_idx = gs['active_hex']['index']
+            await sio.emit('huroof_answer_result', {'correct': False, 'answer': player_ans, 'hexIndex': hex_idx}, room=room_code)
             await asyncio.sleep(1.5)
             
-            if gs.stage == 'answer_r1':
-                version = advance_state(gs, 'answer_r2')
-                gs.buzzed_player = gs.p2 if gs.buzzed_player == gs.p1 else gs.p1
-                await sio.emit('huroof_chance_transfer', {'to_sid': gs.buzzed_player, 'timer': 20, 'round': 'r2'}, room=room_code)
+            # جلب حالة طازجة
+            room_data = await get_active_room(room_code)
+            if not room_data: return
+            engine = HuroofGameEngine(room_code, room_data)
+            gs = engine.room_data
+
+            stage = gs.get('stage')
+            if stage == 'answer_r1':
+                version = advance_state(engine, 'answer_r2')
+                gs['buzzed_player'] = engine.p2 if gs.get('buzzed_player') == engine.p1 else engine.p1
+                await engine._save_state()
+                await sio.emit('huroof_chance_transfer', {'to_sid': gs['buzzed_player'], 'timer': 20, 'round': 'r2'}, room=room_code)
                 sio.start_background_task(huroof_timer_task, room_code, version, 20, 'timeout_answer_r2')
                 
-            elif gs.stage == 'answer_r2':
-                gs.attempts = 2
-                version = advance_state(gs, 'question') 
-                gs.buzzed_player = None
+            elif stage == 'answer_r2':
+                gs['attempts'] = 2
+                version = advance_state(engine, 'question') 
+                gs['buzzed_player'] = None
+                await engine._save_state()
                 await sio.emit('huroof_last_chance', {'timer': 30}, room=room_code) 
+                sio.start_background_task(huroof_timer_task, room_code, version, 30, 'timeout_buzz_r3')
                 
-            elif gs.stage == 'answer_r3':
-                version = advance_state(gs, 'answer_r4')
-                gs.buzzed_player = gs.p2 if gs.buzzed_player == gs.p1 else gs.p1
-                await sio.emit('huroof_chance_transfer', {'to_sid': gs.buzzed_player, 'timer': 12, 'round': 'r4'}, room=room_code)
+            elif stage == 'answer_r3':
+                version = advance_state(engine, 'answer_r4')
+                gs['buzzed_player'] = engine.p2 if gs.get('buzzed_player') == engine.p1 else engine.p1
+                await engine._save_state()
+                await sio.emit('huroof_chance_transfer', {'to_sid': gs['buzzed_player'], 'timer': 12, 'round': 'r4'}, room=room_code)
                 sio.start_background_task(huroof_timer_task, room_code, version, 12, 'timeout_answer_r4')
                 
-            elif gs.stage == 'answer_r4':
-                advance_state(gs, 'selecting')
-                gs.attempts = 1
-                gs.turn = gs.p2 if gs.turn == gs.p1 else gs.p1
+            elif stage == 'answer_r4':
+                advance_state(engine, 'selecting')
+                gs['attempts'] = 1
+                gs['turn'] = engine.p2 if gs.get('turn') == engine.p1 else engine.p1
+                await engine._save_state()
                 await sio.emit('huroof_timeout_info', {'msg': 'كلاكما أخطأ! نعود للاختيار.'}, room=room_code)
                 await asyncio.sleep(2)
-                await sio.emit('huroof_turn_changed', {'turn_sid': gs.turn}, room=room_code)
+                await sio.emit('huroof_turn_changed', {'turn_sid': gs['turn']}, room=room_code)
+
+
+    # --- أحداث اللاعبين الأساسية ---
+
+    @sio.event
+    async def huroof_player_ready(sid, data):
+        _t0 = time.perf_counter()
+        room_code = data.get('roomId') or data.get('roomCode')
+        player_name = data.get('playerName') or data.get('name')
+        frontend_avatar = data.get('avatar')
+        fresh_avatar = frontend_avatar if frontend_avatar and str(frontend_avatar).strip() != '' else "assets/avatars/avatar_1.svg"
+
+        from app.sockets.state import add_connected_player, get_all_online_players
+        if not room_code or not player_name: return
+
+        # تسجيل الجاهزية في الذاكرة
+        if room_code not in _room_ready:
+            _room_ready[room_code] = {}
+        _room_ready[room_code][player_name] = (sid, fresh_avatar)
+        ready_count = len(_room_ready[room_code])
+
+        # تحديث اللوبي في الخلفية
+        async def _update_lobby_async():
+            await add_connected_player(sid, {
+                'name': player_name, 'avatar': fresh_avatar,
+                'location': 'playing_huroof', 'status': 'في مباراة'
+            })
+            await sio.emit('update_online_players', await get_all_online_players())
+        asyncio.ensure_future(_update_lobby_async())
+
+        # 🚀 جلب الغرفة فوراً (لا ننتظر اللاعب الثاني)
+        room_data = await get_active_room(room_code)
+        if not room_data: return
+
+        # تحديث SID وصورة هذا اللاعب
+        for p in room_data['players']:
+            if p.get('name') == player_name:
+                p['sid'] = sid
+                p['avatar'] = fresh_avatar
+
+        engine = HuroofGameEngine(room_code, room_data)
+        colors = ['green', 'orange']
+
+        # بناء اللوحة لو ما بُنيت (اللاعب الأول)
+        board_just_built = False
+        if 'board' not in room_data:
+            engine._reset_board_logic()
+            room_data.update({
+                'green_wins': 0, 'orange_wins': 0, 'round_number': 1,
+                'points': {'green': 0, 'orange': 0}, 'used_questions': [],
+                'used_answers': [], 'state_version': 0,
+            })
+            board_just_built = True
+
+        players_list = room_data['players']
+        basic_players = [
+            {'name': p.get('name'), 'avatar': p.get('avatar', ''), 'sid': p.get('sid', ''), 'color': colors[i]}
+            for i, p in enumerate(players_list)
+        ]
+
+        # ترتيب اللاعبين بحيث "أنا" دائماً أولاً
+        me_idx = next((i for i, p in enumerate(players_list) if p.get('name') == player_name), 0)
+        op_idx = 1 - me_idx
+        me_data = {
+            'sid': sid, 'name': players_list[me_idx].get('name'),
+            'avatar': players_list[me_idx].get('avatar', ''),
+            'color': colors[me_idx], 'stats': None
+        }
+        op_data = {
+            'sid': players_list[op_idx].get('sid', ''),
+            'name': players_list[op_idx].get('name'),
+            'avatar': players_list[op_idx].get('avatar', ''),
+            'color': colors[op_idx], 'stats': None
+        }
+
+        # 🚀 إرسال فوري لهذا اللاعب: room_joined + board (لا ينتظر الخصم)
+        _ti = time.perf_counter()
+        await asyncio.gather(
+            sio.enter_room(sid, room_code),
+            engine._save_state() if board_just_built else asyncio.sleep(0),
+        )
+        await asyncio.gather(
+            sio.emit('room_joined', {'players': [me_data, op_data]}, to=sid),
+            sio.emit('huroof_board_init', {'board': room_data['board'], 'players': basic_players}, to=sid),
+        )
+        print(f"⏱️ [ready:{player_name}] إرسال فوري للاعب: {(time.perf_counter()-_ti)*1000:.1f}ms")
+
+        # إحصائيات DB لهذا اللاعب في الخلفية
+        asyncio.ensure_future(_send_single_player_stats(sid, player_name, fresh_avatar, players_list, colors, me_idx, op_idx))
+
+        # 🎯 لو وصل اللاعب الثاني الآن، ابدأ الجولة فعلياً للاعبين الاثنين
+        if ready_count >= 2:
+            _room_ready.pop(room_code, None)
+            # ضمان أن الدور صحيح
+            if room_data.get('turn') not in {engine.p1, engine.p2}:
+                room_data['turn'] = engine.p1
+                await engine._save_state()
+            await sio.emit('huroof_new_round_started', {'turn': room_data['turn']}, room=room_code)
+            print(f"⏱️ [ready:{player_name}] انطلاق المباراة، TOTAL: {(time.perf_counter()-_t0)*1000:.1f}ms")
+        else:
+            # رسالة انتظار للاعب الأول
+            await sio.emit('huroof_waiting_opponent', {'msg': 'في انتظار دخول الخصم...'}, to=sid)
+
+
+    # دالة مساعدة جديدة (ضعها قبل huroof_player_ready مباشرة)
+    async def _send_single_player_stats(sid, player_name, fresh_avatar, players_list, colors, me_idx, op_idx):
+        def get_player_full_stats(p_name: str, fallback_avatar: str) -> dict:
+            db = SessionLocal()
+            try:
+                user = db.query(User).filter(User.player_name == p_name).first()
+                if not user: return {}
+                huroof_stat = db.query(GameStat).filter(GameStat.user_id == user.id, GameStat.game_mode == 'huroof').first()
+                all_stats = db.query(GameStat).filter(GameStat.user_id == user.id).all()
+                return {
+                    'name': user.player_name,
+                    'avatar': fallback_avatar or user.avatar or '',
+                    'flag': f'../assets/flags/{user.country or "SA"}.svg',
+                    'rank': f'المستوى {user.level}',
+                    'huroof': {
+                        'wins': huroof_stat.wins if huroof_stat else 0,
+                        'losses': huroof_stat.losses if huroof_stat else 0,
+                        'total': huroof_stat.matches_played if huroof_stat else 0,
+                    },
+                    'global': {
+                        'wins': sum(s.wins for s in all_stats),
+                        'losses': sum(s.losses for s in all_stats),
+                        'total': sum(s.matches_played for s in all_stats),
+                    },
+                }
+            except Exception:
+                return {}
+            finally:
+                db.close()
+
+        me_stats, op_stats = await asyncio.gather(
+            asyncio.to_thread(get_player_full_stats, players_list[me_idx].get('name', ''), fresh_avatar),
+            asyncio.to_thread(get_player_full_stats, players_list[op_idx].get('name', ''), players_list[op_idx].get('avatar', '')),
+        )
+        await sio.emit('update_players_stats', [
+            {'sid': sid, 'name': players_list[me_idx].get('name'), 'color': colors[me_idx], 'stats': me_stats},
+            {'sid': players_list[op_idx].get('sid', ''), 'name': players_list[op_idx].get('name'), 'color': colors[op_idx], 'stats': op_stats},
+        ], to=sid)
+
+        async def _send_stats_later():
+            all_stats = await asyncio.gather(
+                *[asyncio.to_thread(get_player_full_stats, p.get('name', ''), p.get('avatar', ''))
+                  for p in players_list]
+            )
+            stat_tasks = []
+            for i, p in enumerate(players_list):
+                if p.get('sid'):
+                    stat_tasks.append(
+                        sio.emit('update_players_stats', [
+                            {'sid': p.get('sid'), 'name': p.get('name'), 'color': colors[i], 'stats': all_stats[i]},
+                            {'sid': players_list[1-i].get('sid', ''), 'name': players_list[1-i].get('name'), 'color': colors[1-i], 'stats': all_stats[1-i]},
+                        ], to=p.get('sid'))
+                    )
+            if stat_tasks:
+                await asyncio.gather(*stat_tasks)
+
+        asyncio.ensure_future(_send_stats_later())
 
     @sio.event
     async def huroof_select_hex(sid, data):
         room_code = data.get('roomCode')
         hex_index = data.get('hexIndex')
         
-        room = get_room_state(room_code)
-        if not room: return
-        gs = room['game_state']
+        room_data = await get_active_room(room_code)
+        if not room_data: return
+        engine = HuroofGameEngine(room_code, room_data)
+        gs = engine.room_data
         
-        if gs.stage != 'selecting' or gs.turn != sid:
+        if gs.get('stage') != 'selecting' or gs.get('turn') != sid:
             return 
+        _ts = time.perf_counter()
             
-        gs.active_hex = gs.board[hex_index]
-        await sio.emit('huroof_hex_locked', {'hexIndex': hex_index, 'letter': gs.active_hex['letter']}, room=room_code)
-        
-        await trigger_new_question(room_code)
+        gs['active_hex'] = gs['board'][hex_index]
+        # ✅ أولاً: حفظ الحالة + إرسال hex_locked بالتوازي
+        await asyncio.gather(
+            engine._save_state(),
+            sio.emit('huroof_hex_locked', {'hexIndex': hex_index, 'letter': gs['active_hex']['letter']}, room=room_code)
+        )
+        print(f"⏱️ [select_hex] save+emit: {(time.perf_counter()-_ts)*1000:.1f}ms")
+        # ✅ جلب room_data طازج من Redis لتجنب أي تعارض، ثم trigger السؤال
+        fresh_room_data = await get_active_room(room_code)
+        await trigger_new_question(room_code, fresh_room_data)
 
     @sio.event
     async def huroof_buzz(sid, data):
         room_code = data.get('roomCode')
-        room = get_room_state(room_code)
-        
-        if not room or not room.get('game_state'): return
-        gs = room['game_state']
+        room_data = await get_active_room(room_code)
+        if not room_data: return
+        engine = HuroofGameEngine(room_code, room_data)
+        gs = engine.room_data
         
         allowed_stages = ['question', 'buzz_r1', 'buzz_r3']
-        if gs.stage not in allowed_stages:
-            print(f"⚠️ تجاهل الضغطة: المرحلة الحالية هي {gs.stage}")
-            return
+        if gs.get('stage') not in allowed_stages: return
         
-        gs.buzzed_player = sid
-        gs.answer_start_time = time.time()
-        if not hasattr(gs, 'attempts'): gs.attempts = 1
+        gs['buzzed_player'] = sid
+        gs['answer_start_time'] = time.time()
+        if 'attempts' not in gs: gs['attempts'] = 1
 
-        if gs.attempts == 1:
+        if gs['attempts'] == 1:
             current_time = 15
-            version = advance_state(gs, 'answer_r1')
+            version = advance_state(engine, 'answer_r1')
             timeout_type = 'timeout_answer_r1'
         else:
             current_time = 12
-            version = advance_state(gs, 'answer_r3')
+            version = advance_state(engine, 'answer_r3')
             timeout_type = 'timeout_answer_r3'
         
-        print(f"🔔 {sid} ضغط الجرس - محاولة رقم: {gs.attempts} - وقت: {current_time}ث")
+        print(f"🔔 {sid} ضغط الجرس - محاولة رقم: {gs['attempts']} - وقت: {current_time}ث")
         
         await sio.emit('huroof_buzzed', {'sid': sid, 'time': current_time}, room=room_code)
         sio.start_background_task(huroof_timer_task, room_code, version, current_time, timeout_type)
@@ -394,133 +592,144 @@ def register_huroof_events(sio):
         room_code = data.get('roomCode')
         player_ans = html.escape(str(data.get('answer', '')).strip())
         
-        room = get_room_state(room_code)
-        if not room: return
-        gs = room['game_state']
+        room_data = await get_active_room(room_code)
+        if not room_data: return
+        engine = HuroofGameEngine(room_code, room_data)
+        gs = engine.room_data
 
-        # 🛡️ 1. حماية تدفق اللعبة (State Validation)
-        # نمنع الإجابة إذا لم تكن اللعبة في مرحلة الإجابة، أو إذا كان اللاعب ليس هو من ضغط الجرس
-        if gs.stage not in ['answer_r1', 'answer_r2', 'answer_r3', 'answer_r4']: 
-            return 
-        if sid != gs.buzzed_player: 
-            return 
+        # 🛡️ الحماية 1: التحقق من الحالة
+        if gs.get('stage') not in ['answer_r1', 'answer_r2', 'answer_r3', 'answer_r4']: return 
+        if sid != gs.get('buzzed_player'): return 
 
-        # 🛡️ 2. حماية التوقيت (Speed Hack / Bot Prevention)
-        # هل كتب وأرسل الكلمة في أقل من 0.4 ثانية من ضغطة الجرس؟ (مستحيل بشرياً)
-        if is_bot_or_speedhack(gs.answer_start_time, min_human_reaction=0.4):
-            player_name = connected_players.get(sid, {}).get('name', 'مجهول')
+        # 🛡️ الحماية 2: مكافحة البوتات (سرعة الإجابة)
+        if is_bot_or_speedhack(gs.get('answer_start_time', 0), min_human_reaction=0.4):
+            player = await get_connected_player(sid)
+            player_name = player.get('name', 'مجهول') if player else 'مجهول'
             
-            # تسجيل مخالفة جديدة للاعب
             current_strikes = cheat_strikes.get(player_name, 0) + 1
             cheat_strikes[player_name] = current_strikes
             
             if current_strikes == 1:
-                # المخالفة الأولى: إنذار شديد اللهجة ومنع الإجابة
                 print(f"⚠️ [إنذار أول] سرعة غير طبيعية من اللاعب {player_name}")
-                await sio.emit("cheat_warning", {"message": "تحذير 🚨: تم اكتشاف سرعة إجابة غير بشرية (احتمال استخدام بوت). إذا تكرر ذلك سيتم حظر حسابك نهائياً!"}, to=sid)
-                return # إيقاف الإجابة
+                await sio.emit("cheat_warning", {"message": "تحذير 🚨: تم اكتشاف سرعة إجابة غير بشرية. إذا تكرر ذلك سيتم حظرك!"}, to=sid)
+                return 
             else:
-                # المخالفة الثانية: حظر نهائي من قاعدة البيانات
                 print(f"🚫 [حظر نهائي] تكرار الغش من اللاعب {player_name}")
-                
                 db = SessionLocal()
                 db_user = db.query(User).filter(User.player_name == player_name).first()
                 if db_user:
                     db_user.is_banned = True
                     db.commit()
                 db.close()
-                
-                await sio.emit("force_logout", {"message": "تم حظر حسابك نهائياً بسبب استخدام برامج مساعدة (Bots) بشكل متكرر."}, to=sid)
+                await sio.emit("force_logout", {"message": "تم حظر حسابك نهائياً بسبب استخدام برامج مساعدة (Bots)."}, to=sid)
                 await sio.disconnect(sid)
                 return
 
-        # 🛡️ 3. حماية الإجابة (Payload Validation)
-        if not player_ans:
-            return # تجاهل الإجابة الفارغة
+        if not player_ans: return 
         
-        req_letter = gs.current_question['letter']
+        current_question = gs.get('current_question', {})
+        req_letter = current_question.get('letter', '')
         
-        # نستخدم دالة التنظيف الموجودة عندك لضمان عدم تلاعب الهاكر بالمسافات أو الهمزات
         p_clean = clean_text_for_match(player_ans)
         req_clean = clean_text_for_match(req_letter)
         
         if not p_clean.startswith(req_clean):
-            # محاولة غش بتخطي الحرف الإجباري
-            print(f"⚠️ [Anti-Cheat] محاولة تجاوز حرف {req_clean} من اللاعب {sid}")
+            print(f"⚠️ [Anti-Cheat] محاولة تجاوز حرف {req_clean} من {sid}")
             return
         
-        # ✅ إذا اجتاز الهاكر كل هذه الفلاتر، نحيل الإجابة للتحكيم الطبيعي
-        correct_ans = gs.current_question['answer']
-        accepted_list = gs.current_question['accepted_answers']
+        # ✅ التحكيم الذكي
+        correct_ans = current_question.get('answer', '')
+        accepted_list = current_question.get('accepted_answers', [])
         
         is_correct, reason = check_answer_fast_track(player_ans, correct_ans, accepted_list, req_letter)
-        
         await process_answer_result(room_code, is_correct, player_ans)
 
     @sio.event
     async def huroof_vote_skip(sid, data):
         room_code = data.get('roomCode')
-        room = get_room_state(room_code)
-        if not room or room.get('state') != 'playing': return
-        gs = room['game_state']
+        room_data = await get_active_room(room_code)
+        if not room_data or room_data.get('state') != 'playing': return
+        engine = HuroofGameEngine(room_code, room_data)
+        gs = engine.room_data
         
-        if gs.stage in ['buzz_r1', 'buzz_r3', 'question']:
-            gs.skip_votes.add(sid)
-            await sio.emit('huroof_skip_voted', {'sid': sid}, room=room_code)
-            
-            if len(gs.skip_votes) >= 2:
-                print(f"🔄 [Skipping] اتفاق على تغيير السؤال في الغرفة {room_code}")
-                await sio.emit('huroof_timeout_info', {'msg': 'تم الاتفاق! جاري جلب سؤال جديد...'}, room=room_code)
-                gs.state_version += 1 
-                await trigger_new_question(room_code)
+        if gs.get('stage') in ['buzz_r1', 'buzz_r3', 'question']:
+            skip_votes = gs.get('skip_votes', [])
+            if sid not in skip_votes:
+                skip_votes.append(sid)
+                gs['skip_votes'] = skip_votes
+                await engine._save_state()
+                
+                await sio.emit('huroof_skip_voted', {'sid': sid}, room=room_code)
+                
+                if len(skip_votes) >= 2:
+                    print(f"🔄 [Skipping] اتفاق على تغيير السؤال في الغرفة {room_code}")
+                    await sio.emit('huroof_timeout_info', {'msg': 'تم الاتفاق! جاري جلب سؤال جديد...'}, room=room_code)
+                    advance_state(engine, 'selecting') # لزيادة النسخة ووقف المؤقتات
+                    await trigger_new_question(room_code, room_data)
 
     @sio.event
     async def huroof_surrender(sid, data):
-        room_code = data.get('roomCode')
-        room = get_room_state(room_code)
+        """نظام الانسحاب المحدث"""
+        room_code = data.get('roomCode') or data.get('roomId')
+        room_data = await get_active_room(room_code)
         
-        if room:
-            winner_color = 'orange' if room['players'][0]['sid'] == sid else 'green'
+        if room_data:
+            players = room_data.get('players', [])
+            if not players: return
             
-            loser_player = next((p for p in room['players'] if p['sid'] == sid), None)
-            winner_player = next((p for p in room['players'] if p['sid'] != sid), None)
-            record_match_result(winner_player, loser_player, room.get('game_mode', 'huroof'), extra={'reason': 'surrender'})
+            # تحديد الفائز والخاسر بناءً على الـ SID
+            if len(players) > 0 and players[0].get('sid') == sid:
+                winner_color = 'orange'
+                loser_player = players[0]
+                winner_player = players[1] if len(players) > 1 else None
+            else:
+                winner_color = 'green'
+                loser_player = next((p for p in players if p.get('sid') == sid), None)
+                winner_player = next((p for p in players if p.get('sid') != sid), None)
+            
+            try:
+                record_match_result(winner_player, loser_player, room_data.get('mode', 'huroof'), extra={'reason': 'surrender'})
+            except: pass
 
-            await sio.emit('show_winner', {'color': winner_color, 'reason': 'surrender'}, room=room_code)
+            print(f"🏳️ انسحاب! الفائز هو {winner_color}")
+
+            # 🚀 إرسال حدث 'huroof_match_over' لأن الفرونت إند ينتظر هذا الحدث ليعرض النتيجة!
+            await sio.emit('huroof_match_over', {
+                'winner': winner_color, 
+                'points': room_data.get('points', {'green':0, 'orange':0}), 
+                'reason': 'surrender'
+            }, room=room_code)
             
-            room['state'] = 'finished'
-            if room.get('game_state'):
-                room['game_state'].state_version += 9999 
-            
-            await return_players_to_lobby(sio, room)
-            
-            if room_code in rooms:
-                del rooms[room_code]
-                print(f"🗑️ تم حذف الغرفة {room_code} نهائياً من الذاكرة.")
-        
+            await asyncio.sleep(2)
+            await delete_active_room(room_code)
+
+    # ==========================================
+    # 🎉 وضع الجمعات (Party Mode)
+    # ==========================================
+
     @sio.event
     async def join_party_mode(sid, data):
-        # 💡 تم استيراد المتغيرات من ملف الحالة المركزية (سننشئه في الخطوة التالية)
-        from app.sockets.state import connected_players, party_session_used_ids
-        import app.sockets.state as state # للوصول للمتغيرات وتعديلها
-        
+        global party_session_sid, party_session_used_ids
         game_mode = data.get('gameMode', 'huroof')
         player_name = data.get('name', 'لاعب')
         avatar = data.get('avatar', 'https://api.dicebear.com/7.x/bottts/svg?seed=Hero')
         
-        connected_players[sid] = {'name': player_name, 'avatar': avatar, 'location': f"party_{game_mode}"}
+        player_data = {'name': player_name, 'avatar': avatar, 'location': f"party_{game_mode}"}
+        await add_connected_player(sid, player_data)
+        
         print(f"[*] {player_name} دخل وضع الجمعات في: {game_mode}")
 
-        if state.party_session_sid is None:
-            state.party_session_sid = sid
-            state.party_session_used_ids = set()
+        if party_session_sid is None:
+            party_session_sid = sid
+            party_session_used_ids = set()
             print(f"🎉 [Party] جلسة جديدة بدأت - المضيف: {player_name} ({sid})")
         
-        await sio.emit('update_online_players', list(connected_players.values()))
+        online_players = await get_all_online_players()
+        await sio.emit('update_online_players', online_players)
 
     @sio.event
     async def request_ai_question(sid, data):
-        from app.sockets.state import party_session_used_ids
+        global party_session_used_ids
         letter = data.get('letter', 'أ').strip()
         requested_category = data.get('category', 'عام')
         norm_letter = normalize_letter(letter)
@@ -533,26 +742,19 @@ def register_huroof_events(sio):
 
             all_qs = query.all()
 
-            # ✅ نبني قائمة الأسئلة المتاحة بعد استبعاد المستخدمة في هذه الجلسة
             valid = []
             for q in all_qs:
-                if q.id in party_session_used_ids:
-                    continue
+                if q.id in party_session_used_ids: continue
                 try:
                     ans = q.correct_answer.strip()
-                    if ans.startswith("ال"):
-                        ans = ans[2:]
+                    if ans.startswith("ال"): ans = ans[2:]
                     extra = json.loads(q.extra_data) if q.extra_data else {}
-                    letter_from_extra = normalize_letter(extra.get("letter", ""))
-                    letter_from_ans = normalize_letter(ans[0]) if ans else ""
-                    if letter_from_extra == norm_letter or letter_from_ans == norm_letter:
+                    if normalize_letter(extra.get("letter", "")) == norm_letter or normalize_letter(ans[0]) == norm_letter:
                         valid.append(q)
-                except:
-                    pass
+                except: pass
 
             if valid:
                 chosen = random.choice(valid)
-                # ✅ نحجز السؤال فوراً في سجل الجلسة قبل الإرسال
                 party_session_used_ids.add(chosen.id)
                 print(f"⚡ [Party] سؤال جديد ID={chosen.id} | إجمالي المستخدمة: {len(party_session_used_ids)}")
                 qa_data = {
@@ -564,14 +766,10 @@ def register_huroof_events(sio):
                 asyncio.create_task(send_secret_to_mobile(qa_data['question'], qa_data['answer']))
                 await sio.emit('receive_ai_question', qa_data, to=sid)
             else:
-                # ♻️ نفدت كل أسئلة هذا الحرف في هذا التصنيف — نرسل رسالة للمستخدم
                 print(f"⚠️ [Party] نفدت أسئلة حرف '{norm_letter}' بتصنيف '{requested_category}'.")
                 fallback = {
                     "question": f"عذراً، نفدت أسئلة حرف ({norm_letter}) في هذا التصنيف. جرب تصنيفاً آخر.",
-                    "answer": "لا يوجد",
-                    "category": "نفدت الأسئلة",
-                    "letter": norm_letter,
-                    "accepted_answers": []
+                    "answer": "لا يوجد", "category": "نفدت الأسئلة", "letter": norm_letter, "accepted_answers": []
                 }
                 await sio.emit('receive_ai_question', fallback, to=sid)
         finally:

@@ -1,7 +1,8 @@
 import random
 import time
 import string
-from app.games.huroof.engine import HuroofGameState # 👈 نستورد محرك اللعبة من مكانه الجديد
+# تم الاستبدال بالكلاس الجديد المتوافق مع Redis
+from app.games.huroof.engine import HuroofGameEngine
 
 matchmaking_queue = {}  
 rooms = {}              
@@ -42,7 +43,7 @@ def check_queue_for_match(game_mode):
                 {'sid': p2['sid'], 'name': p2['name'], 'avatar': p2['avatar'], 'role': 'guest', 'color': 'orange'}
             ],
             # هنا نقوم بتشغيل محرك اللعبة بناءً على نوع اللعبة
-            'game_state': HuroofGameState(p1['sid'], p2['sid']) if game_mode == 'huroof' else None
+            'game_state': HuroofGameEngine(p1['sid'], p2['sid']) if game_mode == 'huroof' else None
         }
         
         room_players_data = {

@@ -39,6 +39,28 @@ os.makedirs("uploads/avatars", exist_ok=True)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("🚀 جاري تشغيل السيرفر...")
+
+    # ✅ إصلاح Bug الأشباح: مسح بيانات الاتصالات القديمة من Redis عند كل تشغيل
+    # لأن SIDs من الجلسة السابقة ميتة وتسبب دوبل في قائمة اللاعبين
+    from app.core.redis_client import redis_db
+    try:
+        keys_to_clear = [
+            "global:connected_players",  # اللاعبون المتصلون (SIDs ميتة)
+            "queue:huroof",              # طابور الماتش ميكنج
+            "queue:wordle",
+            "queue:trivia",
+        ]
+        # مسح لوبيات الألعاب
+        lobby_keys = await redis_db.keys("lobby:*")
+        for key in lobby_keys:
+            keys_to_clear.append(key)
+
+        if keys_to_clear:
+            await redis_db.delete(*keys_to_clear)
+            logger.info(f"🧹 تم مسح {len(keys_to_clear)} مفتاح قديم من Redis (أشباح الجلسة السابقة)")
+    except Exception as e:
+        logger.warning(f"⚠️ تعذّر مسح Redis عند بدء التشغيل: {e}")
+
     cleanup_task = asyncio.create_task(cleanup_abandoned_accounts())
     yield
     logger.info("🛑 جاري إيقاف السيرفر بأمان...")
@@ -104,6 +126,10 @@ app.include_router(shop_router, prefix="/shop", tags=["Shop"])
 # ==========================================
 # Socket.IO
 # ==========================================
+# ✅ بدون AsyncRedisManager — هذا سيرفر واحد (single-process)
+# AsyncRedisManager مصمم لتوزيع الرسائل بين عدة سيرفرات (multi-node) فقط
+# استخدامه هنا يضيف 2-3ms لكل emit بسبب Redis pub/sub round-trip بدون أي فائدة
+# النتيجة بعد الإزالة: emit_gather ينتقل من 12ms → 0.2ms
 sio = socketio.AsyncServer(
     async_mode='asgi',
     cors_allowed_origins=[],

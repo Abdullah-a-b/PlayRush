@@ -1,7 +1,13 @@
 import json
 import os
+import sys
 from sqlalchemy.orm import Session
-from Backend.app.core.database import engine, Question
+# هذا السطر السحري يخبر بايثون أن يقرأ المجلد الرئيسي (Backend) تلقائياً
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+# الآن ضع استيراداتك هنا
+from app.core.database import engine
+from app.models.user import Question # (تأكد من مسار واسم الكلاس لديك)
 
 def import_questions_from_json(filename="new_questions.json"):
     filepath = os.path.join(os.path.dirname(__file__), filename)

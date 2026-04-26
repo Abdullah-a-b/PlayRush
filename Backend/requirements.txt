@@ -35,3 +35,5 @@ pydantic[email]
 # طلبات الـ HTTP الخارجية (تسجيل دخول جوجل، وبوت تليجرام)
 httpx
 requests
+
+redis

@@ -1,46 +1,43 @@
 import asyncio
-from app.sockets.state import connected_players, game_lobby_players, disconnect_timers
-from app.games.core_manager import leave_room, get_room_state, rooms
-from app.services.reward_service import record_match_result
-from app.sockets.lobby import return_players_to_lobby # نستوردها من ملف اللوبي
+from app.sockets.state import (
+    get_connected_player, remove_connected_player, 
+    remove_game_lobby_player, get_game_lobby_players, get_all_online_players,
+    disconnect_timers
+)
 
 def register_connection_events(sio):
-    async def handle_disconnection_timeout(room_code, old_sid):
-        await asyncio.sleep(30)
-        room = get_room_state(room_code)
-        if room and room.get('state') == 'playing':
-            missing_player = next((p for p in room['players'] if p.get('old_sid') == old_sid and p.get('sid') is None), None)
-            if missing_player:
-                print(f"⏰ [Timeout] إعلان فوز الخصم في الغرفة {room_code}.")
-                winner_player = next((p for p in room['players'] if p.get('old_sid') != old_sid), None)
-                winner_color = winner_player['color'] if winner_player else 'green'
-                record_match_result(winner_player, missing_player, room.get('game_mode', 'huroof'), extra={'reason': 'surrender'})
-                await sio.emit('show_winner', {'color': winner_color, 'reason': 'surrender'}, room=room_code)
-                room['state'] = 'finished'
-                if room.get('game_state'): room['game_state'].state_version += 9999 
-                await return_players_to_lobby(sio, room)
-                if room_code in rooms: del rooms[room_code]
-
     @sio.event
-    async def connect(sid, environ):
-        print(f"[+] اتصال جديد: {sid}")
+    async def connect(sid, environ, auth=None):
+        print(f"✅ [سوكيت] لاعب اتصل بالسيرفر: {sid}")
 
     @sio.event
     async def disconnect(sid):
-        if sid in connected_players:
-            print(f"[-] غادر {connected_players[sid]['name']} النظام")
-            del connected_players[sid]
-            await sio.emit('update_online_players', list(connected_players.values()))
+        print(f"❌ [سوكيت] لاعب انقطع اتصاله: {sid}")
         
-        for game_mode, players in game_lobby_players.items():
-            if sid in players:
-                del players[sid]
-                players_list = list(players.values())
-                for p_sid in list(players.keys()):
-                    await sio.emit('update_game_lobby_players', players_list, to=p_sid)
-                    
-        room_code, room = leave_room(sid)
-        if room_code and room and room.get('state') == 'playing':
-            await sio.emit('opponent_disconnected', {'msg': 'انقطع اتصال الخصم، ننتظر عودته...'}, room=room_code)
-            if room.get('game_state'): room['game_state'].state_version += 1 
-            disconnect_timers[room_code] = asyncio.create_task(handle_disconnection_timeout(room_code, sid))
+        player = await get_connected_player(sid)
+        
+        if player:
+            loc = player.get('location', '')
+            
+            # ✅ الإصلاح الرئيسي: إذا كان اللاعب داخل مباراة، لا نمسحه من القائمة العالمية
+            # لأنه سيتصل بـ SID جديد من صفحة اللعبة ويُضيف نفسه تلقائياً
+            if loc and loc.startswith('playing_'):
+                print(f"🎮 [disconnect] {player.get('name')} انتقل لصفحة اللعبة — لن نمسحه من القوائم")
+                # نمسح الـ SID القديم فقط (سيُستبدل بـ SID جديد من huroof_player_ready)
+                await remove_connected_player(sid)
+            else:
+                # لاعب خرج من اللوبي فعلاً
+                await remove_connected_player(sid)
+                
+                if loc and loc != 'global':
+                    await remove_game_lobby_player(loc, sid)
+                    players_list = await get_game_lobby_players(loc)
+                    await sio.emit('update_game_lobby_players', players_list, room=loc)
+                
+                online_players = await get_all_online_players()
+                await sio.emit('update_online_players', online_players)
+                print(f"🧹 [disconnect] تمت إزالة {player.get('name')} من الذاكرة المركزية")
+
+        if sid in disconnect_timers:
+            disconnect_timers[sid].cancel()
+            del disconnect_timers[sid]
