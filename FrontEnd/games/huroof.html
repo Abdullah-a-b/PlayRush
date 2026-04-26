@@ -4,8 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>حروف</title>
+
+    <!-- 🚀 preload الخطوط قبل أي شيء لتسريع الرندر -->
+    <link rel="preload" href="../assets/fonts/Tajawal-Regular.ttf" as="font" type="font/truetype" crossorigin="anonymous">
+    <link rel="preload" href="../assets/fonts/Tajawal-Bold.ttf" as="font" type="font/truetype" crossorigin="anonymous">
+
+    <!-- 🚀 preload الـ CSS المهم -->
+    <link rel="preload" href="../css/games/huroof.css" as="style">
+    <link rel="preload" href="../css/all.min.css" as="style">
+
     <link rel="stylesheet" href="../css/games/huroof.css" />
     <link rel="stylesheet" href="../css/all.min.css">
+
+    <!-- 🚀 config.js بدون defer حتى تكون API_URL و getToken متاحة فوراً -->
+    <script src="../js/config.js"></script>
 </head>
 <body>
     
@@ -198,12 +210,10 @@
         </div>
     </div>
 
-    <script src="js/purify.min.js" defer></script>
-    <script src="../js/config.js" defer></script>
-    <script src="../js/utils.js" defer></script>
-    <script src="../js/socket.io.min.js" defer></script>
-
-    <script src="../js/games/huroof.js" defer></script>
+    <script src="../js/purify.min.js"></script>
+    <script src="../js/utils.js"></script>
+    <script src="../js/socket.io.min.js"></script>
+    <script src="../js/games/huroof.js"></script>
     <script src="../js/anti_cheat.js" defer></script>
 </body>
 </html>

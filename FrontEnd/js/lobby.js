@@ -481,7 +481,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         cancelMatchmakingBtn.style.display = 'block';
         mmStatusTitle.textContent = 'البحث عن منافس...';
         mmStatusDesc.textContent  = 'جاري البحث عن لاعبين في نفس مستواك';
-        socket.emit('quick_play_search', {
+        socket.emit('find_match', {
             player_name: userDataCache.player_name,
             game_mode:   selectedGameMode,
             avatar:      userDataCache.avatar,
@@ -520,25 +520,49 @@ window.addEventListener('DOMContentLoaded', async () => {
                     document.getElementById('mmOrangeAvatar').src = getCorrectAvatarUrl(p.avatar);
                 }
             });
+            
 
             mmCountdown.style.display = 'block';
-            let count = 3;
-            mmCountdown.textContent   = count;
 
-            const countInterval = setInterval(() => {
-                count--;
-                if (count > 0) {
-                    mmCountdown.textContent = count;
+            // ⏳ عداد تنازلي 3 → 2 → 1 → انطلاق! قبل دخول اللعبة
+            const countdownSteps = ['3', '2', '1', 'انطلاق!'];
+            let stepIndex = 0;
+
+            const preloader = document.createElement('link');
+            preloader.rel = 'prefetch';
+            preloader.href = `games/${selectedGameMode}.html`;
+            document.head.appendChild(preloader);
+            const cssPreloader = document.createElement('link');
+            cssPreloader.rel = 'prefetch';
+            cssPreloader.href = `css/games/${selectedGameMode}.css`;
+            document.head.appendChild(cssPreloader);
+            const jsPreloader = document.createElement('link');
+            jsPreloader.rel = 'prefetch';
+            jsPreloader.href = `js/games/${selectedGameMode}.js`;
+            document.head.appendChild(jsPreloader);
+
+            function runCountdownStep() {
+                mmCountdown.textContent = countdownSteps[stepIndex];
+                mmCountdown.style.transform = 'scale(1.4)';
+                mmCountdown.style.transition = 'transform 0.15s ease-out';
+                setTimeout(() => {
+                    mmCountdown.style.transform = 'scale(1)';
+                }, 150);
+
+                stepIndex++;
+                if (stepIndex < countdownSteps.length) {
+                    setTimeout(runCountdownStep, 1000);
                 } else {
-                    clearInterval(countInterval);
-                    mmCountdown.textContent = 'انطلاق!';
-                    setTimeout(() => window.location.assign(`games/${selectedGameMode}.html`), 500);
+                    // بعد ظهور "انطلاق!" نمنح 600ms ثم ننتقل
+                    setTimeout(() => window.location.assign(`games/${selectedGameMode}.html`), 600);
                 }
-            }, 1000);
+            }
+
+            runCountdownStep();
 
         } catch (err) {
             console.error('match_found error:', err);
-            setTimeout(() => window.location.assign(`games/${selectedGameMode}.html`), 1000);
+            window.location.assign(`games/${selectedGameMode}.html`);
         }
     });
 
@@ -791,6 +815,23 @@ window.addEventListener('DOMContentLoaded', async () => {
             }, 2000);
         }
     });
+
+    socket.on('huroof_waiting_opponent', (data) => {
+    const overlay = document.getElementById('waiting-overlay');
+    if (overlay) {
+        overlay.style.display = 'flex';
+        const msg = document.getElementById('overlay-message');
+        if (msg) msg.textContent = data.msg || 'في انتظار دخول الخصم...';
+        const spinner = overlay.querySelector('.spinner');
+        if (spinner) spinner.style.display = 'block';
+    }
+});
+
+socket.on('huroof_new_round_started', () => {
+    // إخفاء overlay الانتظار عند بدء الجولة الفعلية
+    const overlay = document.getElementById('waiting-overlay');
+    if (overlay) overlay.style.display = 'none';
+});
 
     // ----------------------------------------
     // 🖱️ إغلاق النوافذ عند النقر خارجها

@@ -1,3 +1,26 @@
+/* ===== تحميل الخطوط مسبقاً (إصلاح تأخر الواجهة) ===== */
+@font-face {
+    font-family: 'Tajawal';
+    src: url('../assets/fonts/Tajawal-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Tajawal';
+    src: url('../assets/fonts/Tajawal-Bold.ttf') format('truetype');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Tajawal';
+    src: url('../assets/fonts/Tajawal-Black.ttf') format('truetype');
+    font-weight: 900;
+    font-style: normal;
+    font-display: swap;
+}
+
 html, body {
     overflow: hidden;
     height: 100%;
@@ -6,7 +29,7 @@ html, body {
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Tajawal', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     display: flex;
     flex-direction: column;
     background: linear-gradient(45deg, #2a0a3d, #4b1b6a);
@@ -27,7 +50,14 @@ body {
 }
 
 /* --- الشريط العلوي (تحديث شامل) --- */
+/* ===== أنيميشن تحميل الـ top-bar ===== */
+@keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
 .top-bar {
+    animation: fadeInDown 0.3s ease-out both;
     position: fixed; 
     top: 0; 
     left: 0; 
@@ -61,7 +91,7 @@ body {
     color: #ffeb3b; 
     text-shadow: 0 0 10px rgba(106, 27, 154, 0.8);
     margin: 0; 
-    font-family: 'Cairo', sans-serif;
+    font-family: 'Tajawal', sans-serif;
     line-height: 1;
 }
 

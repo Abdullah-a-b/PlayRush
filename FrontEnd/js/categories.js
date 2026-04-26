@@ -169,16 +169,27 @@ window.addEventListener('DOMContentLoaded', async () => {
         addGlobalChatMessage(msg.sender, msg.text, msg.isSystem);
     });
 
+    // ✅ الإصلاح: joinGlobalLobby تُنادى فقط بعد جلب بيانات المستخدم (userDataCache)
+    // وليس عند connect مباشرة — لمنع الإرسال بدون اسم ومنع الدوبل
+    let lobbyJoined = false;
+
     function joinGlobalLobby() {
-        if (userDataCache) {
-            socket.emit('join_global_lobby', {
-                name:   userDataCache.player_name,
-                avatar: userDataCache.avatar, // ✅ المسار الخام — السيرفر يعرف يتعامل معه
-            });
-        }
+        if (!userDataCache) return; // ❌ لا ترسل إذا البيانات لم تُجلب بعد
+        if (lobbyJoined && socket.connected) return; // ❌ لا ترسل مرتين
+        socket.emit('join_global_lobby', {
+            name:   userDataCache.player_name,
+            avatar: userDataCache.avatar,
+        });
+        lobbyJoined = true;
     }
 
-    socket.on('connect', joinGlobalLobby);
+    // عند إعادة الاتصال فقط (انقطاع مؤقت) — أعد الانضمام
+    socket.on('connect', () => {
+        if (userDataCache) {
+            lobbyJoined = false; // السيرفر لا يعرف الـ SID الجديد
+            joinGlobalLobby();
+        }
+    });
 
     // ----------------------------------------
     // 👤 جلب بيانات الحساب
@@ -242,6 +253,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('localAuthFields').style.display = isGoogle ? 'none'  : 'block';
 
         if (socket.connected) joinGlobalLobby();
+        // ✅ إذا Socket لم يتصل بعد، سيُنادى joinGlobalLobby عبر socket.on('connect') أعلاه
 
     } catch {
         showToast('خطأ في الاتصال بالسيرفر', 'error');
