@@ -21,7 +21,7 @@ from app.services.telegram_bot import send_secret_to_mobile
 
 from app.sockets.state import (
     get_active_room, delete_active_room, get_connected_player, get_all_online_players,
-    add_connected_player, cheat_strikes, redis_db
+    add_connected_player, get_cheat_strikes, increment_cheat_strikes, redis_db, set_room_ready, get_room_ready_count, pop_room_ready
 )
 from app.sockets.lobby import return_players_to_lobby
 
@@ -74,8 +74,6 @@ party_session_used_ids = set()
 
 # ✅ Ready tracker في الذاكرة — يستبدل Redis ready_set (أسرع بكثير)
 # { room_code: { player_name: sid } }
-_room_ready: dict = {}
-
 # ==========================================
 # 🛠️ الفلاتر والدوال المساعدة للعبة حروف
 # ==========================================
@@ -146,12 +144,12 @@ def register_huroof_events(sio):
         print(f"⏰ [Timeout] الغرفة {room_code} | النوع: {timeout_type}")
         
         if timeout_type == 'timeout_buzz_r1':
-            gs['attempts'] = 2
-            new_version = advance_state(engine, 'question')
-            gs['buzzed_player'] = None
-            await engine._save_state()
-            await sio.emit('huroof_last_chance', {'timer': 30}, room=room_code)
-            sio.start_background_task(huroof_timer_task, room_code, new_version, 30, 'timeout_buzz_r3')
+            # ✅ إصلاح: انتهى وقت الجرس (لا أحد ضغط أو ضغط ولم يجب) → سؤال جديد بنفس الحرف
+            await sio.emit('huroof_timeout_info', {'msg': 'انتهى الوقت! سؤال جديد بنفس الحرف...'}, room=room_code)
+            await asyncio.sleep(2)
+            fresh_room_data = await get_active_room(room_code)
+            if fresh_room_data:
+                await trigger_new_question(room_code, fresh_room_data)
 
         elif timeout_type == 'timeout_answer_r1':
             new_version = advance_state(engine, 'answer_r2')
@@ -176,13 +174,11 @@ def register_huroof_events(sio):
             sio.start_background_task(huroof_timer_task, room_code, new_version, 12, 'timeout_answer_r4')
 
         elif timeout_type == 'timeout_answer_r4' or timeout_type == 'timeout_buzz_r3':
-            advance_state(engine, 'selecting')
-            gs['attempts'] = 1 
-            gs['turn'] = engine.p2 if gs.get('turn') == engine.p1 else engine.p1
-            await engine._save_state()
-            await sio.emit('huroof_timeout_info', {'msg': 'انتهى الوقت! نعود لاختيار الحروف.'}, room=room_code)
+            await sio.emit('huroof_timeout_info', {'msg': 'انتهى الوقت! سؤال جديد بنفس الحرف...'}, room=room_code)
             await asyncio.sleep(2)
-            await sio.emit('huroof_turn_changed', {'turn_sid': gs['turn']}, room=room_code)
+            fresh_room_data = await get_active_room(room_code)
+            if fresh_room_data:
+                await trigger_new_question(room_code, fresh_room_data)
 
 
     async def trigger_new_question(room_code, room_data=None):
@@ -260,7 +256,13 @@ def register_huroof_events(sio):
         asyncio.create_task(send_secret_to_mobile(result['question'], result['answer']))
 
         print(f"⏱️ [trigger_question:{room_code}] TOTAL: {(time.perf_counter()-_tq0)*1000:.1f}ms")
-        await sio.emit('huroof_new_question', {'questionData': result, 'round': 'r1', 'timer': 40}, room=room_code)
+        # ✅ إصلاح ٣: إرسال current_turn_sid مع السؤال حتى تعرف الواجهة من يملك الدور عند سؤال جديد
+        await sio.emit('huroof_new_question', {
+            'questionData': result,
+            'round': 'r1',
+            'timer': 40,
+            'current_turn_sid': gs.get('turn')
+        }, room=room_code)
         sio.start_background_task(huroof_timer_task, room_code, version, 40, 'timeout_buzz_r1')
 
 
@@ -364,13 +366,11 @@ def register_huroof_events(sio):
                 sio.start_background_task(huroof_timer_task, room_code, version, 12, 'timeout_answer_r4')
                 
             elif stage == 'answer_r4':
-                advance_state(engine, 'selecting')
-                gs['attempts'] = 1
-                gs['turn'] = engine.p2 if gs.get('turn') == engine.p1 else engine.p1
-                await engine._save_state()
-                await sio.emit('huroof_timeout_info', {'msg': 'كلاكما أخطأ! نعود للاختيار.'}, room=room_code)
+                await sio.emit('huroof_timeout_info', {'msg': 'كلاكما أخطأ! سؤال جديد بنفس الحرف...'}, room=room_code)
                 await asyncio.sleep(2)
-                await sio.emit('huroof_turn_changed', {'turn_sid': gs['turn']}, room=room_code)
+                fresh_room_data = await get_active_room(room_code)
+                if fresh_room_data:
+                    await trigger_new_question(room_code, fresh_room_data)
 
 
     # --- أحداث اللاعبين الأساسية ---
@@ -387,10 +387,8 @@ def register_huroof_events(sio):
         if not room_code or not player_name: return
 
         # تسجيل الجاهزية في الذاكرة
-        if room_code not in _room_ready:
-            _room_ready[room_code] = {}
-        _room_ready[room_code][player_name] = (sid, fresh_avatar)
-        ready_count = len(_room_ready[room_code])
+        await set_room_ready(room_code, player_name, sid, fresh_avatar)
+        ready_count = await get_room_ready_count(room_code)
 
         # تحديث اللوبي في الخلفية
         async def _update_lobby_async():
@@ -463,7 +461,7 @@ def register_huroof_events(sio):
 
         # 🎯 لو وصل اللاعب الثاني الآن، ابدأ الجولة فعلياً للاعبين الاثنين
         if ready_count >= 2:
-            _room_ready.pop(room_code, None)
+            await pop_room_ready(room_code)
             # ضمان أن الدور صحيح
             if room_data.get('turn') not in {engine.p1, engine.p2}:
                 room_data['turn'] = engine.p1
@@ -566,8 +564,11 @@ def register_huroof_events(sio):
         engine = HuroofGameEngine(room_code, room_data)
         gs = engine.room_data
         
+        print(f"🔔 [buzz] sid={sid} | stage={gs.get('stage')} | turn={gs.get('turn')}")
         allowed_stages = ['question', 'buzz_r1', 'buzz_r3']
-        if gs.get('stage') not in allowed_stages: return
+        if gs.get('stage') not in allowed_stages:
+            print(f"⛔ [buzz] رُفض — stage={gs.get('stage')} غير مقبول")
+            return
         
         gs['buzzed_player'] = sid
         gs['answer_start_time'] = time.time()
@@ -581,6 +582,8 @@ def register_huroof_events(sio):
             current_time = 12
             version = advance_state(engine, 'answer_r3')
             timeout_type = 'timeout_answer_r3'
+
+        await engine._save_state()
         
         print(f"🔔 {sid} ضغط الجرس - محاولة رقم: {gs['attempts']} - وقت: {current_time}ث")
         
@@ -597,17 +600,24 @@ def register_huroof_events(sio):
         engine = HuroofGameEngine(room_code, room_data)
         gs = engine.room_data
 
+        # 🔍 تشخيص: طباعة حالة السيرفر عند استلام الإجابة
+        print(f"📥 [submit_answer] sid={sid} | stage={gs.get('stage')} | buzzed={gs.get('buzzed_player')} | ans={player_ans}")
+
         # 🛡️ الحماية 1: التحقق من الحالة
-        if gs.get('stage') not in ['answer_r1', 'answer_r2', 'answer_r3', 'answer_r4']: return 
-        if sid != gs.get('buzzed_player'): return 
+        if gs.get('stage') not in ['answer_r1', 'answer_r2', 'answer_r3', 'answer_r4']:
+            print(f"⛔ [submit_answer] رُفض — stage={gs.get('stage')} غير مقبول")
+            return 
+        if sid != gs.get('buzzed_player'):
+            print(f"⛔ [submit_answer] رُفض — sid={sid} != buzzed={gs.get('buzzed_player')}")
+            return 
 
         # 🛡️ الحماية 2: مكافحة البوتات (سرعة الإجابة)
         if is_bot_or_speedhack(gs.get('answer_start_time', 0), min_human_reaction=0.4):
             player = await get_connected_player(sid)
             player_name = player.get('name', 'مجهول') if player else 'مجهول'
             
-            current_strikes = cheat_strikes.get(player_name, 0) + 1
-            cheat_strikes[player_name] = current_strikes
+            current_strikes = await get_cheat_strikes(sid) + 1
+            await increment_cheat_strikes(sid)
             
             if current_strikes == 1:
                 print(f"⚠️ [إنذار أول] سرعة غير طبيعية من اللاعب {player_name}")

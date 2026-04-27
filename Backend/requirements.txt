@@ -12,8 +12,8 @@ python-socketio
 sqlalchemy
 
 # Scalability (اختياري للإنتاج): PostgreSQL بدل SQLite
-# asyncpg
-# psycopg2-binary
+asyncpg
+psycopg2-binary
 
 # Scalability (اختياري للإنتاج): Redis لـ OTP cooldowns وSocket.IO multi-process
 # redis[asyncio]
@@ -37,3 +37,6 @@ httpx
 requests
 
 redis
+
+hypercorn
+waitress

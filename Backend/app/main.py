@@ -125,7 +125,8 @@ app.include_router(shop_router, prefix="/shop", tags=["Shop"])
 
 # 1. إنشاء مدير الاتصالات الذي يربط السيرفرات ببعضها عبر Redis
 # (نستخدم localhost:6379 لأن Redis سيعمل على جهازك)
-redis_mgr = socketio.AsyncRedisManager('redis://127.0.0.1:6379/0')
+REDIS_URL = os.environ.get("REDIS_URL", "redis://127.0.0.1:6379/0")
+redis_mgr = socketio.AsyncRedisManager(REDIS_URL)
 
 # ==========================================
 # Socket.IO
@@ -148,6 +149,9 @@ register_room_events(sio)
 register_huroof_events(sio)
 register_telegram_events(sio)
 
-sio.start_background_task(telegram_bot_listener, sio)
+async def _start_telegram():
+    await telegram_bot_listener(sio)
+
+sio.start_background_task(_start_telegram)
 
 app.mount('/socket.io', socket_app)

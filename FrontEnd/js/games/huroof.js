@@ -194,7 +194,7 @@ socket.on('room_joined', (data) => {
             boardData.forEach((hexData, index) => {
                 if (cells[index]) {
                     cells[index].textContent = hexData.letter;
-                    cells[index].dataset.index = index;
+                    cells[index].dataset.index = hexData.index ?? index;
                     cells[index].classList.remove('active', 'green', 'orange');
                     if (hexData.color) cells[index].classList.add(hexData.color);
                 }
@@ -239,6 +239,20 @@ socket.on('huroof_board_init', (data) => {
     const roundsDisplay = document.getElementById('rounds-display');
     if (roundsDisplay) roundsDisplay.style.display = 'flex';
 
+    const sidebar = document.getElementById('questionSidebar');
+    if (sidebar) {
+        Object.assign(sidebar.style, { display: 'flex', visibility: 'visible', opacity: '1', pointerEvents: 'auto' });
+        sidebar.classList.add('active');
+    }
+    const qText = document.getElementById('questionText');
+    if (qText) {
+        qText.innerHTML = '';
+        const strong = document.createElement('strong');
+        strong.textContent = '⏳ جاري تحضير الجولة...';
+        qText.appendChild(strong);
+        qText.style.display = 'block';
+    }
+
     if (typeof systemMessageDisplay !== 'undefined') {
         systemMessageDisplay.textContent = 'اكتمل الاتصال! المعركة تبدأ الآن ⚔️';
         systemMessageDisplay.style.color = '#00ff88';
@@ -264,7 +278,7 @@ socket.on('huroof_board_init', (data) => {
         data.board.forEach((hexData, index) => {
             if (cells[index]) {
                 cells[index].textContent = hexData.letter;
-                cells[index].dataset.index = index;
+                cells[index].dataset.index = hexData.index ?? index;  // ✅ استخدام index من السيرفر
                 cells[index].classList.remove('active', 'green', 'orange');
                 if (hexData.color) cells[index].classList.add(hexData.color);
             }
@@ -286,6 +300,11 @@ socket.on('huroof_hex_locked', (data) => {
 });
 
 socket.on('huroof_new_question', (data) => {
+    // ✅ إصلاح ٣: تحديث currentTurnSid من السيرفر حتى تعرف الواجهة من يملك الدور
+    if (data.current_turn_sid) {
+        currentTurnSid = data.current_turn_sid;
+    }
+
     const sidebar = document.getElementById('questionSidebar');
     if (sidebar) {
         Object.assign(sidebar.style, { display: 'flex', visibility: 'visible', opacity: '1', pointerEvents: 'auto' });
@@ -295,9 +314,11 @@ socket.on('huroof_new_question', (data) => {
     const qText = document.getElementById('questionText');
     if (qText) qText.innerHTML = sanitizeHTML(data.questionData.question);
 
+    // ✅ إصلاح ١: تفعيل زر "أنا أعرف" فقط لو السؤال وصل وكل شيء جاهز
     buzzerBtn.style.display  = 'block';
     buzzerBtn.disabled       = false;
     buzzerBtn.style.opacity  = '1';
+    isMyTurnToAnswer = false;  // ← إعادة تعيين مهمة لمنع إرسال إجابة قديمة
     systemMessageDisplay.textContent = '';
 
     if (voteSkipBtn) {
@@ -309,6 +330,8 @@ socket.on('huroof_new_question', (data) => {
 
     document.getElementById('answer-container').style.display = 'none';
     answerSection.style.display      = 'none';
+    submitAnswerBtn.disabled         = false;  // ← إعادة تفعيل زر الإرسال
+    playerAnswerInput.value          = '';     // ← مسح الإجابة القديمة
     globalTimerDisplay.style.display = 'block';
     startGlobalTimer(data.timer);
 });
@@ -324,16 +347,19 @@ socket.on('huroof_buzzed', (data) => {
 
     if (data.sid === socket.id) {
         isMyTurnToAnswer = true;
+        submitAnswerBtn.disabled = false;  // ✅ تأكد من تفعيل الزر
         systemMessageDisplay.textContent = 'أسرع! اكتب إجابتك...';
         systemMessageDisplay.style.color = '#4CAF50';
         answerSection.style.display      = 'block';
         playerAnswerInput.value          = '';
         playerAnswerInput.focus();
+        console.log('🎯 دورك للإجابة! isMyTurnToAnswer =', isMyTurnToAnswer);
     } else {
         isMyTurnToAnswer = false;
         systemMessageDisplay.textContent = 'الخصم يجيب الآن... استعد في حال أخطأ!';
         systemMessageDisplay.style.color = '#FF9800';
         answerSection.style.display      = 'none';
+        console.log('⏳ دور الخصم للإجابة');
     }
     startPlayerTimer(timeValue);
 });
@@ -493,20 +519,50 @@ socket.on('opponent_reconnected', () => {
     Swal.fire({ title: 'عاد الخصم!', text: 'تمت استعادة الاتصال، استعد للمتابعة...', icon: 'success', timer: 2000, showConfirmButton: false });
 });
 
+// ✅ إضافة handler جديد للانتظار
+socket.on('huroof_waiting_opponent', (data) => {
+    const overlay = document.getElementById('waiting-overlay');
+    if (overlay) {
+        overlay.style.display = 'flex';
+        const overlayMsg = document.getElementById('overlay-message');
+        if (overlayMsg) {
+            overlayMsg.innerHTML = '';
+            const h2 = document.createElement('h2');
+            h2.style.color = '#FF9800';
+            h2.style.fontFamily = "'Tajawal',sans-serif";
+            h2.textContent = '⏳ في انتظار دخول الخصم...';
+            overlayMsg.appendChild(h2);
+        }
+        const spinner = document.querySelector('.spinner');
+        if (spinner) spinner.style.display = 'block';
+    }
+    // إخفاء أي نص دور حتى يدخل الخصم
+    if (currentLetterDisplay) {
+        currentLetterDisplay.textContent = 'في انتظار الخصم...';
+        currentLetterDisplay.style.color = '#FF9800';
+    }
+});
+
 
 // ============================================================
 // 🖱️ تفاعلات اللاعب
 // ============================================================
 
+// ✅ إصلاح: تعيين data-index لكل خلية عند التحميل (للخلايا المبنية في HTML)
+document.querySelectorAll('.hex').forEach((cell, index) => {
+    if (!cell.dataset.index) cell.dataset.index = index;
+});
+
 cells.forEach((cell, index) => {
     cell.addEventListener('click', () => {
+        const hexIndex = parseInt(cell.dataset.index ?? index);
         if (
             currentTurnSid === socket.id &&
             !cell.classList.contains('green') &&
             !cell.classList.contains('orange') &&
             !cell.classList.contains('active')
         ) {
-            socket.emit('huroof_select_hex', { roomCode, hexIndex: index });
+            socket.emit('huroof_select_hex', { roomCode, hexIndex: hexIndex });
         }
     });
 });
@@ -520,11 +576,19 @@ buzzerBtn.addEventListener('click', () => {
 });
 
 function submitAnswer() {
-    if (!isMyTurnToAnswer) return;
+    console.log('📤 submitAnswer called | isMyTurnToAnswer:', isMyTurnToAnswer, '| ans:', playerAnswerInput.value.trim());
+    if (!isMyTurnToAnswer) {
+        console.warn('⚠️ ليس دورك للإجابة — isMyTurnToAnswer = false');
+        return;
+    }
     const ans = playerAnswerInput.value.trim();
-    if (!ans) return;
+    if (!ans) {
+        console.warn('⚠️ الإجابة فارغة');
+        return;
+    }
     isMyTurnToAnswer         = false;
     submitAnswerBtn.disabled = true;
+    console.log('✅ إرسال الإجابة:', ans, '| roomCode:', roomCode);
     socket.emit('huroof_submit_answer', { roomCode, answer: ans });
 }
 

@@ -94,6 +94,51 @@ async def delete_active_room(room_id):
     await redis_db.hdel("active_rooms", room_id)
 
 # ==========================================
+# 🚀 جاهزية اللاعب وعدّاد الغش — في Redis للتوزيع
+# ==========================================
+
+async def set_room_ready(room_code: str, player_name: str, sid: str, avatar: str):
+    """تسجيل جاهزية اللاعب — يستبدل _room_ready المحلي"""
+    await redis_db.hset(
+        f"ready:{room_code}",
+        player_name,
+        json.dumps({"sid": sid, "avatar": avatar})
+    )
+    await redis_db.expire(f"ready:{room_code}", 300)  # ينتهي بعد 5 دقائق
+
+async def get_room_ready_count(room_code: str) -> int:
+    return await redis_db.hlen(f"ready:{room_code}")
+
+async def pop_room_ready(room_code: str) -> dict:
+    """يعيد {player_name: (sid, avatar)} ويحذف"""
+    data = await redis_db.hgetall(f"ready:{room_code}")
+    if data:
+        await redis_db.delete(f"ready:{room_code}")
+    result = {}
+    for name, payload in data.items():
+        try:
+            d = json.loads(payload)
+            result[name] = (d["sid"], d["avatar"])
+        except: pass
+    return result
+
+# ==========================================
+# 🛡️ عدّاد الغش — في Redis (يستبدل cheat_strikes المحلي)
+# ==========================================
+async def increment_cheat_strikes(sid: str) -> int:
+    n = await redis_db.incr(f"cheat:{sid}")
+    if n == 1:
+        await redis_db.expire(f"cheat:{sid}", 3600)
+    return n
+
+async def get_cheat_strikes(sid: str) -> int:
+    n = await redis_db.get(f"cheat:{sid}")
+    return int(n) if n else 0
+
+async def reset_cheat_strikes(sid: str):
+    await redis_db.delete(f"cheat:{sid}")
+
+# ==========================================
 # 🎮 القواميس المحلية (Local Memory)
 # ==========================================
 active_rooms = {} 
