@@ -1,65 +1,40 @@
-import asyncio
-from app.sockets.state import (
-    join_matchmaking, leave_matchmaking, check_matchmaking, 
-    create_active_room, get_connected_player
-)
+import secrets
+import string
+from app.games.core_manager import add_to_queue, remove_from_queue, check_queue_for_match
+from app.services.reward_service import get_clean_avatar
+from app.sockets.auth_helper import verify_socket_token
 
 def register_matchmaking_events(sio):
 
-    @sio.on('find_match')
-    async def find_match(sid, data):
-        game_mode = data.get('gameMode', 'huroof')
-        
-        # جلب بيانات اللاعب المؤكدة من Redis
-        player = await get_connected_player(sid)
-        if not player:
+    @sio.on('quick_play_search')
+    async def quick_play_search(sid, data):
+        # 🛡️ التحقق من هوية اللاعب قبل إدخاله الطابور
+        token = data.get('token')
+        user, db = verify_socket_token(token)
+        if not user:
+            await sio.emit('quick_play_error', {'msg': 'يجب تسجيل الدخول أولاً'}, to=sid)
             return
-            
-        player_name = player.get('name', 'مجهول')
-        player_avatar = player.get('avatar', '')
-        
-        print(f"🔍 [ماتش ميكنج] اللاعب {player_name} يبحث عن خصم في {game_mode}")
-        
-        player_data = {
-            'sid': sid,
-            'name': player_name,
-            'avatar': player_avatar
-        }
+        db.close()
 
-        # 1. إضافة اللاعب لطابور الانتظار
-        await join_matchmaking(game_mode, player_data)
+        game_mode = data.get('game_mode')
+        # ✅ نأخذ الاسم من DB لا من الـ data — يمنع انتحال الهوية
+        player_name = user.player_name or 'لاعب'
+        avatar = get_clean_avatar(user.avatar, player_name)
 
-        # 2. إرسال تأكيد للاعب
-        await sio.emit('matchmaking_started', {'message': 'جاري البحث عن خصم...'}, to=sid)
+        success, msg = add_to_queue(sid, player_name, avatar, game_mode, token=token)
+        if not success:
+            await sio.emit('quick_play_error', {'msg': msg}, to=sid)
+            return
 
-        # 3. محاولة سحب لاعبين من الطابور لبدء مباراة
-        p1, p2 = await check_matchmaking(game_mode)
-        
-        if p1 and p2:
-            # تم العثور على مباراة!
-            print(f"⚔️ [ماتش ميكنج] مباراة جديدة! {p1['name']} ضد {p2['name']}")
-            
-            # إنشاء غرفة في Redis
-            room_id, room_data = await create_active_room(game_mode, p1, p2)
-            
-            # إدخال اللاعبين في الغرفة الخاصة بالسوكيت
-            await sio.enter_room(p1['sid'], room_id)
-            await sio.enter_room(p2['sid'], room_id)
-            
-            match_payload = {
-                'room_code': room_id,
-                'players': [
-                    {'name': p1['name'], 'avatar': p1['avatar'], 'color': 'green'},
-                    {'name': p2['name'], 'avatar': p2['avatar'], 'color': 'orange'}
-                ]
-            }
-            
-            # إرسال match_found للاعبين لرؤية بعضهم — اللعبة تبدأ مباشرة بعد الانتقال
-            await sio.emit('match_found', match_payload, room=room_id)
+        match_found, room_code, matched_players, rp_data = check_queue_for_match(game_mode)
 
-    @sio.on('cancel_matchmaking')
-    async def cancel_matchmaking(sid, data):
-        game_mode = data.get('gameMode', 'huroof')
-        print(f"🛑 [ماتش ميكنج] لاعب ألغى البحث في {game_mode}")
-        await leave_matchmaking(game_mode, sid)
-        await sio.emit('matchmaking_cancelled', {'message': 'تم إلغاء البحث.'}, to=sid)
+        if match_found:
+            players_list = list(rp_data.values())
+            for p in matched_players:
+                role = 'host' if p['sid'] == matched_players[0]['sid'] else 'guest'
+                await sio.emit('match_found', {'room_code': room_code, 'role': role, 'players': players_list}, to=p['sid'])
+
+    @sio.on('cancel_quick_play')
+    async def cancel_quick_play(sid):
+        if remove_from_queue(sid):
+            await sio.emit('quick_play_cancelled', {}, to=sid)

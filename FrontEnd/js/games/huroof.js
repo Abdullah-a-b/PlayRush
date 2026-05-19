@@ -3,20 +3,11 @@
 // المتطلبات: config.js → utils.js (يوفر API_URL, sanitizeHTML, getToken)
 // ============================================================
 
-// دالة مساعدة: تضع أيقونة FontAwesome ونصاً في زر بدون innerHTML
-function setButtonWithIcon(btn, iconClass, label) {
-    if (!btn) return;
-    btn.innerHTML = '';
-    const i = document.createElement('i');
-    i.className = iconClass;
-    btn.appendChild(i);
-    btn.appendChild(document.createTextNode(' ' + label));
-}
 
 // ============================================================
 // 🚀 الاتصال والجلسة
 // ============================================================
-const socket = io(API_URL, { transports: ['websocket'], upgrade: false });
+const socket = io(API_URL, { transports: ['websocket', 'polling'], upgrade: true });
 
 const token        = getToken();
 const playerName   = sessionStorage.getItem('playerName')   || sessionStorage.getItem('username')   || 'لاعب';
@@ -65,95 +56,41 @@ let isMyTurnToAnswer    = false;
 let globalTimerInterval = null;
 let playerTimerInterval = null;
 
-// ✅ متغيرات التزامن — تضمن الترتيب الصحيح لأحداث البداية
-let _roomJoinedReceived = false;  // هل وصل room_joined؟
-let _pendingTurnSid     = null;   // الدور المنتظر إذا وصل new_round قبل room_joined
-let _pendingBoard       = null;   // اللوحة المنتظرة إذا وصلت قبل room_joined
-
 let playersStatsData = {
     me: {
-        name: 'أنت', avatar: '../assets/avatars/avatar_1.svg',
-        flag: '../assets/flags/SA.svg', rank: '--',
+        name: 'أنت', avatar: '../../assets/avatars/avatar_1.svg',
+        flag: '../../assets/flags/SA.svg', rank: '--',
         huroof: { wins: 0, losses: 0, total: 0 },
         global:  { wins: 0, losses: 0, total: 0 },
         color: 'green',
     },
     opponent: {
-        name: 'الخصم', avatar: '../assets/avatars/avatar_2.svg',
-        flag: '../assets/flags/AE.svg', rank: '--',
+        name: 'الخصم', avatar: '../../assets/avatars/avatar_2.svg',
+        flag: '../../assets/flags/AE.svg', rank: '--',
         huroof: { wins: 0, losses: 0, total: 0 },
         global:  { wins: 0, losses: 0, total: 0 },
         color: 'orange',
     },
 };
 
-// التحديث الفوري: وضع بيانات اللاعب المحلي فور تحميل الصفحة
-playersStatsData.me.name = playerName;
-playersStatsData.me.avatar = getValidAvatarSrc(playerAvatar);
-document.getElementById('myPlayerName').textContent = playerName;
-document.getElementById('myAvatarImg').src = playersStatsData.me.avatar;
-
-// وضع حالة تحميل مبدئية للخصم حتى تأتي بياناته من السيرفر
-document.getElementById('opponentName').textContent = 'جاري البحث...';
-document.getElementById('opponentAvatarImg').style.opacity = '0.5';
 
 // ============================================================
 // 🛠️ مسار الأفاتار (خاص بمجلد games/ حيث المسار ../../)
 // ============================================================
 function getValidAvatarSrc(avatarValue) {
-    if (!avatarValue || avatarValue.trim() === '') return '../assets/avatars/avatar_1.svg';
+    if (!avatarValue || avatarValue.trim() === '') return '../../assets/avatars/avatar_1.svg';
     if (avatarValue.startsWith('http') || avatarValue.startsWith('data:')) return avatarValue;
     if (avatarValue.startsWith('/uploads')) return `${API_URL}${avatarValue}`;
     const name = avatarValue.split('/').pop();
-    return `../assets/avatars/${name.includes('.') ? name : name + '.svg'}`;
+    return `../../assets/avatars/${name.includes('.') ? name : name + '.svg'}`;
 }
 
 
 // ============================================================
 // 🔌 الاتصال والانضمام للغرفة
 // ============================================================
-// =========================================================
-// 🚀 إرسال إشارة الجاهزية للسيرفر بشكل محصّن (يمنع التكرار)
-// =========================================================
-let isReadySignalSent = false;
-
-function sendReadySignal() {
-    if (isReadySignalSent) return; 
-    
-    const roomId = sessionStorage.getItem('gameRoomCode');
-    const pName = sessionStorage.getItem('playerName') || sessionStorage.getItem('username') || localStorage.getItem('playerName');
-    const pAvatar = sessionStorage.getItem('playerAvatar') || sessionStorage.getItem('avatar') || ''; 
-    
-    if (roomId && pName) {
-        console.log("🚀 جاري إرسال إشارة الجاهزية للسيرفر...");
-        
-        // 💡 حل مشكلة "التأخير الوهمي": إظهار رسالة فورية ليعلم اللاعب أنه ينتظر الخصم فقط
-        const sysMsg = document.getElementById('systemMessageDisplay');
-        if (sysMsg) {
-            sysMsg.textContent = '⏳ جاري انتظار دخول الخصم للمباراة...';
-            sysMsg.style.color = '#FF9800';
-        }
-
-        socket.emit('huroof_player_ready', { 
-            roomId: roomId, 
-            roomCode: roomId,
-            playerName: pName,
-            avatar: pAvatar // 👈 إرسال الصورة الطازجة للسيرفر
-        });
-        isReadySignalSent = true;
-    }
-}
-
-// 💡 تأمين الاتصال: نرسل الإشارة إذا كان متصلاً، وننتظر إذا لم يكن
-if (socket.connected) {
-    sendReadySignal();
-}
 socket.on('connect', () => {
-    // ✅ إعادة تعيين متغيرات التزامن عند كل اتصال جديد
-    _roomJoinedReceived = false;
-    _pendingTurnSid     = null;
-    _pendingBoard       = null;
-    sendReadySignal();
+    socket.emit('join_room', { room_code: roomCode, token, player_name: playerName, avatar: playerAvatar });
 });
 
 socket.on('room_joined', (data) => {
@@ -161,70 +98,28 @@ socket.on('room_joined', (data) => {
     const opponent = data.players.find(p => p.sid !== socket.id && p.name !== playerName);
 
     if (me) {
-        // ✅ تحديد اللون فوراً — اللعبة تبدأ هنا
         myColor = me.color;
         const gameTitle = document.querySelector('.game-title');
         if (gameTitle) {
             gameTitle.textContent = `حروف - أنت اللاعب ${myColor === 'green' ? 'الأخضر 🟢' : 'البرتقالي 🟠'}`;
             gameTitle.style.color = myColor === 'green' ? '#4CAF50' : '#FF9800';
         }
-        // بيانات أساسية فورية (بدون إحصائيات)
-        playersStatsData.me.name   = me.name   || playerName;
-        playersStatsData.me.avatar = getValidAvatarSrc(me.avatar || playerAvatar);
-        playersStatsData.me.color  = me.color;
+        if (me.stats) {
+            playersStatsData.me = { ...me.stats, color: me.color, avatar: getValidAvatarSrc(me.stats.avatar) };
+        }
     }
-    if (opponent) {
-        playersStatsData.opponent.name   = opponent.name   || 'الخصم';
-        playersStatsData.opponent.avatar = getValidAvatarSrc(opponent.avatar || '');
-        playersStatsData.opponent.color  = opponent.color;
-        document.getElementById('opponentName').textContent = opponent.name || 'الخصم';
-        document.getElementById('opponentAvatarImg').style.opacity = '1';
-        if (opponent.avatar) document.getElementById('opponentAvatarImg').src = getValidAvatarSrc(opponent.avatar);
+    if (opponent?.stats) {
+        playersStatsData.opponent = { ...opponent.stats, color: opponent.color, avatar: getValidAvatarSrc(opponent.stats.avatar) };
     }
+
     updateTopBarUI();
-
-    // ✅ تمييز أننا استقبلنا room_joined
-    _roomJoinedReceived = true;
-
-    // ✅ إذا كانت اللوحة وصلت قبلنا، ارسمها الآن
-    if (_pendingBoard) {
-        const boardData = _pendingBoard;
-        _pendingBoard = null;
-        requestAnimationFrame(() => {
-            boardData.forEach((hexData, index) => {
-                if (cells[index]) {
-                    cells[index].textContent = hexData.letter;
-                    cells[index].dataset.index = hexData.index ?? index;
-                    cells[index].classList.remove('active', 'green', 'orange');
-                    if (hexData.color) cells[index].classList.add(hexData.color);
-                }
-            });
-        });
-    }
-
-    // ✅ إذا كان الدور وصل قبلنا، طبّقه الآن
-    if (_pendingTurnSid !== null) {
-        currentTurnSid = _pendingTurnSid;
-        _pendingTurnSid = null;
-        document.getElementById('waiting-overlay').style.display = 'none';
-        resetUIForNewTurn();
-    }
-
-    // تفعيل التفاعل مباشرة
-    applyTurnUI();
 });
 
 socket.on('update_players_stats', (players) => {
-    // الإحصائيات تصل لاحقاً من DB — نحدث بصمت بدون إعادة رسم اللوحة
     const me       = players.find(p => p.sid === socket.id || p.name === playerName);
     const opponent = players.find(p => p.sid !== socket.id && p.name !== playerName);
-    if (me?.stats) {
-        const freshMyAvatar = playerAvatar || me.stats.avatar;
-        playersStatsData.me = { ...playersStatsData.me, ...me.stats, color: me.color, avatar: getValidAvatarSrc(freshMyAvatar) };
-    }
-    if (opponent?.stats) {
-        playersStatsData.opponent = { ...playersStatsData.opponent, ...opponent.stats, color: opponent.color, avatar: getValidAvatarSrc(opponent.stats.avatar) };
-    }
+    if (me?.stats)       playersStatsData.me       = { ...me.stats,       color: me.color,       avatar: getValidAvatarSrc(me.stats.avatar) };
+    if (opponent?.stats) playersStatsData.opponent = { ...opponent.stats, color: opponent.color, avatar: getValidAvatarSrc(opponent.stats.avatar) };
     updateTopBarUI();
 });
 
@@ -234,55 +129,17 @@ socket.on('update_players_stats', (players) => {
 // ============================================================
 
 socket.on('huroof_board_init', (data) => {
-    console.log("🎨 استلام اللوحة، جاري الرسم...");
-    
     const roundsDisplay = document.getElementById('rounds-display');
     if (roundsDisplay) roundsDisplay.style.display = 'flex';
 
-    const sidebar = document.getElementById('questionSidebar');
-    if (sidebar) {
-        Object.assign(sidebar.style, { display: 'flex', visibility: 'visible', opacity: '1', pointerEvents: 'auto' });
-        sidebar.classList.add('active');
-    }
-    const qText = document.getElementById('questionText');
-    if (qText) {
-        qText.innerHTML = '';
-        const strong = document.createElement('strong');
-        strong.textContent = '⏳ جاري تحضير الجولة...';
-        qText.appendChild(strong);
-        qText.style.display = 'block';
-    }
+    systemMessageDisplay.textContent = 'اكتمل الاتصال! المعركة تبدأ الآن ⚔️';
+    systemMessageDisplay.style.color = '#00ff88';
 
-    if (typeof systemMessageDisplay !== 'undefined') {
-        systemMessageDisplay.textContent = 'اكتمل الاتصال! المعركة تبدأ الآن ⚔️';
-        systemMessageDisplay.style.color = '#00ff88';
-    }
-
-    // 🚀 إذا وصل board_init قبل room_joined، نعرض اسم الخصم فوراً من بيانات الغرفة
-    if (data.players) {
-        const opp = data.players.find(p => p.name !== playerName);
-        if (opp && document.getElementById('opponentName').textContent === 'جاري البحث...') {
-            document.getElementById('opponentName').textContent = opp.name || 'الخصم';
-            document.getElementById('opponentAvatarImg').style.opacity = '1';
-            if (opp.avatar) document.getElementById('opponentAvatarImg').src = getValidAvatarSrc(opp.avatar);
-        }
-    }
-
-    // ✅ إذا لم يصل room_joined بعد، احفظ اللوحة وارسمها بعد ما يصل
-    if (!_roomJoinedReceived) {
-        _pendingBoard = data.board;
-        return;
-    }
-
-    requestAnimationFrame(() => {
-        data.board.forEach((hexData, index) => {
-            if (cells[index]) {
-                cells[index].textContent = hexData.letter;
-                cells[index].dataset.index = hexData.index ?? index;  // ✅ استخدام index من السيرفر
-                cells[index].classList.remove('active', 'green', 'orange');
-                if (hexData.color) cells[index].classList.add(hexData.color);
-            }
-        });
+    data.board.forEach((hexData, index) => {
+        cells[index].textContent   = hexData.letter;
+        cells[index].dataset.index = index;
+        cells[index].classList.remove('active', 'green', 'orange');
+        if (hexData.color) cells[index].classList.add(hexData.color);
     });
 });
 
@@ -300,11 +157,6 @@ socket.on('huroof_hex_locked', (data) => {
 });
 
 socket.on('huroof_new_question', (data) => {
-    // ✅ إصلاح ٣: تحديث currentTurnSid من السيرفر حتى تعرف الواجهة من يملك الدور
-    if (data.current_turn_sid) {
-        currentTurnSid = data.current_turn_sid;
-    }
-
     const sidebar = document.getElementById('questionSidebar');
     if (sidebar) {
         Object.assign(sidebar.style, { display: 'flex', visibility: 'visible', opacity: '1', pointerEvents: 'auto' });
@@ -314,24 +166,20 @@ socket.on('huroof_new_question', (data) => {
     const qText = document.getElementById('questionText');
     if (qText) qText.innerHTML = sanitizeHTML(data.questionData.question);
 
-    // ✅ إصلاح ١: تفعيل زر "أنا أعرف" فقط لو السؤال وصل وكل شيء جاهز
     buzzerBtn.style.display  = 'block';
     buzzerBtn.disabled       = false;
     buzzerBtn.style.opacity  = '1';
-    isMyTurnToAnswer = false;  // ← إعادة تعيين مهمة لمنع إرسال إجابة قديمة
     systemMessageDisplay.textContent = '';
 
     if (voteSkipBtn) {
         voteSkipBtn.style.display    = 'inline-block';
         voteSkipBtn.disabled         = false;
-        setButtonWithIcon(voteSkipBtn, 'fa-solid fa-forward-step', 'اقتراح تغيير السؤال');
+        voteSkipBtn.innerHTML        = '<i class="fa-solid fa-forward-step"></i> اقتراح تغيير السؤال';
         voteSkipBtn.style.background = '#607d8b';
     }
 
     document.getElementById('answer-container').style.display = 'none';
     answerSection.style.display      = 'none';
-    submitAnswerBtn.disabled         = false;  // ← إعادة تفعيل زر الإرسال
-    playerAnswerInput.value          = '';     // ← مسح الإجابة القديمة
     globalTimerDisplay.style.display = 'block';
     startGlobalTimer(data.timer);
 });
@@ -347,19 +195,16 @@ socket.on('huroof_buzzed', (data) => {
 
     if (data.sid === socket.id) {
         isMyTurnToAnswer = true;
-        submitAnswerBtn.disabled = false;  // ✅ تأكد من تفعيل الزر
         systemMessageDisplay.textContent = 'أسرع! اكتب إجابتك...';
         systemMessageDisplay.style.color = '#4CAF50';
         answerSection.style.display      = 'block';
         playerAnswerInput.value          = '';
         playerAnswerInput.focus();
-        console.log('🎯 دورك للإجابة! isMyTurnToAnswer =', isMyTurnToAnswer);
     } else {
         isMyTurnToAnswer = false;
         systemMessageDisplay.textContent = 'الخصم يجيب الآن... استعد في حال أخطأ!';
         systemMessageDisplay.style.color = '#FF9800';
         answerSection.style.display      = 'none';
-        console.log('⏳ دور الخصم للإجابة');
     }
     startPlayerTimer(timeValue);
 });
@@ -384,7 +229,7 @@ socket.on('huroof_chance_transfer', (data) => {
 
 socket.on('huroof_last_chance', (data) => {
     clearInterval(playerTimerInterval);
-    systemMessageDisplay.textContent = '🚨 الفرصة الأخيرة! من يضغط أولاً؟';
+    systemMessageDisplay.innerHTML   = '🚨 الفرصة الأخيرة! من يضغط أولاً؟';
     systemMessageDisplay.style.color = '#f44336';
     answerSection.style.display      = 'none';
     buzzerBtn.style.display          = 'block';
@@ -393,7 +238,7 @@ socket.on('huroof_last_chance', (data) => {
     if (voteSkipBtn) {
         voteSkipBtn.style.display    = 'inline-block';
         voteSkipBtn.disabled         = false;
-        setButtonWithIcon(voteSkipBtn, 'fa-solid fa-forward-step', 'اقتراح تغيير السؤال');
+        voteSkipBtn.innerHTML        = '<i class="fa-solid fa-forward-step"></i> اقتراح تغيير السؤال';
         voteSkipBtn.style.background = '#607d8b';
     }
     startGlobalTimer(data.timer);
@@ -404,13 +249,13 @@ socket.on('huroof_answer_result', (data) => {
     const cell = cells[data.hexIndex];
     if (data.correct) {
         if (cell) { cell.classList.remove('active'); cell.classList.add(data.color); }
-        systemMessageDisplay.textContent = `✅ إجابة صحيحة! (${sanitizeText(data.answer)})`;
+        systemMessageDisplay.innerHTML   = `✅ إجابة صحيحة! (${sanitizeHTML(data.answer)})`;
         systemMessageDisplay.style.color = '#4CAF50';
         buzzerBtn.style.display          = 'none';
         answerSection.style.display      = 'none';
         if (voteSkipBtn) voteSkipBtn.style.display = 'none';
     } else {
-        systemMessageDisplay.textContent = `❌ إجابة خاطئة: ${sanitizeText(data.answer)}`;
+        systemMessageDisplay.innerHTML   = `❌ إجابة خاطئة: ${sanitizeHTML(data.answer)}`;
         systemMessageDisplay.style.color = '#f44336';
     }
 });
@@ -427,7 +272,7 @@ socket.on('huroof_timeout_info', (data) => {
 
 socket.on('huroof_skip_voted', (data) => {
     if (data.sid === socket.id && voteSkipBtn) {
-        setButtonWithIcon(voteSkipBtn, 'fa-solid fa-check', 'بانتظار الخصم...');
+        voteSkipBtn.innerHTML        = '<i class="fa-solid fa-check"></i> بانتظار الخصم...';
         voteSkipBtn.style.background = '#4CAF50';
         voteSkipBtn.disabled         = true;
     }
@@ -456,27 +301,17 @@ socket.on('huroof_round_over', (data) => {
     const waitingOverlay = document.getElementById('waiting-overlay');
     if (waitingOverlay) {
         waitingOverlay.style.display = 'flex';
-        const overlayMsg = document.getElementById('overlay-message');
-        overlayMsg.innerHTML = '';
-        const h2 = document.createElement('h2');
-        h2.style.color        = sanitizeText(winnerColor);
-        h2.style.marginBottom = '10px';
-        h2.style.fontFamily   = "'Tajawal',sans-serif";
-        h2.textContent        = `فاز اللاعب ${sanitizeText(teamName)} بالجولة!`;
-        const p = document.createElement('p');
-        p.textContent = 'استعد للجولة القادمة...';
-        overlayMsg.appendChild(h2);
-        overlayMsg.appendChild(p);
+        document.getElementById('overlay-message').innerHTML = `
+            <h2 style="color:${winnerColor};margin-bottom:10px;font-family:'Tajawal',sans-serif;">
+                فاز اللاعب ${teamName} بالجولة!
+            </h2>
+            <p>استعد للجولة القادمة...</p>
+        `;
         document.querySelector('.spinner').style.display = 'block';
     }
 });
 
 socket.on('huroof_new_round_started', (data) => {
-    // ✅ إذا لم يصل room_joined بعد (myColor لا يزال null)، احفظ الدور وانتظر
-    if (!_roomJoinedReceived) {
-        _pendingTurnSid = data.turn;
-        return;
-    }
     document.getElementById('waiting-overlay').style.display = 'none';
     currentTurnSid = data.turn;
     resetUIForNewTurn();
@@ -519,50 +354,20 @@ socket.on('opponent_reconnected', () => {
     Swal.fire({ title: 'عاد الخصم!', text: 'تمت استعادة الاتصال، استعد للمتابعة...', icon: 'success', timer: 2000, showConfirmButton: false });
 });
 
-// ✅ إضافة handler جديد للانتظار
-socket.on('huroof_waiting_opponent', (data) => {
-    const overlay = document.getElementById('waiting-overlay');
-    if (overlay) {
-        overlay.style.display = 'flex';
-        const overlayMsg = document.getElementById('overlay-message');
-        if (overlayMsg) {
-            overlayMsg.innerHTML = '';
-            const h2 = document.createElement('h2');
-            h2.style.color = '#FF9800';
-            h2.style.fontFamily = "'Tajawal',sans-serif";
-            h2.textContent = '⏳ في انتظار دخول الخصم...';
-            overlayMsg.appendChild(h2);
-        }
-        const spinner = document.querySelector('.spinner');
-        if (spinner) spinner.style.display = 'block';
-    }
-    // إخفاء أي نص دور حتى يدخل الخصم
-    if (currentLetterDisplay) {
-        currentLetterDisplay.textContent = 'في انتظار الخصم...';
-        currentLetterDisplay.style.color = '#FF9800';
-    }
-});
-
 
 // ============================================================
 // 🖱️ تفاعلات اللاعب
 // ============================================================
 
-// ✅ إصلاح: تعيين data-index لكل خلية عند التحميل (للخلايا المبنية في HTML)
-document.querySelectorAll('.hex').forEach((cell, index) => {
-    if (!cell.dataset.index) cell.dataset.index = index;
-});
-
 cells.forEach((cell, index) => {
     cell.addEventListener('click', () => {
-        const hexIndex = parseInt(cell.dataset.index ?? index);
         if (
             currentTurnSid === socket.id &&
             !cell.classList.contains('green') &&
             !cell.classList.contains('orange') &&
             !cell.classList.contains('active')
         ) {
-            socket.emit('huroof_select_hex', { roomCode, hexIndex: hexIndex });
+            socket.emit('huroof_select_hex', { roomCode, hexIndex: index });
         }
     });
 });
@@ -576,19 +381,11 @@ buzzerBtn.addEventListener('click', () => {
 });
 
 function submitAnswer() {
-    console.log('📤 submitAnswer called | isMyTurnToAnswer:', isMyTurnToAnswer, '| ans:', playerAnswerInput.value.trim());
-    if (!isMyTurnToAnswer) {
-        console.warn('⚠️ ليس دورك للإجابة — isMyTurnToAnswer = false');
-        return;
-    }
+    if (!isMyTurnToAnswer) return;
     const ans = playerAnswerInput.value.trim();
-    if (!ans) {
-        console.warn('⚠️ الإجابة فارغة');
-        return;
-    }
+    if (!ans) return;
     isMyTurnToAnswer         = false;
     submitAnswerBtn.disabled = true;
-    console.log('✅ إرسال الإجابة:', ans, '| roomCode:', roomCode);
     socket.emit('huroof_submit_answer', { roomCode, answer: ans });
 }
 
@@ -632,7 +429,6 @@ function updateTopBarUI() {
 
     document.getElementById('opponentName').textContent     = playersStatsData.opponent.name;
     document.getElementById('opponentAvatarImg').src        = playersStatsData.opponent.avatar;
-    document.getElementById('opponentAvatarImg').style.opacity = '1'; // <--- أضف هذا السطر
     document.getElementById('opponentFlagImg').src          = playersStatsData.opponent.flag;
     document.querySelector('#opponentColorIndicator .color-circle').className = `color-circle ${playersStatsData.opponent.color}-team`;
 }
@@ -728,14 +524,9 @@ function resetUIForNewTurn() {
 
     const qText = document.getElementById('questionText');
     if (qText) {
-        qText.innerHTML = '';
-        const qStrong = document.createElement('strong');
-        qStrong.textContent = currentTurnSid === socket.id
-            ? 'دورك! اختر حرفاً من اللوحة للبدء.'
-            : 'دور الخصم لاختيار حرف...';
-        const qEmoji = document.createTextNode(currentTurnSid === socket.id ? '🎯 ' : '⏳ ');
-        qText.appendChild(qEmoji);
-        qText.appendChild(qStrong);
+        qText.innerHTML = currentTurnSid === socket.id
+            ? '🎯 <strong>دورك! اختر حرفاً من اللوحة للبدء.</strong>'
+            : '⏳ <strong>دور الخصم لاختيار حرف...</strong>';
         qText.style.display = 'block';
     }
 
@@ -751,10 +542,6 @@ function resetUIForNewTurn() {
 }
 
 function updateRoundsUI(points, currentRound) {
-    // ✅ إعادة ضبط جميع النقاط أولاً قبل الرسم لمنع تراكم الألوان
-    document.querySelectorAll('#team-green-score .score-dot').forEach(dot => dot.classList.remove('won'));
-    document.querySelectorAll('#team-orange-score .score-dot').forEach(dot => dot.classList.remove('won'));
-
     document.querySelectorAll('#team-green-score .score-dot').forEach((dot, i) => {
         if (i < points.green) dot.classList.add('won');
     });

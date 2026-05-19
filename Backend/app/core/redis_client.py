@@ -1,14 +1,16 @@
 import redis.asyncio as redis
+from redis.asyncio.connection import ConnectionPool
 
-# إنشاء اتصال دائم بالعقل المركزي المشترك (Redis)
-# نستخدم decode_responses=True لكي تعود البيانات كنصوص بدلاً من Bytes
-
-# ✅ Connection pool لتجنب مشاكل multi-worker
-redis_db = redis.Redis(
+# إعداد الـ Connection Pool الحالي الخاص بك مع ضبط متوازن
+pool = ConnectionPool(
     host='127.0.0.1',
     port=6379,
     decode_responses=True,
-    max_connections=20,        # أضف هذا
-    socket_keepalive=True,     # أضف هذا
-    socket_timeout=5,          # أضف هذا
+    max_connections=1000,  # 🚀 رقم متوازن يمنع الـ Error ويتحمله جهازك
+    socket_keepalive=True,
+    socket_timeout=5,
+    socket_connect_timeout=3,
+    retry_on_timeout=True,
 )
+
+redis_db = redis.Redis(connection_pool=pool)

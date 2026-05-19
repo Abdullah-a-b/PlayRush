@@ -1,67 +1,323 @@
-// =========================================================
-// 🛡️ درع الحماية المتقدم (Client-Side Spy) - النسخة النهائية
-// =========================================================
+// ============================================================================
+// 🛡️ Frontend Anti-Cheat — Server-as-Source-of-Truth
+// ============================================================================
+// التغييرات الرئيسية:
+//   1. السيرفر هو مصدر الحقيقة — نسأل /auth/ban-status عند التحميل
+//   2. لو السيرفر قال "غير محظور" → نمسح أي flag محلي قديم
+//   3. blur يرفع حساسية الكاشف فقط (مش ban مباشر)
+//   4. fast detection بعد blur (200ms, 500ms, 1000ms) لاكتشاف DevTools
+// ============================================================================
 
 (function() {
-    const MAX_CHEAT_ATTEMPTS = 3; 
-    
-    // سحب المحاولات السابقة، وإذا لم تكن موجودة نعتبرها 0
-    let cheatViolations = parseInt(localStorage.getItem('cheatViolations')) || 0;
+    'use strict';
 
-    // استخدام true في النهاية (Capture Phase) لضمان أن درع الحماية هو أول من يقرأ الكيبورد
+    const MAX_VIOLATIONS = 3;
+    const STORAGE_KEY = 'cv';
+    const BAN_KEY = 'cb';
+
+    let violations = 0;
+    try {
+        violations = parseInt(localStorage.getItem(STORAGE_KEY)) || 0;
+    } catch (e) {}
+
+    // ============================================================
+    // 🎯 الخطوة الأولى: مزامنة مع السيرفر
+    // قبل ما نطبّق أي ban من localStorage، نسأل السيرفر
+    // لو السيرفر قال "غير محظور" → نمسح أي flag قديم
+    // ============================================================
+    async function syncBanStatusWithServer() {
+        const apiUrl = getApiUrl();
+        const token = getStoredToken();
+
+        if (!apiUrl) return null;  // لا يمكن السؤال
+
+        try {
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = 'Bearer ' + token;
+
+            const response = await fetch(apiUrl + '/auth/ban-status', {
+                method: 'GET',
+                headers: headers,
+            });
+
+            if (!response.ok) return null;
+            const data = await response.json();
+            return data;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    // ============================================================
+    // 🚀 نقطة البداية الذكية
+    // 1. نسأل السيرفر أولاً
+    // 2. لو "غير محظور" → نمسح أي ban flag محلي
+    // 3. لو "محظور" → نطبّق الـ ban
+    // 4. لو فشل الاتصال → نعتمد على localStorage (الوضع الافتراضي)
+    // ============================================================
+    async function initialize() {
+        const status = await syncBanStatusWithServer();
+
+        if (status !== null) {
+            // ✅ السيرفر استجاب — هو مصدر الحقيقة
+            if (status.banned === true) {
+                // محظور حقاً → ban
+                executeBan('server_confirmed:' + (status.reason || 'banned'));
+                return;
+            } else {
+                // ✅ غير محظور → امسح أي flag محلي قديم (هذا يحل مشكلتك!)
+                try {
+                    localStorage.removeItem(BAN_KEY);
+                    // نُعيد تعيين عداد الـ violations أيضاً (السيرفر فك حظره فبدأ بداية جديدة)
+                    if (status.anticheat_score === 0) {
+                        localStorage.setItem(STORAGE_KEY, '0');
+                        violations = 0;
+                    }
+                } catch (e) {}
+            }
+        } else {
+            // ⚠️ ما قدرنا نسأل السيرفر (offline?) — نعتمد على localStorage
+            try {
+                if (localStorage.getItem(BAN_KEY) === '1') {
+                    executeBan('previously_banned_persistent');
+                    return;
+                }
+            } catch (e) {}
+        }
+
+        // ✅ نبدأ المراقبة العادية بعد المزامنة
+        startMonitoring();
+    }
+
+    // ============================================================
+    // 🎯 الكاشف الرئيسي: window size delta
+    // ============================================================
+    let devToolsOpen = false;
+    let detectionStartTime = Date.now();
+    let strictMode = false;  // ✨ يصبح true عند blur — حساسية أعلى
+
+    function detectDevToolsBySize() {
+        if (Date.now() - detectionStartTime < 2000) return;
+
+        const widthDiff = window.outerWidth - window.innerWidth;
+        const heightDiff = window.outerHeight - window.innerHeight;
+        const opened = (widthDiff > 200 || heightDiff > 200);
+
+        if (opened && !devToolsOpen) {
+            devToolsOpen = true;
+            triggerViolation('devtools_size_detected' + (strictMode ? '_during_blur' : ''));
+        } else if (!opened) {
+            devToolsOpen = false;
+        }
+    }
+
+    // ============================================================
+    // 🎯 الكاشف الثاني: console timing
+    // ============================================================
+    function detectDevToolsByTiming() {
+        const start = performance.now();
+        for (let i = 0; i < 100; i++) {
+            console.log('%c', '');
+        }
+        const elapsed = performance.now() - start;
+        if (elapsed > 50) {
+            triggerViolation('devtools_timing_detected' + (strictMode ? '_during_blur' : ''));
+        }
+        try { console.clear(); } catch (e) {}
+    }
+
+    function runDetections() {
+        try {
+            detectDevToolsBySize();
+            detectDevToolsByTiming();
+        } catch (e) {
+            triggerViolation('detection_error:' + (e.message || 'unknown'));
+        }
+    }
+
+    // ============================================================
+    // 🎯 Blur/Focus — مراقبة شديدة عند فقدان الـ focus
+    // الفلسفة: blur وحده ≠ خطر (الناس يفتحون tabs ثانية)
+    // لكن blur + DevTools = ban
+    // ============================================================
+    let blurDetectionTimers = [];
+
+    function clearBlurTimers() {
+        blurDetectionTimers.forEach(clearTimeout);
+        blurDetectionTimers = [];
+    }
+
+    function startBlurMonitoring() {
+        // ✨ نُفعّل strict mode (الكاشف يضيف "_during_blur" للسبب لتمييزه)
+        strictMode = true;
+        clearBlurTimers();
+
+        // فحوصات سريعة متعاقبة لاكتشاف DevTools لو فُتحت أثناء الـ blur
+        const intervals = [50, 200, 500, 1000, 2000, 4000];
+        intervals.forEach(function(delay) {
+            const t = setTimeout(runDetections, delay);
+            blurDetectionTimers.push(t);
+        });
+    }
+
+    function stopBlurMonitoring() {
+        // ✨ بعد رجوع الـ focus، نفحص مرة أخيرة ثم نعود للوضع العادي
+        clearBlurTimers();
+        runDetections();
+        setTimeout(runDetections, 200);
+        setTimeout(runDetections, 800);
+        setTimeout(function() {
+            strictMode = false;
+        }, 1500);
+    }
+
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            startBlurMonitoring();
+        } else {
+            stopBlurMonitoring();
+        }
+    });
+
+    window.addEventListener('blur', startBlurMonitoring);
+    window.addEventListener('focus', stopBlurMonitoring);
+
+    // ============================================================
+    // 🎯 mousemove نحو الـ tabs/url bar = شك إضافي
+    // ============================================================
+    document.addEventListener('mousemove', function(e) {
+        if (e.clientY < 0) {
+            setTimeout(runDetections, 200);
+            setTimeout(runDetections, 600);
+            setTimeout(runDetections, 1200);
+        }
+    });
+
+    // ============================================================
+    // 🎯 keyboard shortcuts
+    // ============================================================
     window.addEventListener('keydown', function(e) {
-        
-        // 🔴 الحل السحري لمشكلة الحظر السريع: منع احتساب الضغطة المطولة كعدة محاولات
-        if (e.repeat) return; 
+        if (e.repeat) return;
 
-        // استخدام keyCode (الأرقام) لأنها أقوى في التقاط الاختصارات من الأسماء
-        const isF12 = (e.keyCode === 123 || e.key === 'F12');
-        const isI = (e.keyCode === 73 || (e.key && e.key.toLowerCase() === 'i'));
-        const isJ = (e.keyCode === 74 || (e.key && e.key.toLowerCase() === 'j'));
-        const isC = (e.keyCode === 67 || (e.key && e.key.toLowerCase() === 'c'));
-        const isU = (e.keyCode === 85 || (e.key && e.key.toLowerCase() === 'u'));
-        const isO = (e.keyCode === 79 || (e.key && e.key.toLowerCase() === 'o'));
+        const key = (e.key || '').toLowerCase();
+        const isF12 = e.keyCode === 123;
+        const isCtrlShift = e.ctrlKey && e.shiftKey;
+        const isCtrl = e.ctrlKey;
 
-        const isCtrlShiftI = (e.ctrlKey && e.shiftKey && isI);
-        const isCtrlShiftJ = (e.ctrlKey && e.shiftKey && isJ);
-        const isCtrlShiftC = (e.ctrlKey && e.shiftKey && isC);
-        const isCtrlU = (e.ctrlKey && isU);
-        const isCtrlO = (e.ctrlKey && isO);
+        const blocked =
+            isF12 ||
+            (isCtrlShift && (key === 'i' || key === 'j' || key === 'c' || key === 'k')) ||
+            (isCtrl && (key === 'u' || key === 's')) ||
+            (e.metaKey && (key === 'i' || key === 'j' || key === 'c'));
 
-        if (isF12 || isCtrlShiftI || isCtrlShiftJ || isCtrlShiftC || isCtrlU || isCtrlO) {
-            
-            // إيقاف فتح النافذة
+        if (blocked) {
             e.preventDefault();
             e.stopPropagation();
-
-            // زيادة عدد المخالفات
-            cheatViolations++;
-            localStorage.setItem('cheatViolations', cheatViolations);
-
-            if (cheatViolations >= MAX_CHEAT_ATTEMPTS) {
-                executeBan();
-            } else {
-                const remaining = MAX_CHEAT_ATTEMPTS - cheatViolations;
-                showWarningMessage(`⚠️ تحذير أمني: محاولة فتح أدوات المطور ممنوعة! تتبقى لك ${remaining} محاولة قبل الحظر.`);
-            }
-            
+            triggerViolation('keyboard_shortcut:' + key);
             return false;
         }
-    }, true); // <-- true هنا مهمة جداً (Capture Phase)
+    }, true);
 
-    // 🚫 حظر الكليك يمين
     window.addEventListener('contextmenu', function(e) {
         e.preventDefault();
     }, true);
 
-    // ---------------------------------------------------------
-    // دوال المساعدة
-    // ---------------------------------------------------------
-    function showWarningMessage(message) {
+    window.addEventListener('dragstart', function(e) { e.preventDefault(); });
+    window.addEventListener('selectstart', function(e) {
+        if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+        if (e.target && e.target.closest && e.target.closest('.chat-message-text')) return;
+        e.preventDefault();
+    });
+
+    // ============================================================
+    // 🎯 تعطيل console
+    // ============================================================
+    if (typeof window.console !== 'undefined') {
+        const noop = function() {};
+        try {
+            ['log', 'debug', 'info', 'warn', 'table', 'trace', 'dir', 'group', 'groupEnd'].forEach(function(method) {
+                window.console[method] = noop;
+            });
+        } catch (e) {}
+    }
+
+    // ============================================================
+    // Continuous Monitoring (يبدأ بعد الـ sync مع السيرفر)
+    // ============================================================
+    function startMonitoring() {
+        setInterval(runDetections, 1000);
+        setTimeout(runDetections, 500);
+        setTimeout(runDetections, 1500);
+        setTimeout(runDetections, 3000);
+        window.addEventListener('resize', detectDevToolsBySize);
+    }
+
+    // ============================================================
+    // 🎯 Violation Handler
+    // ============================================================
+    let violationDebounce = 0;
+    function triggerViolation(reason) {
+        const now = Date.now();
+        if (now - violationDebounce < 3000) return;
+        violationDebounce = now;
+
+        violations++;
+        try {
+            localStorage.setItem(STORAGE_KEY, violations);
+        } catch (e) {}
+
+        reportToServer(reason);
+
+        if (violations >= MAX_VIOLATIONS) {
+            executeBan(reason);
+        } else {
+            const remaining = MAX_VIOLATIONS - violations;
+            showWarning('⚠️ تحذير: تم رصد محاولة وصول غير مصرح به. تتبقى ' + remaining + ' محاولات قبل الحظر.');
+        }
+    }
+
+    function reportToServer(reason) {
+        try {
+            const apiUrl = getApiUrl();
+            const token = getStoredToken();
+            if (!apiUrl || !token) return;
+
+            const data = new FormData();
+            data.append('reason', reason);
+            data.append('token', token);
+
+            if (navigator.sendBeacon) {
+                navigator.sendBeacon(apiUrl + '/auth/anticheat-report', data);
+            } else {
+                fetch(apiUrl + '/auth/anticheat-report', {
+                    method: 'POST',
+                    body: data,
+                    keepalive: true,
+                }).catch(function() {});
+            }
+        } catch (e) {}
+    }
+
+    function getApiUrl() {
+        if (typeof API_URL !== 'undefined' && API_URL) return API_URL;
+        if (typeof window.API_URL !== 'undefined' && window.API_URL) return window.API_URL;
+        if (typeof CONFIG !== 'undefined' && CONFIG.API_URL) return CONFIG.API_URL;
+        return '';
+    }
+
+    function getStoredToken() {
+        try {
+            return sessionStorage.getItem('token') || localStorage.getItem('token') || '';
+        } catch (e) {
+            return '';
+        }
+    }
+
+    function showWarning(message) {
         if (typeof Swal !== 'undefined') {
             Swal.fire({
                 icon: 'warning',
-                title: 'تحذير!',
+                title: 'تحذير أمني',
                 text: message,
                 confirmButtonColor: '#d33'
             });
@@ -70,28 +326,57 @@
         }
     }
 
-    function executeBan() {
-        console.warn("🚫 تم حظر اللاعب لتجاوز الحد الأقصى من محاولات الغش.");
-        
-        if (typeof socket !== 'undefined' && socket.connected) {
-            socket.emit('player_cheated', { reason: 'Tried to open DevTools multiple times' });
+    async function executeBan(reason) {
+        try {
+            localStorage.setItem(BAN_KEY, '1');
+        } catch (e) {}
+
+        const token = getStoredToken();
+        const apiUrl = getApiUrl();
+
+        if (token && apiUrl) {
+            try {
+                const fd = new FormData();
+                fd.append('token', token);
+                fd.append('reason', reason);
+                await fetch(apiUrl + '/auth/self-ban', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token },
+                    body: fd,
+                    keepalive: true,
+                });
+            } catch (err) {}
         }
 
-        // تدمير الجلسة
-        localStorage.removeItem('token');
-        localStorage.removeItem('userData');
-        
-        // طمس الشاشة
-        document.body.innerHTML = `
-            <div style="height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background-color: #0d0d1a; color: red; text-align: center; direction: rtl;">
-                <h1 style="font-size: 3rem;">تم حظرك!</h1>
-                <p style="font-size: 1.5rem; color: white;">لقد تجاوزت الحد الأقصى لمحاولات العبث بالنظام.</p>
-            </div>
-        `;
-        
-        setTimeout(() => {
-            window.location.href = '../login.html'; 
+        if (typeof socket !== 'undefined' && socket && socket.connected) {
+            try {
+                socket.emit('severe_security_breach', { reason: reason });
+            } catch (err) {}
+        }
+
+        try {
+            sessionStorage.clear();
+            localStorage.removeItem('token');
+            localStorage.removeItem('userData');
+        } catch (e) {}
+
+        document.body.innerHTML =
+            '<div style="height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;background:#0d0d1a;color:red;text-align:center;direction:rtl;font-family:Tajawal,sans-serif;">' +
+                '<h1 style="font-size:3rem;margin:0;">🚫 تم حظرك نهائياً!</h1>' +
+                '<p style="font-size:1.5rem;color:white;margin-top:20px;">تم رصد محاولات اختراق متعددة.</p>' +
+                '<p style="font-size:1rem;color:#bbb;margin-top:10px;">حسابك معطّل في قاعدة البيانات.</p>' +
+            '</div>';
+
+        setTimeout(function() {
+            const path = window.location.pathname;
+            const isInSubfolder = path.includes('/games/');
+            window.location.replace(isInSubfolder ? '../login.html' : 'login.html');
         }, 3000);
     }
+
+    // ============================================================
+    // 🚀 Start: نسأل السيرفر أولاً ثم نبدأ المراقبة
+    // ============================================================
+    initialize();
 
 })();

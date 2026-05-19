@@ -7,3 +7,4 @@ users.db
 .DS_Store
 .venv/
 .vscode/
+**/uploads/

@@ -22,6 +22,8 @@ if (!token) window.location.replace('login.html');
 
 // الاتصال بالسوكيت (يحتاج API_URL من utils.js)
 const socket = io(API_URL, { transports: ['websocket', 'polling'], upgrade: true });
+// 🛡️ ربط معالج الحظر الإجباري — يستجيب لرسائل force_logout من السيرفر
+if (typeof attachForceLogoutHandler === 'function') attachForceLogoutHandler(socket);
 
 // عرض الأفاتار المحفوظ في الجلسة فوراً قبل انتهاء تحميل البيانات
 const cachedAvatar = sessionStorage.getItem('playerAvatar');
@@ -45,41 +47,24 @@ window.addEventListener('DOMContentLoaded', async () => {
     // ----------------------------------------
     socket.on('update_online_players', (players) => {
         const countEl = document.getElementById('globalOnlineCount');
+        if (countEl) countEl.textContent = players.length;
+
         const list = document.getElementById('globalPlayersList');
         if (!list) return;
 
-        // 🛡️ استخراج مصفوفة اللاعبين بشكل قوي جداً (Bulletproof)
-        let playersArray = [];
-        try {
-            let parsed = players;
-            if (typeof players === 'string') parsed = JSON.parse(players);
+        // ✅ ترتيب: اللاعب الحالي أولاً ثم البقية كما هم
+        // نستخدم نسخة جديدة بدل تعديل الأصلية (نفس مفهوم immutability)
+        const myName = userDataCache?.player_name;
+        const sorted = myName
+            ? [...players].sort((a, b) => {
+                if (a.name === myName) return -1;
+                if (b.name === myName) return 1;
+                return 0;
+              })
+            : players;
 
-            if (Array.isArray(parsed)) {
-                playersArray = parsed;
-            } else if (parsed && typeof parsed === 'object') {
-                // البحث في الأنماط الشائعة للباك إند
-                if (Array.isArray(parsed.players)) playersArray = parsed.players;
-                else if (Array.isArray(parsed.data)) playersArray = parsed.data;
-                else {
-                    // استخراج اللاعبين إذا كان السيرفر يرسلهم ككائن (Object)
-                    playersArray = Object.values(parsed).filter(v => v && typeof v === 'object' && v.name);
-                }
-            }
-        } catch (e) {
-            console.error("خطأ في تحليل بيانات اللاعبين:", e);
-        }
-
-        if (countEl) countEl.textContent = playersArray.length;
         list.innerHTML = '';
-
-        if (playersArray.length === 0) {
-            list.innerHTML = '<p style="text-align:center; color:#777; font-size: 12px; margin-top:20px;">لا يوجد لاعبين حالياً</p>';
-            return;
-        }
-
-        playersArray.forEach(p => {
-            if (!p || !p.name) return; // تخطي أي بيانات غير صالحة
-
+        sorted.forEach(p => {
             let locationText = 'الساحة العامة';
             let statusColor  = '#00ff88';
 
@@ -100,41 +85,42 @@ window.addEventListener('DOMContentLoaded', async () => {
 
             const div = document.createElement('div');
             div.className = 'online-player-item';
-            if (userDataCache && p.name === userDataCache.player_name) {
-                div.classList.add('is-me');
-            }
+            // ✅ تمييز اللاعب الحالي بنفس CSS class الموجود في categories.css
+            if (myName && p.name === myName) div.classList.add('is-me');
 
+            // 🛡️ نبني العناصر بـ DOM API بدل innerHTML لمنع XSS
             const img = document.createElement('img');
-            img.src       = getCorrectAvatarUrl(p.avatar);
+            img.src = getCorrectAvatarUrl(p.avatar);
             img.className = 'online-player-avatar';
-            img.alt       = 'Avatar';
-            // صورة احتياطية فورية في حال فشل تحميل مسار السيرفر
-            img.onerror   = () => { img.src = 'assets/avatars/avatar_1.svg'; };
+            img.alt = 'Avatar';
 
-            const info     = document.createElement('div');
-            info.className = 'online-player-info';
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'online-player-info';
 
-            const nameSpan     = document.createElement('span');
+            const nameSpan = document.createElement('span');
             nameSpan.className = 'online-player-name';
-            nameSpan.textContent = sanitizeText(p.name);
+            nameSpan.textContent = p.name || '';
 
-            const statusSpan     = document.createElement('span');
+            const statusSpan = document.createElement('span');
             statusSpan.className = 'online-player-status';
 
             const dot = document.createElement('div');
-            dot.className             = 'status-dot';
-            dot.style.backgroundColor = sanitizeText(statusColor);
+            dot.className = 'status-dot';
+            dot.style.backgroundColor = statusColor;
 
             const locSpan = document.createElement('span');
-            locSpan.style.color = sanitizeText(statusColor);
-            locSpan.textContent = sanitizeText(locationText);
+            locSpan.style.color = statusColor;
+            locSpan.textContent = locationText;
 
             statusSpan.appendChild(dot);
+            statusSpan.appendChild(document.createTextNode(' '));
             statusSpan.appendChild(locSpan);
-            info.appendChild(nameSpan);
-            info.appendChild(statusSpan);
+
+            infoDiv.appendChild(nameSpan);
+            infoDiv.appendChild(statusSpan);
+
             div.appendChild(img);
-            div.appendChild(info);
+            div.appendChild(infoDiv);
             list.appendChild(div);
         });
     });
@@ -146,22 +132,24 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     socket.on('new_chat_message', (msg) => {
-        const safeSender = sanitizeText(msg.sender);
-        const safeText   = sanitizeText(msg.text);
-
         const chatMessages = document.getElementById('chatMessages');
         if (chatMessages) {
+            // 🛡️ نبني العنصر بـ DOM API لمنع XSS تماماً
             const el = document.createElement('div');
             el.className = `chat-message ${msg.isSystem ? 'system' : ''}`;
+
             const senderSpan = document.createElement('span');
             senderSpan.className = 'sender';
-            senderSpan.textContent = `${safeSender}:`;
+            senderSpan.textContent = `${msg.sender || ''}:`;
+
             const textSpan = document.createElement('span');
             textSpan.className = 'text';
-            textSpan.textContent = safeText;
+            textSpan.textContent = msg.text || '';
+
             el.appendChild(senderSpan);
             el.appendChild(document.createTextNode(' '));
             el.appendChild(textSpan);
+
             chatMessages.appendChild(el);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
@@ -169,27 +157,16 @@ window.addEventListener('DOMContentLoaded', async () => {
         addGlobalChatMessage(msg.sender, msg.text, msg.isSystem);
     });
 
-    // ✅ الإصلاح: joinGlobalLobby تُنادى فقط بعد جلب بيانات المستخدم (userDataCache)
-    // وليس عند connect مباشرة — لمنع الإرسال بدون اسم ومنع الدوبل
-    let lobbyJoined = false;
-
     function joinGlobalLobby() {
-        if (!userDataCache) return; // ❌ لا ترسل إذا البيانات لم تُجلب بعد
-        if (lobbyJoined && socket.connected) return; // ❌ لا ترسل مرتين
-        socket.emit('join_global_lobby', {
-            name:   userDataCache.player_name,
-            avatar: userDataCache.avatar,
-        });
-        lobbyJoined = true;
+        if (userDataCache) {
+            socket.emit('join_global_lobby', {
+                name:   userDataCache.player_name,
+                avatar: userDataCache.avatar,
+            });
+        }
     }
 
-    // عند إعادة الاتصال فقط (انقطاع مؤقت) — أعد الانضمام
-    socket.on('connect', () => {
-        if (userDataCache) {
-            lobbyJoined = false; // السيرفر لا يعرف الـ SID الجديد
-            joinGlobalLobby();
-        }
-    });
+    socket.on('connect', joinGlobalLobby);
 
     // ----------------------------------------
     // 👤 جلب بيانات الحساب
@@ -253,7 +230,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('localAuthFields').style.display = isGoogle ? 'none'  : 'block';
 
         if (socket.connected) joinGlobalLobby();
-        // ✅ إذا Socket لم يتصل بعد، سيُنادى joinGlobalLobby عبر socket.on('connect') أعلاه
 
     } catch {
         showToast('خطأ في الاتصال بالسيرفر', 'error');

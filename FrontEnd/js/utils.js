@@ -42,21 +42,42 @@ const GAME_THEMES = {
 
 /**
  * يُعيد الرابط الصحيح لصورة اللاعب بغض النظر عن مصدرها.
+ * 🛡️ مُحكم ضد XSS عبر avatar URL خبيث (javascript:, data:image/svg+xml, إلخ).
  * @param {string} path - المسار المخزّن في قاعدة البيانات
- * @param {string} [prefix='../'] - البادئة المناسبة لمجلد الصفحة الحالية
  */
 function getCorrectAvatarUrl(path) {
     // إذا لم يكن هناك مسار، أو كان المسار به خلل، نرجع الصورة الافتراضية الأولى
-    if (!path || path === 'undefined' || path === 'null' || path === 'custom' || path.trim() === '') {
+    if (!path || path === 'undefined' || path === 'null' || path === 'custom' || String(path).trim() === '') {
         return `assets/avatars/avatar_1.svg`;
     }
-    // إذا كان رابط خارجي أو Base64
-    if (path.startsWith('http') || path.startsWith('data:')) return path;
-    // إذا كان ملف مرفوع على السيرفر
-    if (path.startsWith('/uploads')) return `${API_URL}${path}`;
 
-    // استخراج اسم الملف فقط لضمان المسار الصحيح دائماً (بدون ../)
-    const fileName = path.split('/').pop();
+    const p = String(path).trim();
+    const lower = p.toLowerCase();
+
+    // 🛡️ نمنع كل البروتوكولات الخطيرة (javascript:, data:, vbscript:, file:, إلخ)
+    // ونسمح فقط بـ http/https + المسارات النسبية
+    const dangerousProtocols = ['javascript:', 'vbscript:', 'data:', 'file:', 'ftp:', 'about:'];
+    for (const proto of dangerousProtocols) {
+        if (lower.startsWith(proto)) {
+            console.warn('[SECURITY] avatar URL blocked:', p);
+            return `assets/avatars/avatar_1.svg`;
+        }
+    }
+
+    // إذا كان رابط https/http آمن
+    if (lower.startsWith('https://') || lower.startsWith('http://')) {
+        return p;
+    }
+
+    // إذا كان ملف مرفوع على السيرفر
+    if (p.startsWith('/uploads')) return `${API_URL}${p}`;
+
+    // 🛡️ مسارات نسبية فقط — نأخذ اسم الملف فقط لمنع path traversal
+    const fileName = p.split('/').pop();
+    // نسمح فقط بأسماء ملفات شرعية (حروف/أرقام/_/-/. ثم svg/png/jpg/jpeg/webp)
+    if (!/^[a-zA-Z0-9_-]+\.(svg|png|jpg|jpeg|webp)$/i.test(fileName)) {
+        return `assets/avatars/avatar_1.svg`;
+    }
     return `assets/avatars/${fileName}`;
 }
 
@@ -65,13 +86,29 @@ function getCorrectAvatarUrl(path) {
  * تُرجع رابط Dicebear كاحتياط إذا لم تجد صورة.
  */
 function fixLobbyAvatar(avatarValue, fallbackName) {
-    if (!avatarValue || avatarValue.trim() === '') {
-        return `https://api.dicebear.com/7.x/bottts/svg?seed=${fallbackName || 'Player'}`;
+    if (!avatarValue || String(avatarValue).trim() === '') {
+        return `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(fallbackName || 'Player')}`;
     }
-    if (avatarValue.startsWith('http') || avatarValue.startsWith('data:')) return avatarValue;
 
-    let name = avatarValue.split('/').pop();
+    const v = String(avatarValue).trim();
+    const lower = v.toLowerCase();
+
+    // 🛡️ نمنع البروتوكولات الخطيرة
+    const dangerousProtocols = ['javascript:', 'vbscript:', 'data:', 'file:', 'ftp:', 'about:'];
+    for (const proto of dangerousProtocols) {
+        if (lower.startsWith(proto)) {
+            return `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(fallbackName || 'Player')}`;
+        }
+    }
+
+    if (lower.startsWith('https://') || lower.startsWith('http://')) return v;
+
+    let name = v.split('/').pop();
     if (!name.includes('.')) name += '.svg';
+    // 🛡️ تحقق من اسم الملف
+    if (!/^[a-zA-Z0-9_-]+\.(svg|png|jpg|jpeg|webp)$/i.test(name)) {
+        return `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(fallbackName || 'Player')}`;
+    }
     return `../assets/avatars/${name}`;
 }
 
@@ -320,4 +357,41 @@ function deleteAccount() {
             }
         }
     );
+}
+
+
+// ============================================================
+// 🚫 معالج الحظر الإجباري (force_logout)
+// يُستدعى من السيرفر عند حظر اللاعب — يجب أن يعمل في كل صفحة فيها socket
+// ============================================================
+
+/**
+ * يربط معالج 'force_logout' بأي socket — يجب استدعاؤه بعد إنشاء socket.
+ * يعرض رسالة الحظر، يمسح الجلسة، ويعيد التوجيه لصفحة login.
+ * @param {Socket} socketInstance - الـ socket المُنشأ
+ */
+function attachForceLogoutHandler(socketInstance) {
+    if (!socketInstance) return;
+    socketInstance.on('force_logout', (data) => {
+        const message = (data && data.message) || 'تم حظر حسابك.';
+        try {
+            document.body.innerHTML = `
+                <div style="height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; background-color:#0d0d1a; color:red; text-align:center; direction:rtl; font-family:Tajawal, sans-serif;">
+                    <h1 style="font-size:3rem; margin:0;">🚫 ${message}</h1>
+                    <p style="font-size:1.2rem; color:#bbb; margin-top:20px;">سيتم تحويلك لصفحة تسجيل الدخول...</p>
+                </div>
+            `;
+        } catch (e) {}
+
+        try {
+            sessionStorage.clear();
+            localStorage.removeItem('token');
+        } catch (e) {}
+
+        setTimeout(() => {
+            const path = window.location.pathname;
+            const isInSubfolder = path.includes('/games/');
+            window.location.replace(isInSubfolder ? '../login.html' : 'login.html');
+        }, 2500);
+    });
 }

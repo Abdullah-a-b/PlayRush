@@ -36,7 +36,7 @@ window.addEventListener('load', () => {
     // 3. توليد الصور المحلية
     const defaultAvatars = [];
     for (let i = 1; i <= 60; i++) {
-        defaultAvatars.push(`assets/avatars/avatar_${i}.svg`);
+        defaultAvatars.push(`../assets/avatars/avatar_${i}.svg`);
     }
 
     let currentAvatarData = defaultAvatars[0];
@@ -148,18 +148,12 @@ window.addEventListener('load', () => {
             formData.append('player_name', playerName);
             formData.append('country', playerCountry); 
 
-            // 🚀 السحر هنا: نرسل الملف تحت اسم "avatar_file"، أو النص تحت اسم "avatar"
+            // 🚀 السحر هنا: نرسل الملف تحت اسم "avatar_file"، أو النص تحت اسم "avatar_url"
+            // (اسم الحقل يجب أن يطابق ما ينتظره الباك في setup-profile endpoint)
             if (typeof customAvatarFile !== 'undefined' && customAvatarFile) {
-                formData.append('avatar_file', customAvatarFile); 
-                formData.append('file', customAvatarFile); // مفتاح احتياطي
+                formData.append('avatar_file', customAvatarFile); // نرسل الملف للباك اند
             } else {
-                let finalAvatarName = currentAvatarData;
-                if (finalAvatarName !== 'custom') {
-                    // استخراج اسم الصورة فقط (مثل avatar_5.svg) لتجنب رفض السيرفر للمسار الطويل
-                    finalAvatarName = finalAvatarName.split('/').pop(); 
-                }
-                formData.append('avatar', finalAvatarName); 
-                formData.append('avatar_url', finalAvatarName); // مفتاح احتياطي
+                formData.append('avatar_url', currentAvatarData); // نرسل المسار (مثل ../assets/...)
             }
 
             const response = await fetch(`${API_URL}/auth/setup-profile`, {
@@ -172,8 +166,7 @@ window.addEventListener('load', () => {
                 profileMessage.textContent = "تم الحفظ! جاري توجيهك للوبي...";
                 profileMessage.style.color = "#00ff88";
                 
-                let finalAvatar = data.new_avatar || data.avatar || currentAvatarData;
-                if (finalAvatar === 'custom') finalAvatar = 'assets/avatars/avatar_1.svg';
+                const finalAvatar = data.new_avatar || currentAvatarData;
 
                 sessionStorage.setItem('playerName', playerName);
                 sessionStorage.setItem('playerAvatar', finalAvatar);
@@ -225,10 +218,7 @@ const countryWrapper = document.getElementById('countryWrapper');
 function renderCountryOptions(countries) {
     dropdown.innerHTML = '';
     if(countries.length === 0) {
-        const empty = document.createElement('div');
-        empty.style.cssText = 'padding:10px;color:#bbb;text-align:center;';
-        empty.textContent = 'لا توجد نتائج 🧐';
-        dropdown.appendChild(empty);
+        dropdown.innerHTML = '<div style="padding:10px;color:#bbb;text-align:center;">لا توجد نتائج 🧐</div>';
         return;
     }
 
@@ -236,19 +226,13 @@ function renderCountryOptions(countries) {
         const item = document.createElement('div');
         item.className = 'dropdown-item';
         
-        // 🔒 نبني العنصر بـ DOM API لتجنب XSS في الـ attributes
-        const flagImg = document.createElement('img');
-        flagImg.src   = `../assets/flags/${sanitizeText(c.code)}.svg`;
-        flagImg.alt   = `${sanitizeText(c.name)} flag`;
-        flagImg.style.cssText = 'width:28px;height:auto;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,0.2);margin-left:10px;';
-        flagImg.addEventListener('error', () => { flagImg.style.display = 'none'; });
-
-        const nameSpan = document.createElement('span');
-        nameSpan.textContent = sanitizeText(c.name);
-
-        item.appendChild(flagImg);
-        item.appendChild(document.createTextNode(' '));
-        item.appendChild(nameSpan);
+        // 🚀 السحر هنا: قمنا بتضمين علامة <img> تشير للمجلد المحلي
+        item.innerHTML = `
+            <img src="../assets/flags/${c.code}.svg" 
+                 alt="${c.name} flag" 
+                 style="width: 28px; height: auto; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); margin-left: 10px;"
+                 onerror="this.style.display='none';"> <span>${c.name}</span>
+        `;
         
         item.onclick = () => {
             searchInput.value = `${c.name}`; 

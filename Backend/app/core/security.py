@@ -1,10 +1,10 @@
 import os
+import html
 from datetime import datetime, timedelta
 from fastapi import Request, HTTPException, Depends
 from jose import jwt, JWTError
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
-import html
 
 # 🔄 الاستيرادات الصحيحة من الهيكلة الجديدة
 from app.core.database import SessionLocal
@@ -79,7 +79,11 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == user_email).first()
     if user is None:
         raise HTTPException(status_code=401, detail="حساب اللاعب لم يعد موجوداً")
-        
+
+    # 🛡️ فحص الحظر — يمنع المحظور من استخدام أي API محمي
+    if getattr(user, 'is_banned', False):
+        raise HTTPException(status_code=403, detail="تم حظر حسابك لانتهاك سياسات اللعب العادل والأمان.")
+
     return user
 
 def get_user_from_token(db: Session, token: str):
@@ -97,6 +101,7 @@ def get_user_from_token(db: Session, token: str):
     except JWTError:
         return None
 
+
 def sanitize_text(text: str, max_length: int = 255) -> str:
     """
     فلتر أمني لتنظيف أي نص قادم من المستخدم
@@ -106,14 +111,14 @@ def sanitize_text(text: str, max_length: int = 255) -> str:
     """
     if not text:
         return ""
-    
+
     # تحويل النص لـ String احتياطياً وإزالة المسافات
     cleaned = str(text).strip()
-    
+
     # قص النص حسب الحد المسموح
     cleaned = cleaned[:max_length]
-    
+
     # السحر هنا: تحويل <script> إلى &lt;script&gt; لكي لا يعمل ككود
     cleaned = html.escape(cleaned)
-    
+
     return cleaned

@@ -1,0 +1,44 @@
+# =====================================
+# /etc/systemd/system/playrush-backup-daily.service
+# =====================================
+[Unit]
+Description=PlayRush Daily DB Backup
+After=postgresql.service network.target
+Requires=postgresql.service
+
+[Service]
+Type=oneshot
+User=playrush
+Group=playrush
+WorkingDirectory=/home/playrush/PlayRush/Backend
+Environment=PATH=/home/playrush/PlayRush/Backend/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/home/playrush/PlayRush/Backend/venv/bin/python -m scripts.backup_db --tag daily
+
+# 💡 اختياري: ارفع الـ backup لـ S3 بعد الإنشاء
+# ExecStartPost=/usr/local/bin/upload_to_s3.sh
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/home/playrush/PlayRush/Backend/backups
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+
+# =====================================
+# /etc/systemd/system/playrush-backup-daily.timer
+# =====================================
+# (ملف منفصل في timer)
+[Unit]
+Description=Run PlayRush daily DB backup at 3 AM
+Requires=playrush-backup-daily.service
+
+[Timer]
+OnCalendar=*-*-* 03:00:00     # كل يوم 3 صباحاً
+Persistent=true
+RandomizedDelaySec=10min
+
+[Install]
+WantedBy=timers.target

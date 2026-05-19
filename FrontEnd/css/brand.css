@@ -1,0 +1,60 @@
+/* ============================================================
+   شريط هوية الشركة — Isolated Person
+   يظهر في كل الصفحات بشكل خفيف بدون التأثير على التصميم
+   ============================================================ */
+
+.brand-footer {
+    position: fixed;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+    pointer-events: auto;
+    direction: ltr;
+    font-family: 'Tajawal', system-ui, -apple-system, Arial, sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.4px;
+    color: rgba(255, 255, 255, 0.45);
+    text-align: center;
+    user-select: none;
+    transition: color 0.3s ease, transform 0.3s ease;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    white-space: nowrap;
+}
+
+.brand-footer:hover {
+    color: rgba(255, 255, 255, 0.9);
+    transform: translateX(-50%) translateY(-2px);
+}
+
+.brand-footer .brand-by {
+    opacity: 0.65;
+    margin-inline-end: 4px;
+}
+
+.brand-footer .brand-name {
+    font-weight: 600;
+    background: linear-gradient(90deg, #00ff88, #00d2ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+/* في الصفحات الكبيرة (لوبي/كاتيجوريز) نخلي الـ footer يحفظ مكانه بدون يغطي شات */
+@media (max-width: 768px) {
+    .brand-footer {
+        font-size: 10px;
+        bottom: 4px;
+        padding: 3px 10px;
+    }
+}
+
+/* داخل صفحات اللعبة الفعلية، نخفيه عشان ما يشتت اللاعب */
+body.in-game .brand-footer {
+    display: none;
+}

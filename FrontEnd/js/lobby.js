@@ -10,6 +10,8 @@ if (!token) window.location.replace('login.html');
 
 // الاتصال بالسوكيت
 const socket = io(API_URL, { transports: ['websocket', 'polling'], upgrade: true });
+// 🛡️ ربط معالج الحظر الإجباري — يستجيب لرسائل force_logout من السيرفر
+if (typeof attachForceLogoutHandler === 'function') attachForceLogoutHandler(socket);
 
 // قراءة وضع اللعبة من الرابط أو الجلسة
 const urlParams = new URLSearchParams(window.location.search);
@@ -44,10 +46,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     // ----------------------------------------
     // 🌍 السوكيت: اللاعبين المتصلين
     // ----------------------------------------
-    // ✅ نحتفظ بآخر قائمة وصلت لإعادة رسمها بعد تحميل userDataCache
-    let lastPlayersSnapshot = [];
-
-    function renderLobbyPlayers(allPlayers) {
+    socket.on('update_online_players', (allPlayers) => {
         const lobbyPlayers = allPlayers.filter(p =>
             p.location === selectedGameMode ||
             p.location === `playing_${selectedGameMode}` ||
@@ -67,8 +66,18 @@ window.addEventListener('DOMContentLoaded', async () => {
         const list = document.getElementById('globalPlayersList');
         if (!list) return;
 
+        // ✅ ترتيب: اللاعب الحالي أولاً
+        const myName = userDataCache?.player_name;
+        const sortedLobbyPlayers = myName
+            ? [...lobbyPlayers].sort((a, b) => {
+                if (a.name === myName) return -1;
+                if (b.name === myName) return 1;
+                return 0;
+              })
+            : lobbyPlayers;
+
         list.innerHTML = '';
-        lobbyPlayers.forEach(p => {
+        sortedLobbyPlayers.forEach(p => {
             let locationText = `لوبي ${GAME_THEMES[selectedGameMode]?.title || 'اللعبة'}`;
             let statusColor  = '#facc15';
 
@@ -84,45 +93,41 @@ window.addEventListener('DOMContentLoaded', async () => {
             div.className = 'online-player-item';
             if (userDataCache && p.name === userDataCache.player_name) div.classList.add('is-me');
 
-            // نبني العنصر بـ DOM API لمنع XSS من بيانات اللاعبين
+            // 🛡️ نبني العناصر بـ DOM API بدل innerHTML لمنع XSS
             const img = document.createElement('img');
-            img.src       = getCorrectAvatarUrl(p.avatar);
+            img.src = getCorrectAvatarUrl(p.avatar);
             img.className = 'online-player-avatar';
-            img.alt       = 'Avatar';
+            img.alt = 'Avatar';
 
-            const info     = document.createElement('div');
-            info.className = 'online-player-info';
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'online-player-info';
 
-            const nameSpan     = document.createElement('span');
+            const nameSpan = document.createElement('span');
             nameSpan.className = 'online-player-name';
-            nameSpan.textContent = sanitizeText(p.name);
+            nameSpan.textContent = p.name || '';  // textContent آمن من XSS
 
-            const statusSpan     = document.createElement('span');
+            const statusSpan = document.createElement('span');
             statusSpan.className = 'online-player-status';
 
             const dot = document.createElement('div');
-            dot.className            = 'status-dot';
-            dot.style.backgroundColor = sanitizeText(statusColor);
+            dot.className = 'status-dot';
+            dot.style.backgroundColor = statusColor;
 
             const locSpan = document.createElement('span');
-            locSpan.style.color  = sanitizeText(statusColor);
-            locSpan.textContent  = sanitizeText(locationText);
+            locSpan.style.color = statusColor;
+            locSpan.textContent = locationText;
 
             statusSpan.appendChild(dot);
+            statusSpan.appendChild(document.createTextNode(' '));
             statusSpan.appendChild(locSpan);
-            info.appendChild(nameSpan);
-            info.appendChild(statusSpan);
+
+            infoDiv.appendChild(nameSpan);
+            infoDiv.appendChild(statusSpan);
+
             div.appendChild(img);
-            div.appendChild(info);
+            div.appendChild(infoDiv);
             list.appendChild(div);
         });
-    }
-
-    socket.on('update_online_players', (allPlayers) => {
-        // ✅ احفظ آخر snapshot دائماً
-        lastPlayersSnapshot = allPlayers;
-        // ارسم فقط لو userDataCache جاهز، وإلا يرسم بعدين
-        renderLobbyPlayers(allPlayers);
     });
 
     socket.on('game_chat_history', (history) => {
@@ -132,22 +137,24 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     socket.on('new_game_chat_message', (msg) => {
-        const safeSender = sanitizeText(msg.sender);
-        const safeText   = sanitizeText(msg.text);
-
         const chatMessages = document.getElementById('chatMessages');
         if (chatMessages) {
+            // 🛡️ نبني العنصر بـ DOM API لمنع XSS تماماً (textContent آمن)
             const el = document.createElement('div');
             el.className = `chat-message ${msg.isSystem ? 'system' : ''}`;
+
             const senderSpan = document.createElement('span');
             senderSpan.className = 'sender';
-            senderSpan.textContent = `${safeSender}:`;
+            senderSpan.textContent = `${msg.sender || ''}:`;
+
             const textSpan = document.createElement('span');
             textSpan.className = 'text';
-            textSpan.textContent = safeText;
+            textSpan.textContent = msg.text || '';
+
             el.appendChild(senderSpan);
             el.appendChild(document.createTextNode(' '));
             el.appendChild(textSpan);
+
             chatMessages.appendChild(el);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
@@ -240,12 +247,6 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         if (socket.connected) joinLobby();
         else socket.once('connect', joinLobby);
-
-        // ✅ إعادة رسم القائمة بعد تحميل بيانات المستخدم
-        // (قد تكون update_online_players وصلت قبل userDataCache)
-        if (lastPlayersSnapshot.length > 0) {
-            renderLobbyPlayers(lastPlayersSnapshot);
-        }
 
     } catch {
         showToast('خطأ في الاتصال بالسيرفر', 'error');
@@ -481,7 +482,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         cancelMatchmakingBtn.style.display = 'block';
         mmStatusTitle.textContent = 'البحث عن منافس...';
         mmStatusDesc.textContent  = 'جاري البحث عن لاعبين في نفس مستواك';
-        socket.emit('find_match', {
+        socket.emit('quick_play_search', {
             player_name: userDataCache.player_name,
             game_mode:   selectedGameMode,
             avatar:      userDataCache.avatar,
@@ -514,55 +515,31 @@ window.addEventListener('DOMContentLoaded', async () => {
                 const color = p.color || p.team || (i === 0 ? 'green' : 'orange');
                 if (color === 'green') {
                     document.getElementById('mmGreenName').textContent = p.name || 'لاعب';
-                    document.getElementById('mmGreenAvatar').src  = getCorrectAvatarUrl(p.avatar);
+                    document.getElementById('mmGreenAvatar').src       = p.avatar || 'assets/avatars/avatar_1.svg';
                 } else {
                     document.getElementById('mmOrangeName').textContent = p.name || 'لاعب';
-                    document.getElementById('mmOrangeAvatar').src = getCorrectAvatarUrl(p.avatar);
+                    document.getElementById('mmOrangeAvatar').src       = p.avatar || 'assets/avatars/avatar_1.svg';
                 }
             });
-            
 
             mmCountdown.style.display = 'block';
+            let count = 3;
+            mmCountdown.textContent   = count;
 
-            // ⏳ عداد تنازلي 3 → 2 → 1 → انطلاق! قبل دخول اللعبة
-            const countdownSteps = ['3', '2', '1', 'انطلاق!'];
-            let stepIndex = 0;
-
-            const preloader = document.createElement('link');
-            preloader.rel = 'prefetch';
-            preloader.href = `games/${selectedGameMode}.html`;
-            document.head.appendChild(preloader);
-            const cssPreloader = document.createElement('link');
-            cssPreloader.rel = 'prefetch';
-            cssPreloader.href = `css/games/${selectedGameMode}.css`;
-            document.head.appendChild(cssPreloader);
-            const jsPreloader = document.createElement('link');
-            jsPreloader.rel = 'prefetch';
-            jsPreloader.href = `js/games/${selectedGameMode}.js`;
-            document.head.appendChild(jsPreloader);
-
-            function runCountdownStep() {
-                mmCountdown.textContent = countdownSteps[stepIndex];
-                mmCountdown.style.transform = 'scale(1.4)';
-                mmCountdown.style.transition = 'transform 0.15s ease-out';
-                setTimeout(() => {
-                    mmCountdown.style.transform = 'scale(1)';
-                }, 150);
-
-                stepIndex++;
-                if (stepIndex < countdownSteps.length) {
-                    setTimeout(runCountdownStep, 1000);
+            const countInterval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    mmCountdown.textContent = count;
                 } else {
-                    // بعد ظهور "انطلاق!" نمنح 600ms ثم ننتقل
-                    setTimeout(() => window.location.assign(`games/${selectedGameMode}.html`), 600);
+                    clearInterval(countInterval);
+                    mmCountdown.textContent = 'انطلاق!';
+                    setTimeout(() => window.location.assign(`games/${selectedGameMode}.html`), 500);
                 }
-            }
-
-            runCountdownStep();
+            }, 1000);
 
         } catch (err) {
             console.error('match_found error:', err);
-            window.location.assign(`games/${selectedGameMode}.html`);
+            setTimeout(() => window.location.assign(`games/${selectedGameMode}.html`), 1000);
         }
     });
 
@@ -651,22 +628,15 @@ window.addEventListener('DOMContentLoaded', async () => {
         slots.innerHTML = '';
 
         safePlayers.forEach((p, i) => {
-            const color      = sanitizeText(p.color || p.team || (i === 0 ? 'green' : 'orange'));
+            const color     = p.color || p.team || (i === 0 ? 'green' : 'orange');
             const colorEmoji = color === 'green' ? '🟢' : '🟠';
-            const themeColor = sanitizeText(GAME_THEMES[selectedGameMode]?.color || '#fff');
-            const slot       = document.createElement('div');
-            slot.className   = 'player-slot';
-
-            const img = document.createElement('img');
-            img.src = getCorrectAvatarUrl(p.avatar);
-            img.style.cssText = `width:60px;height:60px;border-radius:50%;border:2px solid ${themeColor};margin-bottom:10px;object-fit:cover;`;
-
-            const nameSpan = document.createElement('span');
-            nameSpan.style.cssText = 'color:#fff;font-size:14px;font-weight:bold;display:block;';
-            nameSpan.textContent   = `${sanitizeText(p.name)} ${colorEmoji}`;
-
-            slot.appendChild(img);
-            slot.appendChild(nameSpan);
+            const slot      = document.createElement('div');
+            slot.className  = 'player-slot';
+            slot.innerHTML  = `
+                <img src="${p.avatar || '../assets/avatars/avatar_1.svg'}"
+                     style="width:60px;height:60px;border-radius:50%;border:2px solid ${GAME_THEMES[selectedGameMode].color};margin-bottom:10px;object-fit:cover;">
+                <span style="color:#fff;font-size:14px;font-weight:bold;display:block;">${p.name} ${colorEmoji}</span>
+            `;
             slots.appendChild(slot);
         });
 
@@ -788,50 +758,19 @@ window.addEventListener('DOMContentLoaded', async () => {
     socket.on('host_linked_success', () => {
         if (codeInterval) clearInterval(codeInterval);
         if (partyModeModal) {
-            partyModeModal.innerHTML = '';
-            const box = document.createElement('div');
-            box.style.cssText = 'background:#1a1a2e;padding:40px;border-radius:20px;color:white;width:90%;max-width:500px;box-shadow:0 0 30px rgba(0,255,136,0.5);border:2px solid #00ff88;';
-
-            const icon = document.createElement('h1');
-            icon.style.cssText = 'color:#00ff88;font-size:60px;margin:0;';
-            icon.textContent   = '✅';
-
-            const title = document.createElement('h2');
-            title.style.cssText = 'color:white;margin-top:10px;';
-            title.textContent   = 'تم ربط المضيف بنجاح!';
-
-            const sub = document.createElement('p');
-            sub.style.color  = '#bbb';
-            sub.textContent  = 'تبدأ اللعبة الآن...';
-
-            box.appendChild(icon);
-            box.appendChild(title);
-            box.appendChild(sub);
-            partyModeModal.appendChild(box);
-
+            partyModeModal.innerHTML = `
+                <div style="background:#1a1a2e;padding:40px;border-radius:20px;color:white;width:90%;max-width:500px;box-shadow:0 0 30px rgba(0,255,136,0.5);border:2px solid #00ff88;">
+                    <h1 style="color:#00ff88;font-size:60px;margin:0;">✅</h1>
+                    <h2 style="color:white;margin-top:10px;">تم ربط المضيف بنجاح!</h2>
+                    <p style="color:#bbb;">تبدأ اللعبة الآن...</p>
+                </div>
+            `;
             setTimeout(() => {
                 partyModeModal.style.display = 'none';
                 window.location.href = 'games/huroof_party.html';
             }, 2000);
         }
     });
-
-    socket.on('huroof_waiting_opponent', (data) => {
-    const overlay = document.getElementById('waiting-overlay');
-    if (overlay) {
-        overlay.style.display = 'flex';
-        const msg = document.getElementById('overlay-message');
-        if (msg) msg.textContent = data.msg || 'في انتظار دخول الخصم...';
-        const spinner = overlay.querySelector('.spinner');
-        if (spinner) spinner.style.display = 'block';
-    }
-});
-
-socket.on('huroof_new_round_started', () => {
-    // إخفاء overlay الانتظار عند بدء الجولة الفعلية
-    const overlay = document.getElementById('waiting-overlay');
-    if (overlay) overlay.style.display = 'none';
-});
 
     // ----------------------------------------
     // 🖱️ إغلاق النوافذ عند النقر خارجها

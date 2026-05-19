@@ -29,10 +29,19 @@ def save_match_sync(winner_player: dict, loser_player: dict, game_mode: str, ext
             token = player.get('token')
             name = player.get('name')
             user = get_user_from_token(db, token)
-            
+
+            # ✅ إصلاح: نستخدم exact match (==) بدل ilike fuzzy match
             if not user and name and (name not in ['لاعب', 'مجهول', 'أنت']):
-                user = db.query(User).filter(User.player_name.ilike(f'%{name.strip()}%')).first()
-            if not user: continue
+                user = db.query(User).filter(User.player_name == name.strip()).first()
+            if not user:
+                print(f"⚠️ [reward] لم يُعثر على المستخدم: token={token[:10] if token else 'None'}... name={name}")
+                continue
+
+            # ✅ Race condition fix: قفل الصف لمنع double rewards عند reconnect سريع
+            # SELECT ... FOR UPDATE — يمنع worker آخر من تعديل نفس الصف بالتزامن
+            user = db.query(User).filter(User.id == user.id).with_for_update().first()
+            if not user:
+                continue
             
             last_reset = user.last_daily_reset or ''
             if last_reset != today:
@@ -167,24 +176,34 @@ def get_clean_avatar(avatar_val, fallback_name="Player"):
     # 1. إذا لم يكن هناك صورة، نرجع صورة عشوائية
     if not avatar_val or str(avatar_val).strip() == "":
         return f"https://api.dicebear.com/7.x/bottts/svg?seed={fallback_name}"
-    
+
     avatar_str = str(avatar_val).strip()
-    
-    # 2. الروابط الخارجية (مثل صور جوجل) تبقى كما هي
-    if avatar_str.startswith("http") or avatar_str.startswith("data:"):
+    lower = avatar_str.lower()
+
+    # 🛡️ إصلاح أمني: نمنع البروتوكولات الخطيرة (data:, javascript:, vbscript:, إلخ)
+    # حتى لو في DB قديمة فيها قيم خبيثة من قبل التحديث، نحميها هنا
+    dangerous_protocols = ('data:', 'javascript:', 'vbscript:', 'file:', 'about:')
+    for proto in dangerous_protocols:
+        if lower.startswith(proto):
+            print(f"⚠️ [SECURITY] avatar محظور: {avatar_str[:50]}")
+            return f"https://api.dicebear.com/7.x/bottts/svg?seed={fallback_name}"
+
+    # 2. الروابط الخارجية (https/http فقط)
+    if lower.startswith("https://") or lower.startswith("http://"):
         return avatar_str
-        
+
     # 3. معالجة الصور المرفوعة (نجلبها من الباك إند ديناميكياً)
     if avatar_str.startswith("/uploads/") or avatar_str.startswith("uploads/"):
         clean_path = avatar_str.replace("//uploads/", "/uploads/").lstrip("/")
         return f"{settings.BACKEND_URL}/{clean_path}"
-        
-    # 4. الأفاتارات الافتراضية (نجلبها من الفرونت إند ديناميكياً)
-    # نستخرج اسم الملف فقط (avatar_1.svg) ونتجاهل أي مسارات نسبية قديمة
+
+    # 4. الأفاتارات الافتراضية (نأخذ اسم الملف فقط لمنع path traversal)
     clean_name = avatar_str.split('/')[-1]
-    if not clean_name.endswith('.svg') and not clean_name.endswith('.png') and not clean_name.endswith('.jpg'):
-        clean_name += '.svg'
-        
+    # نتحقق من اسم الملف بشكل صارم
+    import re
+    if not re.match(r'^[a-zA-Z0-9_-]+\.(svg|png|jpg|jpeg|webp)$', clean_name):
+        return f"https://api.dicebear.com/7.x/bottts/svg?seed={fallback_name}"
+
     return f"{settings.FRONTEND_URL}/assets/avatars/{clean_name}"
 
 def fetch_stats_from_db(token: str, fallback_name: str, fallback_avatar: str):
@@ -198,8 +217,9 @@ def fetch_stats_from_db(token: str, fallback_name: str, fallback_avatar: str):
     db = SessionLocal()
     try:
         user = get_user_from_token(db, token)
+        # ✅ إصلاح: exact match بدل ilike fuzzy
         if not user and fallback_name and fallback_name not in ["لاعب", "مجهول", "أنت"]:
-            user = db.query(User).filter(User.player_name.ilike(f"%{fallback_name.strip()}%")).first()
+            user = db.query(User).filter(User.player_name == fallback_name.strip()).first()
             
         if not user: return default_stats
             

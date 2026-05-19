@@ -1,163 +1,235 @@
-import html
-import json
-from app.core.database import SessionLocal
-from app.models.user import User
+import re
+from app.sockets.state import connected_players, global_chat_history, game_lobby_players, game_chat_history
 from app.services.reward_service import get_clean_avatar
-from app.core.redis_client import redis_db
-from app.sockets.state import (
-    add_connected_player, get_connected_player, get_all_online_players,
-    add_game_lobby_player, get_game_lobby_players,
-    add_chat_message, get_chat_history
-)
+from app.sockets.auth_helper import verify_socket_token
+
 
 async def return_players_to_lobby(sio, room):
+    """
+    يُستدعى بعد انتهاء معركة. مهمته:
+    - تنظيف بيانات الـ avatar للاعبين (لو فيها قيم خبيثة)
+    - لا يُحدّث location مسبقاً — اللاعب يحدّث location بنفسه عبر join_game_lobby
+      عندما يصل فعلاً للوبي.
+    """
     game_mode = room.get('game_mode', 'huroof')
-    db = SessionLocal()
-    try:
-        for player in room.get('players', []):
-            p_sid = player.get('sid')
-            if not p_sid: continue
-            p_name = player.get('name', 'لاعب')
+    if game_mode not in game_lobby_players:
+        game_lobby_players[game_mode] = {}
 
-            # ✅ الإصلاح: جلب الأفاتار الحقيقي من قاعدة البيانات وليس من Redis
-            user_in_db = db.query(User).filter(User.player_name == p_name).first()
-            if user_in_db and user_in_db.avatar:
-                p_avatar = get_clean_avatar(user_in_db.avatar, p_name)
-            else:
-                p_avatar = get_clean_avatar(player.get('avatar', ''), p_name)
+    for player in room.get('players', []):
+        p_sid = player.get('sid')
+        if not p_sid:
+            continue
+        p_name = player.get('name', 'لاعب')
+        p_avatar = get_clean_avatar(player.get('avatar', ''), p_name)
 
-            player_data = {'name': p_name, 'avatar': p_avatar, 'location': game_mode}
-            await add_connected_player(p_sid, player_data)
-            await add_game_lobby_player(game_mode, p_sid, {'name': p_name, 'avatar': p_avatar})
-    finally:
-        db.close()
+        if p_sid in connected_players:
+            connected_players[p_sid]['avatar'] = p_avatar
 
-    players_list = await get_game_lobby_players(game_mode)
-    await sio.emit('update_game_lobby_players', players_list, room=game_mode)
-    
-    online_players = await get_all_online_players()
-    await sio.emit('update_online_players', online_players)
+    await sio.emit('update_online_players', list(connected_players.values()))
+
+
+def _sanitize_chat_text(raw: str) -> str:
+    """فلتر نص الشات: يقص ويمنع الرسائل الفارغة."""
+    return str(raw).strip()[:200]
 
 
 def register_lobby_events(sio):
-    
+
     @sio.on('join_global_lobby')
     async def join_global_lobby(sid, data):
-        player_name = data.get('name', 'لاعب')
-        if not player_name or player_name == 'لاعب':
-            return  # ❌ رفض الانضمام بدون اسم حقيقي (يحدث قبل اكتمال fetch /auth/me)
+        # 🛡️ نحاول التحقق من التوكن إن وُجد — إن لم يكن موجوداً نقبل بالاسم كـ guest
+        token = data.get('token')
+        user, db = verify_socket_token(token)
+        if user:
+            player_name = user.player_name or 'لاعب'
+            avatar = get_clean_avatar(user.avatar, player_name)
+            db.close()
+        else:
+            player_name = str(data.get('name', 'لاعب'))[:30]
+            avatar = get_clean_avatar(data.get('avatar', ''), player_name)
 
-        # 🧹 مسح أي SID قديم لنفس اللاعب (أشباح بعد انقطاع أو إعادة اتصال)
-        all_connected = await redis_db.hgetall("global:connected_players")
-        import json as _json
-        for ghost_sid, ghost_str in all_connected.items():
-            if ghost_sid == sid:
-                continue
-            ghost = _json.loads(ghost_str)
-            if ghost.get('name') == player_name:
-                await redis_db.hdel("global:connected_players", ghost_sid)
-                try:
-                    await sio.leave_room(ghost_sid, "global")
-                except:
-                    pass
-
-        db = SessionLocal()
-        user_in_db = db.query(User).filter(User.player_name == player_name).first()
-        correct_avatar = user_in_db.avatar if user_in_db and user_in_db.avatar else "assets/avatars/avatar_1.svg"
-        db.close()
-
-        player_data = {'name': player_name, 'avatar': correct_avatar, 'location': 'global'}
-        await add_connected_player(sid, player_data)
-        
-        chat_hist = await get_chat_history('global')
-        await sio.emit('chat_history', chat_hist, to=sid)
-        
-        online_players = await get_all_online_players()
-        await sio.emit('update_online_players', online_players)
+        connected_players[sid] = {'name': player_name, 'avatar': avatar, 'location': 'global'}
+        await sio.emit('chat_history', global_chat_history, to=sid)
+        await sio.emit('update_online_players', list(connected_players.values()))
 
     @sio.on('join_game_lobby')
     async def join_game_lobby(sid, data):
-        player_name = data.get('name')
-        game_mode = data.get('gameMode', 'huroof')
-        
-        # 🧹 [الحل الحاسم 3]: نظام "طرد الأشباح" (Ghost Sweeper)
-        # مسح أي اتصال قديم معلق لنفس اللاعب في هذا اللوبي قبل إضافة اتصاله الجديد
-        from app.sockets.state import redis_db, remove_connected_player
-        import json
-        
-        all_ghosts = await redis_db.hgetall(f"lobby:{game_mode}")
-        for ghost_sid, ghost_data_str in all_ghosts.items():
-            ghost_data = json.loads(ghost_data_str)
-            if ghost_data.get('name') == player_name:
-                # تدمير أي نسخة قديمة للاعب من Redis
-                await redis_db.hdel(f"lobby:{game_mode}", ghost_sid)
-                await remove_connected_player(ghost_sid)
-                try:
-                    await sio.leave_room(ghost_sid, game_mode)
-                except:
-                    pass
+        token = data.get('token')
+        game_mode = data.get('gameMode')
 
-        # === تكملة كود الانضمام الطبيعي ===
-        db = SessionLocal()
-        user_in_db = db.query(User).filter(User.player_name == player_name).first()
-        if not user_in_db:
+        # 🛡️ اللوبي يتطلب توكن صالح
+        user, db = verify_socket_token(token)
+        if user:
+            player_name = user.player_name or 'لاعب'
+            avatar = get_clean_avatar(user.avatar, player_name)
             db.close()
-            return
-        correct_avatar = user_in_db.avatar if user_in_db.avatar else "assets/avatars/avatar_1.svg"
-        db.close()
+        else:
+            # نقبل guest بدون توكن لكن بدون وصول للطابور
+            player_name = str(data.get('name', 'لاعب'))[:30]
+            avatar = get_clean_avatar(data.get('avatar', ''), player_name)
 
-        player_data = {'name': player_name, 'avatar': correct_avatar, 'location': game_mode}
-        
-        await add_connected_player(sid, player_data)
-        await add_game_lobby_player(game_mode, sid, {'name': player_name, 'avatar': correct_avatar})
-        
-        # ضمان إدخال اللاعب للغرفة الخاصة باللوبي لاستلام رسائل الشات وقائمة اللاعبين
-        await sio.enter_room(sid, game_mode) 
-        
-        # ✅ الإصلاح: نُرسل التحديثات بالترتيب الصحيح
-        # أولاً قائمة اللاعبين في اللوبي لكل من في الغرفة
-        players_list = await get_game_lobby_players(game_mode)
-        await sio.emit('update_game_lobby_players', players_list, room=game_mode)
-        
-        # ثانياً القائمة العالمية للمتصلين لكل الغرف
-        online_players = await get_all_online_players()
-        await sio.emit('update_online_players', online_players)
-        
-        # ثالثاً سجل الشات للاعب الجديد فقط
-        game_chat_hist = await get_chat_history(game_mode)
-        await sio.emit('game_chat_history', game_chat_hist, to=sid)
+        if game_mode not in game_lobby_players:
+            game_lobby_players[game_mode] = {}
+        if game_mode not in game_chat_history:
+            game_chat_history[game_mode] = []
 
+        game_lobby_players[game_mode][sid] = {'name': player_name, 'avatar': avatar}
+        connected_players[sid] = {
+            'name': player_name,
+            'avatar': avatar,
+            'location': game_mode,
+            'token': token  # نحتفظ بالتوكن للاستخدام الداخلي فقط (لا يُبث للعلن)
+        }
+
+        await sio.emit('update_online_players', list(connected_players.values()))
+        await sio.emit('game_chat_history', game_chat_history[game_mode], to=sid)
+
+        players_list = list(game_lobby_players[game_mode].values())
+        for p_sid in list(game_lobby_players[game_mode].keys()):
+            await sio.emit('update_game_lobby_players', players_list, to=p_sid)
+
+    # ==========================================
+    # 💬 رسائل الشات
+    # ==========================================
     @sio.on('send_chat_message')
     async def send_chat_message(sid, data):
-        raw_text = str(data.get('text', ''))
-        clean_text = html.escape(raw_text.strip())[:200] 
-        if not clean_text: return
-        
-        msg = {'sender': data.get('sender'), 'text': clean_text, 'isSystem': False}
-        await add_chat_message('global', msg)
+        # 🛡️ Anti-Cheat
+        from app.core.anticheat import (
+            check_action_rate, check_payload_safety,
+            report_violation, is_temp_banned, Severity
+        )
+
+        if is_temp_banned(sid):
+            return
+
+        # payload safety
+        payload_issue = check_payload_safety(data, max_string_len=500)
+        if payload_issue:
+            await report_violation(sid, sio, f"chat:{payload_issue}", severity=Severity.HIGH)
+            return
+
+        # rate limit (max 1 message/sec = 60/min — معقول لإنسان)
+        rate_issue = check_action_rate(sid, 'chat_message', max_per_second=2)
+        if rate_issue:
+            await report_violation(sid, sio, f"chat_spam:{rate_issue}", severity=Severity.MEDIUM)
+            return
+
+        # 🛡️ نتحقق من أن المرسل مسجّل فعلاً في الـ lobby
+        if sid not in connected_players:
+            return
+
+        raw_text = _sanitize_chat_text(data.get('text', ''))
+        if not raw_text:
+            return
+
+        # نأخذ الاسم من server state لا من الـ data — يمنع انتحال الهوية في الشات
+        sender_name = connected_players[sid].get('name', 'لاعب')
+        msg = {'sender': sender_name, 'text': raw_text, 'isSystem': False}
+        global_chat_history.append(msg)
+        if len(global_chat_history) > 50:
+            global_chat_history.pop(0)
         await sio.emit('new_chat_message', msg)
 
     @sio.on('send_game_chat_message')
     async def send_game_chat_message(sid, data):
+        # 🛡️ Anti-Cheat
+        from app.core.anticheat import (
+            check_action_rate, check_payload_safety,
+            report_violation, is_temp_banned, Severity
+        )
+
+        if is_temp_banned(sid):
+            return
+
+        payload_issue = check_payload_safety(data, max_string_len=500)
+        if payload_issue:
+            await report_violation(sid, sio, f"game_chat:{payload_issue}", severity=Severity.HIGH)
+            return
+
+        rate_issue = check_action_rate(sid, 'game_chat_message', max_per_second=2)
+        if rate_issue:
+            await report_violation(sid, sio, f"game_chat_spam:{rate_issue}", severity=Severity.MEDIUM)
+            return
+
+        if sid not in connected_players:
+            return
+
         game_mode = data.get('gameMode')
-        raw_text = str(data.get('text', ''))
-        clean_text = html.escape(raw_text.strip())[:200] 
-        if not clean_text: return
-        
-        msg = {'sender': data.get('sender'), 'text': clean_text, 'isSystem': False}
-        await add_chat_message(game_mode, msg)
-        await sio.emit('new_game_chat_message', msg, room=game_mode)
-        
+        if not game_mode:
+            return
+
+        raw_text = _sanitize_chat_text(data.get('text', ''))
+        if not raw_text:
+            return
+
+        # 🛡️ نتحقق أن اللاعب فعلاً في لوبي هذا الـ game_mode
+        if game_mode not in game_lobby_players or sid not in game_lobby_players[game_mode]:
+            return
+
+        sender_name = connected_players[sid].get('name', 'لاعب')
+        msg = {'sender': sender_name, 'text': raw_text, 'isSystem': False}
+
+        if game_mode not in game_chat_history:
+            game_chat_history[game_mode] = []
+        game_chat_history[game_mode].append(msg)
+        if len(game_chat_history[game_mode]) > 50:
+            game_chat_history[game_mode].pop(0)
+
+        for p_sid in list(game_lobby_players[game_mode].keys()):
+            await sio.emit('new_game_chat_message', msg, to=p_sid)
+
+    @sio.on('update_player_info')
+    async def update_player_info(sid, data):
+        if sid not in connected_players:
+            return
+
+        # 🛡️ نحاول التحقق من التوكن — إن صالح نجلب الاسم من DB
+        token = connected_players[sid].get('token')
+        user, db = verify_socket_token(token)
+        if user:
+            player_data = connected_players[sid]
+            player_data['name'] = user.player_name or player_data['name']
+            player_data['avatar'] = get_clean_avatar(user.avatar, player_data['name'])
+            connected_players[sid] = player_data
+            db.close()
+        else:
+            # guest: نقبل التحديث لكن بعد تنظيف
+            player_data = connected_players[sid]
+            player_data['avatar'] = get_clean_avatar(data.get('avatar', ''), player_data['name'])
+            connected_players[sid] = player_data
+
+        await sio.emit('update_online_players', list(connected_players.values()))
+
+    # ==========================================
+    # 🛡️ Anti-Cheat: حظر فوري عبر السوكيت
+    # ==========================================
     @sio.on('severe_security_breach')
     async def handle_security_breach(sid, data):
-        player = await get_connected_player(sid)
-        if player and 'name' in player:
-            print(f"🚨 [أمان] محاولة اختراق من: {player['name']}")
-            db = SessionLocal()
-            db_user = db.query(User).filter(User.player_name == player['name']).first()
-            if db_user:
-                db_user.is_banned = True
+        from app.core.database import SessionLocal
+        from app.models.user import User
+
+        # 🛡️ نتحقق من التوكن بدل الاسم — يمنع حظر لاعب آخر بمعرفة اسمه فقط
+        token = connected_players.get(sid, {}).get('token')
+        if not token:
+            return
+
+        user, db = verify_socket_token(token)
+        if not user:
+            return
+
+        reason = (data or {}).get('reason', 'unknown')
+        print(f"🚨 [security] breach by {user.player_name} | sid={sid} | reason={reason}")
+
+        try:
+            if not getattr(user, 'is_banned', False):
+                user.is_banned = True
                 db.commit()
+                print(f"🚫 [security] تم حظر {user.player_name} في قاعدة البيانات")
+        finally:
             db.close()
+
+        try:
             await sio.emit('force_logout', {'message': 'تم حظر حسابك نهائياً.'}, to=sid)
             await sio.disconnect(sid)
+        except Exception:
+            pass

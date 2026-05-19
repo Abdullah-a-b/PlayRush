@@ -1,73 +1,40 @@
 """
-run_prod.py - تشغيل السيرفر في وضع الإنتاج
-=============================================
-التحسينات:
-  1. workers متعددة بناءً على عدد أنوية CPU
-  2. backlog أعلى لاستيعاب طوابير الاتصال
-  3. keep_alive مضبوط لـ Socket.io
-  4. graceful_timeout لإغلاق آمن تحت الضغط
-  5. h11_max_incomplete_size لحماية من طلبات ضخمة
+⚠️ ملاحظة: هذا الملف معطّل حالياً.
+السيرفر يُشغّل الآن بـ uvicorn مباشرة:
+    uvicorn app.main:app --host 0.0.0.0 --port 8000
 
-ملاحظة Windows:
-  Windows لا يدعم multiprocessing مع asyncio بسهولة.
-  للتطوير المحلي استخدم run_dev.py (worker واحد).
-  للإنتاج الحقيقي: انشر على Linux (VPS/Docker).
+سيُعاد بناء هذا الملف عند تنفيذ نظام Redis الجديد.
 """
-
-import os
-import asyncio
+import sys
 import multiprocessing
-from hypercorn.config import Config
-from hypercorn.asyncio import serve
-
+import subprocess
 
 def get_workers():
-    """
-    عدد الـ workers = عدد أنوية CPU.
-    على Linux: كل worker يستقل بـ event loop خاص به = أداء أعلى.
-    على Windows: يُرجع 1 (multiprocessing محدود).
-    """
-    if os.name == "nt":  # Windows
-        return 1
-    cpu_count = multiprocessing.cpu_count()
-    return max(1, cpu_count)
-
-
-async def main():
-    config = Config()
-
-    # ==========================================
-    # الشبكة
-    # ==========================================
-    config.bind = ["0.0.0.0:8000"]
-    config.backlog = 2048             # طابور الاتصالات المعلقة (الافتراضي 100)
-
-    # ==========================================
-    # المهلات
-    # ==========================================
-    config.keep_alive_timeout = 75    # ثانية — مناسب لـ Socket.io long-polling
-    config.graceful_timeout = 30      # وقت الإغلاق الآمن تحت الضغط
-    config.read_timeout = 60          # مهلة قراءة الطلب
-
-    # ==========================================
-    # الأداء
-    # ==========================================
-    config.workers = get_workers()
-    config.use_reloader = False       # لا hot-reload في الإنتاج
-
-    # ==========================================
-    # اللوج
-    # ==========================================
-    config.accesslog = "-"            # stdout
-    config.errorlog = "-"             # stderr
-    config.loglevel = "info"
-
-    print(f"🚀 تشغيل السيرفر على {config.bind} | Workers: {config.workers}")
-
-    from app.main import app
-    await serve(app, config)
-
+    """✅ عدد workers = عدد CPUs × 2 + 1"""
+    cpu = multiprocessing.cpu_count()
+    return min(cpu * 2 + 1, 9)
 
 if __name__ == "__main__":
-    multiprocessing.freeze_support()  # مطلوب على Windows
-    asyncio.run(main())
+    multiprocessing.freeze_support()
+    workers = 1
+    
+    print(f"🚀 جاري تشغيل السيرفر الإنتاجي على 0.0.0.0:8000 | {workers} workers", flush=True)
+    
+    # استخدام وحدة التشغيل المدمجة يحل جميع مشاكل تجميد العمليات الفرعية
+    cmd = [
+        sys.executable, "-m", "hypercorn", "app.main:app",
+        "--bind", "0.0.0.0:8000",
+        "--workers", str(workers),
+        "--backlog", "4096",
+        "--graceful-timeout", "5",
+        "--keep-alive", "5"
+    ]
+    
+    try:
+        # سيتم توجيه الضغط على Ctrl+C تلقائياً لجميع العمليات بشكل نظيف
+        subprocess.run(cmd)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        print("\n✅ تم الإيقاف بالكامل بشكل نظيف!", flush=True)
+        sys.exit(0)

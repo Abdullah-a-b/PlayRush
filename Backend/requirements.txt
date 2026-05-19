@@ -2,27 +2,22 @@
 fastapi
 uvicorn[standard]
 
-# Scalability: تشغيل متعدد العمليات (workers)
-gunicorn
-
 # محرك الألعاب (WebSockets)
 python-socketio
 
 # قواعد البيانات
 sqlalchemy
 
-# Scalability (اختياري للإنتاج): PostgreSQL بدل SQLite
-asyncpg
+# PostgreSQL driver (مطلوب لو DATABASE_URL=postgresql://)
 psycopg2-binary
 
-# Scalability (اختياري للإنتاج): Redis لـ OTP cooldowns وSocket.IO multi-process
+# Scalability (اختياري للإنتاج): Redis لـ OTP cooldowns و Socket.IO multi-process
+# سيُضاف لاحقاً عند إعادة بناء نظام Redis
 # redis[asyncio]
-# aioredis
 
 # الحماية والتشفير (JWT و Passwords)
 python-jose[cryptography]
 passlib[bcrypt]
-bcrypt==4.0.1
 python-multipart
 slowapi
 
@@ -31,12 +26,11 @@ python-dotenv
 
 # التحقق من صحة البيانات والايميلات (Schemas)
 pydantic[email]
+email-validator
 
 # طلبات الـ HTTP الخارجية (تسجيل دخول جوجل، وبوت تليجرام)
 httpx
 requests
 
-redis
-
-hypercorn
-waitress
+# 🛡️ الأمان: معالجة وفحص الصور — يمنع image bombs و polyglot attacks
+Pillow
