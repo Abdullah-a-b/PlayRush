@@ -8,3 +8,5 @@ users.db
 .venv/
 .vscode/
 **/uploads/
+.git/
+.gitignore
