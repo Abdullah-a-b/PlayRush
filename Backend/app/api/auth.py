@@ -86,7 +86,15 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
 GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT")
-FRONTEND_BASE_URL = os.environ.get("FRONTEND_URL")
+# ⚠️ لازم يكون رابط الفرونت إند كامل (http://host:port) — بدون ده أي إعادة توجيه بعد
+# تسجيل الدخول بجوجل هتكسر (كانت تتحول لسلسلة نصية "None" فعليًا). لازم تحدده في .env
+FRONTEND_BASE_URL = os.environ.get("FRONTEND_URL", "").rstrip("/")
+if not FRONTEND_BASE_URL:
+    import logging
+    logging.getLogger("playrush").warning(
+        "⚠️ FRONTEND_URL غير مضبوط في .env — تسجيل الدخول بجوجل سيفشل عند إعادة التوجيه! "
+        "مثال: FRONTEND_URL=http://127.0.0.1:5500"
+    )
 
 
 # ==========================================
@@ -495,11 +503,12 @@ async def google_callback(request: Request, code: str, background_tasks: Backgro
     user = db.query(User).filter(User.email == email).first()
     needs_profile_setup = False
 
-    # 🛡️ الحماية من الحظر للاعبي جوجل
+    # 🛡️ الحماية من الحظر للاعبي جوجل — نوجّه لصفحة الحظر اللائقة بدل JSON خام
     if user and getattr(user, 'is_banned', False):
-        raise HTTPException(
-            status_code=403,
-            detail="تم حظر حسابك لانتهاك سياسات الأمان. يرجى التواصل مع الدعم."
+        ban_msg = "تم تقييد حسابك بسبب مخالفة سياسات اللعب العادل والأمان."
+        from urllib.parse import quote
+        return RedirectResponse(
+            url=f"{FRONTEND_BASE_URL}/banned.html?reason={quote(ban_msg)}"
         )
 
     if not user:
@@ -558,6 +567,12 @@ async def setup_profile(
     if not re.match(r'^[\w\u0600-\u06FF][\w\u0600-\u06FF\s]{1,18}[\w\u0600-\u06FF]$', safe_player_name):
         raise HTTPException(status_code=400, detail="اسم اللاعب يحتوي على رموز غير مسموحة")
 
+    # 🛡️ فلتر المحتوى المسيء في الاسم (يطبّق بند الشروط)
+    from app.core.content_filter import is_name_allowed
+    _name_check = is_name_allowed(safe_player_name)
+    if not _name_check['clean']:
+        raise HTTPException(status_code=400, detail=f"اسم اللاعب غير مسموح: {_name_check['reason']}")
+
     existing_user = db.query(User).filter(User.player_name == safe_player_name).first()
     if existing_user and existing_user.email != current_user.email:
         raise HTTPException(status_code=400, detail="الاسم مستخدم مسبقاً")
@@ -587,15 +602,12 @@ async def setup_profile(
             print(f"⚠️ cleanup error: {e}")
 
     if avatar_file and avatar_file.filename:
-        file_bytes = await avatar_file.read()
-        # ✅ الدالة ترجع (extension, clean_bytes) — الـ bytes النظيفة بعد إعادة الترميز
-        safe_ext, clean_bytes = validate_image_file(file_bytes, avatar_file.filename)
-        cleanup(old_avatar)
-        filename = f"{uuid.uuid4().hex}.{safe_ext}"
-        save_path = f"uploads/avatars/{filename}"
-        with open(save_path, "wb") as buffer:
-            buffer.write(clean_bytes)  # ✅ نكتب الـ bytes النظيفة (بعد re-encoding)
-        new_path = f"/{save_path}"
+        # 🔒 رفع الصور المخصصة مُعطّل حالياً (ميزة مؤجّلة) — لمنع المحتوى المسيء.
+        # يُقبل فقط الأفاتارات الجاهزة عبر avatar_url. (الكود محفوظ للإرجاع المستقبلي).
+        raise HTTPException(
+            status_code=403,
+            detail="رفع الصور المخصصة غير متاح حالياً. اختر من الأفاتارات الجاهزة."
+        )
 
     elif avatar_url:
         # ✅ إصلاح ثغرات path traversal + XSS + SSRF في avatar_url:
@@ -871,6 +883,11 @@ async def anticheat_report(
     if not user:
         return {"received": False}
 
+    # 🛠️ في وضع التطوير: نسجّل فقط، لا نحظر ولا نزيد score
+    from app.core.dev_mode import is_dev_mode
+    if is_dev_mode():
+        return {"received": True, "dev_mode": True, "score": getattr(user, 'anticheat_score', 0) or 0}
+
     # IP للتتبع
     client_ip = get_client_ip(request)
 
@@ -878,17 +895,18 @@ async def anticheat_report(
         f"🚨 [anticheat-report] user={user.email} ip={client_ip} reason={reason[:200]}"
     )
 
-    # عند تراكم 5+ تقارير في session واحدة → ban
-    # (نخزن في column user.anticheat_score)
+    # الفرونت يدير منطق الـ 3 محاولات ويرسل executeBan صراحةً عند تجاوزها.
+    # هذا الـ endpoint يسجّل فقط للمراقبة + حدّ احتياطي عالٍ (10) لمنع التلاعب الصريح.
     current_score = getattr(user, 'anticheat_score', 0) or 0
     new_score = current_score + 1
 
     if hasattr(user, 'anticheat_score'):
         user.anticheat_score = new_score
-        if new_score >= 5 and not user.is_banned:
+        # حدّ احتياطي عالٍ فقط (الحظر الفعلي يأتي من /auth/self-ban بعد 3 محاولات فرونت)
+        if new_score >= 10 and not user.is_banned:
             user.is_banned = True
             anticheat_logger.error(
-                f"🚫 [anticheat] auto-ban user={user.email} after 5+ reports"
+                f"🚫 [anticheat] auto-ban user={user.email} after 10+ reports (احتياطي)"
             )
         db.commit()
 
@@ -929,7 +947,8 @@ async def ban_status(
 
     if not token:
         # لا يوجد توكن = ليس محظوراً (لاعب جديد محتمل)
-        return {"banned": False, "reason": "no_token"}
+        from app.core.dev_mode import is_dev_mode
+        return {"banned": False, "reason": "no_token", "dev_mode": is_dev_mode()}
 
     try:
         # ✅ نفك التوكن بدون التحقق من expiry
@@ -949,12 +968,17 @@ async def ban_status(
     if not user:
         return {"banned": False, "reason": "user_not_found"}
 
+    # 🛠️ وضع التطوير من .env (يُقرأ لحظياً) — مصدر موثوق، اللاعب لا يتحكم به
+    from app.core.dev_mode import is_dev_mode
+    _dev = is_dev_mode()
+
     if user.is_banned:
         return {
             "banned": True,
             "reason": "account_banned",
             "anticheat_score": getattr(user, 'anticheat_score', 0) or 0,
+            "dev_mode": _dev,
         }
 
     # ✅ غير محظور — السيرفر هو المصدر الموثوق
-    return {"banned": False}
+    return {"banned": False, "dev_mode": _dev}

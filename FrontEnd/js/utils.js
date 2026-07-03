@@ -8,9 +8,15 @@
 // 🌐 إعداد الاتصال بالسيرفر
 // ============================================================
 
-/** رابط الـ API حسب البيئة (محلي أو إنتاج) */
-const isLocal = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
-const API_URL  = isLocal ? CONFIG.API_URL : 'https://api.your-real-domain.com';
+/** رابط الـ API حسب البيئة (محلي / شبكة محلية / إنتاج) */
+const _h = window.location.hostname;
+const isLocal = _h === '127.0.0.1' || _h === 'localhost';
+// عنوان شبكة محلية (هاتف عبر WiFi): 192.168.x.x أو 10.x.x.x أو 172.16-31.x.x
+const isLAN = /^192\.168\.\d+\.\d+$/.test(_h)
+           || /^10\.\d+\.\d+\.\d+$/.test(_h)
+           || /^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+$/.test(_h);
+// محلي أو شبكة محلية → نستخدم CONFIG (نفس العنوان+المنفذ). غير ذلك (دومين عام) → الإنتاج.
+const API_URL = (isLocal || isLAN) ? CONFIG.API_URL : 'https://api.your-real-domain.com';
 
 
 // ============================================================
@@ -62,6 +68,16 @@ function getCorrectAvatarUrl(path) {
             console.warn('[SECURITY] avatar URL blocked:', p);
             return `assets/avatars/avatar_1.svg`;
         }
+    }
+
+    // 🔧 روابط قديمة ثابتة (127.0.0.1/localhost) محفوظة قبل التحديث → نصلحها للعنوان الحالي
+    const staleMatch = p.match(/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/.*)$/i);
+    if (staleMatch) {
+        const sp = staleMatch[3];
+        if (sp.startsWith('/uploads')) return `${API_URL}${sp}`;
+        const fn = sp.split('/').pop();
+        if (/^[a-zA-Z0-9_-]+\.(svg|png|jpg|jpeg|webp)$/i.test(fn)) return `assets/avatars/${fn}`;
+        return `assets/avatars/avatar_1.svg`;
     }
 
     // إذا كان رابط https/http آمن
@@ -199,7 +215,7 @@ function showToast(message, type = 'info') {
  * @param {string} message - نص السؤال
  * @param {Function} onConfirm - دالة تُنفَّذ عند الضغط على "نعم"
  */
-function showConfirm(title, message, onConfirm) {
+function showConfirm(title, message, onConfirm, onCancel) {
     const modal = document.getElementById('customConfirm');
     document.getElementById('confirmTitle').textContent   = title;
     document.getElementById('confirmMessage').textContent = message;
@@ -214,7 +230,7 @@ function showConfirm(title, message, onConfirm) {
     noBtn.parentNode.replaceChild(newNo, noBtn);
 
     newYes.addEventListener('click', () => { modal.style.display = 'none'; onConfirm(); });
-    newNo.addEventListener('click',  () => { modal.style.display = 'none'; });
+    newNo.addEventListener('click',  () => { modal.style.display = 'none'; if (typeof onCancel === 'function') onCancel(); });
 }
 
 
@@ -226,7 +242,7 @@ function showConfirm(title, message, onConfirm) {
  * يضيف رسالة إلى صندوق الدردشة العامة.
  * يحذف أقدم رسالة تلقائياً إذا تجاوز العدد 50.
  */
-function addGlobalChatMessage(sender, text, isSystem = false) {
+function addGlobalChatMessage(sender, text, isSystem = false, senderId = null, emojiId = null) {
     const container = document.getElementById('globalChatMessages');
     if (!container) return;
 
@@ -249,12 +265,56 @@ function addGlobalChatMessage(sender, text, isSystem = false) {
         const userSpan = document.createElement('span');
         userSpan.className = 'user';
         userSpan.textContent = `${sanitizeText(sender)}:`;
-        const textSpan = document.createElement('span');
-        textSpan.style.color = '#ddd';
-        textSpan.textContent = sanitizeText(text);
+        if (senderId && typeof openPlayerProfileById === 'function') {
+            userSpan.style.cursor = 'pointer';
+            userSpan.style.textDecoration = 'underline';
+            userSpan.style.textDecorationStyle = 'dotted';
+            userSpan.addEventListener('click', () => openPlayerProfileById(senderId));
+        }
         msgDiv.appendChild(userSpan);
         msgDiv.appendChild(document.createTextNode(' '));
-        msgDiv.appendChild(textSpan);
+
+        // رسالة إيموجي → Lottie متحرك (مع إعادة محاولة لو المكتبة لم تجهز)
+        if (emojiId) {
+            const holder = document.createElement('span');
+            holder.style.display = 'inline-block';
+            holder.style.width = '38px';
+            holder.style.height = '38px';
+            holder.style.verticalAlign = 'middle';
+            holder.style.fontSize = '26px';
+            msgDiv.appendChild(holder);
+            const inGames = window.location.pathname.includes('/games/');
+            const path = `${inGames ? '../' : ''}assets/emojis/${emojiId}.json`;
+            (function tryLoad(tries) {
+                if (typeof window.lottie !== 'undefined' && window.lottie.loadAnimation) {
+                    try {
+                        const anim = window.lottie.loadAnimation({
+                            container: holder, renderer: 'svg', loop: false, autoplay: true, path,
+                        });
+                        // تكرار ديناميكي خفيف: يعيد التشغيل بعد فترات عشوائية (لا يلفت النظر)
+                        let _plays = 0;
+                        anim.addEventListener('complete', function _onDone() {
+                            _plays++;
+                            if (_plays >= 6) return; // يتوقف بعد عدة مرات
+                            // انتظار عشوائي ثم إعادة (إيقاع غير منتظم = طبيعي)
+                            const wait = 2500 + Math.random() * 4000;
+                            setTimeout(() => {
+                                try { anim.goToAndPlay(0, true); } catch (_) {}
+                            }, wait);
+                        });
+                    } catch (_) { holder.textContent = sanitizeText(text); }
+                } else if (tries < 20) {
+                    setTimeout(() => tryLoad(tries + 1), 250);
+                } else {
+                    holder.textContent = sanitizeText(text);
+                }
+            })(0);
+        } else {
+            const textSpan = document.createElement('span');
+            textSpan.style.color = '#ddd';
+            textSpan.textContent = sanitizeText(text);
+            msgDiv.appendChild(textSpan);
+        }
     }
 
     container.appendChild(msgDiv);
@@ -373,25 +433,26 @@ function deleteAccount() {
 function attachForceLogoutHandler(socketInstance) {
     if (!socketInstance) return;
     socketInstance.on('force_logout', (data) => {
-        const message = (data && data.message) || 'تم حظر حسابك.';
+        const message = (data && data.message) || 'تم تقييد حسابك.';
         try {
-            document.body.innerHTML = `
-                <div style="height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; background-color:#0d0d1a; color:red; text-align:center; direction:rtl; font-family:Tajawal, sans-serif;">
-                    <h1 style="font-size:3rem; margin:0;">🚫 ${message}</h1>
-                    <p style="font-size:1.2rem; color:#bbb; margin-top:20px;">سيتم تحويلك لصفحة تسجيل الدخول...</p>
-                </div>
-            `;
-        } catch (e) {}
-
-        try {
-            sessionStorage.clear();
+            sessionStorage.setItem('banReason', message);
+            sessionStorage.removeItem('token');
             localStorage.removeItem('token');
         } catch (e) {}
 
-        setTimeout(() => {
-            const path = window.location.pathname;
-            const isInSubfolder = path.includes('/games/');
-            window.location.replace(isInSubfolder ? '../login.html' : 'login.html');
-        }, 2500);
+        // صفحة حظر لائقة بدل رسالة خام
+        const path = window.location.pathname;
+        const isInSubfolder = path.includes('/games/');
+        const banPage = isInSubfolder ? '../banned.html' : 'banned.html';
+
+        try {
+            document.body.innerHTML = `
+                <div style="height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; background:#0d0d1a; color:#ddd; text-align:center; direction:rtl; font-family:Tajawal, sans-serif;">
+                    <div style="font-size:3rem; color:#f44336;">🚫</div>
+                    <p style="font-size:1.1rem; margin-top:16px;">جارٍ تحويلك...</p>
+                </div>`;
+        } catch (e) {}
+
+        setTimeout(() => { window.location.replace(banPage); }, 800);
     });
 }

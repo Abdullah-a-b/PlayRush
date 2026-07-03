@@ -1,0 +1,287 @@
+/* ============================================================
+   🎨 تصاميم الثيمات المتكاملة
+   كل ثيم: خلفية متدرّجة + نمط زخرفي متحرك + توهّج + ألوان عناصر
+   يُفعّل عبر html[data-theme="..."]
+   ============================================================ */
+
+/* ---------- العناصر الأساسية (مشترك لكل الثيمات) ---------- */
+html[data-theme] body {
+  background: linear-gradient(135deg, var(--theme-bg1) 0%, var(--theme-bg2) 50%, var(--theme-bg3) 100%) !important;
+}
+html[data-theme] .nav-btn.active,
+html[data-theme] .play-btn,
+html[data-theme] .setting-tab.active {
+  background: linear-gradient(135deg, var(--theme-primary), var(--theme-accent)) !important;
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--theme-accent) 40%, transparent) !important;
+}
+html[data-theme] .nav-btn:hover,
+html[data-theme] .control-btn:hover { background: color-mix(in srgb, var(--theme-primary) 28%, transparent) !important; }
+html[data-theme] .currency-item { background: color-mix(in srgb, var(--theme-primary) 25%, transparent) !important; border: 1px solid color-mix(in srgb, var(--theme-accent) 30%, transparent); }
+html[data-theme] .player-avatar img { border-color: var(--theme-accent) !important; box-shadow: 0 0 12px color-mix(in srgb, var(--theme-accent) 50%, transparent); }
+html[data-theme] .xp-fill { background: linear-gradient(90deg, var(--theme-primary), var(--theme-accent)) !important; }
+html[data-theme] .theme-option.active { border-color: var(--theme-accent) !important; box-shadow: 0 0 15px color-mix(in srgb, var(--theme-accent) 50%, transparent); }
+html[data-theme] .top-bar,
+html[data-theme] .main-navigation { background: color-mix(in srgb, var(--theme-bg2) 90%, transparent) !important; border-color: color-mix(in srgb, var(--theme-accent) 20%, transparent) !important; }
+html[data-theme] .particle { background: radial-gradient(circle, var(--theme-accent) 0%, transparent 70%) !important; }
+
+/* بطاقات أوضاع اللعب — توهّج وإطار حسب الثيم */
+html[data-theme] .game-mode-card,
+html[data-theme] .play-mode-card,
+html[data-theme] .mode-card {
+  box-shadow: 0 8px 30px color-mix(in srgb, var(--theme-primary) 35%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 25%, transparent) !important;
+}
+
+/* ---------- طبقة النمط الزخرفي المتحرّك ---------- */
+html[data-theme] body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: 0.6;
+}
+/* نضمن أن المحتوى فوق الطبقة الزخرفية */
+html[data-theme] .lobby-container,
+html[data-theme] .categories-container,
+html[data-theme] .main-navigation { position: relative; z-index: 1; }
+html[data-theme] .top-bar { position: relative; z-index: 1; }
+/* الشريط الجانبي (يحوي صندوق الرسائل) فوق الشريط العلوي ليفتح الصندوق كاملاً */
+html[data-theme] .sidebar { position: relative; z-index: 5; }
+
+/* 🌊 المحيط — موجات متحرّكة */
+html[data-theme="theme_ocean"] body::before {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 120%, rgba(0,188,212,0.25) 0%, transparent 60%),
+    repeating-linear-gradient(100deg, transparent 0 40px, rgba(0,188,212,0.04) 40px 80px);
+  animation: themeWave 8s ease-in-out infinite alternate;
+}
+@keyframes themeWave { from { transform: translateY(0); } to { transform: translateY(-20px); } }
+
+/* 🌲 الغابة — أوراق متناثرة */
+html[data-theme="theme_forest"] body::before {
+  background:
+    radial-gradient(circle at 15% 20%, rgba(102,187,106,0.12) 0%, transparent 25%),
+    radial-gradient(circle at 85% 70%, rgba(46,125,50,0.14) 0%, transparent 30%),
+    radial-gradient(circle at 50% 50%, rgba(102,187,106,0.06) 0%, transparent 40%);
+}
+
+/* 🌸 الكرز — بتلات */
+html[data-theme="theme_cherry"] body::before {
+  background:
+    radial-gradient(circle at 20% 30%, rgba(255,128,171,0.15) 0%, transparent 25%),
+    radial-gradient(circle at 75% 60%, rgba(194,24,91,0.12) 0%, transparent 30%);
+  animation: themeFloat 10s ease-in-out infinite alternate;
+}
+@keyframes themeFloat { from { transform: translateX(0); } to { transform: translateX(20px); } }
+
+/* 🌅 الغروب — توهّج دافئ */
+html[data-theme="theme_sunset"] body::before {
+  background:
+    radial-gradient(ellipse 100% 60% at 50% 110%, rgba(255,152,0,0.28) 0%, transparent 55%),
+    radial-gradient(circle at 25% 15%, rgba(230,81,0,0.12) 0%, transparent 35%);
+}
+
+/* 🤖 سايبر — شبكة نيون */
+html[data-theme="theme_cyber"] body::before {
+  background:
+    linear-gradient(rgba(0,229,255,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,0,170,0.05) 1px, transparent 1px),
+    radial-gradient(circle at 80% 20%, rgba(0,229,255,0.12) 0%, transparent 40%);
+  background-size: 40px 40px, 40px 40px, auto;
+  animation: themeGrid 6s linear infinite;
+}
+@keyframes themeGrid { from { background-position: 0 0, 0 0, 0 0; } to { background-position: 40px 40px, 40px 40px, 0 0; } }
+
+/* 🌋 الحمم — توهّج ناري نابض */
+html[data-theme="theme_lava"] body::before {
+  background:
+    radial-gradient(ellipse 90% 50% at 50% 115%, rgba(255,87,34,0.3) 0%, transparent 55%),
+    radial-gradient(circle at 70% 80%, rgba(216,67,21,0.15) 0%, transparent 35%);
+  animation: themePulse 4s ease-in-out infinite alternate;
+}
+@keyframes themePulse { from { opacity: 0.5; } to { opacity: 0.85; } }
+
+/* 🌌 المجرّة — نجوم وميض */
+html[data-theme="theme_galaxy"] body::before {
+  background:
+    radial-gradient(circle at 25% 30%, rgba(171,71,188,0.18) 0%, transparent 35%),
+    radial-gradient(2px 2px at 20% 30%, #fff 50%, transparent),
+    radial-gradient(1px 1px at 60% 50%, #fff 50%, transparent),
+    radial-gradient(1.5px 1.5px at 45% 75%, #fff 50%, transparent),
+    radial-gradient(1px 1px at 80% 25%, #fff 50%, transparent),
+    radial-gradient(2px 2px at 90% 65%, #fff 50%, transparent);
+  background-size: auto, 200px 200px, 150px 150px, 180px 180px, 220px 220px, 170px 170px;
+  animation: themeTwinkle 5s ease-in-out infinite alternate;
+}
+@keyframes themeTwinkle { from { opacity: 0.4; } to { opacity: 0.75; } }
+
+/* ❄️ الشفق — أضواء قطبية */
+html[data-theme="theme_aurora"] body::before {
+  background:
+    linear-gradient(120deg, transparent 30%, rgba(100,255,218,0.1) 50%, transparent 70%),
+    radial-gradient(ellipse 80% 40% at 50% 0%, rgba(0,191,165,0.18) 0%, transparent 60%);
+  animation: themeAurora 9s ease-in-out infinite alternate;
+}
+@keyframes themeAurora { from { transform: translateX(-30px); opacity: 0.5; } to { transform: translateX(30px); opacity: 0.8; } }
+
+/* ✨ ذهبي — لمعان */
+html[data-theme="theme_gold"] body::before {
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255,215,0,0.14) 0%, transparent 35%),
+    radial-gradient(circle at 70% 70%, rgba(201,162,39,0.12) 0%, transparent 40%),
+    repeating-linear-gradient(45deg, transparent 0 60px, rgba(255,215,0,0.02) 60px 120px);
+  animation: themeShimmer 7s ease-in-out infinite alternate;
+}
+@keyframes themeShimmer { from { opacity: 0.5; } to { opacity: 0.8; } }
+
+/* 💎 الماس — بريق متلألئ */
+html[data-theme="theme_diamond"] body::before {
+  background:
+    radial-gradient(circle at 30% 25%, rgba(179,229,252,0.18) 0%, transparent 30%),
+    radial-gradient(3px 3px at 25% 35%, #fff 50%, transparent),
+    radial-gradient(2px 2px at 65% 55%, rgba(179,229,252,0.9) 50%, transparent),
+    radial-gradient(2.5px 2.5px at 50% 80%, #fff 50%, transparent),
+    radial-gradient(2px 2px at 85% 30%, rgba(179,229,252,0.9) 50%, transparent);
+  background-size: auto, 180px 180px, 140px 140px, 200px 200px, 160px 160px;
+  animation: themeTwinkle 4s ease-in-out infinite alternate;
+}
+
+/* ---------- حركة العناصر المركزية (إحساس الألعاب الكبيرة) ---------- */
+/* توهّج نابض على بطاقات اللعب */
+html[data-theme] .game-mode-card,
+html[data-theme] .play-mode-card,
+html[data-theme] .mode-card {
+  animation: themeCardGlow 3s ease-in-out infinite alternate;
+}
+@keyframes themeCardGlow {
+  from { box-shadow: 0 8px 30px color-mix(in srgb, var(--theme-primary) 30%, transparent); }
+  to   { box-shadow: 0 12px 45px color-mix(in srgb, var(--theme-accent) 55%, transparent); }
+}
+/* البطاقات ترتفع وتلمع عند التحويم */
+html[data-theme] .game-mode-card:hover,
+html[data-theme] .play-mode-card:hover,
+html[data-theme] .mode-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  border-color: var(--theme-accent) !important;
+}
+/* شعار اللعبة في الوسط — توهّج متحرّك */
+html[data-theme] .game-showcase-icon,
+html[data-theme] [class*="showcase"] img,
+html[data-theme] .vs-text {
+  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--theme-accent) 60%, transparent));
+}
+/* نبض خفيف على العملات */
+html[data-theme] .currency-item { animation: themeCoinPulse 2.5s ease-in-out infinite; }
+@keyframes themeCoinPulse { 0%,100% { box-shadow: 0 0 0 transparent; } 50% { box-shadow: 0 0 14px color-mix(in srgb, var(--theme-accent) 40%, transparent); } }
+/* الأزرار النشطة تتوهّج */
+html[data-theme] .nav-btn.active { animation: themeNavGlow 2.8s ease-in-out infinite alternate; }
+@keyframes themeNavGlow {
+  from { box-shadow: 0 4px 15px color-mix(in srgb, var(--theme-primary) 35%, transparent); }
+  to   { box-shadow: 0 6px 28px color-mix(in srgb, var(--theme-accent) 55%, transparent); }
+}
+/* شريط الـXP يلمع */
+html[data-theme] .xp-fill { position: relative; overflow: hidden; }
+html[data-theme] .xp-fill::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+  animation: themeXpShine 2.5s linear infinite;
+}
+@keyframes themeXpShine { from { transform: translateX(-100%); } to { transform: translateX(200%); } }
+
+/* ============================================================
+   🎨 زينة كبيرة في الوسط + تزيين الشات وقائمة المتصلين
+   ============================================================ */
+
+/* عنصر زخرفي كبير في زاوية الوسط (يتغيّر حسب الثيم) */
+html[data-theme] .main-content { position: relative; }
+html[data-theme] .main-content::after {
+  content: ''; position: absolute; bottom: 10px; left: 15px;
+  font-size: 110px; line-height: 1; pointer-events: none; z-index: 0;
+  opacity: 0.13;
+  animation: themeMascotSway 6s ease-in-out infinite alternate;
+}
+@keyframes themeMascotSway {
+  from { transform: rotate(-3deg) translateY(0); }
+  to   { transform: rotate(3deg) translateY(-8px); }
+}
+/* المحتوى فوق الزينة */
+html[data-theme] .welcome-panel,
+html[data-theme] .content-section { position: relative; z-index: 1; }
+
+/* عنصر الزينة لكل ثيم */
+html[data-theme="theme_ocean"]   .main-content::after { content: '🐙'; }
+html[data-theme="theme_forest"]  .main-content::after { content: '🌳'; font-size: 130px; opacity: 0.16; }
+html[data-theme="theme_cherry"]  .main-content::after { content: '🌸'; }
+html[data-theme="theme_sunset"]  .main-content::after { content: '🌅'; }
+html[data-theme="theme_cyber"]   .main-content::after { content: '🤖'; }
+html[data-theme="theme_lava"]    .main-content::after { content: '🌋'; }
+html[data-theme="theme_galaxy"]  .main-content::after { content: '🪐'; animation: themeMascotSpin 30s linear infinite; }
+html[data-theme="theme_aurora"]  .main-content::after { content: '🏔️'; }
+html[data-theme="theme_gold"]    .main-content::after { content: '👑'; }
+html[data-theme="theme_diamond"] .main-content::after { content: '💎'; }
+@keyframes themeMascotSpin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+
+/* زينة ثانية في الزاوية المقابلة (أصغر) */
+html[data-theme] .main-content::before {
+  content: ''; position: absolute; top: 20px; right: -10px;
+  font-size: 90px; line-height: 1; pointer-events: none; z-index: 0;
+  opacity: 0.12; animation: themeMascotSway 8s ease-in-out infinite alternate-reverse;
+}
+html[data-theme="theme_forest"]  .main-content::before { content: '🦋'; }
+html[data-theme="theme_ocean"]   .main-content::before { content: '🐠'; }
+html[data-theme="theme_cherry"]  .main-content::before { content: '🌸'; }
+html[data-theme="theme_sunset"]  .main-content::before { content: '☁️'; }
+html[data-theme="theme_cyber"]   .main-content::before { content: '⚡'; }
+html[data-theme="theme_lava"]    .main-content::before { content: '🔥'; }
+html[data-theme="theme_galaxy"]  .main-content::before { content: '🌟'; }
+html[data-theme="theme_aurora"]  .main-content::before { content: '❄️'; }
+html[data-theme="theme_gold"]    .main-content::before { content: '✨'; }
+html[data-theme="theme_diamond"] .main-content::before { content: '✨'; }
+
+/* ---------- تزيين الشات وقائمة المتصلين ---------- */
+html[data-theme] .chat-panel,
+html[data-theme] .online-players {
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 35%, transparent) !important;
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--theme-primary) 25%, transparent) !important;
+  position: relative;
+}
+/* شريط علوي متوهّج للوحات */
+html[data-theme] .chat-panel h4,
+html[data-theme] .online-players h4 {
+  position: relative;
+  text-shadow: 0 0 8px color-mix(in srgb, var(--theme-accent) 50%, transparent);
+}
+html[data-theme] .chat-panel h4::after,
+html[data-theme] .online-players h4::after {
+  content: ''; display: block; height: 2px; margin-top: 6px;
+  background: linear-gradient(90deg, var(--theme-accent), transparent);
+  animation: themeLineGlow 3s ease-in-out infinite alternate;
+}
+@keyframes themeLineGlow { from { opacity: 0.4; } to { opacity: 1; } }
+/* رمز زخرفي صغير في زاوية الشات */
+html[data-theme] .chat-panel::before {
+  content: ''; position: absolute; top: 8px; left: 10px;
+  font-size: 40px; opacity: 0.1; pointer-events: none;
+}
+html[data-theme="theme_forest"]  .chat-panel::before { content: '🍃'; }
+html[data-theme="theme_ocean"]   .chat-panel::before { content: '🫧'; }
+html[data-theme="theme_cherry"]  .chat-panel::before { content: '🌸'; }
+html[data-theme="theme_galaxy"]  .chat-panel::before { content: '✦'; }
+html[data-theme="theme_lava"]    .chat-panel::before { content: '🔥'; }
+html[data-theme="theme_diamond"] .chat-panel::before { content: '💎'; }
+html[data-theme="theme_gold"]    .chat-panel::before { content: '✨'; }
+html[data-theme="theme_cyber"]   .chat-panel::before { content: '◈'; }
+html[data-theme="theme_sunset"]  .chat-panel::before { content: '🌅'; }
+html[data-theme="theme_aurora"]  .chat-panel::before { content: '❄️'; }
+
+/* إطار متوهّج للاعب المتصل عند التحويم */
+html[data-theme] .players-list > *:hover {
+  border-color: var(--theme-accent) !important;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--theme-accent) 40%, transparent) !important;
+}
+
+/* ---------- حماية صندوق الرسائل الجاهزة من تأثير الثيم ---------- */
+html[data-theme] .quick-chat-panel {
+  background: #14141f !important;
+  border: 1px solid rgba(74, 144, 226, .3) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .5) !important;
+  z-index: 1001 !important;
+}
+/* زخرفة الشات خلف كل شيء */
+html[data-theme] .chat-panel::before { z-index: 0; }

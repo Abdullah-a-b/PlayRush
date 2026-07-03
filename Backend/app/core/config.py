@@ -8,9 +8,10 @@ class Settings:
     ALGORITHM = os.getenv("ALGORITHM", "HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 10080))
     
-    # الإعدادات العالمية للروابط (نزيل أي شرطة مائلة / في نهاية الرابط لتجنب الأخطاء)
-    FRONTEND_URL = os.getenv("FRONTEND_URL", "http://127.0.0.1:5500").rstrip('/')
-    BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000").rstrip('/')
+    # روابط الأصول: فارغة افتراضياً → مسارات نسبية تعمل على أي عنوان (لابتوب/جوال/شبكة محلية).
+    # في الإنتاج فقط: اضبط FRONTEND_URL/BACKEND_URL في .env بدومينك الحقيقي.
+    FRONTEND_URL = os.getenv("FRONTEND_URL", "").rstrip('/')
+    BACKEND_URL = os.getenv("BACKEND_URL", "").rstrip('/')
     
     TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
     GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")

@@ -449,6 +449,41 @@ body {
     .info span { font-size: 12px; }
 }
 
+/* ===== شاشات الجوال الضيّقة ===== */
+@media (max-width: 600px) {
+    /* الشريط العلوي: يصغر ليناسب عرض الجوال */
+    .top-bar {
+        height: auto; min-height: 64px; padding: 6px 6px;
+        gap: 4px;
+    }
+    .player-profile { gap: 5px; }
+    .player-profile .info span { font-size: 11px; }
+    .country-flag { width: 18px; height: 12px; }
+    .avatar { width: 32px; height: 32px; }
+    .center-info { gap: 4px; }
+    .round-text { font-size: 12px; }
+    .score-dot { width: 10px !important; height: 10px !important; }
+    #turn-status-badge, .turn-badge { font-size: 0.68em; padding: 3px 8px; min-width: 64px; }
+    .my-color-box { width: 16px; height: 16px; }
+
+    /* اللوحة: نصغّرها لتظهر كاملة */
+    .main-container { width: 84vmin; height: 84vmin; }
+    .hex { --hex-size: 6.5vmin; }
+
+    /* بطاقة السؤال */
+    .question-sidebar { bottom: 70px; max-height: 38vh; }
+    .question-text, .game-title { font-size: 1em; }
+    .surrender-btn { width: 38px; height: 38px; bottom: 12px; right: 12px; }
+}
+
+/* شاشات صغيرة جداً (أقل من 380px) */
+@media (max-width: 380px) {
+    .main-container { width: 90vmin; height: 90vmin; }
+    .hex { --hex-size: 7vmin; }
+    .player-profile .info span { font-size: 10px; }
+    #turn-status-badge, .turn-badge { font-size: 0.6em; min-width: 56px; }
+}
+
 .suggestion-toast {
     position: fixed;
     bottom: 120px;
@@ -508,11 +543,46 @@ body {
 /* --- تعديلات الملف الشخصي في الشريط العلوي --- */
 .player-profile {
     cursor: pointer;
-    transition: transform 0.2s, filter 0.2s;
+    transition: transform 0.2s, filter 0.2s, background 0.2s, border-color 0.2s;
+    /* 🎨 شكل بطاقة قابلة للضغط — مطابق للغة التصميم الحالية */
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    padding: 6px 12px;
+    position: relative;
 }
 .player-profile:hover {
     transform: scale(1.05);
     filter: brightness(1.2);
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 235, 59, 0.5);
+}
+.player-profile.right:hover {
+    border-color: rgba(255, 71, 87, 0.55);
+}
+/* 👁 تلميح "اضغط لعرض البروفايل" — أيقونة صغيرة تظهر بثبات وتتوهج عند الـ hover */
+.player-profile::after {
+    content: '\f06e'; /* fa-eye */
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.35);
+    position: absolute;
+    bottom: 4px;
+    inset-inline-end: 8px;
+    transition: color 0.2s;
+}
+.player-profile:hover::after {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+/* 💡 نبضة تعريفية خفيفة على بروفايل الخصم عند بدء المباراة (مرة واحدة) */
+@keyframes profileHintPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 235, 59, 0); }
+    50%      { box-shadow: 0 0 12px 2px rgba(255, 235, 59, 0.35); }
+}
+.player-profile.hint-pulse {
+    animation: profileHintPulse 1.2s ease-in-out 2;
 }
 .avatar { overflow: hidden; }
 .avatar img { width: 100%; height: 100%; object-fit: cover; }
@@ -563,6 +633,7 @@ body {
 .action-btn { flex: 1; padding: 12px 10px; border-radius: 8px; border: none; color: #fff; font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; font-size: 0.9em;}
 .action-btn.add-friend { background: linear-gradient(135deg, #3498db, #2980b9); box-shadow: 0 4px 10px rgba(52, 152, 219, 0.4);}
 .action-btn.add-friend:hover { transform: translateY(-2px); filter: brightness(1.1); }
+.action-btn.add-friend.remove-friend { background: linear-gradient(135deg, #e74c3c, #c0392b); box-shadow: 0 4px 10px rgba(231, 76, 60, 0.4); }
 .action-btn.block-user { background: linear-gradient(135deg, #e67e22, #d35400); box-shadow: 0 4px 10px rgba(230, 126, 34, 0.4);}
 .action-btn.block-user:hover { transform: translateY(-2px); filter: brightness(1.1); }
 .action-btn.report-user { background: linear-gradient(135deg, #c0392b, #a93226); box-shadow: 0 4px 10px rgba(192, 57, 43, 0.4);}
@@ -646,3 +717,135 @@ body {
 @keyframes overlaySpinner {
     to { transform: rotate(360deg); }
 }
+
+/* -------------------------------------------
+   🎯 خانات المساعدات
+------------------------------------------- */
+.help-slots {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    display: flex;
+    gap: 10px;
+    z-index: 1000;
+}
+.help-slot {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #2c2c44, #1a1a2e);
+    border: 2px solid rgba(255,255,255,0.15);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    font-family: inherit;
+    color: #fff;
+    padding: 0;
+}
+.help-slot:hover:not(.used):not(:disabled) {
+    transform: translateY(-4px);
+    border-color: #ffd700;
+    box-shadow: 0 6px 16px rgba(255,215,0,0.3);
+}
+.help-slot .help-icon { font-size: 22px; line-height: 1; }
+.help-slot .help-name { font-size: 8px; margin-top: 2px; text-align: center; opacity: 0.85; padding: 0 2px; }
+.help-slot.used {
+    opacity: 0.4;
+    cursor: not-allowed;
+    filter: grayscale(1);
+}
+.help-slot.used::after {
+    content: '✓';
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: #4CAF50;
+    color: #fff;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.help-slot:disabled { cursor: not-allowed; opacity: 0.5; }
+.help-slot.locked {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+.help-slot.locked .help-icon { filter: grayscale(0.6); }
+.help-slot.unowned {
+    opacity: 0.3;
+    cursor: not-allowed;
+    filter: grayscale(1);
+}
+/* شارة الكمية */
+.help-slot .help-qty {
+    position: absolute;
+    bottom: -6px;
+    right: -6px;
+    background: #ff9800;
+    color: #1a1a2e;
+    font-size: 10px;
+    font-weight: bold;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 3px;
+}
+
+/* رقاقة ندرة صغيرة */
+.help-slot .rarity-dot {
+    position: absolute; top: 4px; left: 4px;
+    width: 7px; height: 7px; border-radius: 50%;
+}
+.rarity-common { background: #9e9e9e; }
+.rarity-rare   { background: #2196F3; }
+.rarity-epic   { background: #9c27b0; }
+
+/* تنبيه استخدام الخصم لمساعدة */
+.help-toast {
+    position: fixed;
+    top: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(20,20,40,0.95);
+    border: 1px solid rgba(255,215,0,0.5);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 12px;
+    z-index: 2500;
+    font-size: 14px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    animation: helpToastIn 0.3s ease;
+}
+@keyframes helpToastIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(-15px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+@media (max-width: 600px) {
+    .help-slots { bottom: 12px; left: 12px; gap: 7px; }
+    .help-slot { width: 46px; height: 46px; border-radius: 11px; }
+    .help-slot .help-icon { font-size: 18px; }
+    .help-slot .help-name { font-size: 7px; }
+}
+
+/* -------------------------------------------
+   😄 إيموجيات داخل لوحة الرسائل + فقاعة متحركة
+------------------------------------------- */
+.qc-emoji-row { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 4px; }
+.qc-emoji-btn { background: transparent; border: none; font-size: 26px; cursor: pointer; padding: 4px 6px; border-radius: 8px; transition: all 0.15s; }
+.qc-emoji-btn:hover { background: rgba(255,255,255,0.12); transform: scale(1.2); }
+.emoji-bubble { position: fixed; z-index: 3000; pointer-events: none; opacity: 0; transform: scale(0.5) translateY(10px); transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.emoji-bubble.show { opacity: 1; transform: scale(1) translateY(0); }
+.emoji-fallback { font-size: 60px; display: inline-block; animation: emojiFloat 2s ease-in-out infinite; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4)); }
+@keyframes emojiFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }

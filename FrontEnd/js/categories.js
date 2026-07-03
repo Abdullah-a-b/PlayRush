@@ -22,8 +22,74 @@ if (!token) window.location.replace('login.html');
 
 // الاتصال بالسوكيت (يحتاج API_URL من utils.js)
 const socket = io(API_URL, { transports: ['websocket', 'polling'], upgrade: true });
+
+// بروفايل الإشعارات في categories: إحصائيات عامة فقط (لا لعبة محددة)
+window.PROFILE_GAME_MODE = null;
+// المتجر في categories: كل المساعدات + كل التجميليات
+window.STORE_CONTEXT = 'categories';
 // 🛡️ ربط معالج الحظر الإجباري — يستجيب لرسائل force_logout من السيرفر
 if (typeof attachForceLogoutHandler === 'function') attachForceLogoutHandler(socket);
+
+// ============================================================
+// 🔔 إعداد الإشعارات (مستوى أعلى — مستقل عن أي كود async قد يفشل)
+// ============================================================
+function renderNotifications(items, unread) {
+    const list = document.getElementById('notificationsList');
+    if (list) {
+        if (!items || items.length === 0) {
+            list.innerHTML = '<div style="color:#888;text-align:center;padding:20px;">لا توجد إشعارات</div>';
+        } else {
+            list.style.textAlign = 'right';
+            list.style.color = '#ddd';
+            list.innerHTML = items.map(n => {
+                const clickable = n.sender_id && (n.type === 'friend_request' || n.type === 'friend_accepted');
+                const cursor = clickable ? 'cursor:pointer;' : '';
+                const hint = clickable ? '<i class="fa-solid fa-circle-user" style="color:#4a90e2;margin-right:6px;font-size:13px;"></i>' : '';
+                return `
+                <div class="notif-item" ${clickable ? `data-sender="${n.sender_id}"` : ''} style="padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.08);${cursor}
+                            ${n.is_read ? '' : 'background:rgba(255,235,59,0.06);'}">
+                    <i class="fa-solid fa-bell" style="color:#ff9800;margin-left:6px;"></i>
+                    ${typeof sanitizeHTML === 'function' ? sanitizeHTML(n.message) : n.message}
+                    ${hint}
+                </div>`;
+            }).join('');
+            list.querySelectorAll('.notif-item[data-sender]').forEach(el => {
+                el.addEventListener('click', () => {
+                    const senderId = parseInt(el.dataset.sender);
+                    if (senderId && typeof openPlayerProfileById === 'function') {
+                        openPlayerProfileById(senderId);
+                    }
+                });
+            });
+        }
+    }
+    const badge = document.getElementById('notifBadge');
+    if (badge) {
+        badge.style.display = unread > 0 ? 'flex' : 'none';
+        if (unread > 0) badge.textContent = unread > 9 ? '9+' : unread;
+    }
+}
+socket.on('notifications_list', (data) => {
+    renderNotifications(data.items, data.unread);
+});
+socket.on('new_notification', (notif) => {
+    const badge = document.getElementById('notifBadge');
+    if (badge) {
+        const cur = parseInt(badge.textContent) || 0;
+        badge.textContent = (cur + 1) > 9 ? '9+' : (cur + 1);
+        badge.style.display = 'flex';
+    }
+    fetchNotifs();
+});
+let _lastNotifFetch = 0;
+function fetchNotifs() {
+    const now = Date.now();
+    if (now - _lastNotifFetch < 3000) return;
+    _lastNotifFetch = now;
+    if (token && socket.connected) socket.emit('fetch_notifications', { token });
+}
+if (socket.connected) fetchNotifs();
+socket.on('connect', fetchNotifs);
 
 // عرض الأفاتار المحفوظ في الجلسة فوراً قبل انتهاء تحميل البيانات
 const cachedAvatar = sessionStorage.getItem('playerAvatar');
@@ -71,7 +137,12 @@ window.addEventListener('DOMContentLoaded', async () => {
             if (p.location && p.location !== 'global') {
                 if (p.location.startsWith('playing_')) {
                     const game = p.location.split('_')[1];
-                    locationText = `⚔️ يخوض معركة (${GAME_THEMES[game]?.title || game})`;
+                    const isFriendly = p.location.endsWith('_friendly');
+                    if (isFriendly) {
+                        locationText = `⚔️ معركة ودية (${GAME_THEMES[game]?.title || game}) ضد صديق`;
+                    } else {
+                        locationText = `⚔️ يخوض معركة (${GAME_THEMES[game]?.title || game})`;
+                    }
                     statusColor  = '#f43f5e';
                 } else if (p.location.startsWith('party_')) {
                     const game = p.location.split('_')[1];
@@ -128,7 +199,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     socket.on('chat_history', (history) => {
         const container = document.getElementById('globalChatMessages');
         if (container) container.innerHTML = '';
-        history.forEach(msg => addGlobalChatMessage(msg.sender, msg.text, msg.isSystem));
+        history.forEach(msg => addGlobalChatMessage(msg.sender, msg.text, msg.isSystem, msg.sender_id, msg.emojiId));
     });
 
     socket.on('new_chat_message', (msg) => {
@@ -137,6 +208,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             // 🛡️ نبني العنصر بـ DOM API لمنع XSS تماماً
             const el = document.createElement('div');
             el.className = `chat-message ${msg.isSystem ? 'system' : ''}`;
+            if (msg.id) el.dataset.msgId = msg.id;
 
             const senderSpan = document.createElement('span');
             senderSpan.className = 'sender';
@@ -154,12 +226,18 @@ window.addEventListener('DOMContentLoaded', async () => {
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
-        addGlobalChatMessage(msg.sender, msg.text, msg.isSystem);
+        addGlobalChatMessage(msg.sender, msg.text, msg.isSystem, msg.sender_id, msg.emojiId);
+    });
+
+    // تنبيه خطأ الدردشة (محتوى مرفوض/كتم)
+    socket.on('chat_error', (data) => {
+        if (typeof showToast === 'function') showToast(data.msg || 'تعذّر إرسال الرسالة', 'error');
     });
 
     function joinGlobalLobby() {
         if (userDataCache) {
             socket.emit('join_global_lobby', {
+                token:  token,
                 name:   userDataCache.player_name,
                 avatar: userDataCache.avatar,
             });
@@ -471,25 +549,26 @@ window.addEventListener('DOMContentLoaded', async () => {
     const notificationsModal = document.getElementById('notificationsModal');
     const closeNotifications = document.getElementById('closeNotifications');
 
-    notificationsBtn?.addEventListener('click', () => { notificationsModal.style.display = 'flex'; });
+    notificationsBtn?.addEventListener('click', () => {
+        notificationsModal.style.display = 'flex';
+        socket.emit('mark_notifications_read', { token });
+        const badge = document.getElementById('notifBadge');
+        if (badge) badge.style.display = 'none';
+    });
     closeNotifications?.addEventListener('click', () => { notificationsModal.style.display = 'none'; });
 
     // ----------------------------------------
-    // 💬 إرسال الدردشة
+    // 💬 الرسائل الجاهزة (Quick Chat) — بديل آمن للدردشة الحرة
+    // (الدردشة الحرة مؤجّلة، ستُضاف لاحقاً مع نظام إشراف)
     // ----------------------------------------
-    const chatInput = document.getElementById('globalChatInput');
-    const sendBtn   = document.getElementById('sendGlobalChatBtn');
-
-    function handleSendMessage() {
-        const text = chatInput?.value.trim();
-        if (!text) return;
-        const myName = document.getElementById('playerName')?.textContent;
-        socket.emit('send_chat_message', { sender: myName, text });
-        chatInput.value = '';
+    const quickChatBtn = document.getElementById('globalQuickChatBtn');
+    if (quickChatBtn && window.QuickChat) {
+        QuickChat.init({
+            socket,
+            triggerBtn: quickChatBtn,
+            event: 'send_chat_message',   // دردشة عامة في الـ lobby
+        });
     }
-
-    sendBtn?.addEventListener('click', handleSendMessage);
-    chatInput?.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSendMessage(); });
 
     // ----------------------------------------
     // 🖱️ إغلاق النوافذ عند النقر خارجها

@@ -12,14 +12,58 @@
 /** قائمة الصور الجاهزة المتاحة للاختيار */
 const ONLINE_AVATARS = Array.from({ length: 60 }, (_, i) => `../assets/avatars/avatar_${i + 1}.svg`);
 
+// 🔒 الأفاتارات التي تُشترى من المتجر (16-60). الأفاتارات 1-15 مجانية.
+const PURCHASABLE_AVATARS = {};
+for (let n = 16; n <= 60; n++) {
+  PURCHASABLE_AVATARS[`avatar_${n}.svg`] = `avatar_${n}`;
+}
+window.OWNED_AVATAR_FILES = [];
+
+function _isAvatarLocked(file) {
+  return PURCHASABLE_AVATARS[file] && !(window.OWNED_AVATAR_FILES || []).includes(file);
+}
+
+let _lastAvatarGridOpts = null;
+let _avatarListenerBound = false;
+let _skipNextOwnedRequest = false;
+
+function _requestOwnedAvatars() {
+  if (typeof socket === 'undefined' || !socket) { setTimeout(_requestOwnedAvatars, 400); return; }
+  const t = (typeof getToken === 'function') ? getToken() : (localStorage.getItem('token') || sessionStorage.getItem('token'));
+  socket.emit('get_owned_avatars', { token: t });
+  if (!_avatarListenerBound) {
+    _avatarListenerBound = true;
+    socket.on('owned_avatars_data', (data) => {
+      if (data && Array.isArray(data.files)) {
+        window.OWNED_AVATAR_FILES = data.files;
+        if (_lastAvatarGridOpts && _lastAvatarGridOpts.wrapper && _lastAvatarGridOpts.wrapper.offsetParent !== null) {
+          _skipNextOwnedRequest = true;  // إعادة الرسم دون طلب جديد (منع حلقة)
+          renderAvatarGrid(_lastAvatarGridOpts);
+        }
+      }
+    });
+    // عند شراء أفاتار → نحدّث القائمة فوراً (بلا تحديث صفحة)
+    socket.on('purchase_result', (data) => {
+      if (data && data.ok && data.category === 'avatar') {
+        const t = (typeof getToken === 'function') ? getToken() : (localStorage.getItem('token') || sessionStorage.getItem('token'));
+        setTimeout(() => socket.emit('get_owned_avatars', { token: t }), 200);
+      }
+    });
+  }
+}
+_requestOwnedAvatars();
+
 /**
  * يرسم شبكة الصور داخل مودال الاختيار مع Lazy Loading.
- * @param {object} opts
- * @param {HTMLElement} opts.wrapper    - حاوية الصور
- * @param {HTMLElement} opts.confirmBtn - زر التأكيد
- * @param {Function}   opts.onSelect   - تُستدعى بمسار الصورة عند الاختيار
  */
 function renderAvatarGrid({ wrapper, confirmBtn, onSelect }) {
+    _lastAvatarGridOpts = { wrapper, confirmBtn, onSelect };
+    // نحدّث قائمة المملوكة في كل فتح (لتظهر المشتراة حديثاً) — إلا لو الاستدعاء من المستمع
+    if (!_skipNextOwnedRequest && typeof socket !== 'undefined' && socket) {
+      const t = (typeof getToken === 'function') ? getToken() : (localStorage.getItem('token') || sessionStorage.getItem('token'));
+      socket.emit('get_owned_avatars', { token: t });
+    }
+    _skipNextOwnedRequest = false;
     const currentSrc = document.getElementById('settingsAvatarPreview')?.src || '';
     const currentFile = currentSrc.split('/').pop();
 
@@ -38,32 +82,54 @@ function renderAvatarGrid({ wrapper, confirmBtn, onSelect }) {
     const PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 70'%3E%3Crect width='70' height='70' fill='%2327272a' rx='35'/%3E%3C/svg%3E";
 
     ONLINE_AVATARS.forEach(url => {
+        const file = url.split('/').pop();
+        const locked = _isAvatarLocked(file);
+        const cell = document.createElement('div');
+        cell.style.position = 'relative';
+        cell.style.display = 'inline-block';
+
         const img = document.createElement('img');
         img.src          = PLACEHOLDER;
         img.dataset.src  = url;
         img.className    = 'avatar-option';
         Object.assign(img.style, {
             width: '70px', height: '70px', borderRadius: '50%',
-            cursor: 'pointer', objectFit: 'cover',
+            cursor: locked ? 'not-allowed' : 'pointer', objectFit: 'cover',
             border: '2px solid transparent', transition: 'all 0.2s ease-in-out',
             background: 'rgba(255,255,255,0.05)',
+            filter: locked ? 'grayscale(0.8) brightness(0.5)' : 'none',
         });
 
-        // تمييز الصورة المحددة حالياً
-        if (url.split('/').pop() === currentFile && currentFile) {
+        // تمييز الصورة المحددة حالياً (غير المقفولة فقط)
+        if (!locked && file === currentFile && currentFile) {
             applyAvatarSelectedStyle(img);
             confirmBtn.style.display = 'inline-block';
             onSelect(url);
         }
 
-        img.addEventListener('click', () => {
-            wrapper.querySelectorAll('.avatar-option').forEach(el => clearAvatarStyle(el));
-            applyAvatarSelectedStyle(img);
-            confirmBtn.style.display = 'inline-block';
-            onSelect(img.dataset.src);
-        });
+        if (locked) {
+            const lock = document.createElement('span');
+            lock.textContent = '🔒';
+            Object.assign(lock.style, {
+                position: 'absolute', top: '50%', left: '50%',
+                transform: 'translate(-50%,-50%)', fontSize: '22px', pointerEvents: 'none',
+            });
+            cell.appendChild(img);
+            cell.appendChild(lock);
+            img.addEventListener('click', () => {
+                if (typeof showToast === 'function') showToast('🔒 هذا الأفاتار يُشترى من المتجر', 'info');
+            });
+        } else {
+            img.addEventListener('click', () => {
+                wrapper.querySelectorAll('.avatar-option').forEach(el => clearAvatarStyle(el));
+                applyAvatarSelectedStyle(img);
+                confirmBtn.style.display = 'inline-block';
+                onSelect(img.dataset.src);
+            });
+            cell.appendChild(img);
+        }
 
-        wrapper.appendChild(img);
+        wrapper.appendChild(cell);
         observer.observe(img);
     });
 }

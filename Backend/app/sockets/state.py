@@ -16,6 +16,9 @@ LAST_UPDATE_ID = 0
 
 disconnect_timers = {}
 
+# 🛡️ خريطة sid → IP (لمنع اللعب ضد النفس أو ضد نفس المنطقة/الشبكة)
+sid_ip_map = {}
+
 # أضف هذه السطور في ملف state.py
 STATS_CACHE = {}
 CACHE_TTL = 15

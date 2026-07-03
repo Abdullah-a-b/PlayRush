@@ -24,15 +24,23 @@ Base.metadata.create_all(bind=engine)
 
 from app.api.auth import router as auth_router
 from app.api.shop import router as shop_router
+from app.api.support import router as support_router
+from app.api.career import router as career_router
 
-from app.services.cron_jobs import cleanup_abandoned_accounts, cleanup_waiting_rooms, cleanup_anticheat_data
+from app.services.cron_jobs import cleanup_abandoned_accounts, cleanup_waiting_rooms, cleanup_anticheat_data, cleanup_collusion_data, release_expired_penalties, cleanup_leaver_data_job, cleanup_closed_tickets_job
 from app.services.telegram_bot import telegram_bot_listener, register_telegram_events
 
 from app.sockets.connection import register_connection_events
 from app.sockets.lobby import register_lobby_events
 from app.sockets.matchmaking import register_matchmaking_events
 from app.games.huroof.events import register_huroof_events
+# 🔌 تسجيل حروف في إطار BaseGame (المرحلة أ) — الاستيراد يفعّل @GameRegistry.register
+from app.games.huroof import game as _huroof_game  # noqa: F401
+# ⚽ لعبة مسيرة لاعب (على نفس الإطار)
+from app.games.career.events import register_career_events
+from app.games.career import game as _career_game  # noqa: F401
 from app.sockets.room_events import register_room_events
+from app.sockets.store import register_store_events
 
 os.makedirs("uploads/avatars", exist_ok=True)
 
@@ -62,12 +70,20 @@ def _make_supervised_task(coro_factory, name: str, restart_delay: float = 5.0):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("🚀 جاري تشغيل السيرفر...")
+    logger.info("🛡️ [moderation] فلتر المحتوى المحلي مُفعّل")
 
     # ✅ كل task محمية بـ supervisor — لا تموت بصمت
+    from app.services.career_importer import career_auto_import_loop
     tasks = [
         _make_supervised_task(cleanup_abandoned_accounts, "cleanup_accounts", restart_delay=60),
         _make_supervised_task(cleanup_waiting_rooms,      "cleanup_rooms",    restart_delay=30),
         _make_supervised_task(cleanup_anticheat_data,     "cleanup_anticheat", restart_delay=60),
+        _make_supervised_task(cleanup_collusion_data,     "cleanup_collusion", restart_delay=60),
+        _make_supervised_task(release_expired_penalties,  "release_penalties", restart_delay=60),
+        _make_supervised_task(cleanup_leaver_data_job,    "cleanup_leavers",  restart_delay=60),
+        _make_supervised_task(cleanup_closed_tickets_job, "cleanup_tickets",  restart_delay=60),
+        # ⚽ تجديد لاعبي "مسيرة لاعب" تلقائياً (Wikidata، دوري)
+        _make_supervised_task(career_auto_import_loop,    "career_importer",  restart_delay=300),
     ]
 
     yield
@@ -94,6 +110,30 @@ async def lifespan(app: FastAPI):
     logger.info("✅ إيقاف نظيف اكتمل")
 
 
+# ==========================================
+# 🛡️ Sentry — رصد الأخطاء (المهمة 0.1)
+# يُفعّل فقط لو SENTRY_DSN موجود في البيئة (آمن: لا يفعل شيئاً بدونه).
+# يصلك كل crash فوراً من اليوم الأول.
+# ==========================================
+_sentry_dsn = os.environ.get("SENTRY_DSN", "").strip()
+if _sentry_dsn:
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.fastapi import FastApiIntegration
+        from sentry_sdk.integrations.starlette import StarletteIntegration
+        sentry_sdk.init(
+            dsn=_sentry_dsn,
+            environment=os.environ.get("ENV", "development"),
+            # نسبة تتبّع الأداء (0.1 = 10% من الطلبات — خفيف على الموارد)
+            traces_sample_rate=float(os.environ.get("SENTRY_TRACES_RATE", "0.1")),
+            integrations=[StarletteIntegration(), FastApiIntegration()],
+            send_default_pii=False,  # لا نرسل بيانات شخصية حساسة
+        )
+        logging.getLogger("uvicorn").info("✅ Sentry مُفعّل لرصد الأخطاء")
+    except Exception as _e:
+        logging.getLogger("uvicorn").warning(f"⚠️ تعذّر تفعيل Sentry: {_e}")
+
+
 app = FastAPI(
     lifespan=lifespan,
     docs_url="/docs" if os.environ.get("ENV") != "production" else None,
@@ -113,9 +153,21 @@ app.add_middleware(SlowAPIMiddleware)
 raw_origins = os.environ.get("ALLOWED_ORIGINS", "")
 ALLOWED_ORIGINS = [o.strip() for o in raw_origins.split(",") if o.strip()] or ["http://127.0.0.1:5500"]
 
+# نسمح أيضاً بعناوين الشبكة المحلية (localhost + IPs محلية بأي منفذ)
+# ليعمل الوصول من الجوال عبر WiFi بلا تعديل يدوي. آمن لأنها عناوين شبكة خاصة فقط.
+LOCAL_ORIGIN_REGEX = (
+    r"^http://("
+    r"localhost|127\.0\.0\.1|"
+    r"192\.168\.\d{1,3}\.\d{1,3}|"
+    r"10\.\d{1,3}\.\d{1,3}\.\d{1,3}|"
+    r"172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}"
+    r")(:\d+)?$"
+)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=LOCAL_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
@@ -197,15 +249,56 @@ async def health_check():
 
 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+# ==========================================
+# 📡 API Versioning (المهمة 0.2)
+# - المسارات الحالية (/auth, /shop, /support) تبقى للويب — لا يتأثر.
+# - نسخة /api/v1/ مكرّرة لتستهدفها Flutter (نفس المعالجات بالضبط).
+# هكذا نخدم الويب والموبايل معاً دون كسر أي شيء.
+# ==========================================
+API_V1 = "/api/v1"
+
+# المسارات الحالية (الويب)
 app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
 app.include_router(shop_router, prefix="/shop", tags=["Shop"])
+app.include_router(support_router, prefix="/support", tags=["Support"])
+app.include_router(career_router, prefix="/career", tags=["Career"])
+
+# نسخة v1 (Flutter) — نفس الـ routers بمسار مُصدّر
+app.include_router(auth_router, prefix=f"{API_V1}/auth", tags=["Authentication v1"])
+app.include_router(shop_router, prefix=f"{API_V1}/shop", tags=["Shop v1"])
+app.include_router(support_router, prefix=f"{API_V1}/support", tags=["Support v1"])
+app.include_router(career_router, prefix=f"{API_V1}/career", tags=["Career v1"])
+
+
+# ==========================================
+# 🧪 اختبار Sentry (يعمل فقط خارج الإنتاج)
+# افتح /sentry-test في المتصفح، ثم راجع لوحة Sentry → Issues.
+# احذف هذا المقطع بعد التأكد أن Sentry يعمل.
+# ==========================================
+if os.environ.get("ENV") != "production":
+    @app.get("/sentry-test")
+    async def _sentry_test():
+        raise Exception("🧪 اختبار Sentry من PlayRush — تجاهل هذا الخطأ")
 
 # ==========================================
 # Socket.IO
 # ==========================================
+# Socket.IO يحتاج إعداد CORS خاصاً به (منفصل عن FastAPI).
+# في وضع التطوير المحلي نسمح بكل العناوين (للوصول من الجوال عبر WiFi).
+# في الإنتاج: يُستخدم ALLOWED_ORIGINS فقط (دومينك الحقيقي).
+def _socket_cors_origins():
+    try:
+        from app.core.dev_mode import is_dev_mode
+        if is_dev_mode():
+            return '*'   # وضع تطوير: نسمح بالشبكة المحلية والجوال
+    except Exception:
+        pass
+    return ALLOWED_ORIGINS
+
 sio = socketio.AsyncServer(
     async_mode='asgi',
-    cors_allowed_origins=ALLOWED_ORIGINS,
+    cors_allowed_origins=_socket_cors_origins(),
     compression=True,
     ping_timeout=20,
     ping_interval=25,
@@ -217,7 +310,9 @@ register_connection_events(sio)
 register_lobby_events(sio)
 register_matchmaking_events(sio)
 register_room_events(sio)
+register_store_events(sio)
 register_huroof_events(sio)
+register_career_events(sio)
 register_telegram_events(sio)
 
 

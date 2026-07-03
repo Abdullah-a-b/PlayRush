@@ -5,13 +5,79 @@
 
 
 // حماية المسار
-const token = sessionStorage.getItem('token');
+const token = (typeof getToken === 'function') ? getToken() : (localStorage.getItem('token') || sessionStorage.getItem('token'));
 if (!token) window.location.replace('login.html');
 
 // الاتصال بالسوكيت
 const socket = io(API_URL, { transports: ['websocket', 'polling'], upgrade: true });
 // 🛡️ ربط معالج الحظر الإجباري — يستجيب لرسائل force_logout من السيرفر
 if (typeof attachForceLogoutHandler === 'function') attachForceLogoutHandler(socket);
+
+// ============================================================
+// 🔔 إعداد الإشعارات (مستوى أعلى — مستقل عن أي كود async قد يفشل)
+// ============================================================
+function renderNotifications(items, unread) {
+    const list = document.getElementById('notificationsList');
+    if (list) {
+        if (!items || items.length === 0) {
+            list.innerHTML = '<div style="color:#888;text-align:center;padding:20px;">لا توجد إشعارات</div>';
+        } else {
+            list.style.textAlign = 'right';
+            list.style.color = '#ddd';
+            list.innerHTML = items.map(n => {
+                const clickable = n.sender_id && (n.type === 'friend_request' || n.type === 'friend_accepted');
+                const cursor = clickable ? 'cursor:pointer;' : '';
+                const hint = clickable ? '<i class="fa-solid fa-circle-user" style="color:#4a90e2;margin-right:6px;font-size:13px;"></i>' : '';
+                return `
+                <div class="notif-item" ${clickable ? `data-sender="${n.sender_id}"` : ''} style="padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.08);${cursor}
+                            ${n.is_read ? '' : 'background:rgba(255,235,59,0.06);'}">
+                    <i class="fa-solid fa-bell" style="color:#ff9800;margin-left:6px;"></i>
+                    ${typeof sanitizeHTML === 'function' ? sanitizeHTML(n.message) : n.message}
+                    ${hint}
+                </div>`;
+            }).join('');
+            // ربط النقر لفتح بروفايل المُرسِل
+            list.querySelectorAll('.notif-item[data-sender]').forEach(el => {
+                el.addEventListener('click', () => {
+                    const senderId = parseInt(el.dataset.sender);
+                    if (senderId && typeof openPlayerProfileById === 'function') {
+                        openPlayerProfileById(senderId);
+                    }
+                });
+            });
+        }
+    }
+    const badge = document.getElementById('notifBadge');
+    if (badge) {
+        badge.style.display = unread > 0 ? 'flex' : 'none';
+        if (unread > 0) badge.textContent = unread > 9 ? '9+' : unread;
+    }
+}
+
+socket.on('notifications_list', (data) => {
+    renderNotifications(data.items, data.unread);
+});
+socket.on('new_notification', (notif) => {
+    const badge = document.getElementById('notifBadge');
+    if (badge) {
+        const cur = parseInt(badge.textContent) || 0;
+        badge.textContent = (cur + 1) > 9 ? '9+' : (cur + 1);
+        badge.style.display = 'flex';
+    }
+    if (typeof showGlobalToast === 'function') showGlobalToast('🔔 ' + notif.message);
+    fetchNotifs();  // نعيد جلب القائمة (مع throttle)
+});
+
+// 🛡️ throttle: يمنع الجلب المتكرر السريع (مثلاً عند إعادة اتصال متكررة)
+let _lastNotifFetch = 0;
+function fetchNotifs() {
+    const now = Date.now();
+    if (now - _lastNotifFetch < 3000) return;  // مرة كل 3 ثوانٍ كحد أقصى
+    _lastNotifFetch = now;
+    if (token && socket.connected) socket.emit('fetch_notifications', { token });
+}
+if (socket.connected) fetchNotifs();
+socket.on('connect', fetchNotifs);
 
 // قراءة وضع اللعبة من الرابط أو الجلسة
 const urlParams = new URLSearchParams(window.location.search);
@@ -22,6 +88,17 @@ if (selectedGameMode) {
     selectedGameMode = sessionStorage.getItem('selectedGameMode');
 }
 if (!selectedGameMode) window.location.replace('categories.html');
+
+// بروفايل الإشعارات: في اللوبي نعرض إحصائيات اللعبة المحددة + العامة
+window.PROFILE_GAME_MODE = selectedGameMode || null;
+// المتجر في اللوبي: مساعدات هذه اللعبة + كل التجميليات
+window.STORE_CONTEXT = selectedGameMode || 'huroof';
+window.CURRENT_GAME = selectedGameMode || 'huroof';
+window.openStoreModal = function () {
+    const m = document.getElementById('storeModal');
+    if (m) m.style.display = 'flex';
+    if (typeof openStore === 'function') openStore();
+};
 
 // حالة الصفحة
 let userDataCache    = null;
@@ -84,6 +161,9 @@ window.addEventListener('DOMContentLoaded', async () => {
             if (p.location === `playing_${selectedGameMode}`) {
                 locationText = `⚔️ يخوض معركة (${GAME_THEMES[selectedGameMode]?.title || 'اللعبة'})`;
                 statusColor  = '#f43f5e';
+            } else if (p.location === `playing_${selectedGameMode}_friendly`) {
+                locationText = `⚔️ معركة ودية (${GAME_THEMES[selectedGameMode]?.title || 'اللعبة'}) ضد صديق`;
+                statusColor  = '#f43f5e';
             } else if (p.location === `party_${selectedGameMode}`) {
                 locationText = 'في وضع الجمعات 🎮';
                 statusColor  = '#ff9800';
@@ -133,7 +213,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     socket.on('game_chat_history', (history) => {
         const container = document.getElementById('globalChatMessages');
         if (container) container.innerHTML = '';
-        history.forEach(msg => addGlobalChatMessage(msg.sender, msg.text, msg.isSystem));
+        history.forEach(msg => addGlobalChatMessage(msg.sender, msg.text, msg.isSystem, msg.sender_id, msg.emojiId));
     });
 
     socket.on('new_game_chat_message', (msg) => {
@@ -159,7 +239,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
-        addGlobalChatMessage(msg.sender, msg.text, msg.isSystem);
+        addGlobalChatMessage(msg.sender, msg.text, msg.isSystem, msg.sender_id, msg.emojiId);
     });
 
     function joinLobby() {
@@ -258,13 +338,18 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     // ----------------------------------------
-    // 🔔 التنبيهات
+    // 🔔 التنبيهات (مستمعات السوكيت مسجّلة في أعلى الملف)
     // ----------------------------------------
     const notificationsBtn   = document.getElementById('notificationsBtn');
     const notificationsModal = document.getElementById('notificationsModal');
     const closeNotifications = document.getElementById('closeNotifications');
 
-    notificationsBtn?.addEventListener('click', () => { notificationsModal.style.display = 'flex'; });
+    notificationsBtn?.addEventListener('click', () => {
+        notificationsModal.style.display = 'flex';
+        socket.emit('mark_notifications_read', { token });
+        const badge = document.getElementById('notifBadge');
+        if (badge) badge.style.display = 'none';
+    });
     closeNotifications?.addEventListener('click', () => { notificationsModal.style.display = 'none'; });
 
     // ----------------------------------------
@@ -483,6 +568,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         mmStatusTitle.textContent = 'البحث عن منافس...';
         mmStatusDesc.textContent  = 'جاري البحث عن لاعبين في نفس مستواك';
         socket.emit('quick_play_search', {
+            token:       token,
             player_name: userDataCache.player_name,
             game_mode:   selectedGameMode,
             avatar:      userDataCache.avatar,
@@ -495,15 +581,35 @@ window.addEventListener('DOMContentLoaded', async () => {
         lobbyMainContent.style.display  = 'block';
     });
 
+    // 🆕 معالج الخطأ — يطلع للاعب بدل ما يبقى عالق في "جاري البحث"
+    socket.on('quick_play_error', (data) => {
+        const msg = (data && data.msg) ? data.msg : 'تعذّر البحث عن مباراة';
+        mmStatusTitle.textContent = 'تعذّر البحث';
+        mmStatusTitle.style.color = '#f44336';
+        mmStatusDesc.textContent  = msg;
+        cancelMatchmakingBtn.style.display = 'block';
+        cancelMatchmakingBtn.textContent = 'رجوع';
+    });
+
     socket.on('match_found', (data) => {
         try {
             sessionStorage.setItem('gameRoomCode', data.room_code);
             sessionStorage.setItem('myRole', data.role || 'guest');
+            // دعوة صديق: نخزّن وضع اللعبة + علامة الودية + أنهما صديقان
+            const gameMode = data.gameMode || selectedGameMode;
+            sessionStorage.setItem('selectedGameMode', gameMode);
+            sessionStorage.setItem('isFriendly', data.friendly ? '1' : '0');
+
+            // لو كانت لوحة الأصدقاء مفتوحة (دعوة صديق) نغلقها ونُظهر شاشة التطابق
+            const fm = document.getElementById('friendsModal');
+            if (fm) fm.style.display = 'none';
+            lobbyMainContent.style.display  = 'none';
+            matchmakingScreen.style.display = 'flex';
 
             mmRadar.style.display          = 'none';
             mmTeamsPreview.style.display   = 'flex';
             cancelMatchmakingBtn.style.display = 'none';
-            mmStatusTitle.textContent = 'تم إيجاد منافس!';
+            mmStatusTitle.textContent = data.friendly ? 'مباراة ودية مع صديق!' : 'تم إيجاد منافس!';
             mmStatusTitle.style.color = '#00ff88';
             mmStatusDesc.textContent  = 'الاستعداد للمعركة...';
 
@@ -533,13 +639,14 @@ window.addEventListener('DOMContentLoaded', async () => {
                 } else {
                     clearInterval(countInterval);
                     mmCountdown.textContent = 'انطلاق!';
-                    setTimeout(() => window.location.assign(`games/${selectedGameMode}.html`), 500);
+                    setTimeout(() => window.location.assign(`games/${gameMode}.html`), 500);
                 }
             }, 1000);
 
         } catch (err) {
             console.error('match_found error:', err);
-            setTimeout(() => window.location.assign(`games/${selectedGameMode}.html`), 1000);
+            const gm = data.gameMode || selectedGameMode;
+            setTimeout(() => window.location.assign(`games/${gm}.html`), 1000);
         }
     });
 
@@ -687,19 +794,28 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     // ----------------------------------------
-    // 💬 الدردشة
+    // 💬 الرسائل الجاهزة (Quick Chat) — بديل آمن للدردشة الحرة
     // ----------------------------------------
-    const sendBtn   = document.getElementById('sendGlobalChatBtn');
-    const chatInput = document.getElementById('globalChatInput');
+    const quickChatBtn = document.getElementById('globalQuickChatBtn');
+    if (quickChatBtn && window.QuickChat) {
+        QuickChat.init({
+            socket,
+            triggerBtn: quickChatBtn,
+            event: 'send_game_chat_message',
+            extra: () => ({ gameMode: selectedGameMode }),  // لوبي اللعبة الحالية
+        });
+    }
 
-    sendBtn?.addEventListener('click', () => {
-        const text = chatInput?.value.trim();
-        if (text) {
-            socket.emit('send_game_chat_message', { gameMode: selectedGameMode, sender: userDataCache.player_name, text });
-            chatInput.value = '';
+    // 🎮 العب مع صديق → يفتح لوحة الأصدقاء (نظام الدعوة الآمن)
+    document.getElementById('playWithFriendBtn')?.addEventListener('click', () => {
+        const navBtn = document.getElementById('friendsNavBtn');
+        if (navBtn) {
+            navBtn.click();  // يفتح اللوحة ويحمّل بيانات الأصدقاء
+        } else {
+            const fm = document.getElementById('friendsModal');
+            if (fm) fm.style.display = 'flex';
         }
     });
-    chatInput?.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendBtn?.click(); });
 
     // ----------------------------------------
     // 📱 وضع الجمعات (Telegram Bot)
@@ -788,3 +904,30 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
     });
 });
+
+// ============================================================
+// ⚽ تحميل مسبق لشعارات أندية "مسيرة لاعب" (كاش المتصفح)
+// يعمل فقط في لوبي career، بعد استقرار اللوبي (لا يبطئه).
+// النتيجة: داخل اللعبة الشعارات تظهر فوراً (من الكاش/الملفات المحلية).
+// ============================================================
+(function preloadCareerLogos() {
+    if (selectedGameMode !== 'career') return;
+    setTimeout(async () => {
+        try {
+            const res = await fetch(`${API_URL}/career/logos`);
+            if (!res.ok) return;
+            const data = await res.json();
+            const logos = data.logos || [];
+            // نحمّل تدريجياً (5 بالتوازي) حتى لا نضغط الشبكة
+            let idx = 0;
+            function next() {
+                if (idx >= logos.length) return;
+                const img = new Image();
+                img.onload = img.onerror = next;
+                img.src = `assets/clubs/${logos[idx++]}`;
+            }
+            for (let k = 0; k < 5; k++) next();
+            console.log(`⚽ تحميل مسبق: ${logos.length} شعار نادٍ`);
+        } catch (_) { /* صامت — التحميل المسبق تحسين اختياري */ }
+    }, 1200);
+})();

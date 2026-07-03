@@ -1,0 +1,154 @@
+/* 💬 نظام الرسائل الجاهزة (Quick Chat) — تنسيق مشترك لكل الصفحات */
+
+.quick-chat-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #4a90e2, #357abd);
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.quick-chat-trigger:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(74, 144, 226, .4);
+}
+.quick-chat-trigger i { font-size: 1rem; }
+
+.quick-chat-panel {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  max-height: 320px;
+  overflow-y: auto;
+  background: #14141f;
+  border: 1px solid rgba(74, 144, 226, .3);
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
+  z-index: 1000;
+}
+
+.qc-category {
+  font-size: 0.78rem;
+  color: #4a90e2;
+  font-weight: 700;
+  margin: 10px 4px 6px;
+  text-align: right;
+}
+.qc-category:first-child { margin-top: 0; }
+
+.qc-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.qc-phrase {
+  padding: 9px 10px;
+  background: #1f1f2e;
+  color: #e8e8f0;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 10px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-align: center;
+  transition: background .12s ease, border-color .12s ease;
+}
+.qc-phrase:hover {
+  background: #2a2a3d;
+  border-color: rgba(74, 144, 226, .5);
+}
+
+/* عبارات الإيموجي القصيرة: نعرضها أكبر وبأعمدة أكثر */
+.qc-grid:has(.qc-phrase:only-child),
+.quick-chat-panel .qc-category + .qc-grid .qc-phrase {
+  font-size: 0.95rem;
+}
+
+.qc-loading {
+  color: #888;
+  text-align: center;
+  padding: 18px;
+  font-size: 0.9rem;
+}
+
+/* تمرير أنيق */
+.quick-chat-panel::-webkit-scrollbar { width: 6px; }
+.quick-chat-panel::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 136, .3);
+  border-radius: 3px;
+}
+
+/* ====== زر الدردشة العائم داخل المباراة ====== */
+.ingame-quick-chat {
+  position: fixed !important;
+  top: 115px !important;
+  left: 20px !important;
+  right: auto !important;
+  bottom: auto !important;
+  z-index: 500;
+}
+.quick-chat-trigger.ingame {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  padding: 0;
+  font-size: 1.25rem;
+  box-shadow: 0 4px 16px rgba(74, 144, 226, .45);
+}
+.quick-chat-trigger.ingame i { font-size: 1.25rem; }
+/* اللوحة تفتح للأسفل من الزر (لأنه بالأعلى الآن) */
+.ingame-quick-chat .quick-chat-panel {
+  top: calc(100% + 10px);
+  bottom: auto;
+  left: 0;
+  right: auto;
+  width: 300px;
+}
+
+/* ====== فقاعة الرسالة الواردة فوق الأفاتار ====== */
+.qc-bubble {
+  position: absolute;
+  top: 100%;
+  inset-inline-start: 50%;
+  transform: translateX(-50%) translateY(6px);
+  margin-top: 8px;
+  background: #4a90e2;
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 14px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  white-space: nowrap;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .35);
+  opacity: 0;
+  transition: opacity .25s ease, transform .25s ease;
+  pointer-events: none;
+  z-index: 950;
+}
+.qc-bubble.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.qc-bubble.mine { background: #50c878; }
+
+/* إيموجي متحرك داخل لوحة الرسائل */
+.qc-phrase.qc-emoji-phrase {
+  padding: 4px;
+  min-width: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

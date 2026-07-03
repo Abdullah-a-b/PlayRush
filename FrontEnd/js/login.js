@@ -98,6 +98,15 @@ window.addEventListener('load', () => {
                     return; 
                 }
 
+                // 🚫 الحساب محظور → صفحة حظر لائقة بدل عرض JSON خام
+                let rawMsg = data.detail || "";
+                if (response.status === 403 && typeof rawMsg === 'string' &&
+                    (rawMsg.includes('حظر') || rawMsg.includes('محظور'))) {
+                    sessionStorage.setItem('banReason', rawMsg);
+                    window.location.replace('banned.html');
+                    return;
+                }
+
                 // 🚀 محرك قراءة الأخطاء الذكي بدلاً من [object Object]
                 let errorMsg = data.detail || "خطأ في تسجيل الدخول";
                 

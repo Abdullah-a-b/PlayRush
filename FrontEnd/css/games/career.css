@@ -1,0 +1,194 @@
+/* ⚽ مسيرة لاعب */
+:root {
+  --ca-bg:#0f0f1a; --ca-panel:#1a1a2e; --ca-accent:#f5a623;
+  --ca-green:#2ecc71; --ca-red:#e74c3c; --ca-blue:#4a90e2;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'Tajawal','Segoe UI',sans-serif;
+  background:radial-gradient(circle at 50% 0%,#16213e 0%,var(--ca-bg) 70%);
+  color:#fff;min-height:100vh;overflow-x:hidden;
+}
+
+/* TOPBAR */
+.game-topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 20px;background:rgba(20,20,35,.75);backdrop-filter:blur(8px);
+  border-bottom:1px solid rgba(255,255,255,.07);
+}
+.player-profile{display:flex;align-items:center;gap:10px}
+.player-profile.right{flex-direction:row-reverse}
+.avatar-wrap img{width:44px;height:44px;border-radius:50%;border:2px solid rgba(255,255,255,.18);object-fit:cover}
+.profile-info{display:flex;flex-direction:column;align-items:flex-end}
+.profile-info.right-info{align-items:flex-start}
+.pname{font-weight:700;font-size:.9rem;color:#e0e0e0;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.career-score{font-size:1.5rem;font-weight:900;color:var(--ca-accent);line-height:1}
+
+.game-center-head{text-align:center}
+.game-title{font-size:1.1rem;font-weight:800}
+.players-progress{display:flex;gap:6px;justify-content:center;margin-top:5px}
+.progress-dot{width:12px;height:12px;border-radius:50%;background:rgba(255,255,255,.15);transition:all .3s}
+.progress-dot.done{background:var(--ca-green)}
+.progress-dot.active{background:var(--ca-accent);box-shadow:0 0 8px var(--ca-accent);transform:scale(1.25)}
+.tiebreaker-badge{font-size:.78rem;color:var(--ca-accent);font-weight:700;margin-top:4px;animation:tpulse 1s infinite}
+@keyframes tpulse{50%{opacity:.5}}
+
+/* اللعب */
+.career-main{max-width:860px;margin:0 auto;padding:20px 16px;display:flex;flex-direction:column;align-items:center;gap:16px}
+.player-status-banner{padding:7px 22px;border-radius:30px;font-weight:700;font-size:.95rem;background:rgba(255,255,255,.08)}
+.player-status-banner.current{background:rgba(46,204,113,.15);color:var(--ca-green)}
+.player-status-banner.retired{background:rgba(231,76,60,.15);color:var(--ca-red)}
+.points-indicator{font-size:.88rem;color:#bbb;background:rgba(245,166,35,.12);padding:5px 16px;border-radius:20px;transition:all .3s}
+.points-indicator #pointsValue{font-weight:900;color:var(--ca-accent);font-size:1.05rem}
+.points-indicator.one-point #pointsValue{color:var(--ca-blue)}
+
+/* الأندية */
+.clubs-stage{display:flex;gap:14px;overflow-x:auto;width:100%;padding:20px 10px;min-height:180px;align-items:center;scroll-behavior:smooth}
+.clubs-stage::-webkit-scrollbar{height:5px}
+.clubs-stage::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:3px}
+.clubs-placeholder{margin:auto;color:#888;font-size:1rem}
+.club-card{flex:0 0 auto;width:125px;min-height:145px;background:linear-gradient(150deg,#22223a,#1a1a2e);
+  border:1px solid rgba(255,255,255,.08);border-radius:14px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:10px;padding:14px 8px;box-shadow:0 5px 18px rgba(0,0,0,.3)}
+.club-logo{width:68px;height:68px;object-fit:contain}
+.club-logo-placeholder{font-size:44px;opacity:.6}
+.club-name{font-size:.87rem;font-weight:700;text-align:center;color:#ddd}
+.club-reveal-anim{animation:clubPop .45s cubic-bezier(.2,1.2,.4,1)}
+@keyframes clubPop{0%{transform:scale(.3) translateY(18px);opacity:0}100%{transform:scale(1) translateY(0);opacity:1}}
+
+/* المؤقّت */
+.reveal-timer-wrap{width:80%;max-width:480px;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden}
+.reveal-timer-bar{height:100%;width:100%;background:var(--ca-accent);border-radius:3px}
+
+/* الجرس */
+.buzz-zone{display:flex;flex-direction:column;align-items:center;gap:10px}
+.career-buzz-btn{width:115px;height:115px;border-radius:50%;border:none;cursor:pointer;
+  background:radial-gradient(circle at 40% 35%,#ff6b6b,#e74c3c);color:#fff;font-family:inherit;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  box-shadow:0 8px 24px rgba(231,76,60,.5),inset 0 -3px 6px rgba(0,0,0,.2);transition:transform .12s}
+.career-buzz-btn i{font-size:2.2rem}
+.career-buzz-btn span{font-size:.95rem;font-weight:700}
+.career-buzz-btn:not(:disabled):hover{transform:scale(1.06)}
+.career-buzz-btn:not(:disabled):active{transform:scale(.94)}
+.career-buzz-btn:disabled{opacity:.4;cursor:not-allowed;background:radial-gradient(circle at 40% 35%,#555,#333);box-shadow:none}
+.strikes-display{display:flex;gap:8px}
+.strike-x{font-size:1.35rem;color:rgba(255,255,255,.18);font-weight:800}
+.strike-x.filled{color:var(--ca-red);animation:stkPop .3s}
+@keyframes stkPop{0%{transform:scale(2)}100%{transform:scale(1)}}
+
+/* الإجابة */
+.answer-box{display:flex;align-items:center;gap:10px;width:100%;max-width:460px;background:#14141f;
+  border:2px solid var(--ca-accent);border-radius:14px;padding:9px 13px;box-shadow:0 10px 28px rgba(0,0,0,.5)}
+.answer-timer{min-width:40px;height:40px;border-radius:50%;background:var(--ca-accent);color:#1a1a2e;
+  font-weight:800;font-size:1.15rem;display:flex;align-items:center;justify-content:center}
+.answer-box input{flex:1;background:transparent;border:none;outline:none;color:#fff;font-family:inherit;font-size:1.05rem;text-align:right}
+.answer-box button{background:var(--ca-accent);border:none;color:#1a1a2e;width:40px;height:40px;border-radius:10px;cursor:pointer;font-size:1.05rem}
+
+/* الحالة */
+.career-status-msg{min-height:26px;font-size:1rem;font-weight:700;text-align:center}
+.career-status-msg.correct{color:var(--ca-green)}
+.career-status-msg.wrong{color:var(--ca-red)}
+.career-status-msg.my-turn{color:var(--ca-accent)}
+.career-status-msg.opp-turn{color:var(--ca-blue)}
+.career-status-msg.reveal{color:#ccc}
+.career-status-msg.tiebreak{color:var(--ca-accent)}
+
+/* أزرار ثابتة: انسحاب يمين، رسائل يسار */
+.surrender-btn{position:fixed;bottom:20px;right:20px;width:46px;height:46px;border-radius:50%;border:none;
+  background:rgba(231,76,60,.18);color:var(--ca-red);cursor:pointer;font-size:1.15rem;transition:background .2s;z-index:800}
+.surrender-btn:hover{background:rgba(231,76,60,.38)}
+.ingame-quick-chat{position:fixed;top:90px;left:20px;z-index:800}
+.quick-chat-trigger.ingame{width:46px;height:46px;border-radius:50%;border:none;background:var(--ca-blue);color:#fff;cursor:pointer;font-size:1.15rem}
+
+/* Overlays */
+.win-message-overlay{position:fixed;inset:0;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;z-index:5000}
+.win-message-box{background:var(--ca-panel);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:32px;text-align:center;max-width:380px;width:90%}
+.win-message-icon{font-size:3.8rem;margin-bottom:10px}
+.win-message-box h2{font-size:1.7rem;margin-bottom:6px}
+.win-message-box p{color:#bbb;margin-bottom:18px}
+.win-message-button{background:var(--ca-accent);border:none;color:#1a1a2e;font-family:inherit;font-weight:700;
+  padding:11px 26px;border-radius:11px;cursor:pointer;font-size:.95rem;margin:4px}
+.surrender-confirm{background:var(--ca-red);color:#fff}
+.surrender-cancel{background:rgba(255,255,255,.1);color:#fff}
+
+/* بروفايل الخصم */
+.profile-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;z-index:5500}
+.profile-modal-box{background:var(--ca-panel);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:28px 24px;max-width:380px;width:92%;position:relative}
+.close-modal-btn{position:absolute;top:14px;left:14px;background:transparent;border:none;color:#888;font-size:1.2rem;cursor:pointer}
+.profile-header{text-align:center;margin-bottom:18px}
+.modal-avatar{width:70px;height:70px;border-radius:50%;border:2px solid rgba(255,255,255,.2);margin-bottom:8px}
+.profile-header h2{font-size:1.2rem}
+.stats-card{background:rgba(255,255,255,.05);border-radius:12px;padding:14px}
+.stats-card h3{font-size:.88rem;color:#aaa;margin-bottom:12px;text-align:center}
+.stats-grid{display:flex;gap:12px;justify-content:center}
+.stat-item{text-align:center}
+.stat-value{display:block;font-size:1.4rem;font-weight:800}
+.stat-value.win{color:var(--ca-green)}
+.stat-value.loss{color:var(--ca-red)}
+.stat-value.total{color:var(--ca-blue)}
+.stat-label{font-size:.78rem;color:#888}
+
+@media (max-width:600px){
+  .club-card{width:105px;min-height:130px}
+  .career-buzz-btn{width:96px;height:96px}
+  .career-score{font-size:1.25rem}
+  .avatar-wrap img{width:36px;height:36px}
+}
+
+/* 😄 الإيموجيات المتحركة (نفس حروف) */
+.qc-emoji-row { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 4px; }
+.qc-emoji-btn { background: transparent; border: none; font-size: 26px; cursor: pointer; padding: 4px 6px; border-radius: 8px; transition: all 0.15s; }
+.qc-emoji-btn:hover { background: rgba(255,255,255,0.12); transform: scale(1.2); }
+.emoji-bubble { position: fixed; z-index: 3000; pointer-events: none; opacity: 0; transform: scale(0.5) translateY(10px); transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.emoji-bubble.show { opacity: 1; transform: scale(1) translateY(0); }
+.emoji-fallback { font-size: 60px; display: inline-block; animation: emojiFloat 2s ease-in-out infinite; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4)); }
+@keyframes emojiFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
+/* 👁 بطاقة بروفايل قابلة للنقر (نسخة حروف بالضبط) */
+.player-profile {
+  cursor: pointer;
+  transition: transform .2s, filter .2s, background .2s, border-color .2s;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 14px;
+  padding: 6px 12px;
+  position: relative;
+}
+.player-profile:hover {
+  transform: scale(1.05);
+  filter: brightness(1.2);
+  background: rgba(255,255,255,.12);
+  border-color: rgba(245,166,35,.5);
+}
+.player-profile.right:hover { border-color: rgba(231,76,60,.55); }
+.player-profile::after {
+  content: '\f06e';
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  font-size: 10px;
+  color: rgba(255,255,255,.35);
+  position: absolute;
+  bottom: 4px;
+  inset-inline-end: 8px;
+  transition: color .2s;
+}
+.player-profile:hover::after { color: rgba(255,255,255,.85); }
+@keyframes profileHintPulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(245,166,35,0); }
+  50%     { box-shadow: 0 0 12px 2px rgba(245,166,35,.35); }
+}
+.player-profile.hint-pulse { animation: profileHintPulse 1.2s ease-in-out 2; }
+
+/* بطاقات إحصائيات إضافية للمودال (نسخة حروف) */
+.stats-container { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.modal-flag { width: 26px; border-radius: 3px; margin-top: 4px; }
+.modal-rank { font-size: .85rem; color: #ccc; margin-top: 6px; }
+.modal-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.action-btn {
+  border: none; border-radius: 10px; padding: 9px 14px; cursor: pointer;
+  font-family: inherit; font-weight: 700; font-size: .82rem; color: #fff;
+  background: linear-gradient(135deg,#3498db,#2980b9); transition: transform .15s;
+}
+.action-btn:hover { transform: scale(1.05); }
+.action-btn.block-user { background: linear-gradient(135deg,#7f8c8d,#616a6b); }
+.action-btn.report-user { background: linear-gradient(135deg,#e67e22,#d35400); }

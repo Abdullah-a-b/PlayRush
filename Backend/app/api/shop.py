@@ -12,28 +12,12 @@ router = APIRouter()
 async def exchange_coins_for_gems(
     request: Request,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),  # ✅ إصلاح: get_db بدل SessionLocal
+    db: Session = Depends(get_db),
 ):
-    """1000 كوين = 5 جواهر"""
-    COST = 1000
-    REWARD = 5
-
-    # ✅ إصلاح race condition: نقفل الصف قبل التعديل
-    # SELECT ... FOR UPDATE — يمنع لاعب يبعت 10 طلبات متزامنة ويستفيد 10 مرات من نفس الـ coins
-    user_locked = db.query(User).filter(User.id == current_user.id).with_for_update().first()
-    if not user_locked:
-        raise HTTPException(status_code=404, detail="المستخدم غير موجود")
-
-    if (user_locked.coins or 0) < COST:
-        raise HTTPException(status_code=400, detail=f"تحتاج {COST} كوين للاستبدال")
-
-    user_locked.coins -= COST
-    user_locked.gems = (user_locked.gems or 0) + REWARD
-    db.commit()
-
-    return {
-        "success": True,
-        "coins": user_locked.coins,
-        "gems": user_locked.gems,
-        "message": f"تم الاستبدال! حصلت على {REWARD} جواهر 💎"
-    }
+    """⛔ مُعطّل: تحويل العملات محذوف نهائياً (مبدأ فصل العملتين — منع Pay-to-Win).
+    الجواهر تُكتسب فقط من نظام المهام/التصنيف المستقبلي، لا تُشترى ولا تُحوّل.
+    راجع وثيقة الاقتصاد §4 (فصل العملات)."""
+    raise HTTPException(
+        status_code=403,
+        detail="تحويل العملات غير متاح. الكوينز والجواهر منفصلتان تماماً."
+    )

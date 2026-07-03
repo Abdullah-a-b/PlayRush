@@ -33,9 +33,11 @@ function createStars() {
 window.addEventListener('load', () => {
     createStars();
     
-    // 3. توليد الصور المحلية
+    // 3. توليد الصور المجانية فقط (1-15). الباقي (16-60) يُشترى من المتجر
+    //    لتفادي التضارب مع نظام الأفاتارات المقفلة في الإعدادات.
+    const FREE_AVATARS_COUNT = 15;
     const defaultAvatars = [];
-    for (let i = 1; i <= 60; i++) {
+    for (let i = 1; i <= FREE_AVATARS_COUNT; i++) {
         defaultAvatars.push(`../assets/avatars/avatar_${i}.svg`);
     }
 
@@ -61,8 +63,8 @@ window.addEventListener('load', () => {
             
             currentAvatarData = src;
             mainProfileImg.setAttribute('src', src);
-            removeCustomBtn.style.display = 'none'; 
-            customFileInput.value = ''; 
+            if (removeCustomBtn) removeCustomBtn.style.display = 'none'; 
+            if (customFileInput) customFileInput.value = ''; 
             closeModal();
         });
         avatarsGrid.appendChild(img);
@@ -75,26 +77,21 @@ window.addEventListener('load', () => {
     document.getElementById('closeModalBtn').addEventListener('click', closeModal);
     avatarModal.addEventListener('click', (e) => { if(e.target === avatarModal) closeModal(); });
 
-    // 4. رفع صورة مخصصة مع (حماية الحجم - أقصى حد 500 كيلوبايت)
+    // 4. رفع صورة مخصصة — 🔒 مؤجّل حالياً (العناصر محذوفة من HTML)
+    if (customFileInput && removeCustomBtn) {
     customFileInput.addEventListener('click', function() { this.value = ''; });
     customFileInput.addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (file) {
-        // ✅ تم رفع الحد الأقصى إلى 5 ميجابايت (5 * 1024 * 1024) بدلاً من 500 كيلو
         if (file.size > 2 * 1024 * 1024) {
             alert("حجم الصورة كبير جداً! الحد الأقصى هو 2 ميجابايت.");
             return;
         }
-        
-        // 🚀 السحر هنا: نحفظ "الملف" الحقيقي لإرساله لاحقاً
         customAvatarFile = file; 
-        currentAvatarData = 'custom'; // مجرد علامة للنظام أننا نستخدم صورة مخصصة
-        
-        // نستخدم الـ FileReader فقط لعرض "المعاينة" للمستخدم فوراً
+        currentAvatarData = 'custom';
         const reader = new FileReader();
         reader.onload = function(event) {
-            mainProfileImg.src = event.target.result; // عرض المعاينة
-            
+            mainProfileImg.src = event.target.result;
             removeCustomBtn.style.display = 'flex';
             document.querySelectorAll('.avatar-item').forEach(el => el.classList.remove('selected'));
             closeModal();
@@ -103,9 +100,9 @@ window.addEventListener('load', () => {
     }
 });
 
-    removeCustomBtn.addEventListener('click', () => {
+    removeCustomBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        customAvatarFile = null; // تفريغ الملف
+        customAvatarFile = null;
         currentAvatarData = defaultAvatars[0];
         mainProfileImg.setAttribute('src', defaultAvatars[0]);
         document.querySelectorAll('.avatar-item')[0].classList.add('selected');
@@ -113,6 +110,7 @@ window.addEventListener('load', () => {
         customFileInput.value = ''; 
         closeModal();
     });
+    }  // نهاية حارس رفع الصور
 
     // 5. الإرسال للسيرفر (باستخدام API_URL الديناميكي)
     const profileForm = document.getElementById('profileForm');
@@ -123,6 +121,13 @@ window.addEventListener('load', () => {
         const playerName = document.getElementById('playerName').value.trim();
         const playerCountry = document.getElementById('playerCountry').value; 
         const token = sessionStorage.getItem('token');
+
+        // 🛡️ موافقة الشروط إجبارية (مهم قانونياً — خاصة لمستخدمي Google)
+        const termsBox = document.getElementById('termsAgree');
+        if (termsBox && !termsBox.checked) {
+            profileMessage.textContent = "يجب الموافقة على الشروط والأحكام للمتابعة";
+            return profileMessage.style.color = "#facc15";
+        }
 
         // تحققات الأمان (Validation)
         if (!token) {

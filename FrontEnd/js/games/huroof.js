@@ -51,6 +51,8 @@ const voteSkipBtn          = document.getElementById('voteSkipBtn');
 // ============================================================
 let myColor             = null;
 let currentTurnSid      = null;
+let currentTurnColor    = null;
+let _opponentUserId     = null;
 let activeHexIndex      = null;
 let isMyTurnToAnswer    = false;
 let globalTimerInterval = null;
@@ -58,15 +60,15 @@ let playerTimerInterval = null;
 
 let playersStatsData = {
     me: {
-        name: 'أنت', avatar: '../../assets/avatars/avatar_1.svg',
-        flag: '../../assets/flags/SA.svg', rank: '--',
+        name: 'أنت', avatar: '../assets/avatars/avatar_1.svg',
+        flag: '../assets/flags/SA.svg', rank: '--',
         huroof: { wins: 0, losses: 0, total: 0 },
         global:  { wins: 0, losses: 0, total: 0 },
         color: 'green',
     },
     opponent: {
-        name: 'الخصم', avatar: '../../assets/avatars/avatar_2.svg',
-        flag: '../../assets/flags/AE.svg', rank: '--',
+        name: 'الخصم', avatar: '../assets/avatars/avatar_2.svg',
+        flag: '../assets/flags/AE.svg', rank: '--',
         huroof: { wins: 0, losses: 0, total: 0 },
         global:  { wins: 0, losses: 0, total: 0 },
         color: 'orange',
@@ -78,11 +80,22 @@ let playersStatsData = {
 // 🛠️ مسار الأفاتار (خاص بمجلد games/ حيث المسار ../../)
 // ============================================================
 function getValidAvatarSrc(avatarValue) {
-    if (!avatarValue || avatarValue.trim() === '') return '../../assets/avatars/avatar_1.svg';
-    if (avatarValue.startsWith('http') || avatarValue.startsWith('data:')) return avatarValue;
-    if (avatarValue.startsWith('/uploads')) return `${API_URL}${avatarValue}`;
-    const name = avatarValue.split('/').pop();
-    return `../../assets/avatars/${name.includes('.') ? name : name + '.svg'}`;
+    if (!avatarValue || avatarValue.trim() === '') return '../assets/avatars/avatar_1.svg';
+    // 🔧 نعالج روابط قديمة ثابتة (127.0.0.1/localhost) محفوظة من قبل التحديث:
+    // نحوّلها لمسار يعمل على العنوان الحالي (لابتوب/جوال).
+    let v = avatarValue.trim();
+    const staleMatch = v.match(/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/.*)$/i);
+    if (staleMatch) {
+        const path = staleMatch[3];  // الجزء بعد الدومين
+        if (path.startsWith('/uploads')) return `${API_URL}${path}`;
+        // كان أصلاً assets — نحوّله لمسار نسبي
+        const fname = path.split('/').pop();
+        return `../assets/avatars/${fname}`;
+    }
+    if (v.startsWith('http') || v.startsWith('data:')) return v;
+    if (v.startsWith('/uploads')) return `${API_URL}${v}`;
+    const name = v.split('/').pop();
+    return `../assets/avatars/${name.includes('.') ? name : name + '.svg'}`;
 }
 
 
@@ -112,6 +125,14 @@ socket.on('room_joined', (data) => {
         playersStatsData.opponent = { ...opponent.stats, color: opponent.color, avatar: getValidAvatarSrc(opponent.stats.avatar) };
     }
 
+    // 👥 نضبط حالة أزرار الصداقة/الحظر حسب العلاقة الحقيقية من الخادم
+    if (typeof data.opponent_user_id !== 'undefined') {
+        _opponentUserId = data.opponent_user_id;
+    }
+    if (typeof data.opponent_relation === 'string' && typeof applyOpponentRelation === 'function') {
+        applyOpponentRelation(data.opponent_relation);
+    }
+
     updateTopBarUI();
 });
 
@@ -135,6 +156,14 @@ socket.on('huroof_board_init', (data) => {
     systemMessageDisplay.textContent = 'اكتمل الاتصال! المعركة تبدأ الآن ⚔️';
     systemMessageDisplay.style.color = '#00ff88';
 
+    // 💡 نبضة تعريفية على بروفايل الخصم (مرة واحدة) — تلمّح أنه قابل للضغط
+    const oppBtn = document.getElementById('opponentProfileBtn');
+    if (oppBtn && !oppBtn.dataset.hinted) {
+        oppBtn.dataset.hinted = '1';
+        oppBtn.classList.add('hint-pulse');
+        setTimeout(() => oppBtn.classList.remove('hint-pulse'), 2600);
+    }
+
     data.board.forEach((hexData, index) => {
         cells[index].textContent   = hexData.letter;
         cells[index].dataset.index = index;
@@ -145,6 +174,8 @@ socket.on('huroof_board_init', (data) => {
 
 socket.on('huroof_turn_changed', (data) => {
     currentTurnSid = data.turn_sid;
+    // اللون أكثر استقراراً من sid عبر إعادة الاتصال/الانتقال
+    currentTurnColor = data.turn_color || null;
     resetUIForNewTurn();
     applyTurnUI();
 });
@@ -164,7 +195,20 @@ socket.on('huroof_new_question', (data) => {
     }
 
     const qText = document.getElementById('questionText');
-    if (qText) qText.innerHTML = sanitizeHTML(data.questionData.question);
+    if (qText) {
+        qText.innerHTML = sanitizeHTML(data.questionData.question);
+        // 🆕 منع نسخ السؤال (يقلل الغش بالبحث عنه)
+        qText.style.userSelect = 'none';
+        qText.style.webkitUserSelect = 'none';
+        qText.style.MozUserSelect = 'none';
+        qText.oncopy = (e) => { e.preventDefault(); return false; };
+        qText.oncontextmenu = (e) => { e.preventDefault(); return false; };
+    }
+
+    // 🆕 توست عند تغيير السؤال
+    if (data.changed) {
+        showToast('🔄 تم تغيير السؤال');
+    }
 
     buzzerBtn.style.display  = 'block';
     buzzerBtn.disabled       = false;
@@ -176,6 +220,7 @@ socket.on('huroof_new_question', (data) => {
         voteSkipBtn.disabled         = false;
         voteSkipBtn.innerHTML        = '<i class="fa-solid fa-forward-step"></i> اقتراح تغيير السؤال';
         voteSkipBtn.style.background = '#607d8b';
+        voteSkipBtn.style.animation  = 'none';
     }
 
     document.getElementById('answer-container').style.display = 'none';
@@ -183,6 +228,28 @@ socket.on('huroof_new_question', (data) => {
     globalTimerDisplay.style.display = 'block';
     startGlobalTimer(data.timer);
 });
+
+// 🆕 دالة توست بسيطة (لو ما كانت موجودة)
+function showToast(message) {
+    let toast = document.getElementById('huroof-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'huroof-toast';
+        Object.assign(toast.style, {
+            position: 'fixed', bottom: '30px', left: '50%',
+            transform: 'translateX(-50%)', background: 'rgba(33,33,55,0.95)',
+            color: '#fff', padding: '12px 24px', borderRadius: '10px',
+            fontSize: '1rem', zIndex: '9999', opacity: '0',
+            transition: 'opacity 0.3s', pointerEvents: 'none',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+        });
+        document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.style.opacity = '1';
+    clearTimeout(toast._hideTimer);
+    toast._hideTimer = setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+}
 
 socket.on('huroof_buzzed', (data) => {
     clearInterval(globalTimerInterval);
@@ -198,6 +265,7 @@ socket.on('huroof_buzzed', (data) => {
         systemMessageDisplay.textContent = 'أسرع! اكتب إجابتك...';
         systemMessageDisplay.style.color = '#4CAF50';
         answerSection.style.display      = 'block';
+        submitAnswerBtn.disabled         = false;  // 🆕 نعيد تفعيل الزر للمحاولة الجديدة
         playerAnswerInput.value          = '';
         playerAnswerInput.focus();
     } else {
@@ -216,6 +284,7 @@ socket.on('huroof_chance_transfer', (data) => {
         systemMessageDisplay.textContent = 'أخطأ الخصم! فرصتك الآن...';
         systemMessageDisplay.style.color = '#4CAF50';
         answerSection.style.display      = 'block';
+        submitAnswerBtn.disabled         = false;  // 🆕 نعيد تفعيل الزر للمحاولة الجديدة
         playerAnswerInput.value          = '';
         playerAnswerInput.focus();
     } else {
@@ -240,6 +309,7 @@ socket.on('huroof_last_chance', (data) => {
         voteSkipBtn.disabled         = false;
         voteSkipBtn.innerHTML        = '<i class="fa-solid fa-forward-step"></i> اقتراح تغيير السؤال';
         voteSkipBtn.style.background = '#607d8b';
+        voteSkipBtn.style.animation  = 'none';
     }
     startGlobalTimer(data.timer);
 });
@@ -255,7 +325,13 @@ socket.on('huroof_answer_result', (data) => {
         answerSection.style.display      = 'none';
         if (voteSkipBtn) voteSkipBtn.style.display = 'none';
     } else {
-        systemMessageDisplay.innerHTML   = `❌ إجابة خاطئة: ${sanitizeHTML(data.answer)}`;
+        // 🆕 رسالة ذكية + إظهار الإجابة الصحيحة
+        const feedback = data.feedback || 'إجابة خاطئة';
+        let msg = `❌ ${sanitizeHTML(feedback)}: ${sanitizeHTML(data.answer)}`;
+        if (data.correct_answer) {
+            msg += `<br><span style="font-size:0.9em;color:#aaa;">الإجابة الصحيحة: <b style="color:#4CAF50;">${sanitizeHTML(data.correct_answer)}</b></span>`;
+        }
+        systemMessageDisplay.innerHTML   = msg;
         systemMessageDisplay.style.color = '#f44336';
     }
 });
@@ -270,13 +346,47 @@ socket.on('huroof_timeout_info', (data) => {
     if (voteSkipBtn) voteSkipBtn.style.display = 'none';
 });
 
+// 🆕 كشف الإجابة الصحيحة للطرفين (عند فشل الاثنين أو الاتفاق على التغيير)
+socket.on('huroof_reveal_answer', (data) => {
+    clearInterval(globalTimerInterval);
+    clearInterval(playerTimerInterval);
+    if (data && data.correct_answer) {
+        systemMessageDisplay.innerHTML = `الإجابة الصحيحة: <b style="color:#4CAF50;">${sanitizeHTML(data.correct_answer)}</b>`;
+        systemMessageDisplay.style.color = '#4CAF50';
+    }
+    buzzerBtn.style.display     = 'none';
+    answerSection.style.display = 'none';
+    if (voteSkipBtn) voteSkipBtn.style.display = 'none';
+});
+
 socket.on('huroof_skip_voted', (data) => {
-    if (data.sid === socket.id && voteSkipBtn) {
-        voteSkipBtn.innerHTML        = '<i class="fa-solid fa-check"></i> بانتظار الخصم...';
-        voteSkipBtn.style.background = '#4CAF50';
-        voteSkipBtn.disabled         = true;
+    if (data.sid === socket.id) {
+        // أنا اللي طلبت التغيير → بانتظار موافقة الخصم
+        if (voteSkipBtn) {
+            voteSkipBtn.innerHTML        = '<i class="fa-solid fa-check"></i> بانتظار موافقة الخصم...';
+            voteSkipBtn.style.background = '#4CAF50';
+            voteSkipBtn.disabled         = true;
+        }
+    } else {
+        // 🆕 الخصم طلب التغيير → يطلع لي طلب الموافقة
+        showToast('🔄 الخصم يطلب تغيير السؤال — اضغط "اقتراح تغيير السؤال" للموافقة');
+        if (voteSkipBtn && !voteSkipBtn.disabled) {
+            voteSkipBtn.innerHTML        = '<i class="fa-solid fa-handshake"></i> الخصم يريد التغيير — وافق؟';
+            voteSkipBtn.style.background  = '#ff9800';
+            ensurePulseKeyframe();
+            voteSkipBtn.style.animation   = 'huroofPulse 1s infinite';
+        }
     }
 });
+
+// 🆕 يضمن وجود keyframe النبضة (مرة واحدة)
+function ensurePulseKeyframe() {
+    if (document.getElementById('huroof-pulse-style')) return;
+    const style = document.createElement('style');
+    style.id = 'huroof-pulse-style';
+    style.textContent = '@keyframes huroofPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}';
+    document.head.appendChild(style);
+}
 
 socket.on('error_message', (msg) => {
     systemMessageDisplay.textContent = `⚠️ ${sanitizeHTML(msg)}`;
@@ -361,8 +471,11 @@ socket.on('opponent_reconnected', () => {
 
 cells.forEach((cell, index) => {
     cell.addEventListener('click', () => {
+        const myTurn = currentTurnColor
+            ? (currentTurnColor === myColor)
+            : (currentTurnSid === socket.id);
         if (
-            currentTurnSid === socket.id &&
+            myTurn &&
             !cell.classList.contains('green') &&
             !cell.classList.contains('orange') &&
             !cell.classList.contains('active')
@@ -466,33 +579,40 @@ document.getElementById('playerProfileModal')?.addEventListener('click', (e) => 
 // ⏱️ المؤقتات والواجهة
 // ============================================================
 
+let _globalTimerLeft = 0;
+let _playerTimerLeft = 0;
+
 function startGlobalTimer(seconds) {
     clearInterval(globalTimerInterval);
     globalTimerDisplay.style.display = 'block';
     globalTimerDisplay.textContent   = `⏳ ${seconds}`;
-    let left = seconds;
+    _globalTimerLeft = seconds;
     globalTimerInterval = setInterval(() => {
-        left--;
-        globalTimerDisplay.textContent = `⏳ ${left}`;
-        if (left <= 0) clearInterval(globalTimerInterval);
+        _globalTimerLeft--;
+        globalTimerDisplay.textContent = `⏳ ${_globalTimerLeft}`;
+        if (_globalTimerLeft <= 0) clearInterval(globalTimerInterval);
     }, 1000);
 }
 
 function startPlayerTimer(seconds) {
     clearInterval(playerTimerInterval);
     playerTimerDisplay.textContent = `⏱️ ${seconds}`;
-    let left = seconds;
+    _playerTimerLeft = seconds;
     playerTimerInterval = setInterval(() => {
-        left--;
-        playerTimerDisplay.textContent = `⏱️ ${left}`;
-        if (left <= 0) clearInterval(playerTimerInterval);
+        _playerTimerLeft--;
+        playerTimerDisplay.textContent = `⏱️ ${_playerTimerLeft}`;
+        if (_playerTimerLeft <= 0) clearInterval(playerTimerInterval);
     }, 1000);
 }
 
 /** يُطبّق شكل الواجهة بناءً على من يملك الدور الحالي */
 function applyTurnUI() {
     const turnBadge = document.getElementById('turn-status-badge');
-    if (currentTurnSid === socket.id) {
+    // نحدّد "دوري" باللون أولاً (مستقر)، ثم sid كاحتياط
+    const isMyTurn = currentTurnColor
+        ? (currentTurnColor === myColor)
+        : (currentTurnSid === socket.id);
+    if (isMyTurn) {
         currentLetterDisplay.textContent = 'دورك! اختر حرفاً من اللوحة';
         currentLetterDisplay.style.color = '#4CAF50';
         if (turnBadge) turnBadge.textContent = 'دورك الآن';
@@ -573,3 +693,497 @@ function createStars() {
 }
 
 createStars();
+
+// ============================================================
+// 🛡️ نظام الإبلاغ عن الخصم (زر "إبلاغ" في بروفايل الخصم)
+// ============================================================
+const reportModal     = document.getElementById('reportModal');
+const cancelReportBtn = document.getElementById('cancelReportBtn');
+const reportUserBtn   = document.querySelector('#modalActionButtons .report-user');
+let reportSentThisMatch = false;
+
+reportUserBtn?.addEventListener('click', () => {
+    if (reportSentThisMatch) {
+        showToast('⚠️ سبق وأبلغت عن الخصم في هذه المباراة');
+        return;
+    }
+    // نغلق البروفايل ونفتح نافذة اختيار السبب
+    document.getElementById('playerProfileModal').style.display = 'none';
+    reportModal.style.display = 'flex';
+});
+
+cancelReportBtn?.addEventListener('click', () => {
+    reportModal.style.display = 'none';
+});
+
+document.querySelectorAll('.report-reason').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const reason = btn.dataset.reason;
+        socket.emit('report_opponent', { roomCode, token, reason });
+        reportModal.style.display = 'none';
+    });
+});
+
+socket.on('report_result', (data) => {
+    showToast(data.ok ? '✅ ' + data.msg : '⚠️ ' + data.msg);
+    if (data.ok) {
+        reportSentThisMatch = true;  // بلاغ واحد لكل مباراة
+    }
+});
+
+socket.on('chat_error', (data) => {
+    showToast('🔇 ' + (data.msg || 'لا يمكنك إرسال رسائل'));
+});
+
+// ============================================================
+// 👥 الصداقة والحظر (أزرار بروفايل الخصم) — ديناميكية حسب الحالة
+// ============================================================
+const addFriendBtn = document.querySelector('#modalActionButtons .add-friend');
+const blockUserBtn  = document.querySelector('#modalActionButtons .block-user');
+
+// حالة العلاقة الحالية مع الخصم (تتغيّر مع الأفعال + من الخادم)
+// 'friends' = صديق (زر: حذف صديق) | 'none' = غير صديق (زر: إضافة صديق)
+// 'pending' = طلب مُرسَل (زر: في انتظار الرد) | blockState منفصل
+let friendState = (sessionStorage.getItem('isFriendly') === '1') ? 'friends' : 'none';
+let blockState  = false;
+
+// تُستدعى من معالج room_joined لضبط الحالة حسب العلاقة الحقيقية من الخادم
+function applyOpponentRelation(relation) {
+    if (relation === 'friends') { friendState = 'friends'; blockState = false; }
+    else if (relation === 'i_blocked') { blockState = true; friendState = 'none'; }
+    else if (relation === 'they_blocked') { blockState = false; friendState = 'none'; }
+    else if (relation === 'pending_outgoing') { friendState = 'pending'; blockState = false; }
+    else if (relation === 'pending_incoming') { friendState = 'incoming'; blockState = false; }
+    else { friendState = 'none'; blockState = false; }
+    renderFriendButton();
+    renderBlockButton();
+}
+
+function renderFriendButton() {
+    if (!addFriendBtn) return;
+    if (blockState) {
+        // محظور → نخفي زر الصداقة (لا معنى لها أثناء الحظر)
+        addFriendBtn.style.display = 'none';
+        return;
+    }
+    addFriendBtn.style.display = '';
+    if (friendState === 'friends') {
+        addFriendBtn.innerHTML = '<i class="fa-solid fa-user-minus"></i> حذف صديق';
+        addFriendBtn.style.background = 'linear-gradient(135deg, #e74c3c, #c0392b)';  // أحمر
+        addFriendBtn.style.boxShadow  = '0 4px 10px rgba(231, 76, 60, 0.4)';
+        addFriendBtn.disabled = false;
+        addFriendBtn.style.opacity = '1';
+        addFriendBtn.style.cursor = 'pointer';
+    } else if (friendState === 'pending') {
+        addFriendBtn.innerHTML = '<i class="fa-solid fa-clock"></i> في انتظار الرد';
+        addFriendBtn.style.background = 'rgba(255,255,255,0.12)';  // رمادي معطّل
+        addFriendBtn.style.boxShadow  = 'none';
+        addFriendBtn.disabled = true;
+        addFriendBtn.style.opacity = '0.7';
+        addFriendBtn.style.cursor = 'default';
+    } else if (friendState === 'incoming') {
+        addFriendBtn.innerHTML = '<i class="fa-solid fa-user-check"></i> قبول الطلب';
+        addFriendBtn.style.background = 'linear-gradient(135deg, #2ecc71, #27ae60)';  // أخضر
+        addFriendBtn.style.boxShadow  = '0 4px 10px rgba(46, 204, 113, 0.4)';
+        addFriendBtn.disabled = false;
+        addFriendBtn.style.opacity = '1';
+        addFriendBtn.style.cursor = 'pointer';
+    } else {
+        addFriendBtn.innerHTML = '<i class="fa-solid fa-user-plus"></i> إضافة صديق';
+        addFriendBtn.style.background = 'linear-gradient(135deg, #3498db, #2980b9)';  // أزرق
+        addFriendBtn.style.boxShadow  = '0 4px 10px rgba(52, 152, 219, 0.4)';
+        addFriendBtn.disabled = false;
+        addFriendBtn.style.opacity = '1';
+        addFriendBtn.style.cursor = 'pointer';
+    }
+}
+
+function renderBlockButton() {
+    if (!blockUserBtn) return;
+    if (blockState) {
+        blockUserBtn.innerHTML = '<i class="fa-solid fa-unlock"></i> رفع الحظر';
+        blockUserBtn.style.background = 'linear-gradient(135deg, #e67e22, #d35400)';  // برتقالي
+    } else {
+        blockUserBtn.innerHTML = '<i class="fa-solid fa-ban"></i> حظر';
+        blockUserBtn.style.background = '';  // اللون الافتراضي
+    }
+}
+
+renderFriendButton();
+renderBlockButton();
+
+let _pendingFriendAction = null;  // 'add' أو 'remove' — لتحديث الحالة بدقة
+
+addFriendBtn?.addEventListener('click', () => {
+    if (blockState || friendState === 'pending') return;  // معطّل أثناء الحظر أو انتظار الرد
+    if (friendState === 'friends') {
+        _pendingFriendAction = 'remove';
+        socket.emit('remove_friend_opponent', { roomCode, token });
+    } else if (friendState === 'incoming') {
+        // الخصم أرسل لي طلباً → أقبله
+        if (_opponentUserId) {
+            socket.emit('respond_friend_request', { token, requester_id: _opponentUserId, accept: true });
+        }
+        friendState = 'friends';
+        renderFriendButton();
+        showToast('✅ تمت إضافة الصديق');
+    } else {
+        _pendingFriendAction = 'add';
+        socket.emit('friend_request_opponent', { roomCode, token });
+    }
+    document.getElementById('playerProfileModal').style.display = 'none';
+});
+blockUserBtn?.addEventListener('click', () => {
+    if (blockState) {
+        socket.emit('unblock_opponent', { roomCode, token });
+    } else {
+        socket.emit('block_opponent', { roomCode, token });
+    }
+    document.getElementById('playerProfileModal').style.display = 'none';
+});
+
+socket.on('friend_result', (data) => {
+    showToast((data.ok ? '✅ ' : '⚠️ ') + (data.msg || ''));
+    if (data.ok && _pendingFriendAction) {
+        // نحدّث الحالة حسب الفعل الذي أرسلناه (دقيق، لا يعتمد على نص الرسالة)
+        friendState = (_pendingFriendAction === 'remove') ? 'none' : 'pending';
+        renderFriendButton();
+    }
+    _pendingFriendAction = null;
+});
+socket.on('block_result', (data) => {
+    showToast((data.ok ? '🚫 ' : '⚠️ ') + (data.msg || ''));
+    if (data.ok) {
+        blockState = true;
+        friendState = 'none';  // الحظر يلغي الصداقة
+        renderBlockButton();
+        renderFriendButton();
+    }
+});
+socket.on('unblock_result', (data) => {
+    showToast((data.ok ? '🔓 ' : '⚠️ ') + (data.msg || ''));
+    if (data.ok) {
+        blockState = false;
+        renderBlockButton();
+        renderFriendButton();
+    }
+});
+
+// 🆕 الخصم حذفني من أصدقائه → أُحدّث زري إلى "إضافة صديق"
+socket.on('opponent_unfriended', () => {
+    friendState = 'none';
+    renderFriendButton();
+});
+
+// 🆕 الخصم قبِل طلب صداقتي → أُحدّث زري إلى "حذف صديق"
+socket.on('opponent_accepted_friend', () => {
+    friendState = 'friends';
+    renderFriendButton();
+    showToast('✅ قبل طلب صداقتك!');
+});
+socket.on('friend_request_received', (data) => {
+    showToast('👋 ' + sanitizeHTML(data.from || 'لاعب') + ' أرسل لك طلب صداقة');
+});
+
+// 🆕 toast تفاعلي لحظي لطلب الصداقة داخل المباراة (غير معطّل، لا يوقف اللعب)
+socket.on('ingame_friend_request', (data) => {
+    if (!data || !data.requesterId) return;
+    showFriendRequestToast(data.requesterId, sanitizeHTML(data.requesterName || 'لاعب'));
+    // نحدّث زر بروفايل الخصم إلى "قبول الطلب" (طلب وارد منه)
+    _opponentUserId = data.requesterId;
+    if (friendState !== 'friends' && !blockState) {
+        friendState = 'incoming';
+        renderFriendButton();
+    }
+});
+
+function showFriendRequestToast(requesterId, requesterName) {
+    // نزيل أي toast صداقة سابق (نعرض واحداً فقط)
+    const old = document.getElementById('ingameFriendToast');
+    if (old) old.remove();
+
+    const toast = document.createElement('div');
+    toast.id = 'ingameFriendToast';
+    toast.style.cssText = `
+        position: fixed; top: 90px; right: 20px; transform: translateY(-20px);
+        background: linear-gradient(135deg, #2c3e50, #1a252f);
+        border: 1px solid rgba(74,144,226,0.5); border-radius: 14px;
+        padding: 12px 16px; z-index: 2000; box-shadow: 0 8px 28px rgba(0,0,0,0.5);
+        display: flex; align-items: center; gap: 10px; max-width: 320px;
+        opacity: 0; transition: opacity .3s ease, transform .3s ease; font-family: inherit;`;
+    toast.innerHTML = `
+        <i class="fa-solid fa-user-plus" style="color:#4a90e2; font-size:18px;"></i>
+        <span style="color:#fff; font-size:13px;">${requesterName} يريد إضافتك صديقاً</span>
+        <button id="frToastAccept" style="background:linear-gradient(135deg,#2ecc71,#27ae60); color:#fff; border:none; border-radius:8px; padding:6px 12px; cursor:pointer; font-family:inherit; font-size:12px;">قبول</button>
+        <button id="frToastReject" style="background:rgba(255,255,255,0.12); color:#ccc; border:none; border-radius:8px; padding:6px 10px; cursor:pointer; font-family:inherit; font-size:12px;">لاحقاً</button>`;
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => {
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateY(0)';
+    });
+
+    let dismissed = false;
+    const dismiss = () => {
+        if (dismissed) return;
+        dismissed = true;
+        clearTimeout(autoTimer);
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-20px)';
+        setTimeout(() => toast.remove(), 300);
+    };
+
+    document.getElementById('frToastAccept').addEventListener('click', () => {
+        socket.emit('respond_friend_request', { token, requester_id: requesterId, accept: true });
+        showToast('✅ تمت إضافة الصديق');
+        // 🆕 نحدّث زر بروفايل الخصم إلى "حذف صديق" (صرنا أصدقاء)
+        friendState = 'friends';
+        blockState = false;
+        if (typeof renderFriendButton === 'function') renderFriendButton();
+        dismiss();
+    });
+    document.getElementById('frToastReject').addEventListener('click', () => {
+        // "لاحقاً" لا يرفض الطلب — يبقى في تبويب الطلبات (النظام الحالي محفوظ)
+        dismiss();
+    });
+
+    // يختفي تلقائياً بعد 8 ثوانٍ (الطلب يبقى في تبويب الطلبات)
+    const autoTimer = setTimeout(dismiss, 8000);
+}
+socket.on('leaver_penalty', (data) => {
+    showToast(data.msg);
+});
+
+// ----------------------------------------
+// 💬 الرسائل الجاهزة داخل اللعبة (Quick Chat)
+// زر عائم يفتح لوحة العبارات المعتمدة. يرسل phraseId فقط (لا نص حر).
+// ----------------------------------------
+(function initIngameQuickChat() {
+    const btn = document.getElementById('gameQuickChatBtn');
+    if (btn && window.QuickChat) {
+        QuickChat.init({
+            socket,
+            triggerBtn: btn,
+            event: 'send_room_chat_message',
+            extra: () => ({ roomCode }),  // رسالة داخل غرفة المباراة الحالية
+            context: 'game',              // 🆕 عبارات المباراة (تنافسية) لا اللوبي
+            game: 'huroof',               // لجلب عبارات حروف المشتراة
+        });
+    }
+
+    // عرض الرسائل الواردة كفقاعة عائمة فوق أفاتار المُرسِل
+    socket.on('new_room_chat_message', (msg) => {
+        if (!msg || !msg.text) return;
+        const mine = msg.senderSid === socket.id;
+        showChatBubble(msg.text, mine);
+    });
+
+    function showChatBubble(text, mine) {
+        // نعرضها قرب أفاتار اللاعب (يمين=أنا، يسار=الخصم في الواجهة RTL)
+        const anchor = mine
+            ? document.getElementById('myProfileBtn')
+            : document.getElementById('opponentProfileBtn');
+        if (!anchor) return;
+        const bubble = document.createElement('div');
+        bubble.className = 'qc-bubble' + (mine ? ' mine' : '');
+        bubble.textContent = text;
+        anchor.style.position = 'relative';
+        anchor.appendChild(bubble);
+        setTimeout(() => bubble.classList.add('show'), 10);
+        setTimeout(() => {
+            bubble.classList.remove('show');
+            setTimeout(() => bubble.remove(), 250);
+        }, 3500);
+    }
+})();
+
+
+// ============================================================
+// 🎯 نظام المساعدات (3 خانات)
+// ============================================================
+(function initHelps() {
+    let _helpsLoadout = [];
+    let _helpsCatalog = [];
+    let _helpsUsed = new Set();
+    let _questionActive = false;  // هل يوجد سؤال نشط (حرف مختار)؟
+    let _inventory = {};          // {help_id: quantity}
+    let _devMode = false;
+    let _slots = 3;
+    let _fourthSlotLevel = 10;
+
+    function _helpById(id) {
+        return _helpsCatalog.find(h => h.id === id);
+    }
+
+    function _owns(id) {
+        return _devMode || (_inventory[id] || 0) > 0;
+    }
+
+    function renderHelpSlots() {
+        const container = document.getElementById('helpSlots');
+        if (!container) return;
+        container.innerHTML = '';
+        _helpsLoadout.forEach(id => {
+            const h = _helpById(id);
+            if (!h) return;
+            const used = _helpsUsed.has(id);
+            const owned = _owns(id);
+            const locked = !_questionActive;
+            const qty = _devMode ? '∞' : (_inventory[id] || 0);
+            const btn = document.createElement('button');
+            let cls = 'help-slot';
+            if (used) cls += ' used';
+            else if (!owned) cls += ' unowned';
+            else if (locked) cls += ' locked';
+            btn.className = cls;
+            btn.disabled = used || locked || !owned;
+            btn.title = !owned ? `${h.name} — لا تملكها (اشترها من المتجر)`
+                       : (locked ? `${h.name} — اختر حرفاً أولاً` : h.name + ' — ' + h.desc);
+            btn.innerHTML = `
+                <span class="rarity-dot rarity-${h.rarity}"></span>
+                <span class="help-icon">${h.icon}</span>
+                <span class="help-name">${sanitizeHTML(h.name)}</span>
+                <span class="help-qty">${qty}</span>`;
+            btn.addEventListener('click', () => useHelp(id));
+            container.appendChild(btn);
+        });
+    }
+
+    function useHelp(id) {
+        if (_helpsUsed.has(id)) return;
+        socket.emit('huroof_use_help', { roomCode, helpId: id });
+    }
+
+    function showHelpToast(msg) {
+        const old = document.getElementById('activeHelpToast');
+        if (old) old.remove();
+        const t = document.createElement('div');
+        t.id = 'activeHelpToast';
+        t.className = 'help-toast';
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => { t.remove(); }, 3500);
+    }
+
+    // طلب الكتالوج عند بدء المباراة
+    socket.on('connect', () => {
+        setTimeout(() => socket.emit('huroof_get_helps_catalog', { roomCode }), 800);
+    });
+
+    socket.on('huroof_helps_catalog', (data) => {
+        if (!data) return;
+        _helpsLoadout = data.loadout || [];
+        _helpsCatalog = data.catalog || [];
+        _helpsUsed = new Set(data.used || []);
+        _inventory = data.inventory || {};
+        _devMode = !!data.devMode;
+        _slots = data.slots || 3;
+        _fourthSlotLevel = data.fourthSlotLevel || 10;
+        // الخانة الرابعة: لو مفتوحة، نضيف مساعدة يملكها اللاعب وليست في التحميل الأساسي
+        if (_slots >= 4) {
+            const owned = Object.keys(_inventory);
+            const extra = owned.find(id => !_helpsLoadout.includes(id));
+            if (extra && _helpsLoadout.length < 4) _helpsLoadout = [..._helpsLoadout, extra];
+        }
+        renderHelpSlots();
+    });
+
+    // تفعيل الخانات عند بدء سؤال (حرف مختار)، وتعطيلها عند انتهائه
+    socket.on('huroof_new_question', () => { _questionActive = true; renderHelpSlots(); });
+    socket.on('huroof_hex_locked', () => { _questionActive = true; renderHelpSlots(); });
+    socket.on('huroof_round_over', () => { _questionActive = false; renderHelpSlots(); });
+    socket.on('huroof_match_over', () => { _questionActive = false; renderHelpSlots(); });
+    // عند العودة لاختيار حرف جديد (انتهى السؤال السابق)
+    socket.on('huroof_turn_changed', () => { _questionActive = false; renderHelpSlots(); });
+
+    // نتيجة استخدام مساعدتي
+    // 📚 اختيار التصنيف: الخادم يرسل قائمة التصنيفات لنعرضها
+    socket.on('huroof_choose_category_options', (data) => {
+        if (!data || !Array.isArray(data.categories) || !data.categories.length) {
+            showHelpToast('⚠️ لا توجد تصنيفات متاحة');
+            return;
+        }
+        const old = document.getElementById('catPickerModal');
+        if (old) old.remove();
+        const modal = document.createElement('div');
+        modal.id = 'catPickerModal';
+        modal.style.cssText = 'position:fixed;inset:0;z-index:6000;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;';
+        const box = document.createElement('div');
+        box.style.cssText = 'background:#1a1a2e;border:1px solid #4a90e2;border-radius:16px;padding:24px;max-width:420px;width:92%;text-align:center;';
+        box.innerHTML = '<h3 style="color:#fff;margin-bottom:6px;">📚 اختر تصنيف سؤالك القادم</h3><p style="color:#aaa;font-size:13px;margin-bottom:16px;">سيكون سؤالك التالي من هذا المجال.</p>';
+        const grid = document.createElement('div');
+        grid.style.cssText = 'display:grid;grid-template-columns:repeat(2,1fr);gap:10px;';
+        data.categories.forEach(cat => {
+            const btn = document.createElement('button');
+            btn.textContent = cat;
+            btn.style.cssText = 'background:rgba(74,144,226,0.15);border:1px solid rgba(74,144,226,0.4);color:#fff;border-radius:10px;padding:12px;cursor:pointer;font-family:inherit;font-size:14px;';
+            btn.addEventListener('click', () => {
+                socket.emit('huroof_use_help', { roomCode, helpId: 'choose_category', category: cat });
+                modal.remove();
+            });
+            grid.appendChild(btn);
+        });
+        box.appendChild(grid);
+        const cancel = document.createElement('button');
+        cancel.textContent = 'إلغاء';
+        cancel.style.cssText = 'margin-top:16px;background:transparent;border:1px solid #555;color:#aaa;border-radius:10px;padding:8px 20px;cursor:pointer;font-family:inherit;';
+        cancel.addEventListener('click', () => modal.remove());
+        box.appendChild(cancel);
+        modal.appendChild(box);
+        document.body.appendChild(modal);
+    });
+
+    socket.on('huroof_help_result', (data) => {
+        if (!data) return;
+        if (!data.ok) {
+            showHelpToast('⚠️ ' + (data.msg || 'تعذّر استخدام المساعدة'));
+            return;
+        }
+        // المساعدة نجحت → نعلّمها مستخدمة + ننقص المخزون محلياً
+        if (data.helpId) {
+            _helpsUsed.add(data.helpId);
+            if (!_devMode && _inventory[data.helpId]) {
+                _inventory[data.helpId] = Math.max(0, _inventory[data.helpId] - 1);
+            }
+        }
+        renderHelpSlots();
+
+        // ===== تطبيق التأثير =====
+        if (data.effect === 'extend_time') {
+            // نزامن العدّاد مع القيمة الجديدة من الخادم (فعّالة حقاً)
+            const newTotal = data.new_total;
+            if (typeof newTotal === 'number') {
+                if (typeof _globalTimerLeft !== 'undefined' && _globalTimerLeft > 0) {
+                    _globalTimerLeft = newTotal;
+                    if (globalTimerDisplay) globalTimerDisplay.textContent = `⏳ ${newTotal}`;
+                }
+                if (typeof _playerTimerLeft !== 'undefined' && _playerTimerLeft > 0) {
+                    _playerTimerLeft = newTotal;
+                    if (playerTimerDisplay) playerTimerDisplay.textContent = `⏱️ ${newTotal}`;
+                }
+            }
+            showHelpToast(`⏱️ +${data.seconds || 10} ثانية لوقتك`);
+        }
+        else if (data.effect === 'count_letters') {
+            showHelpToast(`🔢 عدد حروف الإجابة: ${data.count}`);
+        }
+        else if (data.effect === 'reveal') {
+            // كشف معلومة (حرف/تصنيف/نصف) — نعرضها في toast أطول قليلاً
+            showHelpToast('💡 ' + (data.msg || ''));
+        }
+        else if (data.effect === 'skip_letter') {
+            showHelpToast('⏭️ ' + (data.msg || 'تم التخطّي'));
+        }
+        else if (data.effect === 'change_question') {
+            showHelpToast('🔄 ' + (data.msg || 'سؤال جديد...'));
+        }
+        else {
+            showHelpToast(data.msg || 'تم');
+        }
+    });
+
+    // الخصم استخدم مساعدة (شفافية)
+    socket.on('huroof_opponent_used_help', (data) => {
+        if (!data) return;
+        showHelpToast(`🔔 الخصم استخدم: ${sanitizeHTML(data.name || 'مساعدة')}`);
+    });
+})();

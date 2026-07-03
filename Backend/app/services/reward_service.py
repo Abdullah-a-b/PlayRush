@@ -9,20 +9,48 @@ import os
 GAME_MODES_ALL = ['huroof', 'bank', 'career', 'whoami', 'whatdo']
 
 def get_level_from_xp(xp: int) -> int:
-    """كل مستوى يحتاج 2000 * (level) نقطة XP"""
+    """منحنى تلفيل متدرّج خطّي (يبدأ من المستوى 0).
+    XP المطلوب L→L+1 = 120 + (L * 80). متدرّج وعادل."""
+    if xp is None or xp < 0:
+        return 0
     level = 0
-    xp_needed = 2000
     total = 0
+    xp_needed = 120
     while xp >= total + xp_needed:
         total += xp_needed
         level += 1
-        xp_needed = xp_needed * 2
+        xp_needed = 120 + (level * 80)
     return level
 
+
+def xp_for_next_level(xp: int) -> dict:
+    """تفاصيل تقدّم المستوى (لشريط XP)."""
+    if xp is None or xp < 0:
+        xp = 0
+    level = 0
+    total = 0
+    xp_needed = 120
+    while xp >= total + xp_needed:
+        total += xp_needed
+        level += 1
+        xp_needed = 120 + (level * 80)
+    return {
+        'level': level,
+        'current_in_level': xp - total,
+        'needed_for_next': xp_needed,
+        'total_xp': xp,
+    }
+
 def save_match_sync(winner_player: dict, loser_player: dict, game_mode: str, extra: dict=None):
+    extra = extra or {}
+    # 🤝 مباراة ودية (دعوة صديق): لا تُحتسب إطلاقاً — لا تصنيف، لا مستوى،
+    #    لا جواهر، لا كوينز، ولا حتى إحصائيات فوز/خسارة. مجرد لعب للمتعة.
+    if extra.get('friendly'):
+        print("🤝 [match] مباراة ودية بين صديقين — لا مكافآت ولا إحصائيات")
+        return
+
     db = SessionLocal()
     today = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d')
-    extra = extra or {}
     try:
         for (is_winner, player) in [(True, winner_player), (False, loser_player)]:
             if not player: continue
@@ -58,59 +86,66 @@ def save_match_sync(winner_player: dict, loser_player: dict, game_mode: str, ext
             coins_gain = 0
             gems_gain = 0
             rewards_log = []
+            reason = extra.get('reason', 'normal')
             
             if game_mode == 'huroof':
-                reason = extra.get('reason', 'normal')
                 winner_rounds = extra.get('winner_rounds', 2)
                 loser_rounds = extra.get('loser_rounds', 0)
                 
                 if reason == 'surrender':
                     if is_winner:
-                        xp_gain = 150
-                        coins_gain = 100
+                        # 🏆 الفائز بالانسحاب يحصل على نفس مكافأة فوز 2-0 (لا فرق)
+                        xp_gain = 40
+                        coins_gain = 60
+                        rewards_log.append(f'فوز بالانسحاب (+{xp_gain}XP +{coins_gain}🪙)')
+                    else:
+                        # ❌ المنسحب لا يحصل على شيء (عقوبة)
+                        xp_gain = 0
+                        coins_gain = 0
+                        rewards_log.append('انسحاب من اللعبة (0XP 0🪙)')
+                else:
+                    # 🎯 نظام المكافآت الجديد (حروف): الأداء + المشاركة الثابتة (20🪙+15XP)
+                    if is_winner:
+                        if winner_rounds == 2 and loser_rounds == 0:
+                            xp_gain = 40
+                            coins_gain = 60
+                        else:  # فوز 2-1
+                            xp_gain = 30
+                            coins_gain = 50
+                        rewards_log.append(f'فوز حروف (+{xp_gain}XP +{coins_gain}🪙)')
+                    else:
+                        if winner_rounds == 2 and loser_rounds == 1:  # خسارة 2-1
+                            xp_gain = 25
+                            coins_gain = 40
+                        else:  # خسارة 2-0
+                            xp_gain = 15
+                            coins_gain = 20
+                        rewards_log.append(f'خسارة حروف (+{xp_gain}XP +{coins_gain}🪙)')
+            else:
+                # 🎯 باقي المسابقات: فوز=50🪙/35XP، خسارة=20🪙/15XP
+                # الانسحاب: الفائز يأخذ مكافأة الفوز كاملة، المنسحب صفر
+                if reason == 'surrender':
+                    if is_winner:
+                        xp_gain = 35
+                        coins_gain = 50
                         rewards_log.append(f'فوز بالانسحاب (+{xp_gain}XP +{coins_gain}🪙)')
                     else:
                         xp_gain = 0
                         coins_gain = 0
-                        rewards_log.append(f'انسحاب من اللعبة (0XP 0🪙)')
-                else:
-                    if is_winner:
-                        if winner_rounds == 2 and loser_rounds == 0:
-                            xp_gain = 300
-                            coins_gain = 160  
-                        elif winner_rounds == 2 and loser_rounds == 1:
-                            xp_gain = 250
-                            coins_gain = 160
-                        else:
-                            xp_gain = 250
-                            coins_gain = 160
-                        rewards_log.append(f'فوز حروف (+{xp_gain}XP +{coins_gain}🪙)')
-                    else:
-                        if winner_rounds == 2 and loser_rounds == 0:
-                            xp_gain = 40
-                            coins_gain = 15
-                        elif winner_rounds == 2 and loser_rounds == 1:
-                            xp_gain = 50
-                            coins_gain = 35  
-                        else:
-                            xp_gain = 40
-                            coins_gain = 15
-                        rewards_log.append(f'خسارة حروف (+{xp_gain}XP +{coins_gain}🪙)')
-            else:
-                if is_winner:
-                    xp_gain = 100
+                        rewards_log.append('انسحاب من اللعبة (0XP 0🪙)')
+                elif is_winner:
+                    xp_gain = 35
                     coins_gain = 50
-                    rewards_log.append(f'فوز {game_mode} (+100XP +50🪙)')
+                    rewards_log.append(f'فوز {game_mode} (+{xp_gain}XP +{coins_gain}🪙)')
                 else:
-                    xp_gain = 25
-                    coins_gain = 10
-                    rewards_log.append(f'خسارة {game_mode} (+25XP +10🪙)')
+                    xp_gain = 15
+                    coins_gain = 20
+                    rewards_log.append(f'خسارة {game_mode} (+{xp_gain}XP +{coins_gain}🪙)')
                     
             if is_winner and (not user.first_win_claimed):
                 user.first_win_claimed = True
                 coins_gain += 100
-                gems_gain += 2
-                rewards_log.append('🥇 أول فوز اليوم! (+100🪙 +2💎)')
+                rewards_log.append('🥇 أول فوز اليوم! (+100🪙)')
             
             if is_winner:
                 last_win = user.last_win_date or ''
@@ -120,9 +155,7 @@ def save_match_sync(winner_player: dict, loser_player: dict, game_mode: str, ext
                 else:
                     user.win_streak = 1
                 user.last_win_date = today
-                if user.win_streak % 3 == 0:
-                    gems_gain += 1
-                    rewards_log.append(f'🔥 سلسلة {user.win_streak} انتصار! (+1💎)')
+                # 💎 إزالة جوهرة كل 3 انتصارات — الجواهر ستأتي من نظام المهام/التصنيف مستقبلاً
             else:
                 user.win_streak = 0
                 
@@ -133,9 +166,21 @@ def save_match_sync(winner_player: dict, loser_player: dict, game_mode: str, ext
                 if 'daily_completionist' not in daily_games:
                     daily_games['daily_completionist'] = True
                     user.daily_games = json.dumps(daily_games)
-                    gems_gain += 5
-                    rewards_log.append('🏅 مكافأة الخماسي اليومية! (+5💎)')
+                    # 💎 مكافأة الخماسي اليومية ستُنقل لنظام المهام اليومية مستقبلاً
+                    coins_gain += 200
+                    rewards_log.append('🏅 مكافأة الخماسي اليومية! (+200🪙)')
             
+            # 🛡️ تطبيق معامل مكافحة التواطؤ (يقلّل الجائزة لو المواجهة متكررة)
+            collusion_mult = extra.get('collusion_multiplier', 1.0)
+            if collusion_mult < 1.0:
+                xp_gain = int(xp_gain * collusion_mult)
+                coins_gain = int(coins_gain * collusion_mult)
+                gems_gain = int(gems_gain * collusion_mult)
+                if collusion_mult == 0.0:
+                    rewards_log.append('⚠️ لا جوائز: مواجهات متكررة مع نفس اللاعب')
+                else:
+                    rewards_log.append(f'⚠️ جائزة مخفّضة ({int(collusion_mult*100)}%): مواجهات متكررة')
+
             old_level = get_level_from_xp(user.xp or 0)
             user.xp = (user.xp or 0) + xp_gain
             user.coins = (user.coins or 0) + coins_gain
@@ -144,9 +189,8 @@ def save_match_sync(winner_player: dict, loser_player: dict, game_mode: str, ext
             user.level = new_level
             
             if new_level > old_level:
-                user.gems += 3
                 user.coins += 200
-                rewards_log.append(f'🆙 Level Up! مستوى {new_level} (+3💎 +200🪙)')
+                rewards_log.append(f'🆙 Level Up! مستوى {new_level} (+200🪙)')
                 
             stat = db.query(GameStat).filter(GameStat.user_id == user.id, GameStat.game_mode == game_mode).first()
             if not stat:
@@ -192,10 +236,12 @@ def get_clean_avatar(avatar_val, fallback_name="Player"):
     if lower.startswith("https://") or lower.startswith("http://"):
         return avatar_str
 
-    # 3. معالجة الصور المرفوعة (نجلبها من الباك إند ديناميكياً)
+    # 3. معالجة الصور المرفوعة — مسار نسبي يحلّه المتصفح حسب عنوانه الحالي
     if avatar_str.startswith("/uploads/") or avatar_str.startswith("uploads/"):
         clean_path = avatar_str.replace("//uploads/", "/uploads/").lstrip("/")
-        return f"{settings.BACKEND_URL}/{clean_path}"
+        # لو BACKEND_URL مضبوط (إنتاج) نستخدمه، وإلا مسار نسبي (يعمل محلياً وعلى الجوال)
+        base = settings.BACKEND_URL
+        return f"{base}/{clean_path}" if base else f"/{clean_path}"
 
     # 4. الأفاتارات الافتراضية (نأخذ اسم الملف فقط لمنع path traversal)
     clean_name = avatar_str.split('/')[-1]
@@ -204,7 +250,9 @@ def get_clean_avatar(avatar_val, fallback_name="Player"):
     if not re.match(r'^[a-zA-Z0-9_-]+\.(svg|png|jpg|jpeg|webp)$', clean_name):
         return f"https://api.dicebear.com/7.x/bottts/svg?seed={fallback_name}"
 
-    return f"{settings.FRONTEND_URL}/assets/avatars/{clean_name}"
+    # مسار نسبي للأصول — يحلّه المتصفح حسب عنوان الصفحة (لابتوب/جوال)
+    base = settings.FRONTEND_URL
+    return f"{base}/assets/avatars/{clean_name}" if base else f"assets/avatars/{clean_name}"
 
 def fetch_stats_from_db(token: str, fallback_name: str, fallback_avatar: str):
     default_stats = {
@@ -224,6 +272,7 @@ def fetch_stats_from_db(token: str, fallback_name: str, fallback_avatar: str):
         if not user: return default_stats
             
         huroof_stat = db.query(GameStat).filter(GameStat.user_id == user.id, GameStat.game_mode == "huroof").first()
+        career_stat = db.query(GameStat).filter(GameStat.user_id == user.id, GameStat.game_mode == "career").first()
         user_xp = user.xp if user.xp is not None else 0
         rank = db.query(User).filter(User.xp > user_xp).count() + 1
         flag_path = f"../../assets/flags/{user.country}.svg" if user.country else default_stats["flag"]
@@ -233,6 +282,7 @@ def fetch_stats_from_db(token: str, fallback_name: str, fallback_avatar: str):
             "avatar": get_clean_avatar(user.avatar, user.player_name), 
             "flag": flag_path, "rank": rank,
             "huroof": {"wins": huroof_stat.wins if huroof_stat else 0, "losses": huroof_stat.losses if huroof_stat else 0, "total": huroof_stat.matches_played if huroof_stat else 0},
+            "career": {"wins": career_stat.wins if career_stat else 0, "losses": career_stat.losses if career_stat else 0, "total": career_stat.matches_played if career_stat else 0},
             "global": {"wins": user.wins or 0, "losses": user.losses or 0, "total": user.total_matches or 0}
         }
     except Exception as e:
@@ -243,3 +293,44 @@ def fetch_stats_from_db(token: str, fallback_name: str, fallback_avatar: str):
 
 async def get_player_full_stats(token: str, fallback_name: str, fallback_avatar: str):
     return await asyncio.to_thread(fetch_stats_from_db, token, fallback_name, fallback_avatar)
+
+
+def fetch_stats_by_user_id(target_id: int, game_mode: str = None):
+    """يجلب إحصائيات لاعب عبر user_id (لفتح بروفايله من الإشعارات).
+    game_mode=None → إحصائيات عامة فقط (مثل صفحة categories).
+    game_mode='huroof' → إحصائيات تلك اللعبة + العامة."""
+    default_stats = {
+        "name": "لاعب", "avatar": get_clean_avatar("", "لاعب"),
+        "flag": "../../assets/flags/SA.svg", "rank": "--",
+        "game": None, "game_mode": game_mode,
+        "global": {"wins": 0, "losses": 0, "total": 0}
+    }
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.id == target_id).first()
+        if not user:
+            return default_stats
+        user_xp = user.xp if user.xp is not None else 0
+        rank = db.query(User).filter(User.xp > user_xp).count() + 1
+        flag_path = f"../../assets/flags/{user.country}.svg" if user.country else default_stats["flag"]
+        result = {
+            "name": user.player_name,
+            "avatar": get_clean_avatar(user.avatar, user.player_name),
+            "flag": flag_path, "rank": rank,
+            "game": None, "game_mode": game_mode,
+            "global": {"wins": user.wins or 0, "losses": user.losses or 0, "total": user.total_matches or 0}
+        }
+        # إحصائيات لعبة محددة (لو طُلبت)
+        if game_mode:
+            gstat = db.query(GameStat).filter(GameStat.user_id == user.id, GameStat.game_mode == game_mode).first()
+            result["game"] = {
+                "wins": gstat.wins if gstat else 0,
+                "losses": gstat.losses if gstat else 0,
+                "total": gstat.matches_played if gstat else 0
+            }
+        return result
+    except Exception as e:
+        print(f"🔥 خطأ DB (by_id): {e}")
+        return default_stats
+    finally:
+        db.close()

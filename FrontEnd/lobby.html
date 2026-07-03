@@ -5,9 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>PlayRush - اللوبي</title>
   <link rel="stylesheet" href="css/lobby.css" />
+  <link rel="stylesheet" href="css/theme_styles.css">
   <link rel="stylesheet" href="css/categories.css" />
   <link rel="stylesheet" href="css/all.min.css">
     <link rel="stylesheet" href="css/brand.css">
+    <link rel="stylesheet" href="css/quick_chat.css">
     <script src="js/brand.js" defer></script>
 </head>
 <body>
@@ -47,7 +49,7 @@
         <div class="currency-item"><i class="fa-solid fa-gem" style="color:#00d2ff"></i> <span id="gems">0</span></div>
       </div>
       <div class="controls-section">
-        <button class="control-btn" id="notificationsBtn" title="التنبيهات"><i class="fa-solid fa-bell"></i></button>
+        <button class="control-btn" id="notificationsBtn" title="التنبيهات" style="position:relative;"><i class="fa-solid fa-bell"></i><span id="notifBadge" style="display:none;position:absolute;top:-4px;left:-4px;background:#f44336;color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:11px;align-items:center;justify-content:center;padding:0 4px;">0</span></button>
         <button class="control-btn" id="globalSettingsBtn" title="الإعدادات"><i class="fa-solid fa-gear"></i></button>
         <button class="control-btn" id="backToCategoriesBtn" title="العودة للساحة"><i class="fa-solid fa-arrow-right-from-bracket" style="transform: rotate(180deg);"></i></button>
       </div>
@@ -55,8 +57,9 @@
 
     <nav class="main-navigation">
       <button class="nav-btn active" onclick="window.location.href='categories.html'"><i class="fa-solid fa-gamepad"></i> <span>ساحة الألعاب</span></button>
-      <button class="nav-btn" onclick="showToast('المتجر سيفتح أبوابه قريباً!', 'info')"><i class="fa-solid fa-store"></i> <span>المتجر</span></button>
-      <button class="nav-btn" onclick="showToast('نظام الأصدقاء قيد التطوير', 'info')"><i class="fa-solid fa-user-group"></i> <span>الأصدقاء</span></button>
+      <button class="nav-btn" onclick="openStoreModal()"><i class="fa-solid fa-store"></i> <span>المتجر</span></button>
+      <button class="nav-btn" onclick="if(window.openLoadout)window.openLoadout()"><i class="fa-solid fa-wand-magic-sparkles"></i> <span>المساعدات</span></button>
+      <button class="nav-btn" id="friendsNavBtn" style="position:relative;"><i class="fa-solid fa-user-group"></i> <span>الأصدقاء</span><span id="friendsBadge" style="display:none;position:absolute;top:2px;left:8px;background:#f44336;color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:11px;align-items:center;justify-content:center;padding:0 4px;">0</span></button>
     </nav>
 
     <main class="main-content" id="lobbyMainContent">
@@ -81,14 +84,9 @@
               </div>
           </button>
 
-          <button class="action-btn primary" id="openCreateRoomBtn">
-              <i class="fa-solid fa-plus" style="font-size: 26px;"></i> 
-              <span>إنشاء غرفة</span>
-          </button>
-
-          <button class="action-btn secondary" id="openJoinRoomBtn">
-              <i class="fa-solid fa-right-to-bracket" style="font-size: 26px;"></i> 
-              <span>انضمام لغرفة</span>
+          <button class="action-btn primary" id="playWithFriendBtn" style="background: linear-gradient(45deg, #4a90e2, #357abd); color: #fff; box-shadow: 0 10px 20px rgba(74, 144, 226, 0.4);">
+              <i class="fa-solid fa-user-group" style="font-size: 26px;"></i>
+              <span>العب مع صديق</span>
           </button>
         </div>
       </section>
@@ -147,8 +145,9 @@
         <h4><i class="fa-solid fa-comments"></i> دردشة اللوبي</h4>
         <div class="chat-messages" id="globalChatMessages"></div>
         <div class="chat-input">
-          <input type="text" placeholder="تحدث مع المتصلين..." id="globalChatInput" maxlength="100">
-          <button id="sendGlobalChatBtn"><i class="fa-solid fa-paper-plane"></i></button>
+          <button class="quick-chat-trigger" id="globalQuickChatBtn">
+            <i class="fa-solid fa-comment-dots"></i> أرسل رسالة جاهزة
+          </button>
         </div>
       </div>
       <div class="online-players">
@@ -185,6 +184,7 @@
               <button class="setting-tab active" data-tab="profileTab"><i class="fa-solid fa-user-pen"></i> الملف الشخصي</button>
               <button class="setting-tab" data-tab="securityTab"><i class="fa-solid fa-shield-halved"></i> الأمان والمرور</button>
               <button class="setting-tab" data-tab="audioTab"><i class="fa-solid fa-volume-high"></i> الصوت</button>
+              <button class="setting-tab" data-tab="themeTab"><i class="fa-solid fa-palette"></i> المظهر</button>
               <button class="setting-tab" data-tab="supportTab"><i class="fa-solid fa-headset"></i> المساعدة والدعم</button>
               <button class="setting-tab logout-tab" id="logoutSettingsBtn"><i class="fa-solid fa-power-off"></i> تسجيل الخروج</button>
           </div>
@@ -234,16 +234,20 @@
                   </div>
               </div>
 
+                            <div id="themeTab" class="setting-panel">
+                  <h3 style="color:#fff;">مظهر الموقع (الثيمات)</h3>
+                  <p style="color:#aaa;font-size:13px;margin-bottom:16px;">اختر ثيماً من الثيمات التي تملكها لتطبيقه على الموقع.</p>
+                  <div id="themeGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px;"></div>
+              </div>
               <div id="supportTab" class="setting-panel">
-                  <h3 style="color: #fff;">تواصل معنا</h3>
-                  <p style="color: #aaa; font-size: 14px; line-height: 1.6;">نحن هنا لمساعدتك دائماً!</p>
-                  <a href="mailto:playrush.online@gmail.com" style="display: block; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; text-decoration: none; color: #00d2ff; text-align: center; margin-top: 15px; border: 1px solid rgba(0, 210, 255, 0.3);">
-                      <i class="fa-solid fa-envelope"></i> playrush.online@gmail.com
+                  <h3 style="color: #fff;">المساعدة والدعم</h3>
+                  <p style="color: #aaa; font-size: 14px; line-height: 1.6;">تصفّح الأسئلة الشائعة، أرسل تذكرة، أو تابع تذاكرك السابقة.</p>
+                  <a href="support.html" style="display: flex; align-items:center; justify-content:center; gap:8px; background: linear-gradient(135deg,#667eea,#764ba2); padding: 14px; border-radius: 10px; text-decoration: none; color: #fff; text-align: center; margin-top: 15px; font-weight:600;">
+                      <i class="fa-solid fa-headset"></i> فتح مركز المساعدة
                   </a>
-                  <div style="display: flex; gap: 15px; margin-top: 15px;">
-                      <button class="play-btn" style="background: #000; color: #fff; border: 1px solid #333;"><i class="fa-brands fa-x-twitter"></i> حسابنا في X</button>
-                      <button class="play-btn" style="background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color: #fff;"><i class="fa-brands fa-instagram"></i> انستغرام</button>
-                  </div>
+                  <a href="mailto:playrush.online@gmail.com" style="display: block; background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; text-decoration: none; color: #00d2ff; text-align: center; margin-top: 10px; border: 1px solid rgba(0, 210, 255, 0.3); font-size:13px;">
+                      <i class="fa-solid fa-envelope"></i> أو راسلنا: playrush.online@gmail.com
+                  </a>
               </div>
 
               <div class="settings-danger-zone" style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #3f3f46; text-align: right;">
@@ -266,7 +270,7 @@
       <div class="modal-content" style="max-width: 600px; width: 90%; text-align: center;">
           <span class="close-modal" id="closeAvatarModal">&times;</span>
           <h2 style="color: #facc15;">تغيير الصورة الرمزية</h2>
-          <div class="upload-section" style="margin: 20px 0; padding: 20px; background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.2);">
+          <div class="upload-section" style="display:none;">
               <input type="file" id="customAvatarInput" accept="image/png, image/jpeg, image/jpg" style="display: none;">
               <button class="play-btn" id="triggerAvatarUpload" style="background: #00d2ff; color: #000; width: auto;"><i class="fa-solid fa-cloud-arrow-up"></i> رفع من الجهاز</button>
           </div>
@@ -275,12 +279,55 @@
       </div>
   </div>
 
+  <div id="storeModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 920px; width: 95%;">
+      <span class="close-modal" onclick="document.getElementById('storeModal').style.display='none'">✕</span>
+      <h2 style="color:#fff; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px; margin-bottom:16px;">🛒 المتجر</h2>
+      <div class="store-wrap">
+        <div class="store-tabs" id="storeTabs">
+          <button class="store-tab active" data-stab="help">المساعدات</button>
+          <button class="store-tab" data-stab="avatar">الأفاتارات</button>
+          <button class="store-tab" data-stab="theme">الثيمات</button>
+          <button class="store-tab" data-stab="emoji">الإيموجي</button>
+          <button class="store-tab" data-stab="chat_phrase">العبارات</button>
+        </div>
+        <div id="storeGrid" class="store-grid">
+          <div style="color:#888;text-align:center;padding:40px;">جاري التحميل...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="notificationsModal" class="modal" style="display: none;">
     <div class="modal-content" style="max-width: 400px;">
       <span class="close-modal" id="closeNotifications">&times;</span>
       <h2 style="color: #fff; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 20px;">التنبيهات</h2>
-      <div id="notificationsList" style="color: #aaa; text-align: center; padding: 20px 0;">
+      <div id="notificationsList" style="color: #aaa; text-align: center; padding: 20px 0; max-height: 55vh; overflow-y: auto;">
         لا توجد تنبيهات جديدة حالياً.
+      </div>
+    </div>
+  </div>
+
+  <!-- 👥 قسم الأصدقاء -->
+  <div id="friendsModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 440px;">
+      <span class="close-modal" id="closeFriends">&times;</span>
+      <h2 style="color: #fff; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; margin-bottom: 16px;">الأصدقاء</h2>
+      <div style="display:flex; gap:8px; margin-bottom:16px;">
+        <button class="friends-tab active" data-ftab="list" style="flex:1; padding:10px; border-radius:8px; border:none; cursor:pointer; background:linear-gradient(135deg,#667eea,#764ba2); color:#fff; font-family:inherit;">أصدقائي</button>
+        <button class="friends-tab" data-ftab="requests" style="flex:1; padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.15); cursor:pointer; background:rgba(255,255,255,0.05); color:#ccc; font-family:inherit; position:relative;">الطلبات <span id="reqCountBadge" style="display:none; background:#f44336; color:#fff; border-radius:50%; padding:1px 6px; font-size:11px; margin-right:4px;">0</span></button>
+        <button class="friends-tab" data-ftab="search" style="flex:1; padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.15); cursor:pointer; background:rgba(255,255,255,0.05); color:#ccc; font-family:inherit;">بحث</button>
+      </div>
+      <div id="friendsListPanel" style="min-height:120px; max-height:50vh; overflow-y:auto;"></div>
+      <div id="friendsRequestsPanel" style="min-height:120px; max-height:50vh; overflow-y:auto; display:none;"></div>
+      <div id="friendsSearchPanel" style="min-height:120px; display:none;">
+        <p style="color:#aaa; font-size:13px; margin-bottom:10px;">ابحث عن لاعب بمعرّفه (مثل PR-12345) لإرسال طلب صداقة.</p>
+        <div style="display:flex; gap:8px; margin-bottom:14px;">
+          <input id="friendSearchInput" type="text" placeholder="PR-12345" maxlength="12"
+            style="flex:1; padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.08); color:#fff; font-family:inherit; text-align:center; letter-spacing:1px;">
+          <button id="friendSearchBtn" style="padding:10px 18px; border-radius:8px; border:none; cursor:pointer; background:linear-gradient(135deg,#4a90e2,#357abd); color:#fff; font-family:inherit;">بحث</button>
+        </div>
+        <div id="friendSearchResult"></div>
       </div>
     </div>
   </div>
@@ -320,7 +367,14 @@
     <script src="js/socket.io.min.js" defer></script>
     <script src="js/purify.min.js" defer></script>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" defer></script>
+    <script src="js/quick_chat.js" defer></script>
     <script src="js/lobby.js" defer></script> 
+    <script src="js/friends_panel.js" defer></script>
+    <script src="js/player_profile.js" defer></script>
+    <script src="js/themes.js" defer></script>
+    <script src="js/store.js" defer></script>
+    <script src="js/loadout.js" defer></script>
     <script src="js/anti_cheat.js" defer></script>
 </body>
 </html>

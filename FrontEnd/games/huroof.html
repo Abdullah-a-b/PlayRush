@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="../css/games/huroof.css" />
     <link rel="stylesheet" href="../css/all.min.css">
     <link rel="stylesheet" href="../css/brand.css">
+    <link rel="stylesheet" href="../css/quick_chat.css">
+    <link rel="stylesheet" href="../css/theme_styles.css">
     <script src="../js/brand.js" defer></script>
 </head>
 <body>
@@ -126,6 +128,26 @@
         <i class="fa-solid fa-flag"></i>
     </button>
 
+    <!-- 🎯 خانات المساعدات (3 خانات) -->
+    <div id="helpSlots" class="help-slots">
+        <!-- تُملأ ديناميكياً من JS -->
+    </div>
+
+    <!-- 🛡️ نافذة اختيار سبب الإبلاغ (يفتحها زر "إبلاغ" في بروفايل الخصم) -->
+    <div id="reportModal" class="win-message-overlay">
+        <div class="win-message-box">
+            <h2 style="color: #ff9800;">الإبلاغ عن الخصم</h2>
+            <p>اختر سبب البلاغ — البلاغات الكاذبة تقلل من موثوقية حسابك.</p>
+            <div style="display:flex; flex-direction:column; gap:8px; margin:15px 0;">
+                <button class="win-message-button report-reason" data-reason="toxic_chat" style="background:#555;">سلوك مسيء في الشات</button>
+                <button class="win-message-button report-reason" data-reason="cheating" style="background:#555;">غش أو استخدام برامج</button>
+                <button class="win-message-button report-reason" data-reason="bad_name" style="background:#555;">اسم مخالف</button>
+                <button class="win-message-button report-reason" data-reason="griefing" style="background:#555;">تخريب اللعب المتعمد</button>
+            </div>
+            <button id="cancelReportBtn" class="win-message-button surrender-cancel">إلغاء</button>
+        </div>
+    </div>
+
     <div id="cheatWarningModal" class="cheat-modal">
         <div class="cheat-box">
             <i class="fa-solid fa-triangle-exclamation"></i>
@@ -200,12 +222,23 @@
         </div>
     </div>
 
+    <div class="ingame-quick-chat" id="ingameQuickChatWrap">
+        <button class="quick-chat-trigger ingame" id="gameQuickChatBtn" aria-label="رسالة جاهزة">
+            <i class="fa-solid fa-comment-dots"></i>
+        </button>
+    </div>
+
     <script src="../js/config.js" defer></script>
     <script src="../js/utils.js" defer></script>
     <script src="../js/socket.io.min.js" defer></script>
     <script src="../js/purify.min.js" defer></script>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+    <script src="../js/quick_chat.js" defer></script>
     <script src="../js/games/huroof.js" defer></script>
+    <script src="../js/themes.js" defer></script>
+    <script src="../js/games/huroof_emojis.js" defer></script>
     <script src="../js/anti_cheat.js" defer></script>
 </body>
 </html>

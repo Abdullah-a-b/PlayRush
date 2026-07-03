@@ -1,11 +1,21 @@
 // FrontEnd/js/config.js
 
+// 🌐 اكتشاف عنوان الخادم تلقائياً:
+// - من localhost/127.0.0.1 → خادم محلي على نفس الجهاز
+// - من عنوان شبكة (هاتف عبر WiFi مثل 192.168.x.x) → نفس العنوان + المنفذ 8000
+// هذا يتيح فتح المشروع من الهاتف بلا تعديل يدوي.
+const _host = window.location.hostname;
+const _isLocalHost = (_host === '127.0.0.1' || _host === 'localhost' || _host === '');
+const _backendOrigin = _isLocalHost
+    ? 'http://127.0.0.1:8000'
+    : `http://${_host}:8000`;   // نفس IP الذي فُتحت منه الصفحة (هاتف/شبكة محلية)
+
 const CONFIG = {
     // الدومين الخاص بالباك إند (API)
-    API_URL: "http://127.0.0.1:8000", 
-    
+    API_URL: _backendOrigin,
+
     // الدومين الخاص بالاتصال المباشر (Socket.io)
-    WS_URL: "http://127.0.0.1:8000"
+    WS_URL: _backendOrigin
 };
 
 // دالة مساعدة لتسهيل جلب التوكن من أي مكان

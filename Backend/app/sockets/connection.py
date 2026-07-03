@@ -2,7 +2,7 @@ import asyncio
 from app.sockets.state import connected_players, game_lobby_players, disconnect_timers
 from app.games.core_manager import leave_room, get_room_state, rooms
 from app.services.reward_service import record_match_result
-from app.sockets.lobby import return_players_to_lobby # نستوردها من ملف اللوبي
+from app.sockets.lobby import return_players_to_lobby, _public_players # نستوردها من ملف اللوبي
 
 def register_connection_events(sio):
     async def handle_disconnection_timeout(room_code, old_sid):
@@ -15,7 +15,12 @@ def register_connection_events(sio):
                     print(f"⏰ [Timeout] إعلان فوز الخصم في الغرفة {room_code}.")
                     winner_player = next((p for p in room['players'] if p.get('old_sid') != old_sid), None)
                     winner_color = winner_player['color'] if winner_player else 'green'
-                    record_match_result(winner_player, missing_player, room.get('game_mode', 'huroof'), extra={'reason': 'surrender'})
+                    from app.services.anti_collusion import get_reward_multiplier
+                    uids = list((room.get('user_ids') or {}).values())
+                    mult = get_reward_multiplier(uids[0], uids[1]) if len(uids) == 2 else 1.0
+                    record_match_result(winner_player, missing_player, room.get('game_mode', 'huroof'),
+                                        extra={'reason': 'surrender', 'collusion_multiplier': mult,
+                                               'friendly': room.get('type') == 'friendly'})
                     await sio.emit('show_winner', {'color': winner_color, 'reason': 'surrender'}, room=room_code)
                     room['state'] = 'finished'
                     if room.get('game_state'): room['game_state'].state_version += 9999
@@ -52,14 +57,20 @@ def register_connection_events(sio):
             print(f"🚫 [connect] rejected ip={client_ip} reason={rate_issue}")
             return False  # يرفض الاتصال
 
-        print(f"[+] اتصال جديد: {sid} from {client_ip}")
+
+        # 🛡️ نخزّن الـ IP مؤقتاً للاستخدام في منع اللعب ضد النفس/نفس المنطقة
+        from app.sockets.state import sid_ip_map
+        sid_ip_map[sid] = client_ip
 
     @sio.event
     async def disconnect(sid):
+        # 🛡️ تنظيف خريطة الـ IP
+        from app.sockets.state import sid_ip_map
+        sid_ip_map.pop(sid, None)
+
         if sid in connected_players:
-            print(f"[-] غادر {connected_players[sid]['name']} النظام")
             del connected_players[sid]
-            await sio.emit('update_online_players', list(connected_players.values()))
+            await sio.emit('update_online_players', _public_players())
         
         for game_mode, players in game_lobby_players.items():
             if sid in players:

@@ -71,3 +71,31 @@ class Question(Base):
     correct_answer = Column(String)             
     category = Column(String)                   
     extra_data = Column(String, nullable=True)
+
+
+class CareerPlayer(Base):
+    """لاعب كرة قدم للعبة 'مسيرة لاعب'.
+    clubs = JSON list مرتّبة من الأول للأخير:
+      [{"name": "سبورتنغ لشبونة", "logo": "sporting.png"}, ...]
+    accepted_answers = JSON list بصيغ الاسم المقبولة (للتحكيم المرن).
+    """
+    __tablename__ = "career_players"
+    id = Column(Integer, primary_key=True, index=True)
+    wikidata_id = Column(String, nullable=True, index=True)  # QID للتحديث الدوري بلا تكرار
+    name = Column(String, index=True)            # الاسم الرسمي (الإجابة الصحيحة)
+    status = Column(String, default="retired")   # "current" (حالي) | "retired" (معتزل)
+    clubs = Column(Text)                          # JSON list [{name, logo}, ...] بالترتيب
+    accepted_answers = Column(Text, nullable=True)  # JSON list صيغ مقبولة
+    difficulty = Column(String, default="medium") # easy | medium | hard (للتوازن لاحقاً)
+    nationality = Column(String, nullable=True)   # اختياري (تلميح مستقبلي)
+    active = Column(Boolean, default=True)        # هل يُستخدم في اللعب
+
+
+class CareerSeen(Base):
+    """شخصيات "مسيرة لاعب" التي شاهدها كل مستخدم (لمنع التكرار عبر المباريات).
+    الاختيار يستبعد ما شاهده أيّ من طرفَي المباراة (عدالة)."""
+    __tablename__ = "career_seen"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True)
+    player_id = Column(Integer, index=True)   # CareerPlayer.id
+    seen_at = Column(DateTime, default=datetime.datetime.utcnow)

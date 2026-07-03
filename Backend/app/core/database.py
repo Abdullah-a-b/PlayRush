@@ -62,4 +62,4 @@ def get_db():
         db.close()
 
 
-from app.models.user import User, GameStat, Friendship, Notification, Question
+from app.models.user import User, GameStat, Friendship, Notification, Question, CareerPlayer, CareerSeen

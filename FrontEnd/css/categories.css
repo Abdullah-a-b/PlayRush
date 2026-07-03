@@ -266,6 +266,8 @@
     padding: 20px;
     width: 90%;
     max-width: 700px;
+    max-height: 85vh; /* 🌟 لا يتجاوز الشاشة */
+    overflow-y: auto; /* 🌟 تمرير داخلي عند كثرة المحتوى */
     margin: 0 !important; /* 🌟 إلغاء النزول القديم للأسفل */
     box-shadow: 0 0 30px rgba(0,0,0,0.8);
     position: relative;
@@ -328,3 +330,117 @@
 @keyframes toastSlideDown { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 @keyframes toastFadeOut { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-20px); opacity: 0; } }
 @keyframes zoomIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+/* -------------------------------------------
+   تصميم متجاوب للجوال (Categories Mobile)
+------------------------------------------- */
+@media (max-width: 900px) {
+  /* العنوان الرئيسي أصغر */
+  .welcome-panel h1 { font-size: 20px !important; padding-right: 10px !important; }
+  .welcome-panel p { font-size: 13px; }
+
+  /* شبكة الألعاب: عمود واحد بحجم مناسب */
+  .games-grid { grid-template-columns: 1fr; gap: 16px; margin-top: 12px; }
+  .game-card { padding: 18px; }
+  .game-icon { font-size: 44px; margin-bottom: 10px; }
+  .game-card h3 { font-size: 18px; }
+  .game-card p { font-size: 13px; }
+
+  /* المحتوى الرئيسي يأخذ كامل العرض بهوامش صغيرة */
+  .main-content { padding: 12px; }
+
+  /* التنقّل السفلي: أيقونات فقط */
+  .main-navigation { flex-direction: row; padding: 5px; overflow-x: auto; }
+  .nav-btn { flex: 1; justify-content: center; min-width: auto; padding: 10px; font-size: 12px; }
+  .nav-btn span { display: none; }
+  .nav-btn i { font-size: 18px; }
+}
+
+@media (max-width: 480px) {
+  .welcome-panel h1 { font-size: 18px !important; }
+  .game-icon { font-size: 38px; }
+}
+
+/* -------------------------------------------
+   🛒 المتجر
+------------------------------------------- */
+.store-wrap { max-width: 900px; margin: 0 auto; padding: 10px; }
+.store-tabs {
+    display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;
+    border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px;
+}
+.store-tab {
+    padding: 8px 18px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.05); color: #ccc; cursor: pointer;
+    font-family: inherit; font-size: 14px; transition: all 0.2s;
+}
+.store-tab.active {
+    background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; border-color: transparent;
+}
+.store-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 16px;
+}
+.store-card {
+    background: linear-gradient(145deg, rgba(255,255,255,0.06), rgba(0,0,0,0.3));
+    border: 2px solid #444; border-radius: 14px; padding: 16px 12px;
+    text-align: center; position: relative; transition: transform 0.2s;
+}
+.store-card:hover { transform: translateY(-4px); }
+.store-rarity {
+    position: absolute; top: 8px; right: 8px; font-size: 9px; color: #fff;
+    padding: 2px 8px; border-radius: 10px; font-weight: bold;
+}
+.store-icon { font-size: 40px; margin: 8px 0; }
+.store-name { color: #fff; font-weight: bold; font-size: 15px; margin-bottom: 4px; }
+.store-desc { color: #999; font-size: 11px; margin-bottom: 8px; min-height: 28px; line-height: 1.4; }
+.store-owned-qty { color: #ff9800; font-size: 11px; margin-bottom: 6px; }
+.store-buy {
+    width: 100%; padding: 9px; border: none; border-radius: 9px; cursor: pointer;
+    font-family: inherit; font-size: 13px; font-weight: bold;
+    background: linear-gradient(135deg, #f39c12, #e67e22); color: #fff; transition: all 0.2s;
+}
+.store-buy:hover:not(:disabled) { filter: brightness(1.1); }
+.store-buy.free { background: linear-gradient(135deg, #2ecc71, #27ae60); }
+.store-buy.owned { background: rgba(46,204,113,0.2); color: #2ecc71; cursor: default; }
+.store-buy.locked { background: rgba(255,255,255,0.08); color: #888; cursor: not-allowed; }
+.store-buy.cant { background: rgba(231,76,60,0.2); color: #e57373; cursor: not-allowed; }
+
+@media (max-width: 600px) {
+    .store-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+    .store-tab { padding: 7px 12px; font-size: 12px; }
+    .store-icon { font-size: 32px; }
+}
+/* 🎨 خيارات الثيم في الإعدادات */
+.theme-option { background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 14px 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; font-family: inherit; transition: all 0.15s; }
+.theme-option:hover { border-color: #ffd700; transform: translateY(-2px); }
+.theme-option.active { border-color: #4a90e2; background: rgba(74,144,226,0.15); }
+
+/* 🎯 تجهيز المساعدات */
+.loadout-modal { display: none; position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,0.75); backdrop-filter: blur(4px); align-items: center; justify-content: center; }
+.loadout-box { background: linear-gradient(145deg, #1f1f3a, #15152b); border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; padding: 24px; width: 92%; max-width: 560px; max-height: 85vh; overflow-y: auto; position: relative; }
+.loadout-box h2 { color: #fff; margin-bottom: 6px; }
+.loadout-hint { color: #aaa; font-size: 13px; margin-bottom: 18px; }
+.loadout-subtitle { color: #ffd700; font-size: 15px; margin: 18px 0 10px; }
+.loadout-close { position: absolute; top: 16px; left: 20px; cursor: pointer; color: #aaa; font-size: 20px; }
+.loadout-slots { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.loadout-slot { width: 90px; height: 90px; border-radius: 14px; border: 2px dashed rgba(255,255,255,0.2); display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; background: rgba(255,255,255,0.03); }
+.loadout-slot.filled { border-style: solid; border-color: #4a90e2; background: rgba(74,144,226,0.12); }
+.loadout-slot .ls-icon { font-size: 28px; }
+.loadout-slot .ls-name { font-size: 10px; color: #fff; margin-top: 4px; text-align: center; }
+.loadout-slot .ls-remove { position: absolute; top: -6px; left: -6px; background: #e74c3c; color: #fff; width: 20px; height: 20px; border-radius: 50%; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.loadout-slot .ls-empty { font-size: 32px; color: rgba(255,255,255,0.3); }
+.loadout-available { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px,1fr)); gap: 10px; }
+.loadout-help { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 8px; cursor: pointer; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; font-family: inherit; transition: all 0.15s; }
+.loadout-help:hover:not(:disabled) { border-color: #ffd700; transform: translateY(-2px); }
+.loadout-help:disabled { opacity: 0.4; cursor: not-allowed; }
+.loadout-help.selected { border-color: #4a90e2; background: rgba(74,144,226,0.15); }
+.loadout-help .lh-icon { font-size: 26px; }
+.loadout-help .lh-name { font-size: 12px; color: #fff; }
+.loadout-help .lh-qty { font-size: 10px; color: #ff9800; }
+.loadout-save { margin-top: 20px; width: 100%; padding: 12px; border: none; border-radius: 10px; background: linear-gradient(135deg, #4a90e2, #357abd); color: #fff; font-family: inherit; font-weight: bold; font-size: 15px; cursor: pointer; }
+.loadout-save:hover { filter: brightness(1.1); }
+
+/* وسم نطاق العبارة في المتجر */
+.store-scope { font-size: 11px; padding: 3px 8px; border-radius: 10px; margin: 4px auto; display: inline-block; }
+.store-scope.game { background: rgba(155,89,182,0.2); color: #c39bd3; }
+.store-scope.general { background: rgba(52,152,219,0.2); color: #5dade2; }

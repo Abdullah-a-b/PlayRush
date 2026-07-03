@@ -64,3 +64,51 @@ async def cleanup_anticheat_data():
             logger.error(f"🔥 [cron] خطأ في تنظيف anti-cheat: {e}")
 
         await asyncio.sleep(30 * 60)
+
+async def cleanup_collusion_data():
+    """ينظف سجلات المواجهات القديمة (anti-collusion) كل ساعة."""
+    while True:
+        try:
+            from app.services.anti_collusion import cleanup_old_matchups
+            removed = cleanup_old_matchups()
+            if removed:
+                logger.info(f"🧹 [cron] anti-collusion: نظّف {removed} أزواج قديمة")
+        except Exception as e:
+            logger.error(f"🔥 [cron] خطأ في تنظيف anti-collusion: {e}")
+
+        await asyncio.sleep(60 * 60)
+
+async def release_expired_penalties():
+    """يفك الحظر المنتهي تلقائياً (نظام البلاغات) كل 10 دقائق."""
+    while True:
+        try:
+            from app.services.player_reports import release_expired_bans
+            released = release_expired_bans()
+        except Exception as e:
+            logger.error(f"🔥 [cron] خطأ في فك الحظر المنتهي: {e}")
+
+        await asyncio.sleep(10 * 60)
+
+async def cleanup_leaver_data_job():
+    """ينظّف بيانات عقوبات الانسحاب للمتعافين كل ساعة."""
+    while True:
+        try:
+            from app.services.leaver_penalty import cleanup_leaver_data
+            removed = cleanup_leaver_data()
+            if removed:
+                logger.info(f"🧹 [cron] leaver-penalty: نظّف {removed} لاعب متعافٍ")
+        except Exception as e:
+            logger.error(f"🔥 [cron] خطأ في تنظيف عقوبات الانسحاب: {e}")
+        await asyncio.sleep(60 * 60)
+
+async def cleanup_closed_tickets_job():
+    """يحذف تذاكر الدعم المغلقة الأقدم من 30 يوم (يمنع التكدّس) — كل 12 ساعة."""
+    while True:
+        try:
+            from app.services.support import cleanup_old_closed_tickets
+            removed = cleanup_old_closed_tickets(days=30)
+            if removed:
+                logger.info(f"🧹 [cron] support: حذف {removed} تذكرة مغلقة قديمة")
+        except Exception as e:
+            logger.error(f"🔥 [cron] خطأ في تنظيف التذاكر: {e}")
+        await asyncio.sleep(12 * 60 * 60)

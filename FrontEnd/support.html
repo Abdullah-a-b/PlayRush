@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>المساعدة والدعم - PlayRush</title>
+  <link rel="stylesheet" href="css/all.min.css">
+  <link rel="stylesheet" href="css/brand.css">
+  <script src="js/brand.js" defer></script>
+  <script src="js/config.js" defer></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; direction: rtl;
+      font-family: Tajawal, sans-serif;
+      background: #0d0d1a; color: #e4e4e7;
+      padding: 20px;
+    }
+    .support-wrap { max-width: 720px; margin: 0 auto; }
+    .support-header {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 24px;
+    }
+    .support-header h1 { font-size: 1.6rem; margin: 0; color: #fff; }
+    .support-header .back-link {
+      margin-inline-start: auto; color: #aaa; text-decoration: none;
+      font-size: 0.9rem; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .support-header .back-link:hover { color: #fff; }
+
+    .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .tab-btn {
+      padding: 10px 18px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.04); color: #ccc; cursor: pointer;
+      font-family: inherit; font-size: 0.95rem; transition: all 0.2s;
+    }
+    .tab-btn.active { background: linear-gradient(135deg,#667eea,#764ba2); color: #fff; border-color: transparent; }
+
+    .panel { display: none; }
+    .panel.active { display: block; animation: fadeIn 0.3s; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+    .card {
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px; padding: 18px; margin-bottom: 14px;
+    }
+
+    /* FAQ */
+    .faq-item { border-bottom: 1px solid rgba(255,255,255,0.07); }
+    .faq-item:last-child { border-bottom: none; }
+    .faq-q {
+      padding: 14px 4px; cursor: pointer; font-weight: 600; color: #fff;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .faq-q i { transition: transform 0.2s; color: #888; }
+    .faq-item.open .faq-q i { transform: rotate(180deg); }
+    .faq-a {
+      max-height: 0; overflow: hidden; transition: max-height 0.3s, padding 0.3s;
+      color: #bbb; line-height: 1.7; font-size: 0.92rem;
+    }
+    .faq-item.open .faq-a { max-height: 300px; padding: 0 4px 14px; }
+
+    /* Form */
+    label { display: block; margin: 14px 0 6px; color: #ccc; font-size: 0.9rem; }
+    select, input, textarea {
+      width: 100%; padding: 12px; border-radius: 10px;
+      background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.12);
+      color: #fff; font-family: inherit; font-size: 0.95rem;
+    }
+    textarea { min-height: 120px; resize: vertical; }
+    .submit-btn {
+      width: 100%; margin-top: 18px; padding: 14px;
+      border: none; border-radius: 10px; cursor: pointer;
+      background: linear-gradient(135deg,#667eea,#764ba2); color: #fff;
+      font-size: 1rem; font-family: inherit; font-weight: 600;
+      transition: transform 0.15s, filter 0.15s;
+    }
+    .submit-btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
+    .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    .form-msg { margin-top: 12px; padding: 12px; border-radius: 8px; font-size: 0.9rem; display: none; }
+    .form-msg.ok { background: rgba(76,175,80,0.12); color: #81c784; display: block; }
+    .form-msg.err { background: rgba(244,67,54,0.12); color: #e57373; display: block; }
+
+    /* Tickets */
+    .ticket {
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px; padding: 14px; margin-bottom: 12px;
+    }
+    .ticket-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .ticket-cat { font-size: 0.8rem; color: #999; }
+    .status-badge { font-size: 0.78rem; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+    .status-open { background: rgba(255,193,7,0.15); color: #ffc107; }
+    .status-in_progress { background: rgba(33,150,243,0.15); color: #2196f3; }
+    .status-closed { background: rgba(120,120,120,0.15); color: #999; }
+    .ticket-subject { color: #fff; font-weight: 600; margin-bottom: 4px; }
+    .ticket-msg { color: #bbb; font-size: 0.88rem; line-height: 1.5; }
+    .ticket-reply {
+      margin-top: 10px; padding: 10px; border-radius: 8px;
+      background: rgba(102,126,234,0.1); border-inline-start: 3px solid #667eea;
+      color: #ddd; font-size: 0.88rem;
+    }
+    .ticket-reply strong { color: #8c9eff; }
+
+    /* Contact */
+    .contact-link {
+      display: flex; align-items: center; gap: 10px; padding: 14px;
+      border-radius: 10px; text-decoration: none; color: #ddd; margin-bottom: 10px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+      transition: all 0.2s;
+    }
+    .contact-link:hover { background: rgba(255,255,255,0.08); transform: translateX(-4px); }
+    .empty { text-align: center; color: #888; padding: 30px; }
+  </style>
+</head>
+<body>
+  <div class="support-wrap">
+    <div class="support-header">
+      <i class="fa-solid fa-headset" style="font-size:1.6rem;color:#667eea;"></i>
+      <h1>المساعدة والدعم</h1>
+      <a href="lobby.html" class="back-link"><i class="fa-solid fa-arrow-right"></i> رجوع</a>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="faq"><i class="fa-solid fa-circle-question"></i> أسئلة شائعة</button>
+      <button class="tab-btn" data-tab="new"><i class="fa-solid fa-pen"></i> تذكرة جديدة</button>
+      <button class="tab-btn" data-tab="mine"><i class="fa-solid fa-ticket"></i> تذاكري</button>
+      <button class="tab-btn" data-tab="contact"><i class="fa-solid fa-comments"></i> تواصل</button>
+    </div>
+
+    <!-- FAQ -->
+    <div class="panel active" id="panel-faq">
+      <div class="card" id="faqList"></div>
+    </div>
+
+    <!-- New ticket -->
+    <div class="panel" id="panel-new">
+      <div class="card">
+        <label for="ticketCategory">نوع المشكلة</label>
+        <select id="ticketCategory">
+          <option value="technical">مشكلة تقنية</option>
+          <option value="ban_appeal">مراجعة حظر</option>
+          <option value="payment">مشكلة دفع</option>
+          <option value="suggestion">اقتراح</option>
+          <option value="other">أخرى</option>
+        </select>
+
+        <label for="ticketSubject">الموضوع (اختياري)</label>
+        <input type="text" id="ticketSubject" maxlength="150" placeholder="عنوان مختصر">
+
+        <label for="ticketMessage">وصف المشكلة</label>
+        <textarea id="ticketMessage" maxlength="2000" placeholder="اشرح مشكلتك بالتفصيل..."></textarea>
+
+        <button class="submit-btn" id="submitTicket">إرسال التذكرة</button>
+        <div class="form-msg" id="formMsg"></div>
+      </div>
+    </div>
+
+    <!-- My tickets -->
+    <div class="panel" id="panel-mine">
+      <div id="ticketsList"><div class="empty">جارٍ التحميل...</div></div>
+    </div>
+
+    <!-- Contact -->
+    <div class="panel" id="panel-contact">
+      <div class="card">
+        <p style="color:#bbb;margin-top:0;">نحن هنا لمساعدتك دائماً!</p>
+        <a href="mailto:playrush.online@gmail.com" class="contact-link">
+          <i class="fa-solid fa-envelope" style="color:#00d2ff;"></i> playrush.online@gmail.com
+        </a>
+        <a href="#" class="contact-link" id="xLink">
+          <i class="fa-brands fa-x-twitter"></i> حسابنا في X
+        </a>
+        <a href="#" class="contact-link" id="igLink">
+          <i class="fa-brands fa-instagram" style="color:#e1306c;"></i> إنستغرام
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/support.js" defer></script>
+</body>
+</html>

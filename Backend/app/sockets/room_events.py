@@ -38,28 +38,72 @@ def register_room_events(sio):
 
         # 🛡️ نجلب الاسم والأفاتار من DB إن وُجد التوكن — يمنع انتحال الهوية
         user, db = verify_socket_token(token)
+        joining_user_id = None
         if user:
             player_name = user.player_name or 'مجهول'
             avatar = get_clean_avatar(user.avatar, player_name)
+            joining_user_id = user.id
             db.close()
         else:
             player_name = str(data.get('player_name', 'مجهول'))[:30]
             avatar = get_clean_avatar(data.get('avatar', ''), player_name)
 
-        success, msg = join_room(room_code, sid, player_name, avatar)
+        success, msg = join_room(room_code, sid, player_name, avatar, user_id=joining_user_id)
+        print(f"🔌 [join_room] sid={sid} uid={joining_user_id} name={player_name!r} room={room_code} → success={success} msg={msg!r}")
         if not success:
             await sio.emit('error_message', msg, to=sid)
             return
 
+        # 🔧 نخزّن user_id مباشرة على اللاعب (مصدر حقيقة ثابت لا يتأثر بتغيّر sid)
+        room_obj = get_room_state(room_code)
+        if room_obj and joining_user_id:
+            for p in room_obj['players']:
+                if p['sid'] == sid:
+                    p['user_id'] = joining_user_id
+
+        # 🔧 لو اللاعب انتقل من اللوبي للعبة (sid تغيّر)، نحدّث الـ sid في حالة اللعبة
+        if msg == "reconnected":
+            if room_obj and room_obj.get('game_state'):
+                gs = room_obj['game_state']
+                for p in room_obj['players']:
+                    if p['sid'] == sid and p.get('old_sid') and p['old_sid'] != sid:
+                        old = p['old_sid']
+                        if getattr(gs, 'p1', None) == old: gs.p1 = sid
+                        if getattr(gs, 'p2', None) == old: gs.p2 = sid
+                        if getattr(gs, 'turn', None) == old: gs.turn = sid
+                        if getattr(gs, 'buzzed_player', None) == old: gs.buzzed_player = sid
+
         await sio.enter_room(sid, room_code)
+
         room = get_room_state(room_code)
+
+        # نضع علامة أن هذا اللاعب انضم فعلاً لغرفة socket.io
+        for p in room['players']:
+            if p.get('sid') == sid:
+                p['_socket_joined'] = True
+                break
+
         game_mode = room.get('game_mode', 'huroof')
+        # 🤝 نميّز مباراة الصديق (الودية) في الحالة المعروضة
+        _loc = f'playing_{game_mode}'
+        if room.get('type') == 'friendly':
+            _loc += '_friendly'
+        # نحافظ على user_id الموجود (لا نفقده عند تحديث الحالة)
+        _existing_uid = connected_players.get(sid, {}).get('user_id')
         connected_players[sid] = {
             'name': player_name,
             'avatar': avatar,
-            'location': f'playing_{game_mode}',
-            'token': token
+            'location': _loc,
+            'token': token,
+            'user_id': _existing_uid,
         }
+
+        # 🔄 نبثّ تحديث حالة المتصلين للجميع (ليظهر "يخوض معركة" لحظياً بلا تحديث الصفحة)
+        try:
+            from app.sockets.lobby import _public_players
+            await sio.emit('update_online_players', _public_players())
+        except Exception:
+            pass
 
         safe_room = {k: v for k, v in room.items() if k != 'game_state'}
         fetch_tasks = []
@@ -78,9 +122,106 @@ def register_room_events(sio):
             if p['stats']:
                 p['avatar'] = p['stats']['avatar']
 
+        # 🔒 نزيل الحقول الداخلية قبل الإرسال للعميل (user_id, old_sid)
+        safe_room['players'] = [
+            {k: v for k, v in p.items() if k not in ('user_id', 'old_sid', 'token')}
+            for p in safe_room['players']
+        ]
+
+        # 👥 نحسب علاقة هذا اللاعب بخصمه (لإظهار زر الصداقة/الحظر الصحيح)
+        # نقرأ user_id من كائن اللاعب مباشرةً (أوثق من user_ids map الذي قد يتأخّر بناؤه)
+        me_player  = next((p for p in room['players'] if p.get('sid') == sid), None)
+        opp_player = next((p for p in room['players'] if p.get('sid') != sid), None)
+        my_uid  = (me_player or {}).get('user_id') or (room.get('user_ids') or {}).get(sid)
+        opp_uid = (opp_player or {}).get('user_id')
+        relation = 'none'
+        if my_uid and opp_uid:
+            from app.services.friends import (are_friends, is_blocked_between,
+                                              i_blocked_them, get_pending_requests)
+            if is_blocked_between(my_uid, opp_uid):
+                relation = 'i_blocked' if i_blocked_them(my_uid, opp_uid) else 'they_blocked'
+            elif are_friends(my_uid, opp_uid):
+                relation = 'friends'
+            else:
+                # هل يوجد طلب معلّق؟ ومن أرسله؟
+                incoming = [r.get('id') for r in get_pending_requests(my_uid)]  # من أرسلوا لي
+                if opp_uid in incoming:
+                    relation = 'pending_incoming'   # الخصم أرسل لي → أقدر أقبل
+                else:
+                    outgoing = [r.get('id') for r in get_pending_requests(opp_uid)]  # من أرسلوا للخصم
+                    if my_uid in outgoing:
+                        relation = 'pending_outgoing'  # أنا أرسلت له → في انتظار الرد
+        safe_room['opponent_relation'] = relation
+        safe_room['opponent_user_id'] = opp_uid  # لقبول الطلب الوارد داخل المباراة
+
         await sio.emit('room_joined', safe_room, to=sid)
         await sio.emit('update_players_stats', safe_room['players'], room=room_code)
         await sio.emit('player_joined', {'player': player_name}, room=room_code)
+
+        # 🎮 بدء المباراة تلقائياً عند انضمام الطرفين فعلياً لغرفة socket.io
+        gs_check = room.get('game_state')
+        all_connected = all(p.get('_socket_joined') for p in room['players'])
+        both_present = len(room['players']) >= 2 and all_connected
+        print(f"🔎 [join_room] room={room_code} game_mode={room.get('game_mode')} "
+              f"players={[{'sid': p.get('sid'), 'uid': p.get('user_id'), 'name': p.get('name'), 'joined': p.get('_socket_joined')} for p in room['players']]} "
+              f"state={room['state']} both_present={both_present} has_gs={gs_check is not None}")
+        if both_present and room['state'] == 'starting' and gs_check:
+            room['state'] = 'playing'
+            # 🔧 نضمن أن p1/p2/turn تشير للـ sids الحالية (لا القديمة من اللوبي)
+            # نربط حسب اللون: green=host=p1, orange=guest=p2
+            green_player = next((p for p in room['players'] if p.get('color') == 'green'), None)
+            orange_player = next((p for p in room['players'] if p.get('color') == 'orange'), None)
+            if green_player and orange_player:
+                old_p1, old_p2 = gs_check.p1, gs_check.p2
+                sids_changed = (old_p1 != green_player['sid'] or old_p2 != orange_player['sid'])
+
+                # huroof يستخدم turn؛ ألعاب أخرى قد لا تملكه
+                turn_was_green = getattr(gs_check, 'turn', old_p1) == old_p1
+                gs_check.p1 = green_player['sid']
+                gs_check.p2 = orange_player['sid']
+                if hasattr(gs_check, 'turn'):
+                    gs_check.turn = gs_check.p1 if turn_was_green else gs_check.p2
+
+                # 🔧 نعيد بناء مفاتيح النقاط/السترايك فقط لو الـ sids تغيّرت (انتقال لوبي→لعبة)
+                # لو لم تتغيّر (اتصال مباشر) نبقيها كما هي لتجنّب مسح بيانات جارية
+                if sids_changed:
+                    if hasattr(gs_check, 'scores'):
+                        gs_check.scores = {gs_check.p1: 0, gs_check.p2: 0}
+                    if hasattr(gs_check, 'strikes'):
+                        gs_check.strikes = {gs_check.p1: 0, gs_check.p2: 0}
+                    if hasattr(gs_check, 'helps_used'):
+                        gs_check.helps_used = {gs_check.p1: set(), gs_check.p2: set()}
+
+                # 🔧 نبني user_ids من user_id المخزّن على كل لاعب (ثابت)
+                new_uids = {}
+                for p in room['players']:
+                    if p.get('user_id') is not None:
+                        new_uids[p['sid']] = p['user_id']
+                if new_uids:
+                    room['user_ids'] = new_uids
+
+            game_mode = room.get('game_mode', 'huroof')
+            if game_mode == 'huroof':
+                await sio.emit('huroof_board_init', {'board': gs_check.board}, room=room_code)
+                await sio.emit('huroof_turn_changed', {
+                    'turn_sid': gs_check.turn,
+                    'turn_color': ('green' if gs_check.turn == gs_check.p1 else 'orange')
+                }, room=room_code)
+            elif game_mode == 'career':
+                # ⚽ مسيرة لاعب: نُعلم الطرفين أن اللعبة جاهزة، ثم نبدأها
+                # gs_check.stage == 'waiting' يضمن أننا لا نبدأ مرتين
+                if gs_check.stage == 'waiting':
+                    print(f"⚽ [career] بدء المباراة | room={room_code} | players={len(room['players'])}")
+                    await sio.emit('career_ready', {'roomCode': room_code}, room=room_code)
+                    try:
+                        from app.games.career.events import trigger_career_start
+                        await trigger_career_start(sio, room_code)
+                        print(f"⚽ [career] trigger_career_start اكتمل | room={room_code}")
+                    except Exception as _e:
+                        print(f"❌ [career] خطأ بدء: {_e}")
+                        import traceback; traceback.print_exc()
+                else:
+                    print(f"⚽ [career] تجاهل trigger مكرر | room={room_code} | stage={gs_check.stage}")
 
         if msg in ["reconnected", "reconnected_ready"]:
             if room_code in disconnect_timers:
@@ -89,10 +230,16 @@ def register_room_events(sio):
                 await sio.emit('opponent_reconnected', {'msg': 'عاد الخصم للعب!'}, room=room_code)
 
             gs = room.get('game_state')
-            if gs and hasattr(gs, 'board'):
+            reconnect_game_mode = room.get('game_mode', 'huroof')
+
+            if reconnect_game_mode == 'huroof' and gs and hasattr(gs, 'board'):
+                # 🔁 إعادة إرسال حالة حروف للاعب العائد
                 await sio.emit('huroof_board_init', {'board': gs.board}, to=sid)
                 if room['state'] == 'playing':
-                    await sio.emit('huroof_turn_changed', {'turn_sid': gs.turn}, room=room_code)
+                    await sio.emit('huroof_turn_changed', {
+                        'turn_sid': gs.turn,
+                        'turn_color': ('green' if gs.turn == gs.p1 else 'orange')
+                    }, room=room_code)
                     if gs.stage != 'selecting' and gs.current_question and gs.active_hex:
                         await sio.emit('huroof_hex_locked', {
                             'hexIndex': gs.active_hex['index'],
@@ -103,6 +250,15 @@ def register_room_events(sio):
                             'round': 'r1',
                             'timer': 40
                         }, to=sid)
+
+            elif reconnect_game_mode == 'career' and gs:
+                # 🔁 إعادة إرسال حالة مسيرة لاعب للاعب العائد
+                if room['state'] == 'playing' and gs.stage != 'waiting':
+                    try:
+                        from app.games.career.events import send_career_reconnect_state
+                        await send_career_reconnect_state(sio, room_code, sid)
+                    except Exception as _re:
+                        print(f"⚠️ [career] خطأ reconnect state: {_re}")
 
     @sio.on('start_game')
     async def handle_start_game(sid, data):
