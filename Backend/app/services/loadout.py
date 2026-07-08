@@ -44,3 +44,57 @@ def set_loadout(user_id, slots, max_slots):
     except Exception as e:
         print(f"🔥 خطأ حفظ التشكيل: {e}"); return {"ok": False, "msg": "فشل الحفظ"}
     finally: db.close()
+
+
+# ===== لودآوت لكل لعبة (v2) — حروف يبقى على جدوله القديم =====
+def _init_v2():
+    from app.core.database import engine
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        conn.execute(text("""CREATE TABLE IF NOT EXISTS player_help_loadout_v2 (
+            user_id INTEGER NOT NULL, game VARCHAR(20) NOT NULL,
+            slots TEXT NOT NULL, PRIMARY KEY (user_id, game));"""))
+        conn.commit()
+
+
+def get_loadout_for_game(user_id, game, default_loadout):
+    if game == 'huroof':
+        return get_loadout(user_id)
+    from app.core.database import SessionLocal
+    from sqlalchemy import text
+    import json as _json
+    _init_v2()
+    db = SessionLocal()
+    try:
+        row = db.execute(text(
+            "SELECT slots FROM player_help_loadout_v2 WHERE user_id=:u AND game=:g"),
+            {"u": user_id, "g": game}).fetchone()
+        if row:
+            try:
+                return _json.loads(row[0])
+            except Exception:
+                pass
+        return list(default_loadout)
+    finally:
+        db.close()
+
+
+def set_loadout_for_game(user_id, game, slots, max_slots, valid_fn):
+    if game == 'huroof':
+        return set_loadout(user_id, slots, max_slots)
+    from app.core.database import SessionLocal
+    from sqlalchemy import text
+    import json as _json
+    _init_v2()
+    slots = [s for s in (slots or []) if valid_fn(s)][:max_slots]
+    slots = list(dict.fromkeys(slots))  # لا تكرار
+    db = SessionLocal()
+    try:
+        db.execute(text("""INSERT INTO player_help_loadout_v2 (user_id, game, slots)
+            VALUES (:u, :g, :s) ON CONFLICT (user_id, game)
+            DO UPDATE SET slots = :s"""),
+            {"u": user_id, "g": game, "s": _json.dumps(slots)})
+        db.commit()
+        return slots
+    finally:
+        db.close()

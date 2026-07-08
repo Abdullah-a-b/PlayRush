@@ -32,6 +32,35 @@
     return `../assets/avatars/${src}`;
   }
 
+  // ===== أنيميشن استعد 3-2-1 (موحّد) =====
+  function playReadyAnimation(cb) {
+    const overlay = document.getElementById('readyOverlay');
+    const countEl = document.getElementById('readyCount');
+    const titleEl = document.getElementById('readyTitle');
+    if (!overlay) { if (cb) cb(); return; }
+    overlay.style.display = 'flex';
+    if (titleEl) titleEl.textContent = 'استعد!';
+    let n = 3;
+    countEl.textContent = n;
+    countEl.className = 'ready-count pop';
+    const tick = () => {
+      n--;
+      if (n > 0) {
+        countEl.textContent = n;
+        countEl.className = 'ready-count';
+        void countEl.offsetWidth;
+        countEl.className = 'ready-count pop';
+        setTimeout(tick, 1000);
+      } else {
+        overlay.style.display = 'none';
+        if (cb) cb();
+      }
+    };
+    setTimeout(tick, 1000);
+  }
+  let _readyShown = false;
+
+
   function renderClubs(clubs, animateLast) {
     clubsStage.innerHTML = '';
     if (!clubs || !clubs.length) {
@@ -113,6 +142,7 @@
   socket.on('connect', () => {
     mySid = socket.id;
     socket.emit('join_room', { room_code: roomCode, token, player_name: playerName, avatar: playerAvatar });
+    socket.emit('get_help_loadout', { token, game: 'career' });
   });
 
   // بيانات اللاعبين (نفس بنية حروف بالضبط)
@@ -142,7 +172,10 @@
     }
   });
 
-  socket.on('career_ready', () => setStatus('بدأت المباراة!', ''));
+  socket.on('career_ready', () => {
+    setStatus('بدأت المباراة!', '');
+    if (!_readyShown) { _readyShown = true; playReadyAnimation(); }
+  });
 
   // ===== أحداث اللعبة =====
   socket.on('career_new_player', (d) => {
@@ -259,6 +292,7 @@
         game: 'career',
       });
     }
+  
   })();
 
   // فقاعة عائمة فوق أفاتار المُرسِل (نفس حروف)
@@ -295,6 +329,7 @@
     if (!ans) return;
     clearInterval(answerCountdown);
     answerBox.style.display = 'none';
+    setStatus('⏳ جارٍ التحقق…', 'reveal');
     socket.emit('career_submit_answer', { roomCode, answer: ans });
   }
   $('submitAnswerBtn').addEventListener('click', submitAnswer);
@@ -487,5 +522,98 @@
     showToast('👋 ' + (data.from || 'لاعب') + ' أرسل لك طلب صداقة');
     friendState = 'incoming';
     renderFriendButton();
+  });
+  // ============================================================
+  // 🎯 المساعدات (Play to Win) — شريط تحت يسار مثل حروف
+  // ============================================================
+  let helpsCatalog = {};
+  let myLoadout = [];
+  let myInventory = {};
+  let devModeHelps = false;
+  const helpsUsedLocal = new Set();
+
+  socket.on('help_loadout_data', (d) => {
+    if (!d || d.game !== 'career') return;
+    helpsCatalog = {};
+    (d.catalog || []).forEach((h) => { helpsCatalog[h.id] = h; });
+    myLoadout = d.loadout || d.defaultLoadout || [];
+    myInventory = d.inventory || {};
+    devModeHelps = !!d.devMode;
+    renderHelpsBar();
+  });
+
+  function renderHelpsBar() {
+    const bar = $('careerHelpsBar');
+    if (!bar) return;
+    bar.innerHTML = '';
+    myLoadout.forEach((hid) => {
+      const h = helpsCatalog[hid];
+      if (!h) return;
+      const qty = devModeHelps ? '∞' : String(myInventory[hid] || 0);
+      const depleted = (!devModeHelps && (myInventory[hid] || 0) <= 0);
+      const btn = document.createElement('button');
+      btn.className = 'career-help-btn'
+        + (helpsUsedLocal.has(hid) ? ' used' : '')
+        + (depleted ? ' depleted' : '');
+      btn.title = `${h.name}: ${h.desc}`;
+      btn.innerHTML = `<span class="hicon">${h.icon}</span>`
+        + `<span class="hqty">${qty}</span>`;
+      btn.addEventListener('click', () => {
+        if (helpsUsedLocal.has(hid) || depleted) return;
+        socket.emit('career_use_help', { roomCode, helpId: hid, token });
+      });
+      bar.appendChild(btn);
+    });
+  }
+
+  socket.on('career_help_result', (d) => {
+    if (!d) return;
+    if (!d.ok) { showToast('⚠️ ' + (d.msg || '')); return; }
+    helpsUsedLocal.add(d.helpId);
+    if (!devModeHelps && myInventory[d.helpId]) {
+      myInventory[d.helpId] = Math.max(0, myInventory[d.helpId] - 1);
+    }
+    renderHelpsBar();
+    if (d.info) setStatus(d.info, 'my-turn');
+    if (d.extendSeconds) {
+      // نمدّد عدّاد الكتابة المرئي
+      const t = parseInt(answerTimerEl.textContent || '0', 10) + d.extendSeconds;
+      answerTimerEl.textContent = t;
+      clearInterval(answerCountdown);
+      let left = t;
+      answerCountdown = setInterval(() => {
+        left--; answerTimerEl.textContent = Math.max(0, left);
+        if (left <= 0) { clearInterval(answerCountdown); answerBox.style.display = 'none'; }
+      }, 1000);
+    }
+  });
+  socket.on('career_opponent_used_help', (d) => {
+    if (d && d.name) showToast(`${d.icon || '🎯'} الخصم استخدم: ${d.name}`);
+  });
+  socket.on('career_shield_used', (d) => {
+    const who = d.sid === mySid ? 'درعك امتص الخطأ!' : 'درع الخصم امتص خطأه';
+    setStatus(`🛡️ ${who}`, 'reveal');
+  });
+  socket.on('career_double_lock_used', (d) => {
+    if (d.sid === mySid) showToast('🔒 قفل النقطتين: +2 بدل +1');
+  });
+  // ============================================================
+  // 🔌 أنيميشن انقطاع/عودة الخصم (موحّد — نسخة حروف)
+  // ============================================================
+  socket.on('opponent_disconnected', (data) => {
+    if (typeof Swal === 'undefined') return;
+    Swal.fire({
+      title: 'انقطع الاتصال!',
+      html: `<b>${(data && data.msg) || 'انقطع اتصال الخصم'}</b><br><small>أمام الخصم 30 ثانية للعودة قبل إعلان انسحابه.</small>`,
+      icon: 'warning',
+      allowOutsideClick: false,
+      showConfirmButton: false,
+      didOpen: () => Swal.showLoading(),
+    });
+  });
+  socket.on('opponent_reconnected', () => {
+    if (typeof Swal === 'undefined') return;
+    Swal.close();
+    Swal.fire({ title: 'عاد الخصم!', text: 'تمت استعادة الاتصال، استعد للمتابعة...', icon: 'success', timer: 2000, showConfirmButton: false });
   });
 })();

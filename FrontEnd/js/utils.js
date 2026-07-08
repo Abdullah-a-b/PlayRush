@@ -34,7 +34,7 @@ const COUNTRY_NAMES = {
 
 /** أسماء ألعاب المنصة */
 const GAME_THEMES = {
-    huroof: { title: 'حروف',        color: '#facc15', icon: '🔠' },
+    huroof: { title: 'خلية الحروف',   color: '#facc15', icon: '🔠' },
     bank:   { title: 'بنك',         color: '#00ff88', icon: '🏦' },
     career: { title: 'مسيرة لاعب', color: '#00d2ff', icon: '⚽' },
     whoami: { title: 'من أنا؟',     color: '#f43f5e', icon: '🕵️‍♂️' },

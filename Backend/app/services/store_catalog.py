@@ -17,6 +17,8 @@
 # ===== مساعدات حسب اللعبة =====
 # (نستورد التعريفات من helps.py للعبة حروف)
 from app.games.huroof.helps import HELP_CATALOG as HUROOF_HELPS
+from app.games.career.helps import HELP_CATALOG as CAREER_HELPS
+from app.games.bank.helps import HELP_CATALOG as BANK_HELPS
 
 # نبني عناصر متجر للمساعدات (كوينز فقط — لا جواهر، Play to Win)
 _RARITY_DEFAULTS = {
@@ -55,7 +57,8 @@ def _build_help_items(help_catalog: dict, game: str) -> list:
 # مساعدات كل لعبة (حالياً حروف فقط مفعّلة، البقية placeholders)
 HELPS_BY_GAME = {
     "huroof": _build_help_items(HUROOF_HELPS, "huroof"),
-    "bank": [],     # لعبة البنك — مساعداتها لاحقاً
+    "career": _build_help_items(CAREER_HELPS, "career"),
+    "bank": _build_help_items(BANK_HELPS, "bank"),     # لعبة البنك — مساعداتها لاحقاً
     "game3": [],
     "game4": [],
     "game5": [],
@@ -380,22 +383,65 @@ COSMETICS = [
     {"id": "chat_huroof_master", "category": "chat_phrase", "game": "huroof", "scope": "game",
      "name": "سيّد الحروف 🏆", "icon": "🔤", "rarity": "epic",
      "price": 700, "currency": "coins", "unlock_level": 9},
+
+    # ⚽ عبارات "مسيرة لاعب" (خاصة باللعبة)
+    {"id": "chat_career_easy", "category": "chat_phrase", "game": "career", "scope": "game",
+     "name": "لاعب سهل! ⚽", "icon": "⚽", "rarity": "common",
+     "price": 120, "currency": "coins", "unlock_level": 1},
+    {"id": "chat_career_who", "category": "chat_phrase", "game": "career", "scope": "game",
+     "name": "مين هذا؟ 🤔", "icon": "⚽", "rarity": "common",
+     "price": 150, "currency": "coins", "unlock_level": 2},
+    {"id": "chat_career_early", "category": "chat_phrase", "game": "career", "scope": "game",
+     "name": "عرفته من أول نادي! 🔥", "icon": "⚽", "rarity": "common",
+     "price": 150, "currency": "coins", "unlock_level": 2},
+    {"id": "chat_career_bell", "category": "chat_phrase", "game": "career", "scope": "game",
+     "name": "الجرس أسرع مني 😅", "icon": "🔔", "rarity": "rare",
+     "price": 300, "currency": "coins", "unlock_level": 4},
+    {"id": "chat_career_legend", "category": "chat_phrase", "game": "career", "scope": "game",
+     "name": "أسطورة! 👑", "icon": "⚽", "rarity": "rare",
+     "price": 350, "currency": "coins", "unlock_level": 5},
+    {"id": "chat_career_scout", "category": "chat_phrase", "game": "career", "scope": "game",
+     "name": "كشّاف محترف 🎯", "icon": "⚽", "rarity": "epic",
+     "price": 700, "currency": "coins", "unlock_level": 9},
+
+    # 🏦 عبارات "البنك" (خاصة باللعبة)
+    {"id": "chat_bank_bankit", "category": "chat_phrase", "game": "bank", "scope": "game",
+     "name": "بنّكها! 🏦", "icon": "🏦", "rarity": "common",
+     "price": 120, "currency": "coins", "unlock_level": 1},
+    {"id": "chat_bank_gamble", "category": "chat_phrase", "game": "bank", "scope": "game",
+     "name": "غامر شوي 😏", "icon": "🏦", "rarity": "common",
+     "price": 150, "currency": "coins", "unlock_level": 2},
+    {"id": "chat_bank_gone", "category": "chat_phrase", "game": "bank", "scope": "game",
+     "name": "راحت عليك 💸", "icon": "🏦", "rarity": "common",
+     "price": 150, "currency": "coins", "unlock_level": 2},
+    {"id": "chat_bank_protected", "category": "chat_phrase", "game": "bank", "scope": "game",
+     "name": "رصيدي محمي 🔒", "icon": "🏦", "rarity": "rare",
+     "price": 300, "currency": "coins", "unlock_level": 4},
+    {"id": "chat_bank_riskking", "category": "chat_phrase", "game": "bank", "scope": "game",
+     "name": "ملك المخاطرة 👑", "icon": "🏦", "rarity": "rare",
+     "price": 350, "currency": "coins", "unlock_level": 5},
+    {"id": "chat_bank_mybank", "category": "chat_phrase", "game": "bank", "scope": "game",
+     "name": "البنك بنكي 💰", "icon": "🏦", "rarity": "epic",
+     "price": 700, "currency": "coins", "unlock_level": 9},
 ]
 
 
 def _cosmetics_for_context(game: str = None):
     """التجميليات حسب السياق:
-    - في لوبي لعبة: التجميليات العامة + عبارات تلك اللعبة فقط
-    - في categories: التجميليات العامة فقط (لا عبارات خاصة بلعبة)"""
+    - في لوبي لعبة (game محدّد): العامة + عبارات تلك اللعبة فقط.
+    - في categories (game=None): كل شيء — العامة + عبارات كل الألعاب
+      (مع تمييز النطاق واللعبة في الواجهة)."""
     result = []
     for c in COSMETICS:
         if c.get("category") == "chat_phrase":
             scope = c.get("scope", "general")
             if scope == "general":
                 result.append(c)
-            elif scope == "game" and game and c.get("game") == game:
-                result.append(c)
-            # عبارات اللعبة لا تظهر في categories
+            elif scope == "game":
+                if game is None:
+                    result.append(c)  # categories: أظهر عبارات كل الألعاب
+                elif c.get("game") == game:
+                    result.append(c)  # لوبي: عبارات هذه اللعبة فقط
         else:
             result.append(c)
     return result
@@ -450,12 +496,32 @@ UPGRADES_BY_GAME = {
             "id": "slot4_huroof", "ref_id": "slot4_huroof",
             "category": "upgrade", "game": "huroof",
             "name": "الخانة الرابعة", "icon": "🎯",
-            "desc": "تفتح خانة مساعدة رابعة لتجهيز مساعدة إضافية قبل اللعب.",
+            "desc": "تفتح خانة مساعدة رابعة في لعبة خلية الحروف.",
             "rarity": "epic", "price": 2000, "currency": "coins",
             "unlock_level": 10,
         },
     ],
-    "bank": [], "game3": [], "game4": [], "game5": [],
+    "career": [
+        {
+            "id": "slot4_career", "ref_id": "slot4_career",
+            "category": "upgrade", "game": "career",
+            "name": "الخانة الرابعة", "icon": "🎯",
+            "desc": "تفتح خانة مساعدة رابعة في مسيرة لاعب.",
+            "rarity": "epic", "price": 2000, "currency": "coins",
+            "unlock_level": 10,
+        },
+    ],
+    "bank": [
+        {
+            "id": "slot4_bank", "ref_id": "slot4_bank",
+            "category": "upgrade", "game": "bank",
+            "name": "الخانة الرابعة", "icon": "🎯",
+            "desc": "تفتح خانة مساعدة رابعة في لعبة البنك.",
+            "rarity": "epic", "price": 2000, "currency": "coins",
+            "unlock_level": 10,
+        },
+    ],
+    "game3": [], "game4": [], "game5": [],
 }
 
 

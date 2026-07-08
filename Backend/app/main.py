@@ -39,6 +39,8 @@ from app.games.huroof import game as _huroof_game  # noqa: F401
 # ⚽ لعبة مسيرة لاعب (على نفس الإطار)
 from app.games.career.events import register_career_events
 from app.games.career import game as _career_game  # noqa: F401
+from app.games.bank.events import register_bank_events
+from app.games.bank import game as _bank_game  # noqa: F401
 from app.sockets.room_events import register_room_events
 from app.sockets.store import register_store_events
 
@@ -74,6 +76,7 @@ async def lifespan(app: FastAPI):
 
     # ✅ كل task محمية بـ supervisor — لا تموت بصمت
     from app.services.career_importer import career_auto_import_loop
+    from app.services.bank_importer import bank_auto_import_loop
     tasks = [
         _make_supervised_task(cleanup_abandoned_accounts, "cleanup_accounts", restart_delay=60),
         _make_supervised_task(cleanup_waiting_rooms,      "cleanup_rooms",    restart_delay=30),
@@ -84,6 +87,7 @@ async def lifespan(app: FastAPI):
         _make_supervised_task(cleanup_closed_tickets_job, "cleanup_tickets",  restart_delay=60),
         # ⚽ تجديد لاعبي "مسيرة لاعب" تلقائياً (Wikidata، دوري)
         _make_supervised_task(career_auto_import_loop,    "career_importer",  restart_delay=300),
+        _make_supervised_task(bank_auto_import_loop,      "bank_importer",    restart_delay=300),
     ]
 
     yield
@@ -313,6 +317,7 @@ register_room_events(sio)
 register_store_events(sio)
 register_huroof_events(sio)
 register_career_events(sio)
+register_bank_events(sio)
 register_telegram_events(sio)
 
 

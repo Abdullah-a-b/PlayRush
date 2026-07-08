@@ -87,8 +87,20 @@ class CareerPlayer(Base):
     clubs = Column(Text)                          # JSON list [{name, logo}, ...] بالترتيب
     accepted_answers = Column(Text, nullable=True)  # JSON list صيغ مقبولة
     difficulty = Column(String, default="medium") # easy | medium | hard (للتوازن لاحقاً)
-    nationality = Column(String, nullable=True)   # اختياري (تلميح مستقبلي)
+    nationality = Column(String, nullable=True)   # للمساعدة "كاشف الجنسية"
+    era = Column(String, nullable=True)           # فترة المسيرة "1995-2010" (كاشف الجيل)
+    position = Column(String, nullable=True)      # المركز بالعربية (كاشف المركز)
     active = Column(Boolean, default=True)        # هل يُستخدم في اللعب
+
+
+class BankSeen(Base):
+    """أسئلة البنك التي شاهدها كل مستخدم (لمنع التكرار عبر المباريات).
+    الفلترة شخصية: سؤال شفته أنا لا يظهر لي، لكن يظهر لخصمي إن لم يره."""
+    __tablename__ = "bank_seen"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True)
+    question_id = Column(String, index=True)   # id السؤال (q001...)
+    seen_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
 class CareerSeen(Base):

@@ -96,14 +96,22 @@
         iconHtml = item.icon || '🎁';
       }
 
-      // وسم نطاق العبارة (عامة أو خاصة باللعبة)
+      // وسم نطاق العبارة (عامة أو خاصة بلعبة معيّنة)
       let scopeLabel = '';
       if (item.category === 'chat_phrase') {
         if (item.scope === 'game') {
-          scopeLabel = `<div class="store-scope game">🎮 خاصة باللعبة</div>`;
+          const GAME_LABELS = { huroof: 'خلية الحروف', career: 'مسيرة لاعب', bank: 'البنك' };
+          const gname = GAME_LABELS[item.game] || item.game || 'لعبة';
+          scopeLabel = `<div class="store-scope game">🎮 دردشة ${_esc(gname)}</div>`;
         } else {
           scopeLabel = `<div class="store-scope general">💬 عامة (كل الدردشات)</div>`;
         }
+      }
+      // 🎯 وسم اللعبة للمساعدات/الترقيات (مهم في صفحة categories التي تجمع الكل)
+      if ((item.category === 'help' || item.category === 'upgrade') && item.game) {
+        const GAME_LABELS = { huroof: 'خلية الحروف', career: 'مسيرة لاعب', bank: 'البنك' };
+        const gname = GAME_LABELS[item.game] || item.game;
+        scopeLabel = `<div class="store-scope game">🎮 مساعدة ${_esc(gname)}</div>`;
       }
 
       return `

@@ -112,7 +112,7 @@ def save_match_sync(winner_player: dict, loser_player: dict, game_mode: str, ext
                         else:  # فوز 2-1
                             xp_gain = 30
                             coins_gain = 50
-                        rewards_log.append(f'فوز حروف (+{xp_gain}XP +{coins_gain}🪙)')
+                        rewards_log.append(f'فوز خلية الحروف (+{xp_gain}XP +{coins_gain}🪙)')
                     else:
                         if winner_rounds == 2 and loser_rounds == 1:  # خسارة 2-1
                             xp_gain = 25
@@ -120,7 +120,7 @@ def save_match_sync(winner_player: dict, loser_player: dict, game_mode: str, ext
                         else:  # خسارة 2-0
                             xp_gain = 15
                             coins_gain = 20
-                        rewards_log.append(f'خسارة حروف (+{xp_gain}XP +{coins_gain}🪙)')
+                        rewards_log.append(f'خسارة خلية الحروف (+{xp_gain}XP +{coins_gain}🪙)')
             else:
                 # 🎯 باقي المسابقات: فوز=50🪙/35XP، خسارة=20🪙/15XP
                 # الانسحاب: الفائز يأخذ مكافأة الفوز كاملة، المنسحب صفر
@@ -273,6 +273,7 @@ def fetch_stats_from_db(token: str, fallback_name: str, fallback_avatar: str):
             
         huroof_stat = db.query(GameStat).filter(GameStat.user_id == user.id, GameStat.game_mode == "huroof").first()
         career_stat = db.query(GameStat).filter(GameStat.user_id == user.id, GameStat.game_mode == "career").first()
+        bank_stat = db.query(GameStat).filter(GameStat.user_id == user.id, GameStat.game_mode == "bank").first()
         user_xp = user.xp if user.xp is not None else 0
         rank = db.query(User).filter(User.xp > user_xp).count() + 1
         flag_path = f"../../assets/flags/{user.country}.svg" if user.country else default_stats["flag"]
@@ -283,6 +284,7 @@ def fetch_stats_from_db(token: str, fallback_name: str, fallback_avatar: str):
             "flag": flag_path, "rank": rank,
             "huroof": {"wins": huroof_stat.wins if huroof_stat else 0, "losses": huroof_stat.losses if huroof_stat else 0, "total": huroof_stat.matches_played if huroof_stat else 0},
             "career": {"wins": career_stat.wins if career_stat else 0, "losses": career_stat.losses if career_stat else 0, "total": career_stat.matches_played if career_stat else 0},
+            "bank": {"wins": bank_stat.wins if bank_stat else 0, "losses": bank_stat.losses if bank_stat else 0, "total": bank_stat.matches_played if bank_stat else 0},
             "global": {"wins": user.wins or 0, "losses": user.losses or 0, "total": user.total_matches or 0}
         }
     except Exception as e:

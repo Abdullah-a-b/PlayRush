@@ -1,0 +1,243 @@
+/* 🏦 البنك */
+:root {
+  --bk-bg:#0d1117; --bk-panel:#161b22; --bk-gold:#f0b429;
+  --bk-green:#2ea043; --bk-red:#f85149; --bk-blue:#388bfd;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Tajawal','Segoe UI',sans-serif;
+  background:radial-gradient(circle at 50% 0%,#1a2332 0%,var(--bk-bg) 70%);
+  color:#fff;min-height:100vh;overflow-x:hidden}
+
+/* TOPBAR */
+.game-topbar{display:flex;align-items:center;justify-content:space-between;
+  padding:12px 20px;background:rgba(13,17,23,.8);backdrop-filter:blur(8px);
+  border-bottom:1px solid rgba(255,255,255,.07)}
+.player-profile{display:flex;align-items:center;gap:10px}
+.player-profile.right{flex-direction:row-reverse}
+.avatar-wrap img{width:44px;height:44px;border-radius:50%;border:2px solid rgba(255,255,255,.18);object-fit:cover}
+.profile-info{display:flex;flex-direction:column;align-items:flex-end}
+.profile-info.right-info{align-items:flex-start}
+.pname{font-weight:700;font-size:.9rem;color:#e0e0e0;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bank-safe{font-size:1.6rem;font-weight:900;color:var(--bk-gold);line-height:1}
+.game-center-head{text-align:center}
+.game-title{font-size:1.15rem;font-weight:800}
+.round-badges{display:flex;gap:8px;justify-content:center;margin-top:6px}
+.round-dot{width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.12);
+  display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;color:#888;transition:all .3s}
+.round-dot.done{background:var(--bk-green);color:#fff}
+.round-dot.active{background:var(--bk-gold);color:#1a1a2e;box-shadow:0 0 10px var(--bk-gold);transform:scale(1.15)}
+
+/* اللعب */
+.bank-main{max-width:760px;margin:0 auto;padding:24px 16px;display:flex;flex-direction:column;align-items:center;gap:18px}
+.turn-banner{padding:9px 26px;border-radius:30px;font-weight:800;font-size:1.05rem;background:rgba(255,255,255,.08)}
+.turn-banner.mine{background:rgba(240,180,41,.18);color:var(--bk-gold);animation:pulseGold 1.5s infinite}
+.turn-banner.theirs{background:rgba(56,139,253,.15);color:var(--bk-blue)}
+@keyframes pulseGold{50%{box-shadow:0 0 20px rgba(240,180,41,.4)}}
+
+.temp-timer-row{display:flex;align-items:center;gap:24px;width:100%;justify-content:center}
+.temp-balance{display:flex;flex-direction:column;align-items:center;background:rgba(240,180,41,.1);
+  padding:10px 24px;border-radius:14px;border:1px solid rgba(240,180,41,.25)}
+.tb-label{font-size:.78rem;color:#aaa}
+.tb-value{font-size:2rem;font-weight:900;color:var(--bk-gold);line-height:1.1}
+.turn-timer{width:64px;height:64px;border-radius:50%;background:var(--bk-panel);
+  border:3px solid var(--bk-blue);display:flex;align-items:center;justify-content:center;
+  font-size:1.6rem;font-weight:900;transition:all .3s}
+.turn-timer.low{border-color:var(--bk-red);color:var(--bk-red);animation:pulseRed .5s infinite}
+@keyframes pulseRed{50%{transform:scale(1.1)}}
+
+.question-card{width:100%;min-height:120px;background:linear-gradient(150deg,#1c2432,#161b22);
+  border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:20px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  box-shadow:0 6px 20px rgba(0,0,0,.3)}
+.q-meta{font-size:.82rem;color:#999;display:flex;gap:10px}
+.q-cat{background:rgba(255,255,255,.08);padding:2px 10px;border-radius:10px}
+.q-text{font-size:1.3rem;font-weight:700;text-align:center;line-height:1.5}
+
+.answer-box{display:flex;align-items:center;gap:10px;width:100%;max-width:460px;background:#0d1117;
+  border:2px solid var(--bk-gold);border-radius:14px;padding:9px 13px;box-shadow:0 10px 28px rgba(0,0,0,.5)}
+.answer-timer{min-width:40px;height:40px;border-radius:50%;background:var(--bk-gold);color:#1a1a2e;
+  font-weight:800;font-size:1.15rem;display:flex;align-items:center;justify-content:center}
+.answer-box input{flex:1;background:transparent;border:none;outline:none;color:#fff;font-family:inherit;font-size:1.1rem;text-align:right}
+.answer-box button{background:var(--bk-gold);border:none;color:#1a1a2e;width:42px;height:42px;border-radius:10px;cursor:pointer;font-size:1.1rem}
+
+.action-buttons{display:flex;gap:14px}
+.btn-answer,.btn-bank{border:none;border-radius:14px;padding:14px 32px;cursor:pointer;
+  font-family:inherit;font-weight:800;font-size:1.1rem;color:#fff;transition:transform .12s;display:flex;align-items:center;gap:8px}
+.btn-answer{background:linear-gradient(135deg,#388bfd,#1f6feb)}
+.btn-bank{background:linear-gradient(135deg,#f0b429,#d29e0a);color:#1a1a2e}
+.btn-answer:not(:disabled):hover,.btn-bank:hover{transform:scale(1.06)}
+.btn-answer:disabled{opacity:.4;cursor:not-allowed}
+
+.bank-status-msg{min-height:26px;font-size:1.05rem;font-weight:700;text-align:center}
+.bank-status-msg.correct{color:var(--bk-green)}
+.bank-status-msg.wrong{color:var(--bk-red)}
+.bank-status-msg.bank{color:var(--bk-gold)}
+.bank-status-msg.opp{color:var(--bk-blue)}
+.bank-status-msg.reveal{color:#ccc}
+
+/* أنيميشن استعد 3-2-1 */
+.ready-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;
+  align-items:center;justify-content:center;z-index:6000}
+.ready-content{text-align:center}
+.ready-title{font-size:2rem;font-weight:800;color:var(--bk-gold);margin-bottom:20px;animation:fadeInUp .4s}
+.ready-count{font-size:7rem;font-weight:900;color:#fff;line-height:1}
+.ready-count.pop{animation:countPop .9s ease-out}
+@keyframes countPop{0%{transform:scale(2.5);opacity:0}30%{transform:scale(1);opacity:1}100%{transform:scale(.8);opacity:.6}}
+@keyframes fadeInUp{from{transform:translateY(15px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* أزرار ثابتة */
+.surrender-btn{position:fixed;bottom:20px;right:20px;width:46px;height:46px;border-radius:50%;border:none;
+  background:rgba(248,81,73,.18);color:var(--bk-red);cursor:pointer;font-size:1.15rem;z-index:800}
+.surrender-btn:hover{background:rgba(248,81,73,.38)}
+.ingame-quick-chat{position:fixed;top:90px;left:20px;z-index:800}
+.quick-chat-trigger.ingame{width:46px;height:46px;border-radius:50%;border:none;background:var(--bk-blue);color:#fff;cursor:pointer;font-size:1.15rem}
+
+/* Overlays */
+.win-message-overlay{position:fixed;inset:0;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;z-index:5000}
+.win-message-box{background:var(--bk-panel);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:32px;text-align:center;max-width:380px;width:90%}
+.win-message-icon{font-size:3.8rem;margin-bottom:10px}
+.win-message-box h2{font-size:1.7rem;margin-bottom:6px}
+.win-message-box p{color:#bbb;margin-bottom:18px}
+.win-message-button{background:var(--bk-gold);border:none;color:#1a1a2e;font-family:inherit;font-weight:700;padding:11px 26px;border-radius:11px;cursor:pointer;font-size:.95rem;margin:4px}
+.surrender-confirm{background:var(--bk-red);color:#fff}
+.surrender-cancel{background:rgba(255,255,255,.1);color:#fff}
+
+@media (max-width:600px){
+  .q-text{font-size:1.1rem}
+  .bank-safe{font-size:1.3rem}
+  .btn-answer,.btn-bank{padding:12px 24px;font-size:1rem}
+  .ready-count{font-size:5rem}
+}
+/* 👁 بطاقة بروفايل قابلة للنقر (نسخة حروف بالضبط) */
+.player-profile {
+  cursor: pointer;
+  transition: transform .2s, filter .2s, background .2s, border-color .2s;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 14px;
+  padding: 6px 12px;
+  position: relative;
+}
+.player-profile:hover {
+  transform: scale(1.05);
+  filter: brightness(1.2);
+  background: rgba(255,255,255,.12);
+  border-color: rgba(245,166,35,.5);
+}
+.player-profile.right:hover { border-color: rgba(231,76,60,.55); }
+.player-profile::after {
+  content: '\f06e';
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  font-size: 10px;
+  color: rgba(255,255,255,.35);
+  position: absolute;
+  bottom: 4px;
+  inset-inline-end: 8px;
+  transition: color .2s;
+}
+.player-profile:hover::after { color: rgba(255,255,255,.85); }
+@keyframes profileHintPulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(245,166,35,0); }
+  50%     { box-shadow: 0 0 12px 2px rgba(245,166,35,.35); }
+}
+.player-profile.hint-pulse { animation: profileHintPulse 1.2s ease-in-out 2; }
+
+/* بطاقات إحصائيات إضافية للمودال (نسخة حروف) */
+.stats-container { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.modal-flag { width: 26px; border-radius: 3px; margin-top: 4px; }
+.modal-rank { font-size: .85rem; color: #ccc; margin-top: 6px; }
+.modal-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.action-btn {
+  border: none; border-radius: 10px; padding: 9px 14px; cursor: pointer;
+  font-family: inherit; font-weight: 700; font-size: .82rem; color: #fff;
+  background: linear-gradient(135deg,#3498db,#2980b9); transition: transform .15s;
+}
+.action-btn:hover { transform: scale(1.05); }
+.action-btn.block-user { background: linear-gradient(135deg,#7f8c8d,#616a6b); }
+.action-btn.report-user { background: linear-gradient(135deg,#e67e22,#d35400); }
+
+/* 🎯 شريط المساعدات — تحت يسار */
+.career-helps-bar { position: fixed; bottom: 80px; left: 20px; z-index: 800;
+  display: flex; flex-direction: column; gap: 8px; }
+.career-help-btn { width: 46px; height: 46px; border-radius: 12px; border: 1px solid rgba(255,255,255,.15);
+  background: rgba(30,30,50,.85); cursor: pointer; transition: transform .15s, border-color .2s; }
+.career-help-btn .hicon { font-size: 1.3rem; }
+.career-help-btn:hover:not(.used) { transform: scale(1.1); border-color: var(--bk-gold); }
+.career-help-btn.used { opacity: .35; cursor: not-allowed; filter: grayscale(1); }
+
+/* عدّاد المخزون على زر المساعدة */
+.career-help-btn { position: relative; }
+.career-help-btn .hqty {
+  position: absolute; bottom: -4px; inset-inline-end: -4px;
+  min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px;
+  background: var(--bk-gold); color: #1a1a2e; font-size: .72rem; font-weight: 800;
+  display: flex; align-items: center; justify-content: center; line-height: 1;
+  border: 2px solid var(--bk-bg);
+}
+.career-help-btn.depleted { opacity: .4; cursor: not-allowed; filter: grayscale(1); }
+.career-help-btn.depleted .hqty { background: #777; }
+
+
+/* المودال والإحصائيات */
+.profile-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;z-index:5500}
+.profile-modal-box{background:var(--bk-panel);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:28px 24px;max-width:380px;width:92%;position:relative}
+.close-modal-btn{position:absolute;top:14px;left:14px;background:transparent;border:none;color:#888;font-size:1.2rem;cursor:pointer}
+.profile-header{text-align:center;margin-bottom:18px}
+.profile-header h2{font-size:1.2rem}
+.modal-avatar{width:70px;height:70px;border-radius:50%;border:2px solid rgba(255,255,255,.2);margin-bottom:8px}
+.stats-container { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.stats-card{background:rgba(255,255,255,.05);border-radius:12px;padding:14px}
+.stats-card h3{font-size:.88rem;color:#aaa;margin-bottom:12px;text-align:center}
+.stats-grid{display:flex;gap:12px;justify-content:center}
+.stat-item{text-align:center}
+.stat-value{display:block;font-size:1.4rem;font-weight:800}
+.stat-value.win{color:var(--bk-green)}
+.stat-value.loss{color:var(--bk-red)}
+.stat-value.total{color:var(--bk-blue)}
+.stat-label{font-size:.78rem;color:#888}
+.modal-flag { width: 26px; border-radius: 3px; margin-top: 4px; }
+.modal-rank { font-size: .85rem; color: #ccc; margin-top: 6px; }
+.modal-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.action-btn {
+  border: none; border-radius: 10px; padding: 9px 14px; cursor: pointer;
+  font-family: inherit; font-weight: 700; font-size: .82rem; color: #fff;
+  background: linear-gradient(135deg,#3498db,#2980b9); transition: transform .15s;
+}
+.action-btn:hover { transform: scale(1.05); }
+.action-btn.block-user { background: linear-gradient(135deg,#7f8c8d,#616a6b); }
+.action-btn.report-user { background: linear-gradient(135deg,#e67e22,#d35400); }
+/* 😄 الإيموجيات المتحركة (نفس حروف) */
+.qc-emoji-row { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 4px; }
+.qc-emoji-btn { background: transparent; border: none; font-size: 26px; cursor: pointer; padding: 4px 6px; border-radius: 8px; transition: all 0.15s; }
+.qc-emoji-btn:hover { background: rgba(255,255,255,0.12); transform: scale(1.2); }
+.emoji-bubble { position: fixed; z-index: 3000; pointer-events: none; opacity: 0; transform: scale(0.5) translateY(10px); transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.emoji-bubble.show { opacity: 1; transform: scale(1) translateY(0); }
+.emoji-fallback { font-size: 60px; display: inline-block; animation: emojiFloat 2s ease-in-out infinite; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4)); }
+@keyframes emojiFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
+/* نشاط الخصم (متزامن) */
+.opp-activity{position:fixed;top:110px;right:20px;background:rgba(56,139,253,.15);
+  color:var(--bk-blue);padding:8px 16px;border-radius:20px;font-size:.85rem;font-weight:700;
+  opacity:0;transition:opacity .3s;pointer-events:none;z-index:700}
+.opp-activity.show{opacity:1}
+
+/* نبضة قرار البنك */
+.btn-bank.pulse{animation:bankPulse .6s ease-in-out 3}
+@keyframes bankPulse{50%{transform:scale(1.15);box-shadow:0 0 24px rgba(240,180,41,.7)}}
+
+/* 🎯 شريط المساعدات — تحت يسار */
+.bank-helps-bar { position: fixed; bottom: 80px; left: 20px; z-index: 800;
+  display: flex; flex-direction: column; gap: 8px; }
+.bank-help-btn { width: 46px; height: 46px; border-radius: 12px; border: 1px solid rgba(255,255,255,.15);
+  background: rgba(22,27,34,.9); cursor: pointer; transition: transform .15s, border-color .2s; position: relative; }
+.bank-help-btn .hicon { font-size: 1.3rem; }
+.bank-help-btn:hover:not(.used):not(.depleted) { transform: scale(1.1); border-color: var(--bk-gold); }
+.bank-help-btn.used { opacity: .35; cursor: not-allowed; filter: grayscale(1); }
+.bank-help-btn.depleted { opacity: .4; cursor: not-allowed; filter: grayscale(1); }
+.bank-help-btn .hqty { position: absolute; bottom: -4px; inset-inline-end: -4px;
+  min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px;
+  background: var(--bk-gold); color: #1a1a2e; font-size: .72rem; font-weight: 800;
+  display: flex; align-items: center; justify-content: center; line-height: 1;
+  border: 2px solid var(--bk-bg); }
+.bank-help-btn.depleted .hqty { background: #777; }

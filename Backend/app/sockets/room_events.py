@@ -223,6 +223,18 @@ def register_room_events(sio):
                 else:
                     print(f"⚽ [career] تجاهل trigger مكرر | room={room_code} | stage={gs_check.stage}")
 
+            elif game_mode == 'bank':
+                # 🏦 البنك: نُعلم الطرفين ثم نبدأ أول دور
+                if gs_check.stage == 'waiting':
+                    print(f"🏦 [bank] بدء المباراة | room={room_code}")
+                    await sio.emit('bank_ready', {'roomCode': room_code}, room=room_code)
+                    try:
+                        from app.games.bank.events import trigger_bank_start
+                        await trigger_bank_start(sio, room_code)
+                    except Exception as _e:
+                        print(f"❌ [bank] خطأ بدء: {_e}")
+                        import traceback; traceback.print_exc()
+
         if msg in ["reconnected", "reconnected_ready"]:
             if room_code in disconnect_timers:
                 disconnect_timers[room_code].cancel()
@@ -259,6 +271,32 @@ def register_room_events(sio):
                         await send_career_reconnect_state(sio, room_code, sid)
                     except Exception as _re:
                         print(f"⚠️ [career] خطأ reconnect state: {_re}")
+
+            elif reconnect_game_mode == 'bank' and gs:
+                # 🔁 إعادة إرسال حالة البنك للاعب العائد
+                if room['state'] == 'playing' and gs.stage != 'waiting':
+                    try:
+                        # 🔁 لو عاد بـsid جديد: نعيد ربط حالته أولاً
+                        room_sids = {p['sid'] for p in room['players']}
+                        for old in (gs.p1, gs.p2):
+                            if old not in room_sids:
+                                gs.remap_sid(old, sid)
+                                break
+                        ps = gs.pstate.get(sid, {})
+                        await sio.emit('bank_state', {
+                            'safe': gs.safe, 'temp': {sid: ps.get('temp', 0)},
+                            'round': gs.round, 'totalRounds': gs.TOTAL_ROUNDS,
+                            'stage': gs.stage,
+                        }, to=sid)
+                        q = ps.get('question')
+                        if q and gs.stage == 'playing' and not ps.get('done'):
+                            await sio.emit('bank_question', {
+                                'id': q['id'], 'text': q['q'],
+                                'category': q.get('cat', ''),
+                                'remaining': round(gs.remaining(sid), 1),
+                            }, to=sid)
+                    except Exception as _re:
+                        print(f"⚠️ [bank] خطأ reconnect state: {_re}")
 
     @sio.on('start_game')
     async def handle_start_game(sid, data):

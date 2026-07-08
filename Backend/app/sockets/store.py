@@ -157,8 +157,48 @@ def register_store_events(sio):
                     'ownsFourth': owns_fourth, 'fourthSlotLevel': FOURTH_SLOT_LEVEL,
                     'level': level, 'defaultLoadout': DEFAULT_LOADOUT,
                 }, to=sid)
+            elif game == 'career':
+                from app.games.career.helps import (get_enabled_catalog as c_catalog,
+                    get_slots_for_player as c_slots, FOURTH_SLOT_LEVEL as C_FSL,
+                    FOURTH_SLOT_ITEM as C_FSI, DEFAULT_LOADOUT as C_DEFAULTS)
+                from app.services.help_inventory import grant_career_starter
+                from app.services.loadout import get_loadout_for_game
+                from app.services.cosmetics import owns_cosmetic
+                from app.games.core_manager import _allow_same_ip
+                grant_career_starter(user.id)  # هدية أول مرة: 3 عادية ×1
+                owns4 = owns_cosmetic(user.id, C_FSI)
+                await sio.emit('help_loadout_data', {
+                    'game': game,
+                    'loadout': get_loadout_for_game(user.id, 'career', C_DEFAULTS),
+                    'inventory': get_inventory(user.id),
+                    'catalog': c_catalog(), 'slots': c_slots(level, owns4),
+                    'ownsFourth': owns4, 'fourthSlotLevel': C_FSL,
+                    'level': level, 'defaultLoadout': C_DEFAULTS,
+                    'devMode': _allow_same_ip(),
+                }, to=sid)
+            elif game == 'bank':
+                from app.games.bank.helps import (get_enabled_catalog as b_catalog,
+                    get_slots_for_player as b_slots, FOURTH_SLOT_LEVEL as B_FSL,
+                    FOURTH_SLOT_ITEM as B_FSI, DEFAULT_LOADOUT as B_DEFAULTS,
+                    CONFLICTS as B_CONFLICTS)
+                from app.services.help_inventory import grant_bank_starter
+                from app.services.loadout import get_loadout_for_game
+                from app.services.cosmetics import owns_cosmetic
+                from app.games.core_manager import _allow_same_ip
+                grant_bank_starter(user.id)  # هدية أول مرة: 3 عادية ×1
+                owns4b = owns_cosmetic(user.id, B_FSI)
+                await sio.emit('help_loadout_data', {
+                    'game': game,
+                    'loadout': get_loadout_for_game(user.id, 'bank', B_DEFAULTS),
+                    'inventory': get_inventory(user.id),
+                    'catalog': b_catalog(), 'slots': b_slots(level, owns4b),
+                    'ownsFourth': owns4b, 'fourthSlotLevel': B_FSL,
+                    'conflicts': B_CONFLICTS,
+                    'level': level, 'defaultLoadout': B_DEFAULTS,
+                    'devMode': _allow_same_ip(),
+                }, to=sid)
             else:
-                # ألعاب أخرى: لا مساعدات بعد (كتالوج فارغ — يصلح البق)
+                # ألعاب أخرى: لا مساعدات بعد (كتالوج فارغ)
                 await sio.emit('help_loadout_data', {
                     'game': game,
                     'loadout': [], 'inventory': get_inventory(user.id),
@@ -175,11 +215,46 @@ def register_store_events(sio):
         user, db = verify_socket_token(token)
         if not user: return
         try:
-            from app.services.loadout import set_loadout
             from app.services.help_inventory import get_inventory
-            from app.games.huroof.helps import get_slots_for_player, DEFAULT_LOADOUT
+            game = (data or {}).get('game') or 'huroof'
             slots = (data or {}).get('slots') or []
             inv = get_inventory(user.id)
+            if game == 'career':
+                from app.games.career.helps import (get_slots_for_player as c_slots,
+                    DEFAULT_LOADOUT as C_DEFAULTS, is_valid_help as c_valid,
+                    FOURTH_SLOT_ITEM as C_FSI)
+                from app.services.loadout import set_loadout_for_game
+                from app.services.cosmetics import owns_cosmetic
+                for s in slots:
+                    if s not in inv and s not in C_DEFAULTS:
+                        await sio.emit('help_loadout_result', {'ok': False, 'msg': 'لا تملك إحدى المساعدات'}, to=sid); return
+                max_slots = c_slots(user.level or 0, owns_cosmetic(user.id, C_FSI))
+                await sio.emit('help_loadout_result',
+                    set_loadout_for_game(user.id, 'career', slots, max_slots, c_valid), to=sid)
+                return
+            if game == 'bank':
+                from app.games.bank.helps import (get_slots_for_player as b_slots,
+                    DEFAULT_LOADOUT as B_DEFAULTS, is_valid_help as b_valid,
+                    FOURTH_SLOT_ITEM as B_FSI, loadout_conflict, get_help as b_get)
+                from app.services.loadout import set_loadout_for_game
+                from app.services.cosmetics import owns_cosmetic
+                for s in slots:
+                    if s not in inv and s not in B_DEFAULTS:
+                        await sio.emit('help_loadout_result', {'ok': False, 'msg': 'لا تملك إحدى المساعدات'}, to=sid); return
+                # ⚔️ تعارض: درع الرصيد × فرصة ثانية
+                conf = loadout_conflict(slots)
+                if conf:
+                    n1 = (b_get(conf[0]) or {}).get('name', conf[0])
+                    n2 = (b_get(conf[1]) or {}).get('name', conf[1])
+                    await sio.emit('help_loadout_result',
+                        {'ok': False, 'msg': f'لا يمكن تجهيز "{n1}" مع "{n2}" معاً'}, to=sid)
+                    return
+                max_slots = b_slots(user.level or 0, owns_cosmetic(user.id, B_FSI))
+                await sio.emit('help_loadout_result',
+                    set_loadout_for_game(user.id, 'bank', slots, max_slots, b_valid), to=sid)
+                return
+            from app.services.loadout import set_loadout
+            from app.games.huroof.helps import get_slots_for_player, DEFAULT_LOADOUT
             for s in slots:
                 if s not in inv and s not in DEFAULT_LOADOUT:
                     await sio.emit('help_loadout_result', {'ok': False, 'msg': 'لا تملك إحدى المساعدات'}, to=sid); return

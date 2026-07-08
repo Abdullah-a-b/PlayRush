@@ -114,7 +114,7 @@ socket.on('room_joined', (data) => {
         myColor = me.color;
         const gameTitle = document.querySelector('.game-title');
         if (gameTitle) {
-            gameTitle.textContent = `حروف - أنت اللاعب ${myColor === 'green' ? 'الأخضر 🟢' : 'البرتقالي 🟠'}`;
+            gameTitle.textContent = `خلية الحروف - أنت اللاعب ${myColor === 'green' ? 'الأخضر 🟢' : 'البرتقالي 🟠'}`;
             gameTitle.style.color = myColor === 'green' ? '#4CAF50' : '#FF9800';
         }
         if (me.stats) {

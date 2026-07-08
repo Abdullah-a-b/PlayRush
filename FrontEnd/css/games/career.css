@@ -192,3 +192,33 @@ body{
 .action-btn:hover { transform: scale(1.05); }
 .action-btn.block-user { background: linear-gradient(135deg,#7f8c8d,#616a6b); }
 .action-btn.report-user { background: linear-gradient(135deg,#e67e22,#d35400); }
+
+/* 🎯 شريط المساعدات — تحت يسار */
+.career-helps-bar { position: fixed; bottom: 80px; left: 20px; z-index: 800;
+  display: flex; flex-direction: column; gap: 8px; }
+.career-help-btn { width: 46px; height: 46px; border-radius: 12px; border: 1px solid rgba(255,255,255,.15);
+  background: rgba(30,30,50,.85); cursor: pointer; transition: transform .15s, border-color .2s; }
+.career-help-btn .hicon { font-size: 1.3rem; }
+.career-help-btn:hover:not(.used) { transform: scale(1.1); border-color: var(--ca-accent); }
+.career-help-btn.used { opacity: .35; cursor: not-allowed; filter: grayscale(1); }
+
+/* عدّاد المخزون على زر المساعدة */
+.career-help-btn { position: relative; }
+.career-help-btn .hqty {
+  position: absolute; bottom: -4px; inset-inline-end: -4px;
+  min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px;
+  background: var(--ca-accent); color: #1a1a2e; font-size: .72rem; font-weight: 800;
+  display: flex; align-items: center; justify-content: center; line-height: 1;
+  border: 2px solid var(--ca-bg);
+}
+.career-help-btn.depleted { opacity: .4; cursor: not-allowed; filter: grayscale(1); }
+.career-help-btn.depleted .hqty { background: #777; }
+
+/* أنيميشن استعد 3-2-1 (موحّد) */
+.ready-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:6000}
+.ready-content{text-align:center}
+.ready-title{font-size:2rem;font-weight:800;color:var(--ca-accent);margin-bottom:20px;animation:fadeInUp .4s}
+.ready-count{font-size:7rem;font-weight:900;color:#fff;line-height:1}
+.ready-count.pop{animation:countPop .9s ease-out}
+@keyframes countPop{0%{transform:scale(2.5);opacity:0}30%{transform:scale(1);opacity:1}100%{transform:scale(.8);opacity:.6}}
+@keyframes fadeInUp{from{transform:translateY(15px);opacity:0}to{transform:translateY(0);opacity:1}}

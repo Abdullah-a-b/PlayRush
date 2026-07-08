@@ -74,6 +74,9 @@
 <!-- انسحاب: يمين أسفل -->
 <button id="surrenderBtn" class="surrender-btn" title="انسحاب"><i class="fa-solid fa-flag"></i></button>
 
+<!-- 🎯 المساعدات: تحت يسار (مثل حروف) -->
+<div class="career-helps-bar" id="careerHelpsBar"></div>
+
 <!-- رسائل جاهزة: يسار أسفل -->
 <div class="ingame-quick-chat">
     <button class="quick-chat-trigger ingame" id="gameQuickChatBtn" aria-label="رسالة جاهزة">
@@ -155,12 +158,20 @@
     </div>
 </div>
 
+<!-- أنيميشن استعد 3-2-1 (موحّد) -->
+<div class="ready-overlay" id="readyOverlay" style="display:none;">
+    <div class="ready-content">
+        <div class="ready-title" id="readyTitle">استعد!</div>
+        <div class="ready-count" id="readyCount">3</div>
+    </div>
+</div>
+
 <script src="../js/config.js" defer></script>
 <script src="../js/utils.js" defer></script>
 <script src="../js/socket.io.min.js" defer></script>
 <script src="../js/purify.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" async></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" async></script>
 <script src="../js/quick_chat.js" defer></script>
 <script src="../js/games/career.js" defer></script>
 <script src="../js/games/career_emojis.js" defer></script>

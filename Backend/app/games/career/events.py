@@ -29,6 +29,12 @@ async def trigger_career_start(sio, room_code):
     if _start_first_player is None:
         print(f"❌ [career] trigger: _start_first_player غير مربوط!")
         return
+    # ⏳ ننتظر أنيميشن "استعد 3-2-1" في الواجهة قبل أول لاعب
+    import asyncio as _aio
+    await _aio.sleep(3.2)
+    room = get_room_state(room_code)
+    if not room or not room.get('game_state') or room['game_state'].stage != 'waiting':
+        return  # تغيّرت الحالة أثناء الاستعداد
     await _start_first_player(room_code)
 
 
@@ -44,8 +50,9 @@ def register_career_events(sio):
         try:
             user_ids = [u for u in (user_ids or []) if u]
 
-            def _pick(exclude_seen):
-                q = db.query(CareerPlayer).filter(CareerPlayer.active == True)
+            def _pick_id(exclude_seen):
+                # ⚡ نجلب المعرّفات فقط (لا كامل الصفوف) — أسرع بكثير
+                q = db.query(CareerPlayer.id).filter(CareerPlayer.active == True)
                 if used_ids:
                     q = q.filter(~CareerPlayer.id.in_(used_ids))
                 if exclude_seen and user_ids:
@@ -53,11 +60,12 @@ def register_career_events(sio):
                                 .filter(CareerSeen.user_id.in_(user_ids)).all()]
                     if seen_ids:
                         q = q.filter(~CareerPlayer.id.in_(seen_ids))
-                return q.all()
+                ids = [i for (i,) in q.all()]
+                return random.choice(ids) if ids else None
 
-            players = _pick(exclude_seen=True)
+            pid = _pick_id(exclude_seen=True)
 
-            if not players and user_ids:
+            if pid is None and user_ids:
                 # 🔄 تدوير ذاتي: نحذف أقدم نصف مشاهدات كل طرف ونعيد
                 for uid in user_ids:
                     rows = (db.query(CareerSeen)
@@ -66,16 +74,18 @@ def register_career_events(sio):
                     for r in rows[: max(1, len(rows) // 2)]:
                         db.delete(r)
                 db.commit()
-                players = _pick(exclude_seen=True)
+                pid = _pick_id(exclude_seen=True)
 
-            if not players:
-                players = _pick(exclude_seen=False)  # آخر ملاذ (تكرار مقبول)
-            if not players:
+            if pid is None:
+                pid = _pick_id(exclude_seen=False)  # آخر ملاذ
+            if pid is None:
                 return None
 
-            cp = random.choice(players)
+            cp = db.query(CareerPlayer).filter(CareerPlayer.id == pid).first()
+            if not cp:
+                return None
 
-            # 👁️ نسجّل المشاهدة للطرفين فوراً (الشخصية ستُعرض لهما)
+            # 👁️ نسجّل المشاهدة للطرفين فوراً
             for uid in user_ids:
                 exists = db.query(CareerSeen).filter(
                     CareerSeen.user_id == uid,
@@ -88,6 +98,9 @@ def register_career_events(sio):
                 'id': cp.id, 'name': cp.name, 'status': cp.status,
                 'clubs': json.loads(cp.clubs) if cp.clubs else [],
                 'accepted_answers': json.loads(cp.accepted_answers) if cp.accepted_answers else [],
+                'nationality': cp.nationality,
+                'era': getattr(cp, 'era', None),
+                'position': getattr(cp, 'position', None),
             }
         finally:
             db.close()
@@ -273,7 +286,16 @@ def register_career_events(sio):
         if not room or not room.get('game_state'):
             return
         gs = room['game_state']
+        gs.answer_extended = False
         await asyncio.sleep(gs.ANSWER_WINDOW)
+        room = get_room_state(room_code)
+        if not room or not room.get('game_state'):
+            return
+        gs = room['game_state']
+        # ⏱️ تمديد الكتابة: +5 ثوانٍ لو فُعّلت أثناء النافذة
+        if getattr(gs, 'answer_extended', False) and gs.stage == 'buzzed' \
+                and gs.buzzed_player == buzzer_sid and gs.state_version == version:
+            await asyncio.sleep(5)
         room = get_room_state(room_code)
         if not room or not room.get('game_state'):
             return
@@ -296,15 +318,22 @@ def register_career_events(sio):
         result = check_answer(answer, correct_name, accepted, None)
         is_correct = result['verdict'] == 'accept'
         if result.get('verdict') == 'maybe':
+            # الحالة الحدّية: نسأل AI. لو فشل أو شكّ → نرفض (لا نقبل إجابة خاطئة!)
             try:
                 from app.core.ai_judge import judge_answer
                 clubs = [c['name'] for c in (gs.current_player or {}).get('clubs', [])]
                 judged = await judge_answer(f"لاعب كرة مسيرته: {clubs}", correct_name, answer, timeout=2.0)
-                is_correct = judged.get('accept', True)
+                is_correct = bool(judged.get('accept', False))  # الافتراضي: رفض
             except Exception:
-                is_correct = True
+                is_correct = False  # فشل AI → رفض آمن (لا نمنح نقطة بالخطأ)
         if is_correct:
             points = gs.score_for_current()
+            # 🔒 قفل النقطتين: إجابة صحيحة بعد الاكتمال = نقطتان (يُستهلك)
+            locks = getattr(gs, 'double_locks', {})
+            if points == 1 and locks.get(sid):
+                points = 2
+                locks[sid] = False
+                await sio.emit('career_double_lock_used', {'sid': sid}, room=room_code)
             gs.award(sid, points)
             await sio.emit('career_answer_result', {
                 'sid': sid, 'correct': True, 'points': points,
@@ -323,6 +352,29 @@ def register_career_events(sio):
         if not room or not room.get('game_state'):
             return
         gs = room['game_state']
+        # 🛡️ درع السترايك: أول خطأ لا يُحسب (يُستهلك)
+        shields = getattr(gs, 'shields', {})
+        if shields.get(sid):
+            shields[sid] = False
+            await sio.emit('career_shield_used', {'sid': sid}, room=room_code)
+            resume = gs.reveal_remaining if gs.reveal_remaining is not None else gs.REVEAL_INTERVAL
+            gs.stage = 'revealing'
+            gs.buzzed_player = None
+            gs.bump_version()
+            await _emit_reveal_state(room_code, gs, extra={'resumed': True, 'resumeSeconds': resume})
+            if gs.career_complete:
+                gs.reveal_started_at = time.time()
+                gs.reveal_wait = resume
+                _sv = gs.state_version
+                await asyncio.sleep(resume)
+                room = get_room_state(room_code)
+                if room and room.get('game_state'):
+                    gs = room['game_state']
+                    if gs.stage == 'revealing' and gs.state_version == _sv:
+                        await _replace_player(room_code)
+            else:
+                sio.start_background_task(_reveal_loop, room_code, gs.state_version, resume)
+            return
         strikes = gs.add_strike(sid)
         correct_name = (gs.current_player or {}).get('name', '')
         await sio.emit('career_strike', {
@@ -420,6 +472,105 @@ def register_career_events(sio):
                 except Exception:
                     pass
         await sio.emit('career_my_emojis', {'owned': owned}, to=sid)
+
+
+    # ==========================================
+    # 🎯 المساعدات (Play to Win — لا تكشف الإجابة)
+    # ==========================================
+    @sio.event
+    async def career_use_help(sid, data):
+        """استخدام مساعدة. data: { roomCode, helpId, token }"""
+        from app.games.career.helps import get_help
+        from app.games.core_manager import _allow_same_ip
+        room_code = (data or {}).get('roomCode')
+        help_id = (data or {}).get('helpId')
+        room = get_room_state(room_code)
+        if not room or room.get('state') != 'playing' or not room.get('game_state'):
+            return
+        gs = room['game_state']
+        if not gs.is_player_in_game(sid):
+            return
+        h = get_help(help_id)
+        if not h:
+            await sio.emit('career_help_result', {'ok': False, 'msg': 'مساعدة غير معروفة'}, to=sid)
+            return
+        # مرة واحدة لكل مساعدة بالمباراة
+        used = gs.helps_used.setdefault(sid, set())
+        if help_id in used:
+            await sio.emit('career_help_result', {'ok': False, 'msg': 'استخدمتها في هذه المباراة'}, to=sid)
+            return
+        # قيود التوقيت
+        timing = h.get('timing')
+        if timing == 'buzzed' and not (gs.stage == 'buzzed' and gs.buzzed_player == sid):
+            await sio.emit('career_help_result', {'ok': False, 'msg': 'تُستخدم أثناء كتابتك بعد الجرس'}, to=sid)
+            return
+        if timing == 'revealing' and gs.stage not in ('revealing', 'buzzed'):
+            await sio.emit('career_help_result', {'ok': False, 'msg': 'لا يمكن استخدامها الآن'}, to=sid)
+            return
+        # قيد كسر التعادل (الدرع والقفل)
+        if help_id in ('c_strike_shield', 'c_double_lock') and gs.tiebreaker:
+            await sio.emit('career_help_result', {'ok': False, 'msg': 'لا تعمل في جولة كسر التعادل'}, to=sid)
+            return
+        # الاستهلاك من المخزون (وضع التطوير = لا نهائية مثل حروف)
+        dev_mode = _allow_same_ip()
+        user_id = None
+        _pl = next((p for p in room['players'] if p.get('sid') == sid), None)
+        if _pl:
+            user_id = _pl.get('user_id')
+        if not dev_mode and user_id:
+            from app.services.help_inventory import consume_help
+            if not consume_help(user_id, help_id):
+                await sio.emit('career_help_result', {'ok': False, 'msg': 'لا تملك هذه المساعدة'}, to=sid)
+                return
+        used.add(help_id)
+        cp = gs.current_player or {}
+
+        # التأثيرات
+        if help_id == 'c_extend_write':
+            gs.answer_extended = True  # مؤقّت المهلة يلتقطها
+            await sio.emit('career_help_result', {'ok': True, 'helpId': help_id,
+                'info': '+5 ثوانٍ لكتابتك ⏱️', 'extendSeconds': 5}, to=sid)
+        elif help_id == 'c_nationality':
+            nat = cp.get('nationality') or 'غير معروفة'
+            await sio.emit('career_help_result', {'ok': True, 'helpId': help_id,
+                'info': f'🌍 الجنسية: {nat}'}, to=sid)
+        elif help_id == 'c_club_count':
+            total = len(cp.get('clubs', []))
+            await sio.emit('career_help_result', {'ok': True, 'helpId': help_id,
+                'info': f'📊 إجمالي الأندية: {total}'}, to=sid)
+        elif help_id == 'c_first_letter':
+            name = (cp.get('name') or '').strip()
+            first = name[0] if name else '؟'
+            await sio.emit('career_help_result', {'ok': True, 'helpId': help_id,
+                'info': f'🔤 أول حرف: "{first}"'}, to=sid)
+        elif help_id == 'c_strike_shield':
+            shields = getattr(gs, 'shields', None)
+            if shields is None:
+                gs.shields = {}
+                shields = gs.shields
+            shields[sid] = True
+            await sio.emit('career_help_result', {'ok': True, 'helpId': help_id,
+                'info': '🛡️ درعك مفعّل — أول خطأ لا يُحسب'}, to=sid)
+        elif help_id == 'c_era':
+            era = cp.get('era') or 'غير متوفرة لهذا اللاعب'
+            await sio.emit('career_help_result', {'ok': True, 'helpId': help_id,
+                'info': f'🎂 فترة المسيرة: {era}'}, to=sid)
+        elif help_id == 'c_position':
+            pos = cp.get('position') or 'غير متوفر لهذا اللاعب'
+            await sio.emit('career_help_result', {'ok': True, 'helpId': help_id,
+                'info': f'🎯 المركز: {pos}'}, to=sid)
+        elif help_id == 'c_double_lock':
+            locks = getattr(gs, 'double_locks', None)
+            if locks is None:
+                gs.double_locks = {}
+                locks = gs.double_locks
+            locks[sid] = True
+            await sio.emit('career_help_result', {'ok': True, 'helpId': help_id,
+                'info': '🔒 قفل النقطتين مفعّل لهذه الشخصية'}, to=sid)
+        # إشعار الخصم باستخدام مساعدة (شفافية بلا كشف المحتوى)
+        opp = gs.opponent(sid)
+        await sio.emit('career_opponent_used_help', {'helpId': help_id,
+            'name': h.get('name'), 'icon': h.get('icon')}, to=opp)
 
     # نربط دالة البدء بالمرجع العام (لتُستدعى من room_events عند الانضمام)
     _start_first_player = _start_player

@@ -48,7 +48,21 @@
       const card = document.createElement('button'); card.className = 'loadout-help' + (inSlot ? ' selected' : '');
       card.disabled = inSlot || _selected.length >= _data.slots;
       card.innerHTML = `<span class="lh-icon">${h.icon}</span><span class="lh-name">${_esc(h.name)}</span><span class="lh-qty">${isDefault ? 'أساسية' : 'تملك: ' + (qty || 0)}</span>`;
-      card.addEventListener('click', () => { if (_selected.length < _data.slots && !_selected.includes(h.id)) { _selected.push(h.id); renderLoadout(); } });
+      card.addEventListener('click', () => {
+        if (_selected.length >= _data.slots || _selected.includes(h.id)) return;
+        // ⚔️ تعارض التجهيز (مثل: درع الرصيد × فرصة ثانية بالبنك)
+        const confs = _data.conflicts || [];
+        for (const pair of confs) {
+          const other = pair[0] === h.id ? pair[1] : (pair[1] === h.id ? pair[0] : null);
+          if (other && _selected.includes(other)) {
+            const oh = _helpById(other);
+            if (typeof showToast === 'function') showToast(`⚠️ لا يمكن تجهيز "${h.name}" مع "${(oh && oh.name) || ''}" معاً`);
+            else alert(`لا يمكن تجهيز "${h.name}" مع "${(oh && oh.name) || ''}" معاً`);
+            return;
+          }
+        }
+        _selected.push(h.id); renderLoadout();
+      });
       availEl.appendChild(card);
     });
   }

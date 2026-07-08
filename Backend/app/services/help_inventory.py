@@ -152,3 +152,67 @@ def consume_help(user_id: int, help_id: str) -> bool:
         return False
     finally:
         db.close()
+
+
+def grant_career_starter(user_id):
+    """يمنح مساعدات مسيرة لاعب الأساسية ×1 (مرة واحدة، علم '__career_starter__')."""
+    from sqlalchemy import text
+    from app.core.database import SessionLocal
+    if user_id is None:
+        return False
+    _init()
+    db = SessionLocal()
+    try:
+        row = db.execute(text("""SELECT 1 FROM player_help_inventory
+            WHERE user_id = :uid AND help_id = '__career_starter__' LIMIT 1"""),
+            {"uid": user_id}).fetchone()
+        if row:
+            return False
+        from app.games.career.helps import DEFAULT_LOADOUT as CAREER_DEFAULTS
+        for hid in CAREER_DEFAULTS:
+            db.execute(text("""INSERT INTO player_help_inventory (user_id, help_id, quantity)
+                VALUES (:uid, :hid, 1) ON CONFLICT (user_id, help_id)
+                DO UPDATE SET quantity = player_help_inventory.quantity + 1"""),
+                {"uid": user_id, "hid": hid})
+        db.execute(text("""INSERT INTO player_help_inventory (user_id, help_id, quantity)
+            VALUES (:uid, '__career_starter__', 0)
+            ON CONFLICT (user_id, help_id) DO NOTHING"""), {"uid": user_id})
+        db.commit()
+        return True
+    finally:
+        db.close()
+
+
+def grant_bank_starter(user_id):
+    """يمنح مساعدات البنك الأساسية ×1 — علم لكل مساعدة على حدة
+    (حصين: لو مُنح جزئياً بنسخة قديمة، يكمل الناقص ولا يكرر الممنوح)."""
+    from sqlalchemy import text
+    from app.core.database import SessionLocal
+    if user_id is None:
+        return False
+    _init()
+    db = SessionLocal()
+    granted_any = False
+    try:
+        from app.games.bank.helps import DEFAULT_LOADOUT as BANK_DEFAULTS
+        for hid in BANK_DEFAULTS:
+            flag = f'__bank_starter_{hid}__'
+            row = db.execute(text("""SELECT 1 FROM player_help_inventory
+                WHERE user_id = :uid AND help_id = :flag LIMIT 1"""),
+                {"uid": user_id, "flag": flag}).fetchone()
+            if row:
+                continue  # هذه المساعدة مُنحت سابقاً
+            db.execute(text("""INSERT INTO player_help_inventory (user_id, help_id, quantity)
+                VALUES (:uid, :hid, 1) ON CONFLICT (user_id, help_id)
+                DO UPDATE SET quantity = player_help_inventory.quantity + 1"""),
+                {"uid": user_id, "hid": hid})
+            db.execute(text("""INSERT INTO player_help_inventory (user_id, help_id, quantity)
+                VALUES (:uid, :flag, 0)
+                ON CONFLICT (user_id, help_id) DO NOTHING"""),
+                {"uid": user_id, "flag": flag})
+            granted_any = True
+        db.commit()
+        return granted_any
+    finally:
+        db.close()
+
