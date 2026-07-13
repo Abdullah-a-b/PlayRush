@@ -29,6 +29,9 @@ def register_room_events(sio):
         room_code = ''.join(secrets.choice(alphabet) for _ in range(6))
 
         room = create_room(room_code, sid, host_name, 2, game_mode, "0.0.0.0", avatar, "private")
+        # 🕸️ هذا الـ worker مالك الغرفة الخاصة
+        from app.core import cluster
+        await cluster.claim_room(room_code)
         await sio.emit('room_created', {'room_code': room_code, 'players': room['players']}, to=sid)
 
     @sio.on('join_room')
@@ -61,13 +64,41 @@ def register_room_events(sio):
                 if p['sid'] == sid:
                     p['user_id'] = joining_user_id
 
-        # 🔧 لو اللاعب انتقل من اللوبي للعبة (sid تغيّر)، نحدّث الـ sid في حالة اللعبة
+        # 🔧 مزامنة شاملة: نربط sids المحرك بلاعبي الغرفة الحاليين عبر
+        # user_id (مصدر الحقيقة الثابت). يعالج جذر KeyError/فشل الدور:
+        # حالة اللعبة تُنشأ بـsids الطابور، ثم اللاعبون ينضمون بـsids
+        # مختلفة — بلا هذه المزامنة يبقى p1/p2/turn على sids قديمة.
+        if room_obj and room_obj.get('game_state'):
+            gs = room_obj['game_state']
+            if hasattr(gs, 'remap_sid'):
+                # نبني خريطة uid → sid الحالي من لاعبي الغرفة
+                uid_to_sid = {p.get('user_id'): p.get('sid')
+                              for p in room_obj['players'] if p.get('user_id')}
+                # p1/p2 بالمحرك: نطابقهما بترتيب اللاعبين عبر user_id
+                players = room_obj['players']
+                for slot in ('p1', 'p2'):
+                    cur = getattr(gs, slot, None)
+                    if cur is None:
+                        continue
+                    # اللاعب صاحب هذا الـslot: نجده بالـsid القديم أو الترتيب
+                    match_p = next((p for p in players if p.get('sid') == cur), None)
+                    if match_p is None:
+                        # الـsid تغيّر — نطابق بالترتيب (p1=players[0], p2=players[1])
+                        idx = 0 if slot == 'p1' else 1
+                        if idx < len(players):
+                            new_sid = players[idx].get('sid')
+                            if new_sid and new_sid != cur:
+                                gs.remap_sid(cur, new_sid)
+
+        # 🔧 (احتياط) reconnect صريح بـold_sid
         if msg == "reconnected":
             if room_obj and room_obj.get('game_state'):
                 gs = room_obj['game_state']
                 for p in room_obj['players']:
                     if p['sid'] == sid and p.get('old_sid') and p['old_sid'] != sid:
                         old = p['old_sid']
+                        if hasattr(gs, 'remap_sid'):
+                            gs.remap_sid(old, sid)
                         if getattr(gs, 'p1', None) == old: gs.p1 = sid
                         if getattr(gs, 'p2', None) == old: gs.p2 = sid
                         if getattr(gs, 'turn', None) == old: gs.turn = sid
@@ -98,10 +129,10 @@ def register_room_events(sio):
             'user_id': _existing_uid,
         }
 
-        # 🔄 نبثّ تحديث حالة المتصلين للجميع (ليظهر "يخوض معركة" لحظياً بلا تحديث الصفحة)
+        # 🔄 نبثّ delta صغيراً (ليظهر "يخوض معركة" لحظياً بلا تحديث الصفحة)
         try:
-            from app.sockets.lobby import _public_players
-            await sio.emit('update_online_players', _public_players())
+            from app.sockets.lobby import presence_delta
+            await presence_delta(sio, sid, 'update')
         except Exception:
             pass
 
@@ -153,6 +184,10 @@ def register_room_events(sio):
                         relation = 'pending_outgoing'  # أنا أرسلت له → في انتظار الرد
         safe_room['opponent_relation'] = relation
         safe_room['opponent_user_id'] = opp_uid  # لقبول الطلب الوارد داخل المباراة
+        # 🔑 sid هذا اللاعب صراحةً — الجذر الأمتن: الواجهة تعرف sid الخادم
+        # الخاص بها يقيناً بدل تخمينه من socket.id أو مطابقة الاسم (كانت
+        # تفشل لو اختلف الاسم بين DB والواجهة → المشكلة الأزلية).
+        safe_room['your_sid'] = sid
 
         await sio.emit('room_joined', safe_room, to=sid)
         await sio.emit('update_players_stats', safe_room['players'], room=room_code)
@@ -191,6 +226,15 @@ def register_room_events(sio):
                         gs_check.strikes = {gs_check.p1: 0, gs_check.p2: 0}
                     if hasattr(gs_check, 'helps_used'):
                         gs_check.helps_used = {gs_check.p1: set(), gs_check.p2: set()}
+                    # 🔧 [knowledge] points + total_strikes مفهرسة بالsid —
+                    # يجب إعادة بنائها كذلك وإلا KeyError يوقف close_round
+                    if hasattr(gs_check, 'points'):
+                        gs_check.points = {gs_check.p1: 0, gs_check.p2: 0}
+                    if hasattr(gs_check, 'total_strikes'):
+                        gs_check.total_strikes = {gs_check.p1: 0, gs_check.p2: 0}
+                    # 🔧 نستدعي _sync_keys كشبكة أمان إضافية لو كانت اللعبة تملكها
+                    if hasattr(gs_check, '_sync_keys'):
+                        gs_check._sync_keys()
 
                 # 🔧 نبني user_ids من user_id المخزّن على كل لاعب (ثابت)
                 new_uids = {}
@@ -222,6 +266,18 @@ def register_room_events(sio):
                         import traceback; traceback.print_exc()
                 else:
                     print(f"⚽ [career] تجاهل trigger مكرر | room={room_code} | stage={gs_check.stage}")
+
+            elif game_mode == 'knowledge':
+                # 🧠 ماذا تعرف: نُعلم الطرفين ثم نبدأ أول سؤال
+                gs_check = room.get('game_state')
+                if gs_check and getattr(gs_check, 'stage', '') == 'waiting':
+                    await sio.emit('knowledge_ready', {'roomCode': room_code}, room=room_code)
+                    try:
+                        from app.games.knowledge.events import trigger_knowledge_start
+                        await trigger_knowledge_start(sio, room_code)
+                    except Exception as _e:
+                        print(f"❌ [knowledge] خطأ بدء: {_e}")
+                        import traceback; traceback.print_exc()
 
             elif game_mode == 'bank':
                 # 🏦 البنك: نُعلم الطرفين ثم نبدأ أول دور

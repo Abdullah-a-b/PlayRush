@@ -232,9 +232,11 @@ def register_career_events(sio):
             lp = next((p for p in room['players'] if p['sid'] != winner_sid), None)
             if wp and lp:
                 try:
-                    record_match_result(wp, lp, 'career',
-                                        extra={'friendly': room.get('type') == 'friendly',
-                                               'winner_score': gs.scores.get(winner_sid, 0)})
+                    # 🚀 في thread — لا يحجب event loop (قفل صف + عدة استعلامات)
+                    await asyncio.to_thread(
+                        record_match_result, wp, lp, 'career',
+                        extra={'friendly': room.get('type') == 'friendly',
+                               'winner_score': gs.scores.get(winner_sid, 0)})
                 except Exception as e:
                     print(f"⚠️ [career] خطأ تسجيل: {e}")
         await sio.emit('career_match_over', {'winner': winner_sid, 'scores': gs.scores}, room=room_code)
@@ -313,6 +315,9 @@ def register_career_events(sio):
         gs = room['game_state']
         if gs.stage != 'buzzed' or gs.buzzed_player != sid:
             return
+        # 🛡️ الإرسال يلتزم: نبطل مؤقّت نافذة الكتابة فوراً (بالإصدار) —
+        # كان قد ينفجر أثناء تحكيم AI (≤2ث) ويضرب سترايك رغم إجابة قيد الحسم.
+        gs.bump_version()
         correct_name = (gs.current_player or {}).get('name', '')
         accepted = (gs.current_player or {}).get('accepted_answers', [])
         result = check_answer(answer, correct_name, accepted, None)
@@ -320,6 +325,8 @@ def register_career_events(sio):
         if result.get('verdict') == 'maybe':
             # الحالة الحدّية: نسأل AI. لو فشل أو شكّ → نرفض (لا نقبل إجابة خاطئة!)
             try:
+                # ⚖️ الطرفان يريان أن الحكم الذكي يراجع (شفافية + تفسير التوقف)
+                await sio.emit('career_judging', {'sid': sid}, room=room_code)
                 from app.core.ai_judge import judge_answer
                 clubs = [c['name'] for c in (gs.current_player or {}).get('clubs', [])]
                 judged = await judge_answer(f"لاعب كرة مسيرته: {clubs}", correct_name, answer, timeout=2.0)
@@ -419,8 +426,9 @@ def register_career_events(sio):
         lp = next((p for p in room['players'] if p['sid'] == sid), None)
         if wp and lp:
             try:
-                record_match_result(wp, lp, 'career',
-                                    extra={'reason': 'surrender', 'friendly': room.get('type') == 'friendly'})
+                await asyncio.to_thread(
+                    record_match_result, wp, lp, 'career',
+                    extra={'reason': 'surrender', 'friendly': room.get('type') == 'friendly'})
             except Exception as e:
                 print(f"⚠️ [career] خطأ انسحاب: {e}")
         await sio.emit('career_match_over', {

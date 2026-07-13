@@ -44,21 +44,28 @@ PROMPT_TEMPLATE = """أنت مساعد لتدقيق إجابات لعبة معر
 
 
 def _load_gemini():
-    """يحمّل عميل Gemini لو المفتاح متاح. يرجع None بأمان لو غير متاح."""
-    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
-    if not api_key:
-        return None
+    """يحمّل عميل Gemini (باختيار نموذج متاح تلقائياً). None بأمان."""
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=api_key)
-        return genai.GenerativeModel("gemini-1.5-flash")
+        from app.core.gemini_model import load_gemini_model
+        return load_gemini_model()
     except ImportError:
-        print("⚠️ مكتبة google-generativeai غير مثبّتة.")
-        print("   ثبّتها: pip install google-generativeai")
-        return None
-    except Exception as e:
-        print(f"⚠️ تعذّر تهيئة Gemini: {e}")
-        return None
+        # لو استُدعي السكربت خارج سياق التطبيق، نرجع لطريقة مباشرة
+        api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+        if not api_key:
+            return None
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=api_key)
+            for name in ("gemini-flash-latest", "gemini-2.5-flash",
+                         "gemini-2.0-flash"):
+                try:
+                    return genai.GenerativeModel(name)
+                except Exception:
+                    continue
+            return None
+        except Exception as e:
+            print(f"⚠️ تعذّر تهيئة Gemini: {e}")
+            return None
 
 
 def _enrich_one(model, question_text, answer):

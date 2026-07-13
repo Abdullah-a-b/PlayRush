@@ -20,7 +20,16 @@ logging.basicConfig(
 logger = logging.getLogger("playrush")
 
 from app.core.database import engine, Base
-Base.metadata.create_all(bind=engine)
+# 🛡️ إنشاء الجداول بأمان: كل worker يحاول create_all عند الاشتراك
+# checkfirst=True (افتراضي في SQLAlchemy) يمنع UniqueViolation لو
+# worker آخر سبقه وأنشأ الجدول — آمن مع multi-worker
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as _db_init_err:
+    import logging as _log
+    _log.getLogger("playrush").warning(
+        f"⚠️ [DB] create_all جزئي (ربما الجداول موجودة بالفعل): {_db_init_err}"
+    )
 
 from app.api.auth import router as auth_router
 from app.api.shop import router as shop_router
@@ -41,6 +50,8 @@ from app.games.career.events import register_career_events
 from app.games.career import game as _career_game  # noqa: F401
 from app.games.bank.events import register_bank_events
 from app.games.bank import game as _bank_game  # noqa: F401
+from app.games.knowledge.events import register_knowledge_events
+from app.games.knowledge import game as _knowledge_game  # noqa: F401
 from app.sockets.room_events import register_room_events
 from app.sockets.store import register_store_events
 
@@ -77,6 +88,9 @@ async def lifespan(app: FastAPI):
     # ✅ كل task محمية بـ supervisor — لا تموت بصمت
     from app.services.career_importer import career_auto_import_loop
     from app.services.bank_importer import bank_auto_import_loop
+    from app.services.huroof_importer import huroof_auto_import_loop
+    from app.services.knowledge_importer import knowledge_auto_import_loop
+    from app.sockets.lobby import presence_heartbeat_loop as _presence_heartbeat
     tasks = [
         _make_supervised_task(cleanup_abandoned_accounts, "cleanup_accounts", restart_delay=60),
         _make_supervised_task(cleanup_waiting_rooms,      "cleanup_rooms",    restart_delay=30),
@@ -85,9 +99,25 @@ async def lifespan(app: FastAPI):
         _make_supervised_task(release_expired_penalties,  "release_penalties", restart_delay=60),
         _make_supervised_task(cleanup_leaver_data_job,    "cleanup_leavers",  restart_delay=60),
         _make_supervised_task(cleanup_closed_tickets_job, "cleanup_tickets",  restart_delay=60),
+    ]
+    # 🔴 مهام Redis (حضور عالمي + عنقود) — تُسجَّل فقط مع REDIS_URL.
+    # (كانت تُسجَّل دائماً فترجع فوراً بلا Redis، والـ supervisor يعيدها
+    # للأبد بتحذير "انتهى بدون استثناء" كل بضع ثوانٍ — إزعاج بلا فائدة.)
+    if redis_enabled():
+        tasks += [
+            _make_supervised_task(_presence_heartbeat,         "presence_heartbeat", restart_delay=30),
+            # 🕸️ المرحلة ب-2: مستمع العنقود (أحداث محوَّلة/عضوية/انقطاعات) + نبضه
+            _make_supervised_task(lambda: _cluster.cluster_subscriber_loop(sio), "cluster_sub", restart_delay=5),
+            _make_supervised_task(_cluster.cluster_heartbeat_loop,               "cluster_hb",  restart_delay=30),
+        ]
+    tasks += [
         # ⚽ تجديد لاعبي "مسيرة لاعب" تلقائياً (Wikidata، دوري)
         _make_supervised_task(career_auto_import_loop,    "career_importer",  restart_delay=300),
         _make_supervised_task(bank_auto_import_loop,      "bank_importer",    restart_delay=300),
+        # 🔡 تجديد أسئلة "حروف" تلقائياً (Wikidata، قوالب حتمية — صفر هلوسة)
+        _make_supervised_task(huroof_auto_import_loop,    "huroof_importer",  restart_delay=300),
+        # 🧠 توسيع قوائم "ماذا تعرف" تلقائياً (Wikidata، حقائق ثابتة)
+        _make_supervised_task(knowledge_auto_import_loop, "knowledge_importer", restart_delay=300),
     ]
 
     yield
@@ -217,6 +247,72 @@ async def add_security_headers(request: Request, call_next):
 # ==========================================
 # Health Check — يفحص DB + Socket.IO stats
 # ==========================================
+@app.get("/ai-status", tags=["System"])
+async def ai_status():
+    """يكشف جاهزية الـAI (Gemini): هل المفتاح موجود، وأي نموذج مُختار،
+    وهل الاتصال يعمل فعلاً. يستخدمه مؤشّر الواجهة قبل اللعب."""
+    import os as _os
+    has_key = bool(_os.environ.get("GEMINI_API_KEY", "").strip())
+    result = {
+        "has_key": has_key,
+        "model": None,
+        "reachable": False,
+        "status": "disabled",   # disabled | ready | error
+        "detail": "",
+    }
+    if not has_key:
+        result["detail"] = "لا يوجد GEMINI_API_KEY — التحكيم يعمل بالوضع المتساهل."
+        return result
+    try:
+        # 🔄 force_reload=True: يُعيد المحاولة حتى لو فشل الكاش سابقاً
+        from app.core.gemini_model import load_gemini_model
+        model = await asyncio.to_thread(load_gemini_model, True)
+        if model is None:
+            result["status"] = "error"
+            result["detail"] = "المفتاح موجود لكن لا نموذج متاح (تحقق من صلاحيات المفتاح)."
+            return result
+        model_name = (
+            getattr(model, "_model_name", None)
+            or getattr(model, "model_name", None)
+            or str(model)
+        )
+        if "/" in model_name:
+            model_name = model_name.split("/")[-1]
+        result["model"] = model_name
+        # 🕐 اختبار مباشر بـ generate_content (لا نمر بـ judge_answer لأن
+        #    judge_answer يُرجع lenient عند timeout وهذا يُعرض "خطأ" ظلماً)
+        # timeout=15s للـ cold-start الأول (Gemini يأخذ 5-12s أحياناً)
+        try:
+            def _ping():
+                # 🛡️ prompt عربي آمن — "ping" قد يُطلق safety filter في Gemini
+                resp = model.generate_content("قل: جاهز")
+                return (resp.text or "").strip()
+            ping_text = await asyncio.wait_for(
+                asyncio.to_thread(_ping), timeout=15.0
+            )
+            # أي رد من النموذج = الاتصال يعمل (لا نتحقق من محتوى "ping")
+            if ping_text is not None:
+                result["reachable"] = True
+                result["status"] = "ready"
+                result["detail"] = f"الـAI جاهز ويعمل ✅ (النموذج: {model_name})"
+            else:
+                result["status"] = "error"
+                result["detail"] = "النموذج أرجع ردّاً فارغاً — تحقق من حصة API."
+        except asyncio.TimeoutError:
+            # cold-start طويل جداً — لكن النموذج محمّل ويعمل في الخلفية
+            result["status"] = "error"
+            result["detail"] = (
+                "النموذج مُحمّل لكن الاستجابة بطيئة (cold-start > 15s). "
+                "التحكيم يعمل بالوضع المتساهل مؤقتاً — يتحسن خلال دقيقة."
+            )
+        except Exception as e:
+            result["status"] = "error"
+            result["detail"] = f"فشل الاستدعاء التجريبي: {str(e)[:120]}"
+    except Exception as e:
+        result["status"] = "error"
+        result["detail"] = f"تعذّر تحميل النموذج: {str(e)[:120]}"
+    return result
+
 @app.get("/health", tags=["System"])
 async def health_check():
     from app.core.database import SessionLocal
@@ -300,8 +396,17 @@ def _socket_cors_origins():
         pass
     return ALLOWED_ORIGINS
 
+# 🔴 المرحلة ب: مع REDIS_URL، البثّ يعبر كل الـ workers عبر Redis pub/sub.
+# بدونه: single-worker بالذاكرة كما كان (صفر تغيير سلوكي).
+from app.core.redis_client import redis_enabled, redis_url
+_client_manager = None
+if redis_enabled():
+    _client_manager = socketio.AsyncRedisManager(redis_url())
+    print(f"🔴 [socket.io] Redis manager مفعّل — البث يعبر الـ workers")
+
 sio = socketio.AsyncServer(
     async_mode='asgi',
+    client_manager=_client_manager,
     cors_allowed_origins=_socket_cors_origins(),
     compression=True,
     ping_timeout=20,
@@ -309,6 +414,11 @@ sio = socketio.AsyncServer(
     max_http_buffer_size=1 * 1024 * 1024,
 )
 socket_app = socketio.ASGIApp(sio, socketio_path='socket.io')
+
+# 🕸️ المرحلة ب-2: ترقيع العنقود — تحويل أحداث الغرف للworker المالك
+from app.core import cluster as _cluster
+if redis_enabled():
+    _cluster.patch(sio)
 
 register_connection_events(sio)
 register_lobby_events(sio)
@@ -318,6 +428,7 @@ register_store_events(sio)
 register_huroof_events(sio)
 register_career_events(sio)
 register_bank_events(sio)
+register_knowledge_events(sio)
 register_telegram_events(sio)
 
 

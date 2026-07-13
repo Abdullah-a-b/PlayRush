@@ -1,0 +1,41 @@
+/* 🧠 ماذا تعرف — أنماط (ترث عائلة البنك للثبات البصري الكامل) */
+@import url('bank.css');
+
+.kn-points { color: #ffd166; font-weight: 800; font-size: 1.05rem; }
+
+/* ⚔️ سترايكات عند الأسماء — نفس نمط مسيرة لاعب المعتمد */
+.strikes-display { display: flex; gap: 4px; margin-top: 2px; }
+.right-info .strikes-display { justify-content: flex-end; }
+.strike-x { font-size: 1.0rem; line-height: 1; font-weight: 900;
+  color: rgba(255,255,255,.32); text-shadow: 0 1px 2px rgba(0,0,0,.7); }
+.strike-x.filled { color: #ff4d5e;
+  text-shadow: 0 0 10px rgba(255,77,94,.9), 0 0 3px rgba(0,0,0,.8);
+  animation: knStk .3s; }
+@keyframes knStk { from { transform: scale(1.6); } to { transform: scale(1); } }
+
+/* شريط وقت الدور */
+.kn-timer-wrap { height: 10px; background: rgba(255,255,255,0.08);
+  border-radius: 6px; overflow: hidden; margin: 4px 0 10px; }
+.kn-timer-bar { height: 100%; width: 100%; border-radius: 6px;
+  background: linear-gradient(90deg, #4dd07a, #ffd166); }
+.kn-timer-bar.danger { background: linear-gradient(90deg, #ff6b6b, #ff4d5e); }
+
+/* الإجابات المذكورة */
+.kn-said { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;
+  min-height: 26px; margin: 6px 0; }
+.kn-chip { background: rgba(255,255,255,0.08); border-radius: 20px;
+  padding: 3px 12px; font-size: 0.85rem; animation: knPop .2s; }
+.kn-chip.mine { border: 1px solid rgba(77,208,122,.6); }
+@keyframes knPop { from { transform: scale(.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* ملخص الجولة */
+.kn-round-over { background: rgba(255,255,255,0.06); border-radius: 12px;
+  padding: 14px; text-align: center; font-weight: 800; animation: knPop .25s; }
+
+/* سبنر فقدان الاتصال */
+.dc-spinner { width: 44px; height: 44px; margin: 14px auto;
+  border: 4px solid rgba(255,255,255,.15); border-top-color: #ffd166;
+  border-radius: 50%; animation: dcSpin 0.9s linear infinite; }
+@keyframes dcSpin { to { transform: rotate(360deg); } }
+
+.bank-status-msg.ok { color: #4dd07a; }

@@ -123,7 +123,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     // ----------------------------------------
     // 🌍 السوكيت: اللاعبين المتصلين
     // ----------------------------------------
-    socket.on('update_online_players', (allPlayers) => {
+    // 📡 نظام الحضور بالفروقات (presence.js) — بدل بث القائمة الكاملة
+    initPresence(socket, (allPlayers) => {
         const lobbyPlayers = allPlayers.filter(p =>
             p.location === selectedGameMode ||
             p.location === `playing_${selectedGameMode}` ||
@@ -154,7 +155,10 @@ window.addEventListener('DOMContentLoaded', async () => {
             : lobbyPlayers;
 
         list.innerHTML = '';
-        sortedLobbyPlayers.forEach(p => {
+        // 🛡️ سقف الرسم: العدّاد يعرض الكل، والقائمة ترسم أول 100 فقط
+        const MAX_RENDER = 100;
+        const hiddenCount = Math.max(0, sortedLobbyPlayers.length - MAX_RENDER);
+        sortedLobbyPlayers.slice(0, MAX_RENDER).forEach(p => {
             let locationText = `لوبي ${GAME_THEMES[selectedGameMode]?.title || 'اللعبة'}`;
             let statusColor  = '#facc15';
 
@@ -208,6 +212,15 @@ window.addEventListener('DOMContentLoaded', async () => {
             div.appendChild(infoDiv);
             list.appendChild(div);
         });
+
+        if (hiddenCount > 0) {
+            const more = document.createElement('div');
+            more.className = 'online-player-item';
+            more.style.justifyContent = 'center';
+            more.style.opacity = '0.7';
+            more.textContent = `و ${hiddenCount} لاعب آخر متصل...`;
+            list.appendChild(more);
+        }
     });
 
     socket.on('game_chat_history', (history) => {
@@ -263,7 +276,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     const partyModeModal   = document.getElementById('partyModeModal');
 
     if (localPartyBtn) {
-        localPartyBtn.style.display = selectedGameMode === 'huroof' ? 'flex' : 'none';
+        // 🎯 وضع الجمعات حصري للعبة "خلية الحروف" فقط
+        localPartyBtn.style.display = (selectedGameMode === 'huroof') ? 'flex' : 'none';
         localPartyBtn.addEventListener('click', () => {
             if (partyModeModal) partyModeModal.style.display = 'flex';
         });

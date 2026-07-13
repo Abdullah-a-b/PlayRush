@@ -41,8 +41,8 @@ if "@" in DATABASE_URL:
 engine = create_engine(
     DATABASE_URL,
     poolclass=pool.QueuePool,
-    pool_size=5,         # 5 connections دائمة
-    max_overflow=5,      # 5 إضافية في الذروة (إجمالي 10)
+    pool_size=20,        # ⬆️ كان 5 — اتصالات دائمة (رُفع ضمن مرحلة التوسعة أ)
+    max_overflow=30,     # ⬆️ كان 5 — إضافية بالذروة (إجمالي 50 بدل 10)
     pool_pre_ping=True,  # يفحص الاتصال قبل الاستخدام
     pool_recycle=1800,   # تجديد كل 30 دقيقة
     pool_timeout=30,     # انتظار 30 ثانية قبل error
@@ -62,4 +62,4 @@ def get_db():
         db.close()
 
 
-from app.models.user import User, GameStat, Friendship, Notification, Question, CareerPlayer, CareerSeen
+from app.models.user import User, GameStat, Friendship, Notification, Question, CareerPlayer, BankSeen, CareerSeen, KnowledgeSeen  # 🔧 جميع النماذج مستوردة صراحةً → Base.metadata يضمها كلها → create_all تنشئها

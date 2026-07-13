@@ -49,12 +49,18 @@ def _is_arabic(s):
 
 
 def _variants(ar, en):
-    out = {ar}
-    if ar.startswith("ال") and len(ar) > 4:
-        out.add(ar[2:])
-    if en:
-        out.add(en.lower())
-    return sorted(out)
+    """تنويعات الإملاء الحتمية (ج↔غ، حذف ألف المد: سانتياغو/سانتياجو/
+    سنتياغو...) — محرك مشترك مع مولّد حروف (answer_variants.py)."""
+    try:
+        from answer_variants import spelling_variants
+        return spelling_variants(ar, en)
+    except ImportError:
+        out = {ar}
+        if ar.startswith("ال") and len(ar) > 4:
+            out.add(ar[2:])
+        if en:
+            out.add(en.lower())
+        return sorted(out)
 
 
 def fetch_rows():

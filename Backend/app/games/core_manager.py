@@ -70,11 +70,21 @@ def add_to_queue(sid, name, avatar, game_mode, token=None, user_id=None, ip=None
 
     if game_mode not in matchmaking_queue:
         matchmaking_queue[game_mode] = []
+    from app.sockets.state import connected_players
+    # ننظّف أي مدخل عالق لنفس المستخدم من جلسة ميتة (sid لم يعد متصلاً)
+    if user_id is not None:
+        matchmaking_queue[game_mode] = [
+            p for p in matchmaking_queue[game_mode]
+            if not (p.get('user_id') == user_id
+                    and p.get('sid') != sid
+                    and p.get('sid') not in connected_players)
+        ]
     for p in matchmaking_queue[game_mode]:
         if p['sid'] == sid:
             return False, "أنت بالفعل في طابور البحث!"
-        # 🛡️ منع نفس المستخدم من دخول الطابور مرتين (من جهازين/متصفحين)
-        if user_id is not None and p.get('user_id') == user_id:
+        # 🛡️ نفس المستخدم في جلسة حيّة فعلاً (جهاز/تبويب آخر) → نرفض
+        if user_id is not None and p.get('user_id') == user_id \
+                and p.get('sid') in connected_players:
             return False, "أنت بالفعل في البحث من جهاز آخر!"
     matchmaking_queue[game_mode].append({
         'sid': sid,
@@ -97,53 +107,38 @@ def remove_from_queue(sid):
     return False
 
 
-def check_queue_for_match(game_mode):
-    queue = matchmaking_queue.get(game_mode, [])
-    if len(queue) < 2:
-        return False, None, None, None
+def pair_is_valid(p1, p2):
+    """🛡️ كل فحوصات صلاحية التطابق (مستخرجة لتشاركها المسار المحلي
+    والمسار العنقودي على Redis): نفس المستخدم/IP، تقابل حديث،
+    حظر متبادل، صداقة (منع تواطؤ)."""
+    from app.services.anti_collusion import were_recently_matched
+    same_user = (p1.get('user_id') is not None and
+                 p1.get('user_id') == p2.get('user_id'))
+    same_ip = (not _allow_same_ip() and
+               p1.get('ip') not in (None, 'unknown') and
+               p1.get('ip') == p2.get('ip'))
+    recently_matched = (not _allow_same_ip() and
+                        were_recently_matched(p1.get('user_id'), p2.get('user_id')))
+    is_blocked = False
+    are_friends_pair = False
+    if p1.get('user_id') and p2.get('user_id'):
+        from app.services.friends import is_blocked_between, are_friends
+        is_blocked = is_blocked_between(p1['user_id'], p2['user_id'])
+        are_friends_pair = (not _allow_same_ip() and
+                            are_friends(p1['user_id'], p2['user_id']))
+    ok = (not same_user and not same_ip and not recently_matched
+          and not is_blocked and not are_friends_pair)
+    if not ok:
+        print(f"🔎 [matchmaking] لم يتطابق p1={p1.get('user_id')} مع cand={p2.get('user_id')} | "
+              f"same_user={same_user} same_ip={same_ip} recently={recently_matched} "
+              f"blocked={is_blocked} friends={are_friends_pair} dev={_allow_same_ip()}")
+    return ok
 
-    # 🛡️ نبحث عن أول زوج صالح: ليسوا نفس المستخدم ولا نفس الـ IP
-    # ولا تقابلوا مؤخراً (anti-collusion)
-    from app.services.anti_collusion import were_recently_matched, record_matchup
-    p1 = queue[0]
-    p2_index = None
-    for i in range(1, len(queue)):
-        candidate = queue[i]
-        same_user = (p1.get('user_id') is not None and
-                     p1.get('user_id') == candidate.get('user_id'))
-        same_ip = (not _allow_same_ip() and
-                   p1.get('ip') not in (None, 'unknown') and
-                   p1.get('ip') == candidate.get('ip'))
-        recently_matched = (not _allow_same_ip() and
-                            were_recently_matched(p1.get('user_id'), candidate.get('user_id')))
-        # 🚫 لا نطابق لاعبين بينهما حظر
-        is_blocked = False
-        # 🛡️ نزاهة: لا نطابق صديقين في المباريات المصنّفة (منع التواطؤ)
-        #    معطّل في وضع المطور (ALLOW_SAME_IP=1) للاختبار المحلي
-        are_friends_pair = False
-        if p1.get('user_id') and candidate.get('user_id'):
-            from app.services.friends import is_blocked_between, are_friends
-            is_blocked = is_blocked_between(p1['user_id'], candidate['user_id'])
-            are_friends_pair = (not _allow_same_ip() and
-                                are_friends(p1['user_id'], candidate['user_id']))
-        if not same_user and not same_ip and not recently_matched and not is_blocked and not are_friends_pair:
-            p2_index = i
-            break
-        else:
-            # 🔎 تشخيص: لماذا لم يتطابقا؟
-            print(f"🔎 [matchmaking] لم يتطابق p1={p1.get('user_id')} مع cand={candidate.get('user_id')} | "
-                  f"same_user={same_user} same_ip={same_ip} recently={recently_matched} "
-                  f"blocked={is_blocked} friends={are_friends_pair} dev={_allow_same_ip()}")
 
-    # ما لقينا خصم صالح لـ p1 الآن (كلهم نفس المستخدم/الشبكة) → ننتظر
-    if p2_index is None:
-        print(f"🔎 [matchmaking] لا يوجد خصم صالح لـ p1={p1.get('user_id')} (طابور={len(queue)})")
-        return False, None, None, None
-    print(f"🔎 [matchmaking] ✅ تطابق! p1={p1.get('user_id')} مع cand رقم {p2_index}")
-
-    # نخرج الزوج الصالح من الطابور
-    p2 = queue.pop(p2_index)
-    p1 = queue.pop(0)
+def create_match_room(p1, p2, game_mode):
+    """ينشئ غرفة مباراة لزوج متطابق (مستخرجة للمشاركة مع المسار
+    العنقودي). الغرفة تعيش بذاكرة هذا الـ worker = هو مالكها."""
+    from app.services.anti_collusion import record_matchup
     players = [p1, p2]
     random.shuffle(players)
     p1, p2 = players[0], players[1]
@@ -178,8 +173,34 @@ def check_queue_for_match(game_mode):
         p1['sid']: p1.get('user_id'),
         p2['sid']: p2.get('user_id'),
     }
+    return room_code, [p1, p2], room_players_data
 
-    return True, room_code, [p1, p2], room_players_data
+
+def check_queue_for_match(game_mode):
+    queue = matchmaking_queue.get(game_mode, [])
+    if len(queue) < 2:
+        return False, None, None, None
+
+    # 🛡️ نبحث عن أول زوج صالح (الفحوصات في pair_is_valid المشتركة)
+    p1 = queue[0]
+    p2_index = None
+    for i in range(1, len(queue)):
+        if pair_is_valid(p1, queue[i]):
+            p2_index = i
+            break
+
+    # ما لقينا خصم صالح لـ p1 الآن (كلهم نفس المستخدم/الشبكة) → ننتظر
+    if p2_index is None:
+        print(f"🔎 [matchmaking] لا يوجد خصم صالح لـ p1={p1.get('user_id')} (طابور={len(queue)})")
+        return False, None, None, None
+    print(f"🔎 [matchmaking] ✅ تطابق! p1={p1.get('user_id')} مع cand رقم {p2_index}")
+
+    # نخرج الزوج الصالح من الطابور
+    p2 = queue.pop(p2_index)
+    p1 = queue.pop(0)
+
+    room_code, matched, rp_data = create_match_room(p1, p2, game_mode)
+    return True, room_code, matched, rp_data
 
 
 def create_room(room_code, sid, host_name, max_players, game_mode, ip_address, avatar, room_type="private"):

@@ -200,6 +200,11 @@
     openAnswerBox(d.answerWindow);
   });
 
+  // ⚖️ الحكم الذكي يراجع إجابة حدّية — الوقت ما زال مجمّداً حتى الحسم
+  socket.on('bank_judging', () => {
+    setStatus('⚖️ الحكم الذكي يراجع إجابتك… (وقتك مجمّد)', 'bank');
+  });
+
   // نشاط الخصم (متزامن — نعرضه بشكل خفيف)
   socket.on('bank_opp_activity', (d) => {
     const map = {

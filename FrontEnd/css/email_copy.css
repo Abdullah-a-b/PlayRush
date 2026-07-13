@@ -1,0 +1,42 @@
+/* ============================================================
+   زر نسخ الإيميل — email_copy.js
+   ============================================================ */
+
+.email-copy-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-inline-start: 8px;
+    padding: 6px 12px;
+    border: 1px solid rgba(0, 210, 255, 0.35);
+    border-radius: 8px;
+    background: rgba(0, 210, 255, 0.08);
+    color: #00d2ff;
+    font-family: 'Tajawal', system-ui, -apple-system, Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    vertical-align: middle;
+    transition: background 0.2s ease, transform 0.15s ease, border-color 0.2s ease;
+}
+
+.email-copy-btn:hover {
+    background: rgba(0, 210, 255, 0.16);
+    transform: translateY(-1px);
+}
+
+.email-copy-btn:active {
+    transform: translateY(0);
+}
+
+.email-copy-btn.copied {
+    background: rgba(0, 255, 136, 0.15);
+    border-color: rgba(0, 255, 136, 0.5);
+    color: #00ff88;
+}
+
+.email-copy-btn.copy-fail {
+    background: rgba(255, 80, 80, 0.15);
+    border-color: rgba(255, 80, 80, 0.5);
+    color: #ff7676;
+}

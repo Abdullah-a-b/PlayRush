@@ -210,11 +210,25 @@ def save_match_sync(winner_player: dict, loser_player: dict, game_mode: str, ext
         db.close()
 
 def record_match_result(winner_player: dict, loser_player: dict, game_mode: str, extra: dict=None):
+    """يسجّل نتيجة المباراة. يعمل في كل السياقات:
+    - داخل thread (asyncio.to_thread): لا event loop → نحفظ مباشرة.
+    - داخل async loop: نجدول الحفظ في executor (لا نحجب الloop).
+    الجذر السابق: get_running_loop() كان يفشل داخل to_thread (لا loop)
+    فيُلتقط الاستثناء ولا تُحفظ المباراة أبداً → البروفايل يعرض 0.
+    """
     try:
         loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+    if loop is not None:
+        # نحن داخل async loop → نجدول بلا حجب
         loop.run_in_executor(None, save_match_sync, winner_player, loser_player, game_mode, extra)
-    except Exception as e:
-        print("⚠️ خطأ في تشغيل الحفظ الخلفي:", e)
+    else:
+        # نحن داخل thread (to_thread) أو سياق متزامن → نحفظ مباشرة
+        try:
+            save_match_sync(winner_player, loser_player, game_mode, extra)
+        except Exception as e:
+            print(f"⚠️ خطأ في حفظ المباراة: {e}")
 
 def get_clean_avatar(avatar_val, fallback_name="Player"):
     # 1. إذا لم يكن هناك صورة، نرجع صورة عشوائية
@@ -274,6 +288,7 @@ def fetch_stats_from_db(token: str, fallback_name: str, fallback_avatar: str):
         huroof_stat = db.query(GameStat).filter(GameStat.user_id == user.id, GameStat.game_mode == "huroof").first()
         career_stat = db.query(GameStat).filter(GameStat.user_id == user.id, GameStat.game_mode == "career").first()
         bank_stat = db.query(GameStat).filter(GameStat.user_id == user.id, GameStat.game_mode == "bank").first()
+        knowledge_stat = db.query(GameStat).filter(GameStat.user_id == user.id, GameStat.game_mode == "knowledge").first()
         user_xp = user.xp if user.xp is not None else 0
         rank = db.query(User).filter(User.xp > user_xp).count() + 1
         flag_path = f"../../assets/flags/{user.country}.svg" if user.country else default_stats["flag"]
@@ -285,6 +300,7 @@ def fetch_stats_from_db(token: str, fallback_name: str, fallback_avatar: str):
             "huroof": {"wins": huroof_stat.wins if huroof_stat else 0, "losses": huroof_stat.losses if huroof_stat else 0, "total": huroof_stat.matches_played if huroof_stat else 0},
             "career": {"wins": career_stat.wins if career_stat else 0, "losses": career_stat.losses if career_stat else 0, "total": career_stat.matches_played if career_stat else 0},
             "bank": {"wins": bank_stat.wins if bank_stat else 0, "losses": bank_stat.losses if bank_stat else 0, "total": bank_stat.matches_played if bank_stat else 0},
+            "knowledge": {"wins": knowledge_stat.wins if knowledge_stat else 0, "losses": knowledge_stat.losses if knowledge_stat else 0, "total": knowledge_stat.matches_played if knowledge_stat else 0},
             "global": {"wins": user.wins or 0, "losses": user.losses or 0, "total": user.total_matches or 0}
         }
     except Exception as e:

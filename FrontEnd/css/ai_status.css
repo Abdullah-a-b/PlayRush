@@ -1,0 +1,54 @@
+/* ============================================================
+   شارة حالة الذكاء الاصطناعي — ai_status.js
+   ============================================================ */
+
+.ai-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-family: 'Tajawal', system-ui, -apple-system, Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    color: #ccc;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    cursor: default;
+}
+
+.ai-badge .ai-model {
+    font-weight: 400;
+    opacity: 0.75;
+    font-size: 11px;
+}
+
+.ai-badge .ai-hint {
+    font-weight: 400;
+    opacity: 0.7;
+    font-size: 11px;
+}
+
+.ai-badge.checking {
+    color: #9fb3c8;
+    border-color: rgba(159, 179, 200, 0.3);
+}
+
+.ai-badge.ready {
+    color: #00ff88;
+    background: rgba(0, 255, 136, 0.08);
+    border-color: rgba(0, 255, 136, 0.35);
+}
+
+.ai-badge.disabled {
+    color: #f5c451;
+    background: rgba(245, 196, 81, 0.08);
+    border-color: rgba(245, 196, 81, 0.35);
+}
+
+.ai-badge.error {
+    color: #ff7676;
+    background: rgba(255, 118, 118, 0.08);
+    border-color: rgba(255, 118, 118, 0.4);
+}

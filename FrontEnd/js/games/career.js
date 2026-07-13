@@ -116,16 +116,25 @@
     if (tb) tb.style.display = tiebreaker ? 'block' : 'none';
   }
 
-  function updateStrikes(strikes) {
-    const el = $('myStrikes');
+  function renderStrikeRow(el, count) {
     if (!el) return;
-    const myStrk = (strikes && strikes[mySid]) || 0;
     el.innerHTML = '';
     for (let i = 0; i < 2; i++) {
       const x = document.createElement('span');
-      x.className = 'strike-x' + (i < myStrk ? ' filled' : '');
+      x.className = 'strike-x' + (i < count ? ' filled' : '');
       x.textContent = '✗'; el.appendChild(x);
     }
+  }
+
+  function updateStrikes(strikes) {
+    // ⚔️ سترايكاتك + سترايكات خصمك (2 لكل لاعب) — مرئية للطرفين
+    // حتى تعرف متى تغامر بالجرس ومتى خصمك على الحافة.
+    strikes = strikes || {};
+    const myStrk = strikes[mySid] || 0;
+    let oppStrk = 0;
+    for (const k in strikes) { if (k !== mySid) oppStrk = strikes[k] || 0; }
+    renderStrikeRow($('myStrikes'), myStrk);
+    renderStrikeRow($('oppStrikes'), oppStrk);
   }
 
   function startRevealBar(seconds) {
@@ -242,6 +251,13 @@
     } else {
       setStatus(`❌ ${who}: إجابة خاطئة`, 'wrong');
     }
+  });
+
+  // ⚖️ الحكم الذكي يراجع إجابة حدّية — المؤقّت متوقف حتى الحسم
+  socket.on('career_judging', (d) => {
+    const mine = d && d.sid === mySid;
+    setStatus(mine ? '⚖️ الحكم الذكي يراجع إجابتك…'
+                   : '⚖️ الحكم الذكي يراجع إجابة الخصم…', 'reveal');
   });
 
   socket.on('career_strike', (d) => {

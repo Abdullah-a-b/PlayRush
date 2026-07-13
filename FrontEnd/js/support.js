@@ -62,18 +62,36 @@ function renderFAQ() {
 }
 renderFAQ();
 
-// ---------- روابط التواصل (عطّلها لو ما عندك حسابات بعد) ----------
-const SOCIAL = {
-  x: '',          // ضع رابط X هنا، مثلاً 'https://x.com/playrush'
-  instagram: '',  // ضع رابط إنستغرام هنا
-};
+// ---------- روابط التواصل (تُقرأ من SOCIAL_LINKS في config.js) ----------
 (function setupSocial() {
-  const xL = document.getElementById('xLink');
-  const igL = document.getElementById('igLink');
-  if (SOCIAL.x) { xL.href = SOCIAL.x; xL.target = '_blank'; }
-  else xL.addEventListener('click', e => { e.preventDefault(); alert('سيتوفر حسابنا في X قريباً'); });
-  if (SOCIAL.instagram) { igL.href = SOCIAL.instagram; igL.target = '_blank'; }
-  else igL.addEventListener('click', e => { e.preventDefault(); alert('سيتوفر حسابنا في إنستغرام قريباً'); });
+  var grid = document.getElementById('socialGrid');
+  if (!grid) return;
+  var links = (typeof SOCIAL_LINKS !== 'undefined') ? SOCIAL_LINKS : {};
+  var PLATFORMS = [
+    { key: 'twitter',   icon: 'fa-x-twitter',  label: 'X',        color: '#ffffff' },
+    { key: 'instagram', icon: 'fa-instagram',  label: 'إنستغرام', color: '#e1306c' },
+    { key: 'tiktok',    icon: 'fa-tiktok',     label: 'تيك توك',  color: '#00f2ea' },
+    { key: 'snapchat',  icon: 'fa-snapchat',   label: 'سناب شات', color: '#f5d90a' },
+    { key: 'threads',   icon: 'fa-threads',    label: 'ثريدز',    color: '#ffffff' },
+    { key: 'facebook',  icon: 'fa-facebook-f', label: 'فيسبوك',   color: '#1877f2' },
+  ];
+  var any = false;
+  PLATFORMS.forEach(function (p) {
+    var url = links[p.key];
+    if (!url || String(url).trim() === '') return;
+    any = true;
+    var a = document.createElement('a');
+    a.className = 'social-tile';
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.style.setProperty('--sc', p.color);
+    a.innerHTML = '<i class="fa-brands ' + p.icon + '"></i><span>' + p.label + '</span>';
+    grid.appendChild(a);
+  });
+  if (!any) {
+    grid.innerHTML = '<p style="color:#888;font-size:13px;">حساباتنا قريباً…</p>';
+  }
 })();
 
 // ---------- إرسال تذكرة ----------

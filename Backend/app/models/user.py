@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Text
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 
@@ -66,11 +66,16 @@ class Notification(Base):
 class Question(Base):
     __tablename__ = "questions"
     id = Column(Integer, primary_key=True, index=True)
-    game_mode = Column(String, index=True)      
-    question_text = Column(String)              
-    correct_answer = Column(String)             
-    category = Column(String)                   
+    game_mode = Column(String, index=True)
+    question_text = Column(String)
+    correct_answer = Column(String)
+    category = Column(String)
     extra_data = Column(String, nullable=True)
+    # 🛡️ منع التكرار على مستوى DB (طبقة ثانية بعد dedup الكود)
+    __table_args__ = (
+        UniqueConstraint("game_mode", "question_text",
+                         name="uq_question_game_text"),
+    )
 
 
 class CareerPlayer(Base):
@@ -101,6 +106,9 @@ class BankSeen(Base):
     user_id = Column(Integer, index=True)
     question_id = Column(String, index=True)   # id السؤال (q001...)
     seen_at = Column(DateTime, default=datetime.datetime.utcnow)
+    __table_args__ = (
+        UniqueConstraint("user_id", "question_id", name="uq_bank_seen_user_q"),
+    )
 
 
 class CareerSeen(Base):
@@ -111,3 +119,18 @@ class CareerSeen(Base):
     user_id = Column(Integer, index=True)
     player_id = Column(Integer, index=True)   # CareerPlayer.id
     seen_at = Column(DateTime, default=datetime.datetime.utcnow)
+    __table_args__ = (
+        UniqueConstraint("user_id", "player_id", name="uq_career_seen_user_p"),
+    )
+
+class KnowledgeSeen(Base):
+    """أسئلة "ماذا تعرف" التي شاهدها كل مستخدم (لمنع التكرار عبر المباريات).
+    الفلترة شخصية: سؤال شفته أنا لا يظهر لي، لكن يظهر لخصمي إن لم يره."""
+    __tablename__ = "knowledge_seen"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True)
+    question_id = Column(String, index=True)   # id سؤال القائمة
+    seen_at = Column(DateTime, default=datetime.datetime.utcnow)
+    __table_args__ = (
+        UniqueConstraint("user_id", "question_id", name="uq_knowledge_seen_user_q"),
+    )

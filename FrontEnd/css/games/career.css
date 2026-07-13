@@ -72,8 +72,15 @@ body{
 .career-buzz-btn:not(:disabled):active{transform:scale(.94)}
 .career-buzz-btn:disabled{opacity:.4;cursor:not-allowed;background:radial-gradient(circle at 40% 35%,#555,#333);box-shadow:none}
 .strikes-display{display:flex;gap:8px}
-.strike-x{font-size:1.35rem;color:rgba(255,255,255,.18);font-weight:800}
-.strike-x.filled{color:var(--ca-red);animation:stkPop .3s}
+/* ⚔️ السترايكات بجانب اسم كل لاعب — واضحة على الخلفية الداكنة:
+   الخانة الفارغة إطار رمادي مرئي، والمملوءة حمراء متوهجة */
+.profile-info .strikes-display{gap:4px;margin-top:2px}
+.right-info .strikes-display{justify-content:flex-end}
+.strike-x{font-size:1.05rem;line-height:1;font-weight:900;
+  color:rgba(255,255,255,.32);text-shadow:0 1px 2px rgba(0,0,0,.7)}
+.strike-x.filled{color:#ff4d5e;
+  text-shadow:0 0 10px rgba(255,77,94,.9),0 0 3px rgba(0,0,0,.8);
+  animation:stkPop .3s}
 @keyframes stkPop{0%{transform:scale(2)}100%{transform:scale(1)}}
 
 /* الإجابة */

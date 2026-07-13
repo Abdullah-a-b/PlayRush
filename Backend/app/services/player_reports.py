@@ -241,6 +241,8 @@ def _evaluate_penalties(db, target_id: int) -> str | None:
         db.execute(text("UPDATE users SET is_banned = TRUE WHERE id = :tid"), {"tid": target_id})
 
     db.commit()
+    # ⚡ إبطال كاش الكتم فوراً — العقوبة الجديدة تضرب لحظياً لا بعد 30 ثانية
+    invalidate_mute_cache(target_id)
     print(f"🛡️ [reports] عقوبة {ptype} طُبّقت على user_id={target_id} (وزن={total_weight:.1f})")
     return ptype
 
@@ -266,10 +268,29 @@ def get_active_penalty(user_id: int) -> dict | None:
         db.close()
 
 
+# 🚀 كاش الكتم (إصلاح bottleneck): كان كل رسالة شات = استعلام DB
+# يحجب event loop. الآن نتيجة الفحص تُحفظ 30 ثانية لكل لاعب،
+# وتُبطل فوراً عند تطبيق عقوبة جديدة (الكتم يضرب لحظياً).
+_MUTE_CACHE: dict = {}          # user_id → (is_muted, expires_at)
+_MUTE_CACHE_TTL = 30
+
+
+def invalidate_mute_cache(user_id: int):
+    _MUTE_CACHE.pop(user_id, None)
+
+
 def is_chat_muted(user_id: int) -> bool:
-    """هل اللاعب مكتوم من الشات؟"""
+    """هل اللاعب مكتوم من الشات؟ (نتيجة مكيّشة 30 ثانية)"""
+    now = time.time()
+    hit = _MUTE_CACHE.get(user_id)
+    if hit and hit[1] > now:
+        return hit[0]
     p = get_active_penalty(user_id)
-    return p is not None and p['type'] in ('chat_mute', 'temp_ban', 'long_ban')
+    result = p is not None and p['type'] in ('chat_mute', 'temp_ban', 'long_ban')
+    if len(_MUTE_CACHE) > 20000:  # حارس ذاكرة
+        _MUTE_CACHE.clear()
+    _MUTE_CACHE[user_id] = (result, now + _MUTE_CACHE_TTL)
+    return result
 
 
 # ==========================================

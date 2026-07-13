@@ -6,8 +6,10 @@
   <title>المساعدة والدعم - PlayRush</title>
   <link rel="stylesheet" href="css/all.min.css">
   <link rel="stylesheet" href="css/brand.css">
+    <link rel="stylesheet" href="css/social_bar.css">
   <script src="js/brand.js" defer></script>
   <script src="js/config.js" defer></script>
+    <script src="js/social_bar.js" defer></script>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -110,7 +112,44 @@
     }
     .contact-link:hover { background: rgba(255,255,255,0.08); transform: translateX(-4px); }
     .empty { text-align: center; color: #888; padding: 30px; }
+
+    /* شبكة حسابات التواصل */
+    .social-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 10px;
+      margin-top: 4px;
+    }
+    .social-tile {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.06);
+      color: #ddd;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .social-tile i {
+      font-size: 20px;
+      color: var(--sc, #00ff88);
+      width: 24px;
+      text-align: center;
+    }
+    .social-tile:hover {
+      transform: translateY(-3px);
+      background: rgba(255,255,255,0.09);
+      border-color: color-mix(in srgb, var(--sc, #00ff88) 50%, transparent);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.35),
+                  0 0 14px color-mix(in srgb, var(--sc, #00ff88) 35%, transparent);
+    }
   </style>
+  <link rel="stylesheet" href="css/email_copy.css">
+  <link rel="stylesheet" href="css/ai_status.css">
 </head>
 <body>
   <div class="support-wrap">
@@ -164,19 +203,21 @@
     <div class="panel" id="panel-contact">
       <div class="card">
         <p style="color:#bbb;margin-top:0;">نحن هنا لمساعدتك دائماً!</p>
+        <div style="margin:6px 0 16px;"><span id="aiStatusBadge" class="ai-badge"></span></div>
         <a href="mailto:playrush.online@gmail.com" class="contact-link">
           <i class="fa-solid fa-envelope" style="color:#00d2ff;"></i> playrush.online@gmail.com
         </a>
-        <a href="#" class="contact-link" id="xLink">
-          <i class="fa-brands fa-x-twitter"></i> حسابنا في X
-        </a>
-        <a href="#" class="contact-link" id="igLink">
-          <i class="fa-brands fa-instagram" style="color:#e1306c;"></i> إنستغرام
-        </a>
+
+        <p style="color:#bbb;margin:18px 0 10px;font-weight:600;">تابعنا على مواقع التواصل</p>
+        <div class="social-grid" id="socialGrid">
+          <!-- تُبنى ديناميكياً من SOCIAL_LINKS في support.js -->
+        </div>
       </div>
     </div>
   </div>
 
   <script src="js/support.js" defer></script>
+  <script src="js/email_copy.js" defer></script>
+  <script src="js/ai_status.js" defer></script>
 </body>
 </html>

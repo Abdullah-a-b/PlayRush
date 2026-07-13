@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="../css/games/career.css" />
     <link rel="stylesheet" href="../css/all.min.css">
     <link rel="stylesheet" href="../css/brand.css">
+    <link rel="stylesheet" href="../css/social_bar.css">
     <link rel="stylesheet" href="../css/quick_chat.css">
     <link rel="stylesheet" href="../css/theme_styles.css">
     <script src="../js/brand.js" defer></script>
@@ -20,6 +21,7 @@
         <div class="profile-info">
             <span id="myName" class="pname">أنت</span>
             <span class="career-score" id="myScore">0</span>
+            <div class="strikes-display" id="myStrikes"></div>
         </div>
     </div>
 
@@ -37,6 +39,7 @@
         <div class="profile-info right-info">
             <span id="opponentName" class="pname">الخصم</span>
             <span class="career-score" id="opponentScore">0</span>
+            <div class="strikes-display" id="oppStrikes"></div>
         </div>
         <div class="avatar-wrap"><img id="opponentAvatarImg" src="../assets/avatars/avatar_2.svg" alt=""></div>
     </div>
@@ -59,7 +62,6 @@
         <button class="career-buzz-btn" id="buzzBtn" disabled>
             <i class="fa-solid fa-bell"></i><span>جرس</span>
         </button>
-        <div class="strikes-display" id="myStrikes"></div>
     </div>
 
     <div class="answer-box" id="answerBox" style="display:none;">
@@ -167,6 +169,7 @@
 </div>
 
 <script src="../js/config.js" defer></script>
+    <script src="../js/social_bar.js" defer></script>
 <script src="../js/utils.js" defer></script>
 <script src="../js/socket.io.min.js" defer></script>
 <script src="../js/purify.min.js" defer></script>

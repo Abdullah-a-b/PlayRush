@@ -1,16 +1,128 @@
 import re
 import time
+import json
+import asyncio
 from app.sockets.state import connected_players, global_chat_history, game_lobby_players, game_chat_history
 from app.services.reward_service import get_clean_avatar
 from app.sockets.auth_helper import verify_socket_token
 
 
+def _public_player(sid):
+    """لاعب واحد بدون حقول داخلية (user_id/token) + pid كمفتاح ثابت للعميل."""
+    p = connected_players.get(sid)
+    if not p:
+        return None
+    d = {k: v for k, v in p.items() if k not in ('user_id', 'token')}
+    d['pid'] = sid
+    return d
+
+
 def _public_players():
-    """قائمة المتصلين بدون حقول داخلية (user_id/token) — للبث العلني."""
-    return [
-        {k: v for k, v in p.items() if k not in ('user_id', 'token')}
-        for p in connected_players.values()
-    ]
+    """قائمة المتصلين كاملة — تُرسل كـ snapshot للمنضم الجديد فقط (to=sid)."""
+    return [pl for s in list(connected_players.keys()) if (pl := _public_player(s))]
+
+
+# ============================================================
+# 📡 نظام الحضور بالفروقات (Delta Presence) — إصلاح بث اللوبي الكامل
+# بدل بث القائمة الكاملة للجميع عند كل تغيير (N² traffic عند 5000 متصل)،
+# نبث فرقاً صغيراً (لاعب واحد) والعميل يحدّث خريطته المحلية.
+# snapshot الكامل يُرسل مرة واحدة فقط للمنضم الجديد.
+#
+# 🔴 المرحلة ب: مع REDIS_URL يصبح المخزن *عالمياً* عبر كل الـ workers:
+#   - كل فرق join/update يكتب `pr:presence:{sid}` (TTL 90ث) — write-through.
+#   - snapshot يقرأ من Redis → المنضم يرى لاعبي كل الـ workers.
+#   - heartbeat كل 30ث يجدد TTL لاعبي هذا الـ worker؛ لو worker انهار،
+#     لاعبوه يختفون من الحضور خلال ≤90ث تلقائياً (تنظيف ذاتي).
+#   - فشل Redis في أي لحظة → سقوط رشيق للوضع المحلي (المنصة لا تقف).
+# ============================================================
+_PRESENCE_KEY = 'pr:presence:'
+_PRESENCE_TTL = 90
+
+
+async def _presence_redis():
+    """عميل Redis إن كان مفعّلاً وحيّاً، وإلا None (وضع محلي)."""
+    from app.core.redis_client import redis_enabled, redis_available, get_redis
+    if not redis_enabled():
+        return None
+    if not await redis_available():
+        return None
+    return get_redis()
+
+
+async def send_presence_snapshot(sio, to_sid):
+    """يرسل القائمة الكاملة للاعب واحد فقط (عند انضمامه/إعادة اتصاله).
+    مع Redis: القائمة عالمية (كل الـ workers)؛ بدونه: محلية."""
+    players = None
+    r = await _presence_redis()
+    if r is not None:
+        try:
+            keys, cursor = [], 0
+            while True:
+                cursor, batch = await r.scan(cursor=cursor, match=_PRESENCE_KEY + '*', count=1000)
+                keys.extend(batch)
+                if cursor == 0:
+                    break
+            players = []
+            if keys:
+                for v in await r.mget(keys):
+                    if v:
+                        try:
+                            players.append(json.loads(v))
+                        except Exception:
+                            pass
+        except Exception as e:
+            print(f"⚠️ [presence] قراءة Redis فشلت — snapshot محلي: {e}")
+            players = None
+    if players is None:
+        players = _public_players()
+    await sio.emit('online_players_snapshot', players, to=to_sid)
+
+
+async def presence_delta(sio, sid, op):
+    """يبث فرقاً صغيراً للجميع (عبر كل الـ workers مع Redis manager).
+    op: 'join' | 'update' | 'leave' — مع write-through لمخزن Redis."""
+    r = await _presence_redis()
+    if op == 'leave':
+        if r is not None:
+            try:
+                await r.delete(_PRESENCE_KEY + sid)
+            except Exception:
+                pass
+        await sio.emit('online_player_delta', {'op': 'leave', 'pid': sid})
+        return
+    pl = _public_player(sid)
+    if pl:
+        if r is not None:
+            try:
+                await r.set(_PRESENCE_KEY + sid, json.dumps(pl, ensure_ascii=False), ex=_PRESENCE_TTL)
+            except Exception:
+                pass
+        await sio.emit('online_player_delta', {'op': op, 'player': pl})
+
+
+async def presence_heartbeat_loop(*_):
+    """(supervised) يجدد TTL حضور لاعبي هذا الـ worker كل 30ث.
+    SET كامل (لا EXPIRE فقط) — يعافي المفاتيح لو Redis أُفرغ."""
+    from app.core.redis_client import redis_enabled
+    if not redis_enabled():
+        return  # لا Redis → لا حاجة للنبض
+    while True:
+        await asyncio.sleep(30)
+        r = await _presence_redis()
+        if r is None:
+            continue
+        try:
+            pipe = r.pipeline()
+            n = 0
+            for s in list(connected_players.keys()):
+                pl = _public_player(s)
+                if pl:
+                    pipe.set(_PRESENCE_KEY + s, json.dumps(pl, ensure_ascii=False), ex=_PRESENCE_TTL)
+                    n += 1
+            if n:
+                await pipe.execute()
+        except Exception as e:
+            print(f"⚠️ [presence] heartbeat: {e}")
 
 
 async def return_players_to_lobby(sio, room):
@@ -33,8 +145,8 @@ async def return_players_to_lobby(sio, room):
 
         if p_sid in connected_players:
             connected_players[p_sid]['avatar'] = p_avatar
-
-    await sio.emit('update_online_players', _public_players())
+            # 📡 delta بدل بث القائمة الكاملة — لاعبان فقط تغيّرا
+            await presence_delta(sio, p_sid, 'update')
 
 
 def _sanitize_chat_text(raw: str) -> str:
@@ -65,7 +177,9 @@ def register_lobby_events(sio):
             'user_id': _uid, 'token': token
         }
         await sio.emit('chat_history', global_chat_history, to=sid)
-        await sio.emit('update_online_players', _public_players())
+        # 📡 snapshot كامل للمنضم فقط + delta صغير للجميع
+        await send_presence_snapshot(sio, sid)
+        await presence_delta(sio, sid, 'join')
 
     @sio.on('join_game_lobby')
     async def join_game_lobby(sid, data):
@@ -99,12 +213,15 @@ def register_lobby_events(sio):
             'user_id': _uid
         }
 
-        await sio.emit('update_online_players', _public_players())
+        # 📡 snapshot كامل للمنضم فقط + delta صغير للجميع
+        await send_presence_snapshot(sio, sid)
+        await presence_delta(sio, sid, 'join')
         await sio.emit('game_chat_history', game_chat_history[game_mode], to=sid)
 
-        players_list = list(game_lobby_players[game_mode].values())
-        for p_sid in list(game_lobby_players[game_mode].keys()):
-            await sio.emit('update_game_lobby_players', players_list, to=p_sid)
+        # ✅ أُزيلت حلقة update_game_lobby_players:
+        # كانت تبث قائمة بحجم N لكل لاعب باللوبي (N² رسائل لكل انضمام)
+        # والواجهة لا تستمع لهذا الحدث أصلاً — لوبي اللعبة يشتق قائمته
+        # من نظام الحضور بالفلترة على location.
 
     # ==========================================
     # 💬 رسائل الشات
@@ -316,26 +433,34 @@ def register_lobby_events(sio):
             await report_violation(sid, sio, f"room_chat_spam:{rate_issue}", severity=Severity.MEDIUM)
             return
 
-        if sid not in connected_players:
-            return
-
-        room_code = data.get('roomCode') if isinstance(data, dict) else None
+        # 🕸️ ملاحظة عنقودية: هذا المعالج قد يعمل عند الـ worker المالك
+        # بينما sid المرسِل يعيش على worker آخر — فلا نشترط وجوده في
+        # connected_players المحلية؛ هويته تُشتق من عضويته بالغرفة نفسها
+        # (نفس ضمانة منع الانتحال: الاسم من الخادم لا من الحمولة).
+        room_code = None
+        if isinstance(data, dict):
+            room_code = data.get('roomCode') or data.get('room_code')
         if not room_code:
             return
 
-        # 🛡️ فحص الكتم (من نظام البلاغات)
-        _uid = connected_players[sid].get('user_id')
+        # 🛡️ نتحقق أن اللاعب فعلاً عضو في هذه الغرفة
+        from app.games.core_manager import rooms
+        room = rooms.get(room_code)
+        room_player = None
+        if room:
+            room_player = next((p for p in room.get('players', [])
+                                if p.get('sid') == sid), None)
+        if not room_player:
+            return
+
+        # 🛡️ فحص الكتم (من نظام البلاغات) — uid من المحلي أو من الغرفة
+        _uid = (connected_players.get(sid, {}).get('user_id')
+                or room_player.get('user_id'))
         if _uid:
             from app.services.player_reports import is_chat_muted
             if is_chat_muted(_uid):
                 await sio.emit('chat_error', {'msg': 'أنت مكتوم من الشات بسبب بلاغات'}, to=sid)
                 return
-
-        # 🛡️ نتحقق أن اللاعب فعلاً عضو في هذه الغرفة
-        from app.games.core_manager import rooms
-        room = rooms.get(room_code)
-        if not room or not any(p.get('sid') == sid for p in room.get('players', [])):
-            return
 
         # 🔒 معرّف عبارة فقط → نص معتمد من الخادم
         from app.core.quick_chat import resolve_phrase
@@ -344,7 +469,8 @@ def register_lobby_events(sio):
             await report_violation(sid, sio, "room_chat:invalid_phrase_id", severity=Severity.MEDIUM)
             return
 
-        sender_name = connected_players[sid].get('name', 'لاعب')
+        sender_name = (connected_players.get(sid, {}).get('name')
+                       or room_player.get('name', 'لاعب'))
         msg = {'sender': sender_name, 'text': text, 'senderSid': sid, 'isSystem': False}
         await sio.emit('new_room_chat_message', msg, room=room_code)
 
@@ -368,7 +494,8 @@ def register_lobby_events(sio):
             player_data['avatar'] = get_clean_avatar(data.get('avatar', ''), player_data['name'])
             connected_players[sid] = player_data
 
-        await sio.emit('update_online_players', _public_players())
+        # 📡 delta بدل بث القائمة الكاملة
+        await presence_delta(sio, sid, 'update')
 
     # ==========================================
     # 🛡️ Anti-Cheat: حظر فوري عبر السوكيت
@@ -816,6 +943,9 @@ def register_lobby_events(sio):
         # ملاحظة: لا نستدعي record_matchup للمباريات الودية (لا تدخل مكافحة التواطؤ)
 
         # نُدخل الـ socket للطرفين في غرفة Socket.IO
+        # 🕸️ هذا الـ worker أنشأ الغرفة الودية — نسجّله مالكاً
+        from app.core import cluster
+        await cluster.claim_room(room_code)
         await sio.enter_room(inviter_sid, room_code)
         await sio.enter_room(sid, room_code)
 

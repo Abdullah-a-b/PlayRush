@@ -111,7 +111,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     // ----------------------------------------
     // 🌍 السوكيت: اللاعبين المتصلين والدردشة
     // ----------------------------------------
-    socket.on('update_online_players', (players) => {
+    // 📡 نظام الحضور بالفروقات (presence.js) — بدل بث القائمة الكاملة
+    initPresence(socket, (players) => {
         const countEl = document.getElementById('globalOnlineCount');
         if (countEl) countEl.textContent = players.length;
 
@@ -130,7 +131,11 @@ window.addEventListener('DOMContentLoaded', async () => {
             : players;
 
         list.innerHTML = '';
-        sorted.forEach(p => {
+        // 🛡️ سقف الرسم: العدّاد يعرض الكل، لكن القائمة ترسم أول 100 فقط —
+        // آلاف عناصر DOM تجمّد المتصفح (خصوصاً الجوالات) عند 5000 متصل.
+        const MAX_RENDER = 100;
+        const hiddenCount = Math.max(0, sorted.length - MAX_RENDER);
+        sorted.slice(0, MAX_RENDER).forEach(p => {
             let locationText = 'الساحة العامة';
             let statusColor  = '#00ff88';
 
@@ -194,6 +199,15 @@ window.addEventListener('DOMContentLoaded', async () => {
             div.appendChild(infoDiv);
             list.appendChild(div);
         });
+
+        if (hiddenCount > 0) {
+            const more = document.createElement('div');
+            more.className = 'online-player-item';
+            more.style.justifyContent = 'center';
+            more.style.opacity = '0.7';
+            more.textContent = `و ${hiddenCount} لاعب آخر متصل...`;
+            list.appendChild(more);
+        }
     });
 
     socket.on('chat_history', (history) => {

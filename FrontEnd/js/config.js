@@ -18,6 +18,21 @@ const CONFIG = {
     WS_URL: _backendOrigin
 };
 
+// ============================================================
+// 🌐 روابط التواصل الاجتماعي — مصدر واحد لكل المنصة
+// عدّل الروابط هنا فقط، وستتحدّث في كل الصفحات تلقائياً.
+// لإخفاء منصة: اجعل رابطها '' (فراغ) أو احذف السطر.
+// ============================================================
+const SOCIAL_LINKS = {
+    twitter:   'https://x.com/PlayRushApp',      // X (تويتر)
+    instagram: 'https://www.instagram.com/playrush_app?igsh=MWhuZnQyb3ByN2V6aQ==',    // إنستغرام
+    tiktok:    'https://www.tiktok.com/@playrushapp',      // تيك توك
+    snapchat:  'https://www.snapchat.com/add/playrushapp?share_id=vLlm4hBExyw&locale=ar-EG', // سناب شات
+    threads:   'https://www.threads.com/@playrush_app',     // ثريدز
+    facebook:  'https://www.facebook.com/share/1E4AC4MxYV/',     // فيسبوك
+};
+// ⚠️ استبدل "PlayRush" أعلاه باسم المستخدم الفعلي لكل حساب.
+
 // دالة مساعدة لتسهيل جلب التوكن من أي مكان
 const getToken = () => localStorage.getItem('token') || sessionStorage.getItem('token');
 

@@ -9,8 +9,10 @@
   <link rel="stylesheet" href="css/categories.css" />
   <link rel="stylesheet" href="css/all.min.css">
     <link rel="stylesheet" href="css/brand.css">
+    <link rel="stylesheet" href="css/social_bar.css">
     <link rel="stylesheet" href="css/quick_chat.css">
     <script src="js/brand.js" defer></script>
+  <link rel="stylesheet" href="css/email_copy.css">
 </head>
 <body>
   <div id="toastContainer" class="toast-container"></div>
@@ -76,7 +78,7 @@
               <span>اللعب السريع</span>
           </button>
 
-          <button class="action-btn primary" id="localPartyBtn" style="background: linear-gradient(45deg, #f59e0b, #ea580c); color: #fff; box-shadow: 0 10px 20px rgba(245, 158, 11, 0.4);">
+          <button class="action-btn primary" id="localPartyBtn" style="display: none; background: linear-gradient(45deg, #f59e0b, #ea580c); color: #fff; box-shadow: 0 10px 20px rgba(245, 158, 11, 0.4);">
               <i class="fa-solid fa-tv" style="font-size: 26px;"></i>
               <div style="display: flex; flex-direction: column; gap: 5px; align-items: center; justify-content: center;">
                   <span style="font-size: 17px; font-weight: bold;">وضع الجَمَعات</span>
@@ -362,6 +364,7 @@
 </div>
 
     <script src="js/config.js" defer></script>
+    <script src="js/social_bar.js" defer></script>
     <script src="js/utils.js" defer></script>
     <script src="js/settings.js" defer></script>
     <script src="js/socket.io.min.js" defer></script>
@@ -369,6 +372,7 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" defer></script>
     <script src="js/quick_chat.js" defer></script>
+    <script src="js/presence.js" defer></script>
     <script src="js/lobby.js" defer></script> 
     <script src="js/friends_panel.js" defer></script>
     <script src="js/player_profile.js" defer></script>
@@ -376,5 +380,6 @@
     <script src="js/store.js" defer></script>
     <script src="js/loadout.js" defer></script>
     <script src="js/anti_cheat.js" defer></script>
+  <script src="js/email_copy.js" defer></script>
 </body>
 </html>

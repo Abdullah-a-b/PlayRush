@@ -1,0 +1,97 @@
+/* ============================================================
+   شريط التواصل الاجتماعي — PlayRush
+   يظهر أسفل يمين كل صفحة، متسق مع الهوية الداكنة/الخضراء.
+   ============================================================ */
+
+.social-bar {
+    position: fixed;
+    bottom: 10px;
+    right: 14px;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    direction: rtl;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    transition: background 0.3s ease;
+}
+
+.social-bar:hover {
+    background: rgba(0, 0, 0, 0.42);
+}
+
+.social-bar-label {
+    font-family: 'Tajawal', system-ui, -apple-system, Arial, sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.5);
+    margin-inline-end: 2px;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.social-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    color: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.06);
+    font-size: 14px;
+    text-decoration: none;
+    transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.social-icon:hover {
+    transform: translateY(-3px) scale(1.08);
+    /* --sc = لون المنصة، يُضبط من الـJS */
+    color: var(--sc, #00ff88);
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4),
+                0 0 12px color-mix(in srgb, var(--sc, #00ff88) 45%, transparent);
+}
+
+.social-icon:active {
+    transform: translateY(-1px) scale(1.02);
+}
+
+/* أجهزة متوسطة: نصغّر قليلاً */
+@media (max-width: 768px) {
+    .social-bar {
+        bottom: 6px;
+        right: 8px;
+        gap: 6px;
+        padding: 5px 8px;
+    }
+    .social-icon {
+        width: 27px;
+        height: 27px;
+        font-size: 13px;
+    }
+    .social-bar-label {
+        font-size: 10px;
+    }
+}
+
+/* شاشات صغيرة جداً: نخفي كلمة "تابعنا" لتوفير المساحة */
+@media (max-width: 480px) {
+    .social-bar-label {
+        display: none;
+    }
+    .social-bar {
+        gap: 5px;
+        padding: 5px 7px;
+    }
+}
+
+/* داخل اللعبة الفعلية: نخفيه كي لا يشتت اللاعب (مثل brand-footer) */
+body.in-game .social-bar {
+    display: none;
+}

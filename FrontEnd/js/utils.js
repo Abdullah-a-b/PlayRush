@@ -38,7 +38,7 @@ const GAME_THEMES = {
     bank:   { title: 'بنك',         color: '#00ff88', icon: '🏦' },
     career: { title: 'مسيرة لاعب', color: '#00d2ff', icon: '⚽' },
     whoami: { title: 'من أنا؟',     color: '#f43f5e', icon: '🕵️‍♂️' },
-    whatdo: { title: 'ماذا تعرف؟',  color: '#a855f7', icon: '🧠' },
+    knowledge: { title: 'ماذا تعرف', color: '#a855f7', icon: '🧠' },
 };
 
 

@@ -2,6 +2,7 @@ import asyncio
 import html
 import random
 import json
+import time
 
 # ==========================================
 # 🔄 الاستيرادات من الهيكلة الجديدة (تأكد من مطابقتها لمساراتك)
@@ -10,6 +11,87 @@ from app.core.database import SessionLocal, Question, User
 from app.games.core_manager import get_room_state, rooms
 from app.services.reward_service import record_match_result
 from app.services.telegram_bot import send_secret_to_mobile
+
+# ==========================================
+# 🚀 كاش أسئلة حروف بالذاكرة (إصلاح bottleneck حرج)
+# كان trigger_new_question يسحب جدول Question *كاملاً* من DB
+# ويحلّل JSON لكل صف — عند كل سؤال في كل مباراة!
+# الآن: تحميل + تحليل مرة كل 10 دقائق، والفلترة بالذاكرة.
+# ==========================================
+_HUROOF_QCACHE = {'ts': 0.0, 'rows': None}
+_HUROOF_QCACHE_TTL = 600  # الأسئلة تتغير عبر استيراد/سكربتات نادرة فقط
+
+
+def _load_huroof_questions_cached():
+    """(يعمل في thread) أسئلة حروف محلّلة مسبقاً — DB مرة كل 10 دقائق بدل كل سؤال."""
+    now = time.time()
+    if _HUROOF_QCACHE['rows'] is not None and (now - _HUROOF_QCACHE['ts']) < _HUROOF_QCACHE_TTL:
+        return _HUROOF_QCACHE['rows']
+    db = SessionLocal()
+    try:
+        rows = []
+        for q in db.query(Question).filter(Question.game_mode == "huroof").all():
+            try:
+                extra = json.loads(q.extra_data) if q.extra_data else {}
+            except Exception:
+                extra = {}
+            ans = (q.correct_answer or '').strip()
+            core = ans[2:] if ans.startswith("ال") else ans
+            rows.append({
+                'id': q.id,
+                'question_text': q.question_text,
+                'correct_answer': q.correct_answer,
+                'category': q.category,
+                'accepted_answers': extra.get('accepted_answers', []),
+                'letter_extra': normalize_letter(extra.get('letter', '') or ''),
+                'letter_ans': normalize_letter(core[0]) if core else '',
+            })
+        _HUROOF_QCACHE['rows'] = rows
+        _HUROOF_QCACHE['ts'] = now
+        return rows
+    finally:
+        db.close()
+
+
+def _fetch_combined_seen(uids):
+    """(يعمل في thread) مشاهدات اللاعبَين معاً — جلب بالـ id المفهرس.
+    كان البحث بـ session_token *غير المفهرس* = مسح جدول users كاملاً ×2 لكل سؤال!"""
+    combined = set()
+    if not uids:
+        return combined
+    db = SessionLocal()
+    try:
+        for u in db.query(User).filter(User.id.in_(uids)).all():
+            try:
+                combined.update(json.loads(u.seen_question_ids or "[]"))
+            except Exception:
+                pass
+    finally:
+        db.close()
+    return combined
+
+
+def _mark_seen_thread(uids, qid):
+    """(يعمل في thread — fire-and-forget) يضيف السؤال لمشاهدات اللاعبَين."""
+    if not uids:
+        return
+    try:
+        db = SessionLocal()
+        try:
+            for u in db.query(User).filter(User.id.in_(uids)).all():
+                try:
+                    seen = json.loads(u.seen_question_ids or "[]")
+                except Exception:
+                    seen = []
+                if qid not in seen:
+                    seen.append(qid)
+                    u.seen_question_ids = json.dumps(seen)
+            db.commit()
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"⚠️ [huroof] mark seen: {e}")
+
 
 # 🔌 المرحلة ب: نقطة الدخول الموحّدة للتحقق من أفعال اللاعب (BaseGame)
 def _get_huroof_game():
@@ -203,117 +285,85 @@ def register_huroof_events(sio):
 
         norm_letter = normalize_letter(gs.active_hex['letter'])
 
-        db = SessionLocal()
-        combined_seen = set()  
-        player_db_ids = {}     
+        # 🚀 كل عمل DB صار في threads (asyncio.to_thread) — لا يحجب event loop:
+        # 1) user_id يؤخذ من connected_players مباشرة (كان بحث session_token غير مفهرس)
+        # 2) الأسئلة من الكاش (كان سحب الجدول كاملاً لكل سؤال)
+        uids = []
+        for player in room.get('players', []):
+            p_sid = player.get('sid')
+            if not p_sid:
+                continue
+            uid = connected_players.get(p_sid, {}).get('user_id')
+            if uid:
+                uids.append(uid)
 
-        try:
-            for player in room.get('players', []):
-                p_sid = player.get('sid')
-                if not p_sid:
-                    continue
-                token = connected_players.get(p_sid, {}).get('token')
-                user = None
-                if token:
-                    user = db.query(User).filter(User.session_token == token).first() # تأكد من اسم الحقل أو استخدم auth_provider logic
-                if user:
-                    try:
-                        seen_ids = json.loads(user.seen_question_ids or "[]")
-                        combined_seen.update(seen_ids)
-                        player_db_ids[p_sid] = user.id
-                    except Exception:
-                        pass
+        combined_seen = await asyncio.to_thread(_fetch_combined_seen, uids)
+        all_qs = await asyncio.to_thread(_load_huroof_questions_cached)
 
-            valid_qs = []
-            query = db.query(Question).filter(Question.game_mode == "huroof")
-            for q in query.all():
-                if hasattr(gs, 'used_questions') and q.id in gs.used_questions:
-                    continue
-                if q.id in combined_seen:
-                    continue
-                try:
-                    ans = q.correct_answer.strip()
-                    if ans.startswith("ال"):
-                        ans = ans[2:]
-                    extra = json.loads(q.extra_data) if q.extra_data else {}
-                    letter_from_extra = normalize_letter(extra.get("letter", ""))
-                    letter_from_ans = normalize_letter(ans[0]) if ans else ""
-                    if letter_from_extra == norm_letter or letter_from_ans == norm_letter:
-                        valid_qs.append(q)
-                except (json.JSONDecodeError, AttributeError, IndexError, TypeError):
-                    pass
+        used = set(gs.used_questions) if hasattr(gs, 'used_questions') else set()
+        valid_qs = [
+            q for q in all_qs
+            if q['id'] not in used and q['id'] not in combined_seen
+            and (q['letter_extra'] == norm_letter or q['letter_ans'] == norm_letter)
+        ]
 
-
-            if not valid_qs:
-                print(f"⚠️ نفدت الأسئلة الجديدة لحرف '{norm_letter}' بالنسبة لهذين اللاعبَين.")
-                fallback = {
-                    "question": f"نفدت الأسئلة الجديدة لحرف ({norm_letter}) لكلاكما. اختاروا حرفاً آخر.",
-                    "answer": "لا يوجد",
-                    "category": "نفدت الأسئلة",
-                    "letter": norm_letter,
-                    "accepted_answers": []
-                }
-                await sio.emit('receive_ai_question', fallback, room=room_code)
-                return
-
-            # 📚 اختيار التصنيف: لو اللاعب صاحب الدور اختار تصنيفاً مسبقاً، نُفضّله
-            pref_map = getattr(gs, 'preferred_category', None)
-            turn_sid = gs.turn  # gs.turn هو sid اللاعب صاحب الدور مباشرة
-            if pref_map and pref_map.get(turn_sid):
-                wanted = pref_map.get(turn_sid)
-                filtered = [q for q in valid_qs if q.category == wanted]
-                if filtered:
-                    valid_qs = filtered
-                pref_map.pop(turn_sid, None)
-
-            chosen = random.choice(valid_qs)
-
-            if hasattr(gs, 'used_questions'):
-                gs.used_questions.append(chosen.id)
-                gs.used_answers.append(chosen.correct_answer)
-
-            for p_sid, user_id in player_db_ids.items():
-                user = db.query(User).filter(User.id == user_id).first()
-                if user:
-                    try:
-                        seen_ids = json.loads(user.seen_question_ids or "[]")
-                        if chosen.id not in seen_ids:
-                            seen_ids.append(chosen.id)
-                            user.seen_question_ids = json.dumps(seen_ids)
-                    except Exception:
-                        user.seen_question_ids = json.dumps([chosen.id])
-            db.commit()
-
-            extra = json.loads(chosen.extra_data) if chosen.extra_data else {}
-            gs.current_question = {
-                "question": chosen.question_text,
-                "answer": chosen.correct_answer,
-                "accepted_answers": extra.get("accepted_answers", []),
-                "category": chosen.category,
-                "letter": norm_letter
+        if not valid_qs:
+            print(f"⚠️ نفدت الأسئلة الجديدة لحرف '{norm_letter}' بالنسبة لهذين اللاعبَين.")
+            fallback = {
+                "question": f"نفدت الأسئلة الجديدة لحرف ({norm_letter}) لكلاكما. اختاروا حرفاً آخر.",
+                "answer": "لا يوجد",
+                "category": "نفدت الأسئلة",
+                "letter": norm_letter,
+                "accepted_answers": []
             }
+            await sio.emit('receive_ai_question', fallback, room=room_code)
+            return
 
-            version = advance_state(gs, 'buzz_r1')
-            gs.buzzed_player = None
-            gs.skip_votes.clear()
+        # 📚 اختيار التصنيف: لو اللاعب صاحب الدور اختار تصنيفاً مسبقاً، نُفضّله
+        pref_map = getattr(gs, 'preferred_category', None)
+        turn_sid = gs.turn  # gs.turn هو sid اللاعب صاحب الدور مباشرة
+        if pref_map and pref_map.get(turn_sid):
+            wanted = pref_map.get(turn_sid)
+            filtered = [q for q in valid_qs if q['category'] == wanted]
+            if filtered:
+                valid_qs = filtered
+            pref_map.pop(turn_sid, None)
 
-            # 🛡️ ANTI-CHEAT: track when question was shown for reaction time validation
-            import time as _time
-            gs.question_shown_at = _time.time()
+        chosen = random.choice(valid_qs)
 
-            asyncio.create_task(send_secret_to_mobile(gs.current_question['question'], gs.current_question['answer']))
+        if hasattr(gs, 'used_questions'):
+            gs.used_questions.append(chosen['id'])
+            gs.used_answers.append(chosen['correct_answer'])
 
-            await sio.emit('huroof_new_question', {
-                'questionData': gs.current_question,
-                'round': 'r1',
-                'timer': 40,
-                'changed': is_change
-            }, room=room_code)
+        # 📝 تسجيل المشاهدة fire-and-forget — لا نؤخر وصول السؤال للاعبين
+        if uids:
+            asyncio.create_task(asyncio.to_thread(_mark_seen_thread, uids, chosen['id']))
 
-            sio.start_background_task(huroof_timer_task, room_code, version, 40, 'timeout_buzz_r1')
+        gs.current_question = {
+            "question": chosen['question_text'],
+            "answer": chosen['correct_answer'],
+            "accepted_answers": chosen['accepted_answers'],
+            "category": chosen['category'],
+            "letter": norm_letter
+        }
 
-        finally:
-            db.close()
+        version = advance_state(gs, 'buzz_r1')
+        gs.buzzed_player = None
+        gs.skip_votes.clear()
+
+        # 🛡️ ANTI-CHEAT: track when question was shown for reaction time validation
+        gs.question_shown_at = time.time()
+
+        asyncio.create_task(send_secret_to_mobile(gs.current_question['question'], gs.current_question['answer']))
+
+        await sio.emit('huroof_new_question', {
+            'questionData': gs.current_question,
+            'round': 'r1',
+            'timer': 40,
+            'changed': is_change
+        }, room=room_code)
+
+        sio.start_background_task(huroof_timer_task, room_code, version, 40, 'timeout_buzz_r1')
 
     async def process_answer_result(room_code, is_correct, player_ans, result=None):
         room = get_room_state(room_code)
@@ -343,12 +393,15 @@ def register_huroof_events(sio):
                         uids = list((room.get('user_ids') or {}).values())
                         mult = get_reward_multiplier(uids[0], uids[1]) if len(uids) == 2 else 1.0
 
-                        record_match_result(winner_player, loser_player, room.get('game_mode', 'huroof'), extra={
-                            'winner_rounds': gs.points[player_color],
-                            'loser_rounds':  gs.points[loser_color],
-                            'collusion_multiplier': mult,
-                            'friendly': room.get('type') == 'friendly',
-                        })
+                        # 🚀 في thread — لا يحجب event loop
+                        await asyncio.to_thread(
+                            record_match_result, winner_player, loser_player,
+                            room.get('game_mode', 'huroof'), extra={
+                                'winner_rounds': gs.points[player_color],
+                                'loser_rounds':  gs.points[loser_color],
+                                'collusion_multiplier': mult,
+                                'friendly': room.get('type') == 'friendly',
+                            })
 
                         # 🚪 مباراة مكتملة بشرف للطرفين → تعافي السمعة
                         from app.services.leaver_penalty import record_clean_match
@@ -567,6 +620,10 @@ def register_huroof_events(sio):
 
         if gs.stage not in ['answer_r1', 'answer_r2', 'answer_r3', 'answer_r4']: return
         if sid != gs.buzzed_player: return
+
+        # 🛡️ الإرسال يلتزم: نبطل مؤقّت الإجابة فوراً (بالإصدار) —
+        # يمنع انفجار المهلة أثناء تحكيم AI (≤2ث) ومعالجة النتيجة مرتين.
+        gs.state_version += 1
 
         correct_ans = gs.current_question['answer']
         accepted_list = gs.current_question['accepted_answers']
@@ -1022,9 +1079,10 @@ def register_huroof_events(sio):
             from app.services.anti_collusion import get_reward_multiplier
             uids = list((room.get('user_ids') or {}).values())
             mult = get_reward_multiplier(uids[0], uids[1]) if len(uids) == 2 else 1.0
-            record_match_result(winner_player, loser_player, room.get('game_mode', 'huroof'),
-                                extra={'reason': 'surrender', 'collusion_multiplier': mult,
-                                       'friendly': room.get('type') == 'friendly'})
+            await asyncio.to_thread(
+                record_match_result, winner_player, loser_player, room.get('game_mode', 'huroof'),
+                extra={'reason': 'surrender', 'collusion_multiplier': mult,
+                       'friendly': room.get('type') == 'friendly'})
 
             # 🚪 عقوبة الانسحاب المتكرر (للمنسحب) + مكافأة الفائز (سلوك جيد)
             # 🤝 المباريات الودية لا تُطبّق عقوبة انسحاب (صفر مخاطر)
@@ -1068,7 +1126,10 @@ def register_huroof_events(sio):
             state.party_session_sid = sid
             state.party_session_used_ids = set()
         
-        await sio.emit('update_online_players', list(connected_players.values()))
+        # 🛡️ إصلاح أمني: كان يبث connected_players.values() خاماً — يسرّب token/user_id للجميع!
+        # الآن delta منظّف (بدون حقول داخلية) عبر نظام الحضور.
+        from app.sockets.lobby import presence_delta
+        await presence_delta(sio, sid, 'update')
 
     @sio.event
     async def request_ai_question(sid, data):

@@ -25,16 +25,48 @@ _LENIENT_DEFAULT = {"accept": True, "source": "lenient_default"}
 
 
 def _get_model():
-    """يحمّل Gemini لو المفتاح متاح. None بأمان لو غير متاح."""
+    """يحمّل Gemini (باختيار نموذج متاح تلقائياً). None بأمان لو غير متاح.
+
+    يطابق نمط _load_gemini() في ai_enrichment.py:
+      - يحاول load_gemini_model() أولاً (المسار الطبيعي داخل التطبيق).
+      - لو فشل الـ import (سياق خارجي أو خطأ)، يرجع لطريقة مباشرة
+        مع نفس قائمة النماذج المفضّلة من gemini_model.py.
+      - أي فشل ينتهي بـ None بأمان (lenient fallback في judge_answer).
+    """
+    # المسار الأساسي: نفس gemini_model.py الذي يستخدمه ai_enrichment
+    try:
+        from app.core.gemini_model import load_gemini_model
+        return load_gemini_model()
+    except ImportError:
+        pass
+    except Exception:
+        return None
+
+    # Fallback مباشر (نفس ترتيب _PREFERRED في gemini_model.py)
     api_key = os.environ.get("GEMINI_API_KEY", "").strip()
     if not api_key:
         return None
     try:
         import google.generativeai as genai
         genai.configure(api_key=api_key)
-        return genai.GenerativeModel("gemini-1.5-flash")
+        for name in (
+            "gemini-2.5-flash-lite",
+            "gemini-2.5-flash",
+            "gemini-flash-latest",
+            "gemini-2.0-flash",
+            "gemini-2.0-flash-lite",
+            "gemini-1.5-flash-latest",
+            "gemini-1.5-flash",
+        ):
+            try:
+                m = genai.GenerativeModel(name)
+                if m.generate_content("ping"):
+                    return m
+            except Exception:
+                continue
     except Exception:
-        return None
+        pass
+    return None
 
 
 _JUDGE_PROMPT = """أنت حكم لإجابات لعبة معرفية عربية. كن متساهلاً مع الأخطاء الإملائية.

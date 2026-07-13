@@ -63,24 +63,29 @@ def _seen_ids_for_user(user_id):
         return set()
 
 
-def _record_seen(user_id, question_id):
-    if not user_id:
+def _record_seen_bulk(user_id, question_ids):
+    """(يعمل في thread — fire-and-forget عند نهاية المباراة)
+    يسجّل كل أسئلة المباراة دفعة واحدة في transaction واحد.
+    🐛 إصلاح: الدالة القديمة _record_seen لم تكن تُستدعى أبداً —
+    ميزة عدم التكرار كانت تقرأ ولا تكتب!"""
+    if not user_id or not question_ids:
         return
     try:
         from app.core.database import SessionLocal
         from app.models.user import BankSeen
         db = SessionLocal()
         try:
-            exists = db.query(BankSeen).filter(
+            existing = {qid for (qid,) in db.query(BankSeen.question_id).filter(
                 BankSeen.user_id == user_id,
-                BankSeen.question_id == question_id).first()
-            if not exists:
-                db.add(BankSeen(user_id=user_id, question_id=question_id))
-                db.commit()
+                BankSeen.question_id.in_(list(question_ids))).all()}
+            for qid in question_ids:
+                if qid not in existing:
+                    db.add(BankSeen(user_id=user_id, question_id=qid))
+            db.commit()
         finally:
             db.close()
     except Exception as e:
-        print(f"⚠️ [bank] seen record: {e}")
+        print(f"⚠️ [bank] seen bulk: {e}")
 
 
 def _recycle_seen(user_id):
@@ -194,11 +199,14 @@ def register_bank_events(sio):
             return
         diff = gs.difficulty_now(sid)
         _uid = _uid_of(room, sid)
-        q = _pick_question(diff, gs.used_question_ids, user_id=_uid)
+        # 🚀 المنتقي يقرأ مشاهدات DB — في thread حتى لا يحجب event loop
+        q = await asyncio.to_thread(_pick_question, diff, gs.used_question_ids, _uid)
         if not q:
             return
         gs.pstate[sid]['question'] = q
         gs.pstate[sid]['question_diff'] = diff  # الصعوبة المعروضة (النقاط منها!)
+        # 📝 نتتبع أسئلة هذا اللاعب لتسجيلها بالجملة عند نهاية المباراة
+        gs.pstate[sid].setdefault('asked_ids', []).append(q['id'])
         # 💰 المضاعفة تلتصق بهذا السؤال
         if gs.pstate[sid].pop('double_next', False):
             gs.pstate[sid]['double_active'] = True
@@ -269,6 +277,13 @@ def register_bank_events(sio):
         if not room:
             return
         ps = gs.pstate[sid]
+        # 🛡️ حاجز السباق: إجابة مُرسلة عند حافة المهلة + تحكيم AI (≤2ث)
+        # كانا قد يدخلان معاً → معالجة مزدوجة (مسح رصيد + تقدّم سؤال ×2).
+        # أول داخلٍ يقفل الباب فوراً — قبل أي await، وasyncio أحادي الخيط
+        # فالفحص+القفل ذرّيان.
+        if not ps.get('answering'):
+            return
+        ps['answering'] = False
         q = ps['question'] or {}
         correct = q.get('a', '')
         accepted = q.get('accepted', [])
@@ -291,6 +306,8 @@ def register_bank_events(sio):
             is_correct = result['verdict'] == 'accept'
             if result.get('verdict') == 'maybe':
                 try:
+                    # ⚖️ نُعلم اللاعب أن الحكم الذكي يراجع (والوقت مجمّد أصلاً)
+                    await sio.emit('bank_judging', {}, to=sid)
                     from app.core.ai_judge import judge_answer
                     judged = await judge_answer(q.get('q', ''), correct, answer, timeout=2.0)
                     is_correct = bool(judged.get('accept', False))
@@ -300,8 +317,7 @@ def register_bank_events(sio):
         # الـfallback عند نفاد صعوبة قد يسحب سؤالاً من فئة أخرى)
         diff = gs.pstate[sid].get('question_diff') or q.get('diff', 'easy')
         pts = gs.points_for(diff)
-        ps['answering'] = False
-        gs.unfreeze(sid)  # ▶️ استئناف بعد الكتابة + تحكيم AI
+        gs.unfreeze(sid)  # ▶️ استئناف بعد الكتابة + تحكيم AI (القفل تم أول الدالة)
         # 🔄 فرصة ثانية: خطأ + مفعّلة → نفس السؤال مرة أخرى (+5ث)
         if not is_correct and ps.get('second_chance'):
             ps['second_chance'] = False
@@ -451,13 +467,21 @@ def register_bank_events(sio):
         gs.winner = winner_sid
         gs.stage = 'finished'
         room['state'] = 'finished'
+        # 📝 تسجيل مشاهدات المباراة بالجملة (fire-and-forget، في thread)
+        for _sid in (gs.p1, gs.p2):
+            _u = _uid_of(room, _sid)
+            _qids = list(gs.pstate.get(_sid, {}).get('asked_ids', []))
+            if _u and _qids:
+                asyncio.create_task(asyncio.to_thread(_record_seen_bulk, _u, _qids))
         if winner_sid:
             wp = next((p for p in room['players'] if p['sid'] == winner_sid), None)
             lp = next((p for p in room['players'] if p['sid'] != winner_sid), None)
             if wp and lp:
                 try:
-                    record_match_result(wp, lp, 'bank',
-                                        extra={'friendly': room.get('type') == 'friendly'})
+                    # 🚀 في thread — تسجيل النتيجة فيه قفل صف + عدة استعلامات
+                    await asyncio.to_thread(
+                        record_match_result, wp, lp, 'bank',
+                        extra={'friendly': room.get('type') == 'friendly'})
                 except Exception as e:
                     print(f"⚠️ [bank] خطأ تسجيل: {e}")
         _wname = next((p.get('name') for p in room['players']
@@ -476,13 +500,20 @@ def register_bank_events(sio):
         winner_sid = gs.opponent(sid)
         gs.stage = 'finished'
         room['state'] = 'finished'
+        # 📝 تسجيل مشاهدات المباراة بالجملة (حتى عند الانسحاب)
+        for _sid in (gs.p1, gs.p2):
+            _u = _uid_of(room, _sid)
+            _qids = list(gs.pstate.get(_sid, {}).get('asked_ids', []))
+            if _u and _qids:
+                asyncio.create_task(asyncio.to_thread(_record_seen_bulk, _u, _qids))
         wp = next((p for p in room['players'] if p['sid'] == winner_sid), None)
         lp = next((p for p in room['players'] if p['sid'] == sid), None)
         if wp and lp:
             try:
-                record_match_result(wp, lp, 'bank',
-                                    extra={'reason': 'surrender',
-                                           'friendly': room.get('type') == 'friendly'})
+                await asyncio.to_thread(
+                    record_match_result, wp, lp, 'bank',
+                    extra={'reason': 'surrender',
+                           'friendly': room.get('type') == 'friendly'})
             except Exception as e:
                 print(f"⚠️ [bank] خطأ انسحاب: {e}")
         _wname = next((p.get('name') for p in room['players']
