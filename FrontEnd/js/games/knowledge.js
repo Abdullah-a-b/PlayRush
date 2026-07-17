@@ -1,4 +1,4 @@
-/* 🧠 ماذا تعرف — منطق العميل (الأقسام المشتركة منقولة من البنك حرفياً — ثبات التصميم) */
+/*  ماذا تعرف — منطق العميل (الأقسام المشتركة منقولة من البنك حرفياً — ثبات التصميم) */
 (function () {
   'use strict';
   window.CURRENT_GAME = 'knowledge';
@@ -20,7 +20,71 @@
   let answerCountdown = null;
   let timerRAF = null;
   let iAmActive = false;
-  let sentThisTurn = false;
+  
+  // 🐛 [تم التعديل هنا]: تعريف المتغير لحل مشكلة sentThisTurn is not defined
+  let sentThisTurn = false; 
+
+  // ===== المساعدات (نمط بقية الألعاب) =====
+  // الكتالوج والتشكيلة والمخزون تصل عبر help_loadout_data.
+  // «مراوغة» تُفعَّل فقط في دورك وعندك سترايكان (وغير مُقفلة بقاعدة 2-2).
+  let helpsCatalog = {};
+  let myLoadout = [];
+  let myInventory = {};
+  let devModeHelps = false;
+  const helpsUsedLocal = new Set();
+  let myDodgeBlocked = false;
+  let myStrikesNow = 0;
+
+  function pickMine(map) {
+    if (!map) return undefined;
+    if (mySid && (mySid in map)) return map[mySid];
+    return undefined;
+  }
+
+  function syncHelpsState(d) {
+    if (!d) return;
+    const used = pickMine(d.helps_used);
+    if (Array.isArray(used)) used.forEach((h) => helpsUsedLocal.add(h));
+    const pb = pickMine(d.dodge_blocked);
+    if (pb !== undefined) myDodgeBlocked = !!pb;
+    if (d.strikes) myStrikesNow = d.strikes[mySid] || 0;
+  }
+
+  function renderHelpsBar() {
+    const bar = $('knHelpsBar');
+    if (!bar) return;
+    bar.innerHTML = '';
+    myLoadout.forEach((hid) => {
+      const h = helpsCatalog[hid];
+      if (!h) return;
+      const qty = devModeHelps ? '∞' : String(myInventory[hid] || 0);
+      const depleted = (!devModeHelps && (myInventory[hid] || 0) <= 0);
+      // «مراوغة» لها شروط عرض إضافية: دورك + سترايكان + غير مُقفلة
+      const dodgeLocked = (hid === 'k_dodge') &&
+        (!iAmActive || myStrikesNow !== 2 || myDodgeBlocked);
+      // ⏱️ كل مساعدات اللعبة توقيتها 'turn': خارج دورك = مقفلة بصرياً
+      const wrongPhase = !iAmActive;
+      const btn = document.createElement('button');
+      btn.className = 'bank-help-btn'
+        + (helpsUsedLocal.has(hid) ? ' used' : '')
+        + ((depleted || dodgeLocked || wrongPhase) ? ' depleted' : '');
+      btn.title = `${h.name}: ${h.desc}`;
+      btn.innerHTML = `<span class="hicon">${h.icon}</span>`
+        + `<span class="hqty">${qty}</span>`;
+      btn.addEventListener('click', () => {
+        if (helpsUsedLocal.has(hid) || depleted) return;
+        if (hid === 'k_dodge' && dodgeLocked) {
+          showToast(myDodgeBlocked
+            ? '🔒 مراوغتك مُقفلة: خصمك سبقك في حالة 2-2'
+            : '🌀 المراوغة تتاح في دورك وعندك سترايكان');
+          return;
+        }
+        if (wrongPhase) { showToast('⏳ المساعدات تُستخدم في دورك فقط'); return; }
+        socket.emit('knowledge_use_help', { roomCode, helpId: hid, token });
+      });
+      bar.appendChild(btn);
+    });
+  }
 
   function getValidAvatar(src) {
     if (!src) return '../assets/avatars/avatar_1.svg';
@@ -44,7 +108,7 @@
     $('myPoints').textContent = points[mySid] ?? 0;
     $('opponentPoints').textContent = points[opp] ?? 0;
   }
-  // ⚔️ سترايكات عند الأسماء (نمط مسيرة لاعب المعتمد) — 3 خانات هنا
+  //  سترايكات عند الأسماء (نمط مسيرة لاعب المعتمد) — 3 خانات هنا
   function renderStrikeRow(el, count) {
     if (!el) return;
     el.innerHTML = '';
@@ -107,7 +171,7 @@
     $('knTimerBar').style.width = '0%';
   }
 
-  // ⏱️ يحسب الوقت المتبقي من timestamp الـ server (turn_ends_at) بدلاً من
+  // ⏱ يحسب الوقت المتبقي من timestamp الـ server (turn_ends_at) بدلاً من
   // عداد محلي يتراكم فيه خطأ الشبكة (50-300ms) — يمنع السترايك الظالم
   function openAnswerBox(seconds, endsAtServerTs) {
     sentThisTurn = false;
@@ -127,7 +191,7 @@
     answerCountdown = setInterval(() => {
       const left = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
       answerTimerEl.textContent = left;
-      // 🛡️ نوقف الإدخال بصرياً فقط — الـ backend هو المرجع الفعلي
+      //  نوقف الإدخال بصرياً فقط — الـ backend هو المرجع الفعلي
       if (left <= 0) { clearInterval(answerCountdown); answerInput.disabled = true; }
     }, 200);
   }
@@ -168,7 +232,7 @@
 
   socket.on('room_joined', (data) => {
     const players = data.players || [];
-    // 🔑 الجذر الأمتن: الخادم يرسل your_sid صراحةً (يعرف sid المستقبِل
+    //  الجذر الأمتن: الخادم يرسل your_sid صراحةً (يعرف sid المستقبِل
     // يقيناً). نعتمده أولاً — لا تخمين من socket.id ولا مطابقة اسم قد تفشل.
     if (data.your_sid) {
       mySid = data.your_sid;
@@ -210,10 +274,18 @@
     updateStrikes({});
   });
 
+  // 🎯 حدث موجّه من الخادم لصاحب الدور حصرياً — فتح مضمون 100%
+  socket.on('knowledge_your_turn', (d) => {
+    iAmActive = true;
+    $('turnText').textContent = '🫵 دورك — اكتب إجابة!';
+    openAnswerBox(d.seconds || 10, d.turn_ends_at);
+    renderHelpsBar();
+  });
+
   socket.on('knowledge_turn', (d) => {
     updateStrikes(d.strikes);
     updatePoints(d.points);
-    // 🔑 صاحب الدور: نطابق بالsid أولاً، وكحماية إضافية بالاسم (لو
+    //  صاحب الدور: نطابق بالsid أولاً، وكحماية إضافية بالاسم (لو
     // اختلف الsid لأي سبب بيئي، الاسم يبقى ثابتاً). هذا يضمن أن
     // iAmActive صحيح دائماً → الإجابة تُرسل → لا سترايك زائف.
     iAmActive = (d.sid === mySid) || (d.name && d.name === playerName);
@@ -222,10 +294,23 @@
     startTimerBar(d.seconds || 10);
     if (iAmActive) {
       $('turnText').textContent = '🫵 دورك — اكتب إجابة!';
-      openAnswerBox(d.seconds || 10, d.turn_ends_at);   // ⚡ يظهر فوراً بوقت دقيق من الـ server
+      openAnswerBox(d.seconds || 10, d.turn_ends_at);   //  يظهر فوراً بوقت دقيق من الـ server
     } else {
       closeAnswerBox();
       $('turnText').textContent = `⏳ دور ${d.name}…`;
+    }
+    syncHelpsState(d);
+    renderHelpsBar();
+    // تحصين: مع تعدد الـ workers قد يصل حدث متأخر (round_start) بعد
+    // knowledge_turn فيغلق الصندوق المفتوح للتو — نعيد التأكيد بعد لحظة
+    if (iAmActive) {
+      const endsAt = d.turn_ends_at;
+      const secs = d.seconds || 10;
+      setTimeout(() => {
+        if (iAmActive && answerBox.style.display === 'none') {
+          openAnswerBox(secs, endsAt);
+        }
+      }, 450);
     }
   });
 
@@ -237,7 +322,7 @@
     answerInput.disabled = true;
     $('submitAnswerBtn').disabled = true;
     clearInterval(answerCountdown);
-    stopTimerBar();   // 🛑 نوقف شريط الوقت: الحسم الآن للخادم/الـAI بلا ضغط وقت
+    stopTimerBar();   //  نوقف شريط الوقت: الحسم الآن للخادم/الـAI بلا ضغط وقت
     socket.emit('knowledge_submit_answer', { roomCode, answer: ans });
     setStatus('⏳ جارٍ التحقق…');
   }
@@ -245,6 +330,82 @@
   answerInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
 
   socket.on('knowledge_judging', () => setStatus('⚖️ الحكم الذكي يراجع الإجابة…'));
+
+  // ===== أحداث المساعدات =====
+  socket.emit('get_help_loadout', { token, game: 'knowledge' });
+
+  socket.on('help_loadout_data', (d) => {
+    if (!d || d.game !== 'knowledge') return;
+    helpsCatalog = {};
+    (d.catalog || []).forEach((h) => { helpsCatalog[h.id] = h; });
+    myLoadout = d.loadout || d.defaultLoadout || [];
+    myInventory = d.inventory || {};
+    devModeHelps = !!d.devMode;
+    renderHelpsBar();
+  });
+
+  socket.on('knowledge_help_result', (d) => {
+    if (!d) return;
+    if (!d.ok) { showToast('⚠️ ' + (d.msg || '')); return; }
+    helpsUsedLocal.add(d.helpId);
+    if (!devModeHelps && myInventory[d.helpId]) {
+      myInventory[d.helpId] = Math.max(0, myInventory[d.helpId] - 1);
+    }
+    renderHelpsBar();
+    if (d.info) setStatus(d.info, 'ok');
+  });
+
+  socket.on('knowledge_opponent_used_help', (d) => {
+    if (d && d.name) showToast(`${d.icon || '🎯'} الخصم استخدم: ${d.name}`);
+  });
+
+  // «مراوغة»: انتقال الدور بلا سترايك (+ قاعدة القفل 2-2)
+  socket.on('knowledge_dodge', (d) => {
+    stopTimerBar();
+    closeAnswerBox();
+    syncHelpsState(d);
+    renderHelpsBar();
+    const mine = (d.sid === mySid);
+    setStatus(mine ? '🌀 راوغت — انتقل الدور بلا سترايك'
+                   : `🌀 ${d.name} راوغ — جاء دورك`, 'ok');
+    if (d.blocked_sid && d.blocked_sid === mySid) {
+      showToast('🔒 خصمك سبقك في حالة 2-2 — أُقفلت مراوغتك لبقية المباراة');
+    }
+  });
+
+  // «محاولة ثانية»: الخطأ المكتوب لم يُحسب — 5 ثوانٍ لمحاولة أخرى
+  socket.on('knowledge_retry', (d) => {
+    if (!d) return;
+    const mine = (d.sid === mySid);
+    if (mine) {
+      sentThisTurn = false;
+      answerInput.disabled = false;
+      $('submitAnswerBtn').disabled = false;
+      setStatus('🔄 محاولتك الثانية — الخطأ لم يُحسب، عندك 5 ثوانٍ!', 'ok');
+      startTimerBar(d.seconds || 5);
+      openAnswerBox(d.seconds || 5, d.turn_ends_at);
+      answerInput.value = '';
+      answerInput.focus();
+    } else {
+      showToast(`🔄 محاولة ثانية لـ ${d.name} — خطؤه لم يُحسب`);
+      startTimerBar(d.seconds || 5);
+    }
+    syncHelpsState(d);
+    renderHelpsBar();
+  });
+
+  // «وقت إضافي»: مؤقّت جديد من الخادم للطرفين
+  socket.on('knowledge_time_plus', (d) => {
+    if (!d) return;
+    const mine = (d.sid === mySid);
+    if (!mine) showToast(`⏱️ ${d.name} أضاف وقتاً لدوره`);
+    if (mine && d.turn_ends_at) {
+      const left = Math.max(1, Math.ceil(d.turn_ends_at - (Date.now() / 1000)));
+      startTimerBar(left);
+      openAnswerBox(left, d.turn_ends_at);
+    }
+  });
+
 
   socket.on('knowledge_correct', (d) => {
     stopTimerBar();
@@ -293,6 +454,7 @@
     if (!d) return;
     updatePoints(d.points);
     updateStrikes(d.strikes);
+    syncHelpsState(d);
     if (d.index) updateRound(d.index);
     if (d.stage === 'turn' && d.q) {
       $('qText').textContent = d.q;
@@ -301,6 +463,7 @@
       startTimerBar(d.seconds_left || 3);
       if (iAmActive) openAnswerBox(d.seconds_left || 3, d.turn_ends_at);
       $('turnText').textContent = iAmActive ? '🫵 دورك — اكتب إجابة!' : '⏳ دور الخصم…';
+      renderHelpsBar();
     }
   });
 
@@ -393,7 +556,7 @@
     Swal.close();
     Swal.fire({ title: 'عاد الخصم!', icon: 'success', timer: 2000, showConfirmButton: false });
   });
-  // 🏆 مهلة الخادم (30ث) تُطلق show_winner — نعامله كنهاية مباراة بانسحاب
+  //  مهلة الخادم (30ث) تُطلق show_winner — نعامله كنهاية مباراة بانسحاب
   socket.on('show_winner', (d) => {
     clearInterval(dcCountdownTimer);
     if (typeof Swal !== 'undefined') Swal.close();
@@ -407,7 +570,7 @@
   });
 
   // ============================================================
-  // 👤 بروفايل اللاعب — نسخة حروف بالضبط (بطاقة ماذا تعرف)
+  //  بروفايل اللاعب — نسخة حروف بالضبط (بطاقة ماذا تعرف)
   // ============================================================
   function openProfileModal(isMe) {
     const data  = isMe ? playersStatsData.me : playersStatsData.opponent;
@@ -438,7 +601,7 @@
   });
 
   // ============================================================
-  // 🛡️ الإبلاغ عن الخصم (نسخة حروف)
+  //  الإبلاغ عن الخصم (نسخة حروف)
   // ============================================================
   const reportModal     = document.getElementById('reportModal');
   const cancelReportBtn = document.getElementById('cancelReportBtn');
@@ -464,7 +627,7 @@
   socket.on('chat_error', (data) => showToast('🔇 ' + (data.msg || 'لا يمكنك إرسال رسائل')));
 
   // ============================================================
-  // 👥 الصداقة والحظر (نسخة حروف — ديناميكية حسب الحالة)
+  //  الصداقة والحظر (نسخة حروف — ديناميكية حسب الحالة)
   // ============================================================
   const addFriendBtn = document.querySelector('#modalActionButtons .add-friend');
   const blockUserBtn = document.querySelector('#modalActionButtons .block-user');
@@ -564,24 +727,4 @@
     friendState = 'incoming'; renderFriendButton();
   });
 
-  // ============================================================
-  // 🎯 المساعدات — نفس الشريط والموضع (كتالوج اللعبة قادم بالاقتصاد)
-  // ============================================================
-  socket.emit('get_help_loadout', { token, game: 'knowledge' });
-  socket.on('help_loadout_data', (d) => {
-    if (!d || d.game !== 'knowledge') return;
-    const bar = $('bankHelpsBar');
-    if (!bar) return;
-    bar.innerHTML = '';
-    (d.loadout || []).forEach((hid) => {
-      const h = (d.catalog || []).find(x => x.id === hid);
-      if (!h) return;
-      const btn = document.createElement('button');
-      btn.className = 'bank-help-btn';
-      btn.title = `${h.name}: ${h.desc}`;
-      btn.innerHTML = `<span class="hicon">${h.icon}</span>`;
-      btn.addEventListener('click', () => showToast('🎯 مساعدات ماذا تعرف — قريباً'));
-      bar.appendChild(btn);
-    });
-  });
 })();

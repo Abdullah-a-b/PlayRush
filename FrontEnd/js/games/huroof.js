@@ -5,7 +5,7 @@
 
 
 // ============================================================
-// 🚀 الاتصال والجلسة
+//  الاتصال والجلسة
 // ============================================================
 const socket = io(API_URL, { transports: ['websocket', 'polling'], upgrade: true });
 
@@ -18,7 +18,7 @@ if (!token || !roomCode) window.location.href = '../lobby.html';
 
 
 // ============================================================
-// 🧱 بناء لوحة السداسيات
+//  بناء لوحة السداسيات
 // ============================================================
 const honeycomb = document.querySelector('.honeycomb');
 if (honeycomb && honeycomb.children.length === 0) {
@@ -32,7 +32,7 @@ if (honeycomb && honeycomb.children.length === 0) {
 
 
 // ============================================================
-// 🖥️ مراجع عناصر الواجهة
+//  مراجع عناصر الواجهة
 // ============================================================
 const cells                = document.querySelectorAll('.hex');
 const currentLetterDisplay = document.getElementById('currentLetterDisplay');
@@ -47,7 +47,7 @@ const voteSkipBtn          = document.getElementById('voteSkipBtn');
 
 
 // ============================================================
-// 📊 حالة اللعبة
+//  حالة اللعبة
 // ============================================================
 let myColor             = null;
 let currentTurnSid      = null;
@@ -77,11 +77,11 @@ let playersStatsData = {
 
 
 // ============================================================
-// 🛠️ مسار الأفاتار (خاص بمجلد games/ حيث المسار ../../)
+//  مسار الأفاتار (خاص بمجلد games/ حيث المسار ../../)
 // ============================================================
 function getValidAvatarSrc(avatarValue) {
     if (!avatarValue || avatarValue.trim() === '') return '../assets/avatars/avatar_1.svg';
-    // 🔧 نعالج روابط قديمة ثابتة (127.0.0.1/localhost) محفوظة من قبل التحديث:
+    //  نعالج روابط قديمة ثابتة (127.0.0.1/localhost) محفوظة من قبل التحديث:
     // نحوّلها لمسار يعمل على العنوان الحالي (لابتوب/جوال).
     let v = avatarValue.trim();
     const staleMatch = v.match(/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/.*)$/i);
@@ -100,7 +100,7 @@ function getValidAvatarSrc(avatarValue) {
 
 
 // ============================================================
-// 🔌 الاتصال والانضمام للغرفة
+//  الاتصال والانضمام للغرفة
 // ============================================================
 socket.on('connect', () => {
     socket.emit('join_room', { room_code: roomCode, token, player_name: playerName, avatar: playerAvatar });
@@ -125,7 +125,7 @@ socket.on('room_joined', (data) => {
         playersStatsData.opponent = { ...opponent.stats, color: opponent.color, avatar: getValidAvatarSrc(opponent.stats.avatar) };
     }
 
-    // 👥 نضبط حالة أزرار الصداقة/الحظر حسب العلاقة الحقيقية من الخادم
+    //  نضبط حالة أزرار الصداقة/الحظر حسب العلاقة الحقيقية من الخادم
     if (typeof data.opponent_user_id !== 'undefined') {
         _opponentUserId = data.opponent_user_id;
     }
@@ -146,17 +146,45 @@ socket.on('update_players_stats', (players) => {
 
 
 // ============================================================
-// 🎮 أحداث السيرفر — سير اللعبة
+//  أحداث السيرفر — سير اللعبة
 // ============================================================
 
+
+// ===== أنيميشن استعد 3-2-1 (موحّد مع بقية الألعاب) =====
+let _readyShown = false;
+function playReadyAnimation(cb) {
+    const overlay = document.getElementById('readyOverlay');
+    const countEl = document.getElementById('readyCount');
+    if (!overlay || !countEl) { if (cb) cb(); return; }
+    overlay.style.display = 'flex';
+    let n = 3;
+    countEl.textContent = n;
+    countEl.className = 'ready-count pop';
+    const tick = () => {
+        n--;
+        if (n > 0) {
+            countEl.textContent = n;
+            countEl.className = 'ready-count';
+            void countEl.offsetWidth;
+            countEl.className = 'ready-count pop';
+            setTimeout(tick, 1000);
+        } else {
+            overlay.style.display = 'none';
+            if (cb) cb();
+        }
+    };
+    setTimeout(tick, 1000);
+}
+
 socket.on('huroof_board_init', (data) => {
+    if (!_readyShown) { _readyShown = true; playReadyAnimation(); }
     const roundsDisplay = document.getElementById('rounds-display');
     if (roundsDisplay) roundsDisplay.style.display = 'flex';
 
     systemMessageDisplay.textContent = 'اكتمل الاتصال! المعركة تبدأ الآن ⚔️';
     systemMessageDisplay.style.color = '#00ff88';
 
-    // 💡 نبضة تعريفية على بروفايل الخصم (مرة واحدة) — تلمّح أنه قابل للضغط
+    //  نبضة تعريفية على بروفايل الخصم (مرة واحدة) — تلمّح أنه قابل للضغط
     const oppBtn = document.getElementById('opponentProfileBtn');
     if (oppBtn && !oppBtn.dataset.hinted) {
         oppBtn.dataset.hinted = '1';
@@ -399,7 +427,7 @@ socket.on('error_message', (msg) => {
 
 
 // ============================================================
-// 🎯 نظام الجولات (Best of 3)
+//  نظام الجولات (Best of 3)
 // ============================================================
 
 socket.on('huroof_round_over', (data) => {
@@ -466,7 +494,7 @@ socket.on('opponent_reconnected', () => {
 
 
 // ============================================================
-// 🖱️ تفاعلات اللاعب
+//  تفاعلات اللاعب
 // ============================================================
 
 cells.forEach((cell, index) => {
@@ -508,7 +536,7 @@ voteSkipBtn?.addEventListener('click', () => { if (!voteSkipBtn.disabled) socket
 
 
 // ============================================================
-// 🚪 الانسحاب
+//  الانسحاب
 // ============================================================
 const surrenderModal = document.getElementById('surrenderModal');
 const leaveBtn       = document.querySelector('.surrender-btn') || document.querySelector('a[href*="lobby"]');
@@ -531,7 +559,7 @@ document.getElementById('confirmSurrenderBtn').onclick = () => {
 
 
 // ============================================================
-// 👤 الشريط العلوي والملف الشخصي
+//  الشريط العلوي والملف الشخصي
 // ============================================================
 
 function updateTopBarUI() {
@@ -576,7 +604,7 @@ document.getElementById('playerProfileModal')?.addEventListener('click', (e) => 
 
 
 // ============================================================
-// ⏱️ المؤقتات والواجهة
+// ⏱ المؤقتات والواجهة
 // ============================================================
 
 let _globalTimerLeft = 0;
@@ -679,7 +707,7 @@ function updateRoundsUI(points, currentRound) {
 
 
 // ============================================================
-// ✨ تأثيرات بصرية
+//  تأثيرات بصرية
 // ============================================================
 function createStars() {
     const container = document.getElementById('stars');
@@ -695,7 +723,7 @@ function createStars() {
 createStars();
 
 // ============================================================
-// 🛡️ نظام الإبلاغ عن الخصم (زر "إبلاغ" في بروفايل الخصم)
+//  نظام الإبلاغ عن الخصم (زر "إبلاغ" في بروفايل الخصم)
 // ============================================================
 const reportModal     = document.getElementById('reportModal');
 const cancelReportBtn = document.getElementById('cancelReportBtn');
@@ -736,7 +764,7 @@ socket.on('chat_error', (data) => {
 });
 
 // ============================================================
-// 👥 الصداقة والحظر (أزرار بروفايل الخصم) — ديناميكية حسب الحالة
+//  الصداقة والحظر (أزرار بروفايل الخصم) — ديناميكية حسب الحالة
 // ============================================================
 const addFriendBtn = document.querySelector('#modalActionButtons .add-friend');
 const blockUserBtn  = document.querySelector('#modalActionButtons .block-user');
@@ -954,7 +982,7 @@ socket.on('leaver_penalty', (data) => {
 });
 
 // ----------------------------------------
-// 💬 الرسائل الجاهزة داخل اللعبة (Quick Chat)
+//  الرسائل الجاهزة داخل اللعبة (Quick Chat)
 // زر عائم يفتح لوحة العبارات المعتمدة. يرسل phraseId فقط (لا نص حر).
 // ----------------------------------------
 (function initIngameQuickChat() {
@@ -998,7 +1026,7 @@ socket.on('leaver_penalty', (data) => {
 
 
 // ============================================================
-// 🎯 نظام المساعدات (3 خانات)
+//  نظام المساعدات (3 خانات)
 // ============================================================
 (function initHelps() {
     let _helpsLoadout = [];
@@ -1027,7 +1055,10 @@ socket.on('leaver_penalty', (data) => {
             if (!h) return;
             const used = _helpsUsed.has(id);
             const owned = _owns(id);
-            const locked = !_questionActive;
+            // ⏱️ القفل حسب توقيت المساعدة: post = يلزم سؤال معروض،
+            // pre = قبل اختيار الحرف فقط (كانت مقفولة بوقتها الصحيح — bug عكسي)
+            const timing = h.timing || 'post';
+            const locked = (timing === 'pre') ? _questionActive : !_questionActive;
             const qty = _devMode ? '∞' : (_inventory[id] || 0);
             const btn = document.createElement('button');
             let cls = 'help-slot';
@@ -1037,7 +1068,8 @@ socket.on('leaver_penalty', (data) => {
             btn.className = cls;
             btn.disabled = used || locked || !owned;
             btn.title = !owned ? `${h.name} — لا تملكها (اشترها من المتجر)`
-                       : (locked ? `${h.name} — اختر حرفاً أولاً` : h.name + ' — ' + h.desc);
+                       : (locked ? `${h.name} — ${timing === 'pre' ? 'تُستخدم قبل اختيار الحرف' : 'اختر حرفاً أولاً'}`
+                                 : h.name + ' — ' + h.desc);
             btn.innerHTML = `
                 <span class="rarity-dot rarity-${h.rarity}"></span>
                 <span class="help-icon">${h.icon}</span>
@@ -1096,7 +1128,7 @@ socket.on('leaver_penalty', (data) => {
     socket.on('huroof_turn_changed', () => { _questionActive = false; renderHelpSlots(); });
 
     // نتيجة استخدام مساعدتي
-    // 📚 اختيار التصنيف: الخادم يرسل قائمة التصنيفات لنعرضها
+    //  اختيار التصنيف: الخادم يرسل قائمة التصنيفات لنعرضها
     socket.on('huroof_choose_category_options', (data) => {
         if (!data || !Array.isArray(data.categories) || !data.categories.length) {
             showHelpToast('⚠️ لا توجد تصنيفات متاحة');

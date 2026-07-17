@@ -19,8 +19,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger("playrush")
 
-from app.core.database import engine, Base
-# 🛡️ إنشاء الجداول بأمان: كل worker يحاول create_all عند الاشتراك
+from app.infrastructure.database import engine, Base, register_models
+
+register_models()
+# إنشاء الجداول بأمان: كل worker يحاول create_all عند الاشتراك
 # checkfirst=True (افتراضي في SQLAlchemy) يمنع UniqueViolation لو
 # worker آخر سبقه وأنشأ الجدول — آمن مع multi-worker
 try:
@@ -28,32 +30,35 @@ try:
 except Exception as _db_init_err:
     import logging as _log
     _log.getLogger("playrush").warning(
-        f"⚠️ [DB] create_all جزئي (ربما الجداول موجودة بالفعل): {_db_init_err}"
+        f"[DB] create_all جزئي (ربما الجداول موجودة بالفعل): {_db_init_err}"
     )
 
-from app.api.auth import router as auth_router
-from app.api.shop import router as shop_router
-from app.api.support import router as support_router
-from app.api.career import router as career_router
+from app.domains.users.router import router as auth_router
+from app.domains.wallet.router import router as shop_router
+from app.domains.wallet.progression_router import router as progression_router
+from app.domains.support.router import router as support_router
+from app.domains.games.router import router as career_router
 
-from app.services.cron_jobs import cleanup_abandoned_accounts, cleanup_waiting_rooms, cleanup_anticheat_data, cleanup_collusion_data, release_expired_penalties, cleanup_leaver_data_job, cleanup_closed_tickets_job
-from app.services.telegram_bot import telegram_bot_listener, register_telegram_events
+from app.jobs.cron_jobs import cleanup_abandoned_accounts, cleanup_waiting_rooms, cleanup_anticheat_data, cleanup_collusion_data, release_expired_penalties, cleanup_leaver_data_job, cleanup_closed_tickets_job
+from app.infrastructure.telegram_bot import telegram_bot_listener, register_telegram_events
 
 from app.sockets.connection import register_connection_events
-from app.sockets.lobby import register_lobby_events
-from app.sockets.matchmaking import register_matchmaking_events
-from app.games.huroof.events import register_huroof_events
-# 🔌 تسجيل حروف في إطار BaseGame (المرحلة أ) — الاستيراد يفعّل @GameRegistry.register
-from app.games.huroof import game as _huroof_game  # noqa: F401
-# ⚽ لعبة مسيرة لاعب (على نفس الإطار)
-from app.games.career.events import register_career_events
-from app.games.career import game as _career_game  # noqa: F401
-from app.games.bank.events import register_bank_events
-from app.games.bank import game as _bank_game  # noqa: F401
-from app.games.knowledge.events import register_knowledge_events
-from app.games.knowledge import game as _knowledge_game  # noqa: F401
-from app.sockets.room_events import register_room_events
-from app.sockets.store import register_store_events
+from app.domains.games.sockets.lobby import register_lobby_events
+from app.domains.games.sockets.matchmaking import register_matchmaking_events
+from app.domains.games.huroof.events import register_huroof_events
+# تسجيل حروف في إطار BaseGame (المرحلة أ) — الاستيراد يفعّل @GameRegistry.register
+from app.domains.games.huroof import game as _huroof_game  # noqa: F401
+# لعبة مسيرة لاعب (على نفس الإطار)
+from app.domains.games.career.events import register_career_events
+from app.domains.games.career import game as _career_game  # noqa: F401
+from app.domains.games.bank.events import register_bank_events
+from app.domains.games.whoami.events import register_whoami_events
+from app.domains.games.bank import game as _bank_game  # noqa: F401
+from app.domains.games.knowledge.events import register_knowledge_events
+from app.domains.games.knowledge import game as _knowledge_game  # noqa: F401
+from app.domains.games.whoami import game as _whoami_game  # noqa: F401
+from app.domains.games.sockets.room_events import register_room_events
+from app.domains.wallet.sockets import register_store_events
 
 os.makedirs("uploads/avatars", exist_ok=True)
 
@@ -69,28 +74,58 @@ def _make_supervised_task(coro_factory, name: str, restart_delay: float = 5.0):
         while True:
             try:
                 await coro_factory()
-                logger.warning(f"⚠️ [{name}] انتهى بدون استثناء — غير متوقع، إعادة بعد {restart_delay}s")
+                logger.warning(f" [{name}] انتهى بدون استثناء — غير متوقع، إعادة بعد {restart_delay}s")
             except asyncio.CancelledError:
-                logger.info(f"🛑 [{name}] ملغي — إيقاف نظيف")
+                logger.info(f" [{name}] ملغي — إيقاف نظيف")
                 return
             except Exception as e:
-                logger.error(f"🔥 [{name}] crash: {type(e).__name__}: {e} — إعادة بعد {restart_delay}s")
+                logger.error(f" [{name}] crash: {type(e).__name__}: {e} — إعادة بعد {restart_delay}s")
             await asyncio.sleep(restart_delay)
 
     return asyncio.create_task(_supervisor(), name=name)
 
 
+async def _ai_startup_check():
+    """فحص جاهزية الـ AI مرة واحدة عند الإقلاع — يطبع الحالة في التيرمينال.
+
+    يعمل في الخلفية حتى لا يؤخر إقلاع السيرفر (تحميل Gemini قد يأخذ ثوانٍ).
+    للفحص اليدوي في أي وقت: python scripts/check_ai.py
+    """
+    import os as _os
+    if not _os.environ.get("GEMINI_API_KEY", "").strip():
+        logger.warning("[AI] معطّل — GEMINI_API_KEY غير موجود (التحكيم بالوضع المتساهل)")
+        return
+    try:
+        from app.infrastructure.gemini_model import load_gemini_model
+        import time as _time
+        t0 = _time.time()
+        model = await asyncio.to_thread(load_gemini_model, True)
+        if model is None:
+            logger.error("[AI] خطأ — المفتاح موجود لكن لا نموذج متاح (صلاحيات/حصة المفتاح)")
+            return
+        name = (getattr(model, "_model_name", None)
+                or getattr(model, "model_name", None) or str(model))
+        if "/" in name:
+            name = name.split("/")[-1]
+        ms = int((_time.time() - t0) * 1000)
+        logger.info(f"[AI] جاهز — النموذج: {name} ({ms}ms)")
+    except Exception as e:
+        logger.error(f"[AI] خطأ أثناء الفحص: {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("🚀 جاري تشغيل السيرفر...")
-    logger.info("🛡️ [moderation] فلتر المحتوى المحلي مُفعّل")
+    logger.info(" جاري تشغيل السيرفر...")
+    logger.info(" [moderation] فلتر المحتوى المحلي مُفعّل")
+    asyncio.create_task(_ai_startup_check())
 
-    # ✅ كل task محمية بـ supervisor — لا تموت بصمت
-    from app.services.career_importer import career_auto_import_loop
-    from app.services.bank_importer import bank_auto_import_loop
-    from app.services.huroof_importer import huroof_auto_import_loop
-    from app.services.knowledge_importer import knowledge_auto_import_loop
-    from app.sockets.lobby import presence_heartbeat_loop as _presence_heartbeat
+    # كل task محمية بـ supervisor — لا تموت بصمت
+    from app.domains.games.importers.career_importer import career_auto_import_loop
+    from app.domains.games.importers.bank_importer import bank_auto_import_loop
+    from app.domains.games.importers.huroof_importer import huroof_auto_import_loop
+    from app.domains.games.importers.knowledge_importer import knowledge_auto_import_loop
+    from app.domains.games.importers.whoami_importer import whoami_auto_import_loop
+    from app.domains.games.sockets.lobby import presence_heartbeat_loop as _presence_heartbeat
     tasks = [
         _make_supervised_task(cleanup_abandoned_accounts, "cleanup_accounts", restart_delay=60),
         _make_supervised_task(cleanup_waiting_rooms,      "cleanup_rooms",    restart_delay=30),
@@ -100,34 +135,36 @@ async def lifespan(app: FastAPI):
         _make_supervised_task(cleanup_leaver_data_job,    "cleanup_leavers",  restart_delay=60),
         _make_supervised_task(cleanup_closed_tickets_job, "cleanup_tickets",  restart_delay=60),
     ]
-    # 🔴 مهام Redis (حضور عالمي + عنقود) — تُسجَّل فقط مع REDIS_URL.
+    # مهام Redis (حضور عالمي + عنقود) — تُسجَّل فقط مع REDIS_URL.
     # (كانت تُسجَّل دائماً فترجع فوراً بلا Redis، والـ supervisor يعيدها
     # للأبد بتحذير "انتهى بدون استثناء" كل بضع ثوانٍ — إزعاج بلا فائدة.)
     if redis_enabled():
         tasks += [
             _make_supervised_task(_presence_heartbeat,         "presence_heartbeat", restart_delay=30),
-            # 🕸️ المرحلة ب-2: مستمع العنقود (أحداث محوَّلة/عضوية/انقطاعات) + نبضه
+            # المرحلة ب-2: مستمع العنقود (أحداث محوَّلة/عضوية/انقطاعات) + نبضه
             _make_supervised_task(lambda: _cluster.cluster_subscriber_loop(sio), "cluster_sub", restart_delay=5),
             _make_supervised_task(_cluster.cluster_heartbeat_loop,               "cluster_hb",  restart_delay=30),
         ]
     tasks += [
-        # ⚽ تجديد لاعبي "مسيرة لاعب" تلقائياً (Wikidata، دوري)
+        # تجديد لاعبي "مسيرة لاعب" تلقائياً (Wikidata، دوري)
         _make_supervised_task(career_auto_import_loop,    "career_importer",  restart_delay=300),
         _make_supervised_task(bank_auto_import_loop,      "bank_importer",    restart_delay=300),
-        # 🔡 تجديد أسئلة "حروف" تلقائياً (Wikidata، قوالب حتمية — صفر هلوسة)
+        # تجديد أسئلة "حروف" تلقائياً (Wikidata، قوالب حتمية — صفر هلوسة)
         _make_supervised_task(huroof_auto_import_loop,    "huroof_importer",  restart_delay=300),
-        # 🧠 توسيع قوائم "ماذا تعرف" تلقائياً (Wikidata، حقائق ثابتة)
+        # توسيع قوائم "ماذا تعرف" تلقائياً (Wikidata، حقائق ثابتة)
         _make_supervised_task(knowledge_auto_import_loop, "knowledge_importer", restart_delay=300),
+        # توليد شخصيات «من أنا» تلقائياً (Wikidata، تلميحات قوالب حتمية)
+        _make_supervised_task(whoami_auto_import_loop,    "whoami_importer",  restart_delay=300),
     ]
 
     yield
 
-    # ✅ Graceful shutdown: أبلغ اللاعبين قبل الإغلاق
-    logger.info("🛑 جاري إغلاق السيرفر — إبلاغ اللاعبين المتصلين...")
+    # Graceful shutdown: أبلغ اللاعبين قبل الإغلاق
+    logger.info(" جاري إغلاق السيرفر — إبلاغ اللاعبين المتصلين...")
     try:
         from app.sockets.state import connected_players
         if connected_players:
-            logger.info(f"📡 إرسال force_logout لـ {len(connected_players)} لاعب متصل")
+            logger.info(f" إرسال force_logout لـ {len(connected_players)} لاعب متصل")
             disconnect_tasks = [
                 sio.emit('force_logout', {'message': 'السيرفر يعيد التشغيل، سيتم تسجيل دخولك تلقائياً.'}, to=sid)
                 for sid in list(connected_players.keys())
@@ -135,17 +172,17 @@ async def lifespan(app: FastAPI):
             await asyncio.gather(*disconnect_tasks, return_exceptions=True)
             await asyncio.sleep(0.5)   # فرصة صغيرة لإرسال الرسائل
     except Exception as e:
-        logger.warning(f"⚠️ خطأ أثناء إبلاغ اللاعبين عند الإغلاق: {e}")
+        logger.warning(f" خطأ أثناء إبلاغ اللاعبين عند الإغلاق: {e}")
 
-    # ✅ إلغاء جميع الـ tasks بأمان
+    # إلغاء جميع الـ tasks بأمان
     for task in tasks:
         task.cancel()
     await asyncio.gather(*tasks, return_exceptions=True)
-    logger.info("✅ إيقاف نظيف اكتمل")
+    logger.info(" إيقاف نظيف اكتمل")
 
 
 # ==========================================
-# 🛡️ Sentry — رصد الأخطاء (المهمة 0.1)
+# Sentry — رصد الأخطاء (المهمة 0.1)
 # يُفعّل فقط لو SENTRY_DSN موجود في البيئة (آمن: لا يفعل شيئاً بدونه).
 # يصلك كل crash فوراً من اليوم الأول.
 # ==========================================
@@ -163,9 +200,9 @@ if _sentry_dsn:
             integrations=[StarletteIntegration(), FastApiIntegration()],
             send_default_pii=False,  # لا نرسل بيانات شخصية حساسة
         )
-        logging.getLogger("uvicorn").info("✅ Sentry مُفعّل لرصد الأخطاء")
+        logging.getLogger("uvicorn").info(" Sentry مُفعّل لرصد الأخطاء")
     except Exception as _e:
-        logging.getLogger("uvicorn").warning(f"⚠️ تعذّر تفعيل Sentry: {_e}")
+        logging.getLogger("uvicorn").warning(f" تعذّر تفعيل Sentry: {_e}")
 
 
 app = FastAPI(
@@ -216,7 +253,7 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
     # ============================================================
-    # 🛡️ Security Headers — production-grade
+    # Security Headers — production-grade
     # ============================================================
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
@@ -224,12 +261,12 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()"
 
-    # 🛡️ HSTS — يجبر HTTPS لمدة سنة (production فقط)
+    # HSTS — يجبر HTTPS لمدة سنة (production فقط)
     if os.environ.get("ENV") == "production":
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
 
-    # 🛡️ CSP — Content Security Policy
-    # ⚠️ ملاحظة: هذا CSP لـ API responses فقط (HTML pages تجي من frontend منفصل)
+    # CSP — Content Security Policy
+    # ملاحظة: هذا CSP لـ API responses فقط (HTML pages تجي من frontend منفصل)
     # لكن لو حدّ يطلب HTML مباشرة من API، نمنع scripts خارجية
     response.headers["Content-Security-Policy"] = (
         "default-src 'none'; "
@@ -238,7 +275,7 @@ async def add_security_headers(request: Request, call_next):
         "base-uri 'none';"
     )
 
-    # 🛡️ Cross-Origin policies
+    # Cross-Origin policies
     response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
     response.headers["Cross-Origin-Resource-Policy"] = "same-site"
 
@@ -264,8 +301,8 @@ async def ai_status():
         result["detail"] = "لا يوجد GEMINI_API_KEY — التحكيم يعمل بالوضع المتساهل."
         return result
     try:
-        # 🔄 force_reload=True: يُعيد المحاولة حتى لو فشل الكاش سابقاً
-        from app.core.gemini_model import load_gemini_model
+        # force_reload=True: يُعيد المحاولة حتى لو فشل الكاش سابقاً
+        from app.infrastructure.gemini_model import load_gemini_model
         model = await asyncio.to_thread(load_gemini_model, True)
         if model is None:
             result["status"] = "error"
@@ -279,12 +316,12 @@ async def ai_status():
         if "/" in model_name:
             model_name = model_name.split("/")[-1]
         result["model"] = model_name
-        # 🕐 اختبار مباشر بـ generate_content (لا نمر بـ judge_answer لأن
+        # اختبار مباشر بـ generate_content (لا نمر بـ judge_answer لأن
         #    judge_answer يُرجع lenient عند timeout وهذا يُعرض "خطأ" ظلماً)
         # timeout=15s للـ cold-start الأول (Gemini يأخذ 5-12s أحياناً)
         try:
             def _ping():
-                # 🛡️ prompt عربي آمن — "ping" قد يُطلق safety filter في Gemini
+                # prompt عربي آمن — "ping" قد يُطلق safety filter في Gemini
                 resp = model.generate_content("قل: جاهز")
                 return (resp.text or "").strip()
             ping_text = await asyncio.wait_for(
@@ -315,9 +352,9 @@ async def ai_status():
 
 @app.get("/health", tags=["System"])
 async def health_check():
-    from app.core.database import SessionLocal
+    from app.infrastructure.database import SessionLocal
     from app.sockets.state import connected_players, rooms as active_rooms
-    from app.games.core_manager import rooms
+    from app.domains.games.core_manager import rooms
     from sqlalchemy import text
 
     db_ok = False
@@ -336,7 +373,7 @@ async def health_check():
     response = {
         "status": overall_status,
         "db": "ok" if db_ok else "down",
-        # ✅ إضافة: إحصائيات Socket.IO لمراقبة حية
+        # إضافة: إحصائيات Socket.IO لمراقبة حية
         "active_connections": len(connected_players),
         "active_rooms": len(rooms),
     }
@@ -350,8 +387,18 @@ async def health_check():
 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
+
+@app.middleware("http")
+async def avatar_cache_headers(request, call_next):
+    """🖼️ كاش طويل للأفاتارات: 5000 لاعب متزامن = آلاف طلبات الصور.
+    بالكاش كل متصفح يحمّل الصورة مرة واحدة ثم يقرأها محلياً لأسبوع."""
+    response = await call_next(request)
+    if request.url.path.startswith("/uploads/"):
+        response.headers["Cache-Control"] = "public, max-age=604800, immutable"
+    return response
+
 # ==========================================
-# 📡 API Versioning (المهمة 0.2)
+# API Versioning (المهمة 0.2)
 # - المسارات الحالية (/auth, /shop, /support) تبقى للويب — لا يتأثر.
 # - نسخة /api/v1/ مكرّرة لتستهدفها Flutter (نفس المعالجات بالضبط).
 # هكذا نخدم الويب والموبايل معاً دون كسر أي شيء.
@@ -361,19 +408,21 @@ API_V1 = "/api/v1"
 # المسارات الحالية (الويب)
 app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
 app.include_router(shop_router, prefix="/shop", tags=["Shop"])
+app.include_router(progression_router, prefix="/progression", tags=["Progression"])
 app.include_router(support_router, prefix="/support", tags=["Support"])
 app.include_router(career_router, prefix="/career", tags=["Career"])
 
 # نسخة v1 (Flutter) — نفس الـ routers بمسار مُصدّر
 app.include_router(auth_router, prefix=f"{API_V1}/auth", tags=["Authentication v1"])
 app.include_router(shop_router, prefix=f"{API_V1}/shop", tags=["Shop v1"])
+app.include_router(progression_router, prefix=f"{API_V1}/progression", tags=["Progression v1"])
 app.include_router(support_router, prefix=f"{API_V1}/support", tags=["Support v1"])
 app.include_router(career_router, prefix=f"{API_V1}/career", tags=["Career v1"])
 
 
 # ==========================================
-# 🧪 اختبار Sentry (يعمل فقط خارج الإنتاج)
-# افتح /sentry-test في المتصفح، ثم راجع لوحة Sentry → Issues.
+# اختبار Sentry (يعمل فقط خارج الإنتاج)
+# افتح /sentry-test في المتصفح، ثم راجع لوحة Sentry  Issues.
 # احذف هذا المقطع بعد التأكد أن Sentry يعمل.
 # ==========================================
 if os.environ.get("ENV") != "production":
@@ -396,13 +445,13 @@ def _socket_cors_origins():
         pass
     return ALLOWED_ORIGINS
 
-# 🔴 المرحلة ب: مع REDIS_URL، البثّ يعبر كل الـ workers عبر Redis pub/sub.
+# المرحلة ب: مع REDIS_URL، البثّ يعبر كل الـ workers عبر Redis pub/sub.
 # بدونه: single-worker بالذاكرة كما كان (صفر تغيير سلوكي).
-from app.core.redis_client import redis_enabled, redis_url
+from app.infrastructure.redis_client import redis_enabled, redis_url
 _client_manager = None
 if redis_enabled():
     _client_manager = socketio.AsyncRedisManager(redis_url())
-    print(f"🔴 [socket.io] Redis manager مفعّل — البث يعبر الـ workers")
+    print(f" [socket.io] Redis manager مفعّل — البث يعبر الـ workers")
 
 sio = socketio.AsyncServer(
     async_mode='asgi',
@@ -415,7 +464,7 @@ sio = socketio.AsyncServer(
 )
 socket_app = socketio.ASGIApp(sio, socketio_path='socket.io')
 
-# 🕸️ المرحلة ب-2: ترقيع العنقود — تحويل أحداث الغرف للworker المالك
+# المرحلة ب-2: ترقيع العنقود — تحويل أحداث الغرف للworker المالك
 from app.core import cluster as _cluster
 if redis_enabled():
     _cluster.patch(sio)
@@ -428,6 +477,7 @@ register_store_events(sio)
 register_huroof_events(sio)
 register_career_events(sio)
 register_bank_events(sio)
+register_whoami_events(sio)
 register_knowledge_events(sio)
 register_telegram_events(sio)
 
@@ -437,12 +487,12 @@ async def telegram_bot_supervisor():
     while True:
         try:
             await telegram_bot_listener(sio)
-            logger.warning("🤖 [telegram_bot] listener انتهى بدون استثناء — إعادة بعد 5s")
+            logger.warning(" [telegram_bot] listener انتهى بدون استثناء — إعادة بعد 5s")
         except asyncio.CancelledError:
-            logger.info("🤖 [telegram_bot] supervisor ملغي")
+            logger.info(" [telegram_bot] supervisor ملغي")
             break
         except Exception as e:
-            logger.error(f"🤖 [telegram_bot] crash: {type(e).__name__}: {e} — إعادة بعد 5s")
+            logger.error(f" [telegram_bot] crash: {type(e).__name__}: {e} — إعادة بعد 5s")
         await asyncio.sleep(5)
 
 

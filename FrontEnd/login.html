@@ -2,14 +2,22 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>تسجيل الدخول - PlayRush</title>
-  <link rel="stylesheet" href="css/login.css" />
+  <title>تسجيل الدخول</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/auth.css" />
   <link rel="stylesheet" href="css/all.min.css">
     <link rel="stylesheet" href="css/brand.css">
     <link rel="stylesheet" href="css/social_bar.css">
     <script src="js/brand.js" defer></script>
 </head>
 <body>
+  <a href="index.html" id="backHomeBtn"
+     onclick="try{sessionStorage.setItem('pr_splash_company','1')}catch(e){}"
+     style="position:fixed;top:16px;inset-inline-start:16px;z-index:1000;display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:12px;background:rgba(22,27,34,.85);border:1px solid rgba(255,255,255,.15);color:#c9d1d9;text-decoration:none;font-size:.88rem;font-weight:700;">
+    <span>🏠</span> الرئيسية
+  </a>
+
   <div class="stars" id="stars"></div>
 
   <div class="login-container">
@@ -28,6 +36,10 @@
         <i class="fa fa-eye toggle-password" id="togglePassword"></i>
       </div>
 
+      <label class="remember-me" style="display:flex;align-items:center;gap:8px;margin:6px 0 12px;cursor:pointer;font-size:.92rem;opacity:.9;">
+        <input type="checkbox" id="rememberMe" checked style="width:16px;height:16px;accent-color:#facc15;cursor:pointer;" />
+        تذكرني لمدة أسبوع
+      </label>
       <button type="submit">دخول</button>
     </form>
     
@@ -51,5 +63,10 @@
   <script src="js/utils.js" defer></script>
   <script src="js/login.js" defer></script>
   <script src="js/anti_cheat.js" defer></script>
+  <script src="js/sound.js" defer></script>
+  <div class="pr-copyright" style="text-align:center;padding:14px 8px;font-size:.78rem;opacity:.55;">
+    © 2026 <strong>Isolated Person</strong> — PlayRush™ جميع الحقوق محفوظة &nbsp;·&nbsp; <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">الشروط والأحكام</a>
+  </div>
+  <script src="js/music.js" defer></script>
 </body>
 </html>

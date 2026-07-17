@@ -1,5 +1,5 @@
 // ============================================================
-// 🎧 صفحة الدعم — FAQ + تذاكر + تواصل
+//  صفحة الدعم — FAQ + تذاكر + تواصل
 // ============================================================
 const API = (typeof CONFIG !== 'undefined' && CONFIG.API_URL) ? CONFIG.API_URL : 'http://127.0.0.1:8000';
 const token = (typeof getToken === 'function') ? getToken() : (localStorage.getItem('token') || sessionStorage.getItem('token'));

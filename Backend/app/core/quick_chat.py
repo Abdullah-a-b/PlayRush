@@ -1,5 +1,5 @@
 """
-💬 نظام الرسائل الجاهزة (Quick Chat) — بديل آمن للدردشة الحرة.
+ نظام الرسائل الجاهزة (Quick Chat) — بديل آمن للدردشة الحرة.
 
 المبدأ: العميل لا يرسل نصاً حراً أبداً، بل يرسل *معرّف* (ID) عبارة جاهزة فقط.
 الخادم هو المصدر الوحيد للنصوص — يستحيل حقن نص مسيء لأن لا نص يُكتب أصلاً.
@@ -55,11 +55,11 @@ QUICK_CHAT_INGAME = {
     ],
 }
 
-# نجمع كل العبارات في فهرس واحد (id → text) ليعمل التحقق في أي سياق
+# نجمع كل العبارات في فهرس واحد (id  text) ليعمل التحقق في أي سياق
 QUICK_CHAT = {**QUICK_CHAT_LOBBY}  # توافق خلفي
 _ALL_CATS = [QUICK_CHAT_LOBBY, QUICK_CHAT_INGAME]
 
-# فهرس سريع id → text (للتحقق والبحث بزمن ثابت) — يغطّي الكتالوجين
+# فهرس سريع id  text (للتحقق والبحث بزمن ثابت) — يغطّي الكتالوجين
 _PHRASE_BY_ID = {
     item["id"]: item["text"]
     for cat_dict in _ALL_CATS
@@ -89,8 +89,8 @@ def resolve_emoji(phrase_id: str):
 
 def get_quick_chat_catalog(context: str = "lobby") -> dict:
     """يُرجع قائمة العبارات حسب السياق:
-    - 'game' أو 'room' → عبارات داخل المباراة (تنافسية/تفاعلية)
-    - غير ذلك (lobby/categories) → عبارات اجتماعية عامة"""
+    - 'game' أو 'room'  عبارات داخل المباراة (تنافسية/تفاعلية)
+    - غير ذلك (lobby/categories)  عبارات اجتماعية عامة"""
     if context in ("game", "room", "ingame"):
         return QUICK_CHAT_INGAME
     return QUICK_CHAT_LOBBY
@@ -106,7 +106,7 @@ def get_catalog_for_user(context: str, owned_phrase_ids: list, game: str = None)
 
     # نجلب عناصر المتجر
     try:
-        from app.services.store_catalog import COSMETICS
+        from app.domains.wallet.store_catalog import COSMETICS
     except Exception:
         return base
 
@@ -156,7 +156,7 @@ def get_catalog_for_user(context: str, owned_phrase_ids: list, game: str = None)
 # فهرس عبارات المتجر (للتحقق عند الإرسال)
 def _store_phrase_text(phrase_id: str):
     try:
-        from app.services.store_catalog import COSMETICS
+        from app.domains.wallet.store_catalog import COSMETICS
         for c in COSMETICS:
             if c.get("category") == "chat_phrase" and c["id"] == phrase_id:
                 return c["name"]
@@ -173,11 +173,11 @@ def resolve_phrase(phrase_id: str):
     base = _PHRASE_BY_ID.get(phrase_id)
     if base is not None:
         return base
-    # تفاعل إيموجي: react_<emojiId> → أيقونة الإيموجي
+    # تفاعل إيموجي: react_<emojiId>  أيقونة الإيموجي
     if phrase_id.startswith("react_"):
         emoji_id = phrase_id[len("react_"):]
         try:
-            from app.services.store_catalog import COSMETICS
+            from app.domains.wallet.store_catalog import COSMETICS
             for c in COSMETICS:
                 if c.get("category") == "emoji" and c["id"] == emoji_id:
                     return c.get("icon", "🙂")

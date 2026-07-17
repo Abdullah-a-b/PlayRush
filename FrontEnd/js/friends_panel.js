@@ -1,5 +1,5 @@
 // ============================================================
-// 👥 قسم الأصدقاء (مشترك بين اللوبي و categories)
+//  قسم الأصدقاء (مشترك بين اللوبي و categories)
 // يتطلب: socket عام + token + دالة showToast + sanitizeHTML (اختياري)
 // ============================================================
 (function() {
@@ -148,7 +148,7 @@
     box.innerHTML = `
       <div style="display:flex; align-items:center; gap:12px; padding:12px; background:rgba(255,255,255,0.05); border-radius:10px;">
         <div class="profile-clickable" data-profile="${p.id}" title="اعرض البروفايل" style="display:flex;align-items:center;gap:12px;flex:1;cursor:pointer;padding:4px 8px;border-radius:8px;transition:background 0.15s;">
-          <img src="${escHtml(avatarSrc(p.avatar))}" style="width:46px;height:46px;border-radius:50%;background:#222;pointer-events:none;">
+          <img loading="lazy" src="${escHtml(avatarSrc(p.avatar))}" style="width:46px;height:46px;border-radius:50%;background:#222;pointer-events:none;">
           <div style="flex:1;pointer-events:none;">
             <div style="color:#fff;font-weight:bold;">${escHtml(p.name)} <i class="fa-solid fa-circle-info" style="color:#4a90e2;font-size:12px;opacity:0.7;"></i></div>
             <div style="color:#888;font-size:12px;">${escHtml(p.player_id)}</div>
@@ -276,7 +276,7 @@
     panel.innerHTML = friends.map(f => `
       <div style="display:flex;align-items:center;gap:12px;padding:10px;border-bottom:1px solid rgba(255,255,255,0.07);">
         <div class="profile-clickable" data-profile="${f.id}" title="اعرض البروفايل" style="display:flex;align-items:center;gap:10px;flex:1;cursor:pointer;padding:4px 8px;border-radius:8px;transition:background 0.15s;">
-          <img src="${escHtml(avatarSrc(f.avatar))}" style="width:42px;height:42px;border-radius:50%;background:#222;pointer-events:none;">
+          <img loading="lazy" src="${escHtml(avatarSrc(f.avatar))}" style="width:42px;height:42px;border-radius:50%;background:#222;pointer-events:none;">
           <span style="color:#fff;pointer-events:none;">${escHtml(f.name)}</span>
           <i class="fa-solid fa-circle-info" style="color:#4a90e2;font-size:12px;opacity:0.7;pointer-events:none;"></i>
         </div>
@@ -310,7 +310,7 @@
     panel.innerHTML = pending.map(p => `
       <div style="display:flex;align-items:center;gap:12px;padding:10px;border-bottom:1px solid rgba(255,255,255,0.07);">
         <div class="profile-clickable" data-profile="${p.id}" title="اعرض البروفايل" style="display:flex;align-items:center;gap:10px;flex:1;cursor:pointer;padding:4px 8px;border-radius:8px;transition:background 0.15s;">
-          <img src="${escHtml(avatarSrc(p.avatar))}" style="width:42px;height:42px;border-radius:50%;background:#222;pointer-events:none;">
+          <img loading="lazy" src="${escHtml(avatarSrc(p.avatar))}" style="width:42px;height:42px;border-radius:50%;background:#222;pointer-events:none;">
           <span style="color:#fff;pointer-events:none;">${escHtml(p.name)}</span>
           <i class="fa-solid fa-circle-info" style="color:#4a90e2;font-size:12px;opacity:0.7;pointer-events:none;"></i>
         </div>

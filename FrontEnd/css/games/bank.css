@@ -1,4 +1,4 @@
-/* 🏦 البنك */
+/*  البنك */
 :root {
   --bk-bg:#0d1117; --bk-panel:#161b22; --bk-gold:#f0b429;
   --bk-green:#2ea043; --bk-red:#f85149; --bk-blue:#388bfd;
@@ -108,7 +108,7 @@ body{font-family:'Tajawal','Segoe UI',sans-serif;
   .btn-answer,.btn-bank{padding:12px 24px;font-size:1rem}
   .ready-count{font-size:5rem}
 }
-/* 👁 بطاقة بروفايل قابلة للنقر (نسخة حروف بالضبط) */
+/*  بطاقة بروفايل قابلة للنقر (نسخة حروف بالضبط) */
 .player-profile {
   cursor: pointer;
   transition: transform .2s, filter .2s, background .2s, border-color .2s;
@@ -157,7 +157,7 @@ body{font-family:'Tajawal','Segoe UI',sans-serif;
 .action-btn.block-user { background: linear-gradient(135deg,#7f8c8d,#616a6b); }
 .action-btn.report-user { background: linear-gradient(135deg,#e67e22,#d35400); }
 
-/* 🎯 شريط المساعدات — تحت يسار */
+/*  شريط المساعدات — تحت يسار */
 .career-helps-bar { position: fixed; bottom: 80px; left: 20px; z-index: 800;
   display: flex; flex-direction: column; gap: 8px; }
 .career-help-btn { width: 46px; height: 46px; border-radius: 12px; border: 1px solid rgba(255,255,255,.15);
@@ -168,13 +168,11 @@ body{font-family:'Tajawal','Segoe UI',sans-serif;
 
 /* عدّاد المخزون على زر المساعدة */
 .career-help-btn { position: relative; }
-.career-help-btn .hqty {
-  position: absolute; bottom: -4px; inset-inline-end: -4px;
-  min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px;
-  background: var(--bk-gold); color: #1a1a2e; font-size: .72rem; font-weight: 800;
+.career-help-btn .hqty { position: absolute; bottom: 2px; inset-inline-end: 2px;
+  z-index: 3; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px;
+  background: var(--bk-gold); color: #1a1a2e; font-size: .7rem; font-weight: 800;
   display: flex; align-items: center; justify-content: center; line-height: 1;
-  border: 2px solid var(--bk-bg);
-}
+  box-shadow: 0 0 0 2px rgba(13, 17, 23, .85); }
 .career-help-btn.depleted { opacity: .4; cursor: not-allowed; filter: grayscale(1); }
 .career-help-btn.depleted .hqty { background: #777; }
 
@@ -207,7 +205,7 @@ body{font-family:'Tajawal','Segoe UI',sans-serif;
 .action-btn:hover { transform: scale(1.05); }
 .action-btn.block-user { background: linear-gradient(135deg,#7f8c8d,#616a6b); }
 .action-btn.report-user { background: linear-gradient(135deg,#e67e22,#d35400); }
-/* 😄 الإيموجيات المتحركة (نفس حروف) */
+/*  الإيموجيات المتحركة (نفس حروف) */
 .qc-emoji-row { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 4px; }
 .qc-emoji-btn { background: transparent; border: none; font-size: 26px; cursor: pointer; padding: 4px 6px; border-radius: 8px; transition: all 0.15s; }
 .qc-emoji-btn:hover { background: rgba(255,255,255,0.12); transform: scale(1.2); }
@@ -226,7 +224,7 @@ body{font-family:'Tajawal','Segoe UI',sans-serif;
 .btn-bank.pulse{animation:bankPulse .6s ease-in-out 3}
 @keyframes bankPulse{50%{transform:scale(1.15);box-shadow:0 0 24px rgba(240,180,41,.7)}}
 
-/* 🎯 شريط المساعدات — تحت يسار */
+/*  شريط المساعدات — تحت يسار */
 .bank-helps-bar { position: fixed; bottom: 80px; left: 20px; z-index: 800;
   display: flex; flex-direction: column; gap: 8px; }
 .bank-help-btn { width: 46px; height: 46px; border-radius: 12px; border: 1px solid rgba(255,255,255,.15);
@@ -235,9 +233,9 @@ body{font-family:'Tajawal','Segoe UI',sans-serif;
 .bank-help-btn:hover:not(.used):not(.depleted) { transform: scale(1.1); border-color: var(--bk-gold); }
 .bank-help-btn.used { opacity: .35; cursor: not-allowed; filter: grayscale(1); }
 .bank-help-btn.depleted { opacity: .4; cursor: not-allowed; filter: grayscale(1); }
-.bank-help-btn .hqty { position: absolute; bottom: -4px; inset-inline-end: -4px;
-  min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px;
-  background: var(--bk-gold); color: #1a1a2e; font-size: .72rem; font-weight: 800;
+.bank-help-btn .hqty { position: absolute; bottom: 2px; inset-inline-end: 2px;
+  z-index: 3; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px;
+  background: var(--bk-gold); color: #1a1a2e; font-size: .7rem; font-weight: 800;
   display: flex; align-items: center; justify-content: center; line-height: 1;
-  border: 2px solid var(--bk-bg); }
+  box-shadow: 0 0 0 2px rgba(13, 17, 23, .85); }
 .bank-help-btn.depleted .hqty { background: #777; }

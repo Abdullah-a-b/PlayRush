@@ -1,5 +1,5 @@
 """
-🏦 مولّد أسئلة البنك من Wikidata — حقائق ثابتة محصّنة من الخطأ.
+ مولّد أسئلة البنك من Wikidata — حقائق ثابتة محصّنة من الخطأ.
 
 المبدأ: قوالب حتمية (عاصمة/عملة/قارة الدول) — لا توليد لغوي قد يهلوس.
 - طلب SPARQL واحد يجلب كل الدول ذات السيادة + P36/P38/P30 بالعربية والإنجليزية.
@@ -35,7 +35,7 @@ SELECT ?cLabelAr ?cLabelEn ?capAr ?capEn ?curAr ?curEn ?contAr WHERE {
 }
 """
 
-# دول مشهورة → أسئلتها سهلة؛ البقية متوسطة/صعبة
+# دول مشهورة  أسئلتها سهلة؛ البقية متوسطة/صعبة
 FAMOUS = {"السعودية", "مصر", "الإمارات", "الكويت", "قطر", "الأردن", "العراق",
           "المغرب", "الجزائر", "تونس", "فرنسا", "ألمانيا", "إيطاليا",
           "إسبانيا", "المملكة المتحدة", "الولايات المتحدة", "روسيا", "الصين",
@@ -49,7 +49,7 @@ def _is_arabic(s):
 
 
 def _variants(ar, en):
-    """تنويعات الإملاء الحتمية (ج↔غ، حذف ألف المد: سانتياغو/سانتياجو/
+    """تنويعات الإملاء الحتمية (جغ، حذف ألف المد: سانتياغو/سانتياجو/
     سنتياغو...) — محرك مشترك مع مولّد حروف (answer_variants.py)."""
     try:
         from answer_variants import spelling_variants
@@ -84,7 +84,7 @@ def build_questions(rows):
         cap_ar, cap_en = g("capAr"), g("capEn")
         cur_ar, cur_en = g("curAr"), g("curEn")
         cont_ar = g("contAr")
-        # 🛡️ تحصين: نقبل الحقل فقط إن كانت قيمته عربية سليمة (لا QIDs خام)
+        # تحصين: نقبل الحقل فقط إن كانت قيمته عربية سليمة (لا QIDs خام)
         if _is_arabic(cap_ar) and not cap_ar.startswith("Q"):
             qs.append({"id": f"wd_cap_{len(qs)}", "q": f"ما عاصمة {country}؟",
                        "a": cap_ar, "accepted": _variants(cap_ar, cap_en),
@@ -106,10 +106,10 @@ def run_import():
     rows = fetch_rows()
     qs = build_questions(rows)
     if len(qs) < 30:
-        print(f"⚠️ [bank-import] نتائج قليلة ({len(qs)}) — أُبقي الملف القديم (تحصين)")
+        print(f" [bank-import] نتائج قليلة ({len(qs)}) — أُبقي الملف القديم (تحصين)")
         return 0
     json.dump(qs, open(out_path, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-    print(f"🏦 [bank-import] وُلّد {len(qs)} سؤال → {out_path}")
+    print(f" [bank-import] وُلّد {len(qs)} سؤال  {out_path}")
     return len(qs)
 
 

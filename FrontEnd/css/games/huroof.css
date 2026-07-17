@@ -520,7 +520,7 @@ body {
 }
 
 .hex.selected {
-    border-color: #facc15 !important;
+    border-color: var(--brand-gold, #facc15) !important;
     box-shadow: 0 0 15px rgba(250, 204, 21, 0.6) !important;
     transition: all 0.2s ease-in-out;
 }
@@ -532,7 +532,7 @@ body {
     z-index: 5;
 }
 
-/* ✅ إصلاح: قاعدة موحدة للـ sidebar */
+/*  إصلاح: قاعدة موحدة للـ sidebar */
 .question-sidebar.active {
     display: flex !important;
     opacity: 1 !important;
@@ -544,7 +544,7 @@ body {
 .player-profile {
     cursor: pointer;
     transition: transform 0.2s, filter 0.2s, background 0.2s, border-color 0.2s;
-    /* 🎨 شكل بطاقة قابلة للضغط — مطابق للغة التصميم الحالية */
+    /*  شكل بطاقة قابلة للضغط — مطابق للغة التصميم الحالية */
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 14px;
@@ -560,7 +560,7 @@ body {
 .player-profile.right:hover {
     border-color: rgba(255, 71, 87, 0.55);
 }
-/* 👁 تلميح "اضغط لعرض البروفايل" — أيقونة صغيرة تظهر بثبات وتتوهج عند الـ hover */
+/*  تلميح "اضغط لعرض البروفايل" — أيقونة صغيرة تظهر بثبات وتتوهج عند الـ hover */
 .player-profile::after {
     content: '\f06e'; /* fa-eye */
     font-family: 'Font Awesome 6 Free';
@@ -576,7 +576,7 @@ body {
     color: rgba(255, 255, 255, 0.85);
 }
 
-/* 💡 نبضة تعريفية خفيفة على بروفايل الخصم عند بدء المباراة (مرة واحدة) */
+/*  نبضة تعريفية خفيفة على بروفايل الخصم عند بدء المباراة (مرة واحدة) */
 @keyframes profileHintPulse {
     0%, 100% { box-shadow: 0 0 0 0 rgba(255, 235, 59, 0); }
     50%      { box-shadow: 0 0 12px 2px rgba(255, 235, 59, 0.35); }
@@ -640,7 +640,7 @@ body {
 .action-btn.report-user:hover { transform: translateY(-2px); filter: brightness(1.1); }
 
 /* ==========================================
-   🎯 نظام الجولات (Rounds Display)
+    نظام الجولات (Rounds Display)
    ========================================== */
 .center-info {
     display: flex;
@@ -719,7 +719,7 @@ body {
 }
 
 /* -------------------------------------------
-   🎯 خانات المساعدات
+    خانات المساعدات
 ------------------------------------------- */
 .help-slots {
     position: fixed;
@@ -840,7 +840,7 @@ body {
 }
 
 /* -------------------------------------------
-   😄 إيموجيات داخل لوحة الرسائل + فقاعة متحركة
+    إيموجيات داخل لوحة الرسائل + فقاعة متحركة
 ------------------------------------------- */
 .qc-emoji-row { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 4px; }
 .qc-emoji-btn { background: transparent; border: none; font-size: 26px; cursor: pointer; padding: 4px 6px; border-radius: 8px; transition: all 0.15s; }
@@ -849,3 +849,12 @@ body {
 .emoji-bubble.show { opacity: 1; transform: scale(1) translateY(0); }
 .emoji-fallback { font-size: 60px; display: inline-block; animation: emojiFloat 2s ease-in-out infinite; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4)); }
 @keyframes emojiFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
+/* أنيميشن استعد 3-2-1 (موحّد) */
+.ready-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:6000}
+.ready-content{text-align:center}
+.ready-title{font-size:2rem;font-weight:800;color:#facc15;margin-bottom:20px;animation:rdFadeUp .4s}
+.ready-count{font-size:7rem;font-weight:900;color:#fff;line-height:1}
+.ready-count.pop{animation:rdPop .9s ease-out}
+@keyframes rdPop{0%{transform:scale(2.5);opacity:0}30%{transform:scale(1);opacity:1}100%{transform:scale(.8);opacity:.6}}
+@keyframes rdFadeUp{from{transform:translateY(15px);opacity:0}to{transform:translateY(0);opacity:1}}

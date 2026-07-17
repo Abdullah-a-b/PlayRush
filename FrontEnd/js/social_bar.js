@@ -8,7 +8,7 @@
 (function () {
     if (document.querySelector('.social-bar')) return;  // لا تكرار
 
-    // 🎮 لا نظهر داخل صفحات اللعبة الفعلية (يشتت اللاعب أثناء المباراة)
+    //  لا نظهر داخل صفحات اللعبة الفعلية (يشتت اللاعب أثناء المباراة)
     if (/\/games\//.test(window.location.pathname)) return;
 
     // بيانات المنصات: المفتاح (يطابق SOCIAL_LINKS) + الأيقونة + الاسم + اللون

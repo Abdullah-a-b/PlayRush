@@ -1,9 +1,9 @@
-/* 🧠 ماذا تعرف — أنماط (ترث عائلة البنك للثبات البصري الكامل) */
+/*  ماذا تعرف — أنماط (ترث عائلة البنك للثبات البصري الكامل) */
 @import url('bank.css');
 
 .kn-points { color: #ffd166; font-weight: 800; font-size: 1.05rem; }
 
-/* ⚔️ سترايكات عند الأسماء — نفس نمط مسيرة لاعب المعتمد */
+/*  سترايكات عند الأسماء — نفس نمط مسيرة لاعب المعتمد */
 .strikes-display { display: flex; gap: 4px; margin-top: 2px; }
 .right-info .strikes-display { justify-content: flex-end; }
 .strike-x { font-size: 1.0rem; line-height: 1; font-weight: 900;
@@ -39,3 +39,16 @@
 @keyframes dcSpin { to { transform: rotate(360deg); } }
 
 .bank-status-msg.ok { color: #4dd07a; }
+
+/* ✍️ صندوق الكتابة (كان بلا أنماط إطلاقاً — سبب "ما يطلع") */
+.answer-box{position:fixed;left:50%;bottom:120px;transform:translateX(-50%);
+  z-index:900;background:rgba(22,27,34,.97);border:1px solid rgba(74,222,128,.4);
+  border-radius:16px;padding:14px 18px;display:flex;gap:10px;align-items:center;
+  box-shadow:0 12px 40px rgba(0,0,0,.5);width:min(480px,92vw)}
+.answer-box .answer-timer{min-width:38px;height:38px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-weight:900;
+  background:rgba(74,222,128,.15);color:#4ade80;border:2px solid #4ade80}
+.answer-box input{flex:1;padding:12px 14px;border-radius:10px;
+  border:1px solid rgba(255,255,255,.15);background:#0d1117;color:#fff;font-size:1rem}
+.answer-box button{padding:12px 18px;border:none;border-radius:10px;cursor:pointer;
+  background:linear-gradient(135deg,#4ade80,#16a34a);color:#fff;font-weight:800}

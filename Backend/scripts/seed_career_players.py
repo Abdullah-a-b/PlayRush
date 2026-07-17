@@ -1,5 +1,5 @@
 """
-⚽ بذور بيانات 'مسيرة لاعب' — لاعبون تجريبيون للاختبار.
+ بذور بيانات 'مسيرة لاعب' — لاعبون تجريبيون للاختبار.
 
 التشغيل: python scripts/seed_career_players.py
 يملأ جدول career_players ببيانات أولية. لاحقاً تُوسّع عبر Wikidata.
@@ -13,7 +13,8 @@ import json
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.core.database import SessionLocal, CareerPlayer
+from app.infrastructure.database import SessionLocal
+from app.domains.games.models import CareerPlayer
 
 
 # بيانات تجريبية — لاعبون مشهورون (سهل تخمينهم للاختبار)
@@ -108,9 +109,9 @@ def main():
             db.add(cp)
             added += 1
         db.commit()
-        print(f"✅ أُضيف {added} لاعب | ⏭️ متخطّى {skipped} (موجود مسبقاً)")
+        print(f" أُضيف {added} لاعب | ⏭ متخطّى {skipped} (موجود مسبقاً)")
         total = db.query(CareerPlayer).count()
-        print(f"📊 إجمالي اللاعبين في القاعدة: {total}")
+        print(f" إجمالي اللاعبين في القاعدة: {total}")
     finally:
         db.close()
 

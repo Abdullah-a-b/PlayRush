@@ -1,4 +1,4 @@
-/* 🎯 تجهيز المساعدات */
+/*  تجهيز المساعدات */
 (function () {
   if (typeof window === 'undefined') return;
   function _token() { return (typeof getToken === 'function') ? getToken() : (localStorage.getItem('token') || sessionStorage.getItem('token')); }
@@ -50,7 +50,7 @@
       card.innerHTML = `<span class="lh-icon">${h.icon}</span><span class="lh-name">${_esc(h.name)}</span><span class="lh-qty">${isDefault ? 'أساسية' : 'تملك: ' + (qty || 0)}</span>`;
       card.addEventListener('click', () => {
         if (_selected.length >= _data.slots || _selected.includes(h.id)) return;
-        // ⚔️ تعارض التجهيز (مثل: درع الرصيد × فرصة ثانية بالبنك)
+        //  تعارض التجهيز (مثل: درع الرصيد × فرصة ثانية بالبنك)
         const confs = _data.conflicts || [];
         for (const pair of confs) {
           const other = pair[0] === h.id ? pair[1] : (pair[1] === h.id ? pair[0] : null);

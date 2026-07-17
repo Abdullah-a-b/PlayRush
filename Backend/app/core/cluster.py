@@ -1,5 +1,5 @@
 """
-🕸️ طبقة العنقود (Cluster) — المرحلة ب-2: multi-worker كامل
+ طبقة العنقود (Cluster) — المرحلة ب-2: multi-worker كامل
 
 المشكلة: غرف الألعاب تعيش في ذاكرة worker واحد (كائنات Python حية
 بمؤقتات وإصدارات). مع عدة workers، لاعبا المباراة قد يتصلان بworkers
@@ -7,13 +7,13 @@
 
 الحل: نمط «الـ worker المالك» (Owner-Worker):
   1. الغرفة تعيش حيث أُنشئت — منشئها هو مالكها (سجل في Redis).
-  2. أي حدث لعبة يصل worker غير المالك → يُحوَّل للمالك عبر
+  2. أي حدث لعبة يصل worker غير المالك  يُحوَّل للمالك عبر
      Redis pub/sub، والمالك يعالجه بحالته المحلية كأن الحدث وصله
      مباشرة. البثّ الناتج يعبر كل الـ workers (AsyncRedisManager من ب-1).
   3. عضوية غرف socket.io يجب أن تُسجَّل على worker *اتصال* اللاعب —
      لذا enter_room/leave_room مُرقّعتان: لو الاتصال يعيش على worker
      آخر، تُرسل أمر تنفيذ محلي له.
-  4. انقطاع لاعب على worker غير المالك → بثّ sid_gone، والمالك
+  4. انقطاع لاعب على worker غير المالك  بثّ sid_gone، والمالك
      يشغّل مسار الانقطاع المعتاد (مؤقت 30ث... إلخ).
   5. مفاتيح Redis كلها بـ TTL يجدده نبض دوري — انهيار worker =
      تنظيف ذاتي، وفشل Redis = سقوط رشيق للسلوك المحلي.
@@ -26,15 +26,15 @@ import json
 import uuid
 import asyncio
 
-from app.core.redis_client import redis_enabled, redis_available, get_redis
+from app.infrastructure.redis_client import redis_enabled, redis_available, get_redis
 
 WORKER_ID = os.environ.get("WORKER_ID") or uuid.uuid4().hex[:10]
 
 _CH = 'pr:cluster:'           # قناة كل worker: pr:cluster:{WORKER_ID}
 _CH_BCAST = 'pr:cluster:bcast'
-_K_CONN = 'pr:conn:'          # sid → worker المالك للاتصال
-_K_OWNER = 'pr:room_owner:'   # room_code → worker المالك للغرفة
-_K_SIDROOM = 'pr:sid_room:'   # sid → room_code
+_K_CONN = 'pr:conn:'          # sid  worker المالك للاتصال
+_K_OWNER = 'pr:room_owner:'   # room_code  worker المالك للغرفة
+_K_SIDROOM = 'pr:sid_room:'   # sid  room_code
 _TTL = 120
 
 # أحداث الغرف/الألعاب التي تُحوَّل للمالك
@@ -138,7 +138,7 @@ async def _send(worker_id, payload):
         await r.publish(_CH + worker_id, json.dumps(payload, ensure_ascii=False))
         return True
     except Exception as e:
-        print(f"⚠️ [cluster] إرسال فشل: {e}")
+        print(f" [cluster] إرسال فشل: {e}")
         return False
 
 
@@ -180,11 +180,11 @@ def patch(sio):
                     if ok:
                         return  # سيعالجه المالك
             except Exception as e:
-                print(f"⚠️ [cluster] تحويل {event}: {e} — معالجة محلية")
+                print(f" [cluster] تحويل {event}: {e} — معالجة محلية")
         return await _orig_trigger(event, namespace, *args)
 
     async def _enter(sid, room, namespace=None):
-        # نربط sid↔room دائماً (يُستخدم لتوجيه الأحداث اللاحقة)
+        # نربط sidroom دائماً (يُستخدم لتوجيه الأحداث اللاحقة)
         r = await _r()
         if r is not None:
             try:
@@ -214,14 +214,14 @@ def patch(sio):
     sio._trigger_event = _trigger
     sio.enter_room = _enter
     sio.leave_room = _leave
-    print(f"🕸️ [cluster] worker {WORKER_ID} — تحويل أحداث الغرف مفعّل")
+    print(f" [cluster] worker {WORKER_ID} — تحويل أحداث الغرف مفعّل")
 
 
 # ---------- المستمع والنبض (supervised) ----------
 async def cluster_subscriber_loop(sio):
     """يستمع لقناة هذا الـ worker + قناة البث: أحداث محوَّلة، أوامر
     عضوية، وإشعارات انقطاع.
-    🛡️ صامد داخلياً: لو Redis غير متاح (أو انقطع) لا ينهار للـ supervisor
+     صامد داخلياً: لو Redis غير متاح (أو انقطع) لا ينهار للـ supervisor
     كل 5ث — ينتظر بهدوء ويعيد الاتصال بنفسه، برسالة واحدة بالدقيقة."""
     if not redis_enabled():
         return
@@ -231,7 +231,7 @@ async def cluster_subscriber_loop(sio):
             r = get_redis()
             pubsub = r.pubsub()
             await pubsub.subscribe(_CH + WORKER_ID, _CH_BCAST)
-            print(f"🕸️ [cluster] worker {WORKER_ID} يستمع")
+            print(f" [cluster] worker {WORKER_ID} يستمع")
             announced_down = 0.0
             async for msg in pubsub.listen():
                 if msg.get('type') != 'message':
@@ -251,14 +251,14 @@ async def cluster_subscriber_loop(sio):
                         if p.get('origin') != WORKER_ID and on_remote_sid_gone:
                             await on_remote_sid_gone(p['sid'])
                 except Exception as e:
-                    print(f"⚠️ [cluster] معالجة رسالة: {e}")
+                    print(f" [cluster] معالجة رسالة: {e}")
         except asyncio.CancelledError:
             raise
         except Exception as e:
             import time as _t
             now = _t.time()
             if now - announced_down >= 60:
-                print(f"🕸️ [cluster] Redis غير متاح للمستمع ({type(e).__name__}) — "
+                print(f" [cluster] Redis غير متاح للمستمع ({type(e).__name__}) — "
                       f"إعادة محاولة هادئة كل 10ث حتى يعود")
                 announced_down = now
             await asyncio.sleep(10)
@@ -275,7 +275,7 @@ async def cluster_heartbeat_loop(*_):
             continue
         try:
             from app.sockets.state import connected_players
-            from app.games.core_manager import rooms
+            from app.domains.games.core_manager import rooms
             pipe = r.pipeline()
             for s in list(connected_players.keys()):
                 pipe.expire(_K_CONN + s, _TTL)
@@ -286,4 +286,4 @@ async def cluster_heartbeat_loop(*_):
                         pipe.set(_K_SIDROOM + pl['sid'], code, ex=_TTL)
             await pipe.execute()
         except Exception as e:
-            print(f"⚠️ [cluster] heartbeat: {e}")
+            print(f" [cluster] heartbeat: {e}")

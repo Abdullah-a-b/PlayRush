@@ -1,4 +1,4 @@
-/* 🏦 البنك — منطق العميل */
+/*  البنك — منطق العميل */
 (function () {
   'use strict';
   window.CURRENT_GAME = 'bank';
@@ -33,7 +33,7 @@
     el.className = 'bank-status-msg' + (type ? ' ' + type : '');
   }
   function updateSafe(safe, safeByName) {
-    // 🛡️ الأسماء ثابتة مهما تقلّبت هوية الاتصال — نفضّلها دائماً
+    //  الأسماء ثابتة مهما تقلّبت هوية الاتصال — نفضّلها دائماً
     if (safeByName && Object.keys(safeByName).length) {
       const oppName = oppRoomName || Object.keys(safeByName).find(n => n !== myRoomName);
       $('mySafe').textContent = safeByName[myRoomName] ?? 0;
@@ -150,10 +150,12 @@
 
   // ===== بدء دور =====
   socket.on('bank_round_start', (d) => {
+    hDone = false; hQShown = false; hAnswering = false;
+    if (typeof renderHelpsBar === 'function') renderHelpsBar();
     updateSafe(d.safe, d.safeByName);
     updateRound(d.round);
     updateTemp({ [mySid]: 0 });
-    iAmActive = true;  // 🔥 متزامن: الجميع يلعب معاً
+    iAmActive = true;  //  متزامن: الجميع يلعب معاً
     answerBox.style.display = 'none';
     $('actionButtons').style.display = 'none';
     $('qText').textContent = 'استعد…';
@@ -169,7 +171,7 @@
 
   // ===== سؤال جديد =====
   socket.on('bank_question', (d) => {
-    // 🙈 لا صعوبة ولا نقاط — الفئة فقط (مثل الأصل)
+    //  لا صعوبة ولا نقاط — الفئة فقط (مثل الأصل)
     $('qMeta').innerHTML = `<span class="q-cat">${d.category}</span>`;
     $('qText').textContent = d.text;
     answerBox.style.display = 'none';
@@ -177,10 +179,10 @@
     $('actionButtons').style.display = 'flex';
     $('answerActionBtn').disabled = false;
     $('answerActionBtn').style.display = '';
-    $('bankBtn').style.display = 'none';  // 🏦 البنك بين الأسئلة فقط
+    $('bankBtn').style.display = 'none';  //  البنك بين الأسئلة فقط
   });
 
-  // 🏦 نافذة القرار: "تبنّك أم تغامر؟" (ثانيتان بين الأسئلة)
+  //  نافذة القرار: "تبنّك أم تغامر؟" (ثانيتان بين الأسئلة)
   socket.on('bank_decision', (d) => {
     $('qMeta').textContent = '';
     $('qText').textContent = `🏦 معك ${d.temp} — تبنّك أم تغامر؟`;
@@ -195,12 +197,13 @@
 
   // ===== ضغط إجابة → نافذة كتابة =====
   socket.on('bank_answering', (d) => {
-    pauseTurnTimer();  // ⏸️ الوقت مجمّد أثناء الكتابة (يستأنف بنتيجة الإجابة)
+    hAnswering = true; if (typeof renderHelpsBar === 'function') renderHelpsBar();
+    pauseTurnTimer();  // ⏸ الوقت مجمّد أثناء الكتابة (يستأنف بنتيجة الإجابة)
     $('actionButtons').style.display = 'none';
     openAnswerBox(d.answerWindow);
   });
 
-  // ⚖️ الحكم الذكي يراجع إجابة حدّية — الوقت ما زال مجمّداً حتى الحسم
+  //  الحكم الذكي يراجع إجابة حدّية — الوقت ما زال مجمّداً حتى الحسم
   socket.on('bank_judging', () => {
     setStatus('⚖️ الحكم الذكي يراجع إجابتك… (وقتك مجمّد)', 'bank');
   });
@@ -239,6 +242,7 @@
 
   // ===== نتيجة الإجابة =====
   socket.on('bank_answer_result', (d) => {
+    hAnswering = false; hQShown = false; if (typeof renderHelpsBar === 'function') renderHelpsBar();
     clearInterval(answerCountdown);
     answerBox.style.display = 'none';
     $('tempValue').textContent = d.temp ?? 0;
@@ -266,6 +270,7 @@
 
   // ===== نهاية دور =====
   socket.on('bank_player_done', (d) => {
+    hDone = true; if (typeof renderHelpsBar === 'function') renderHelpsBar();
     pauseTurnTimer();
     clearInterval(answerCountdown);
     answerBox.style.display = 'none';
@@ -282,7 +287,7 @@
     clearInterval(answerCountdown);
     clearInterval(turnCountdown);
     const myName = myRoomName;
-    // 🛡️ الحكم باسم الغرفة الثابت (نفس مصدر الخادم بالضبط)
+    //  الحكم باسم الغرفة الثابت (نفس مصدر الخادم بالضبط)
     const iWon = d.winnerName ? (d.winnerName === myName) : (d.winner === mySid);
     const isDraw = !d.winner && !d.winnerName;
     $('winIcon').textContent = isDraw ? '🤝' : (iWon ? '🏆' : '😔');
@@ -374,7 +379,7 @@
   });
 
   // ============================================================
-  // 👤 بروفايل اللاعب — نسخة حروف بالضبط (بطاقة البنك)
+  //  بروفايل اللاعب — نسخة حروف بالضبط (بطاقة البنك)
   // ============================================================
   function openProfileModal(isMe) {
     const data  = isMe ? playersStatsData.me : playersStatsData.opponent;
@@ -407,7 +412,7 @@
   });
 
   // ============================================================
-  // 🛡️ الإبلاغ عن الخصم (نسخة حروف)
+  //  الإبلاغ عن الخصم (نسخة حروف)
   // ============================================================
   const reportModal     = document.getElementById('reportModal');
   const cancelReportBtn = document.getElementById('cancelReportBtn');
@@ -438,7 +443,7 @@
   });
 
   // ============================================================
-  // 👥 الصداقة والحظر (نسخة حروف — ديناميكية حسب الحالة)
+  //  الصداقة والحظر (نسخة حروف — ديناميكية حسب الحالة)
   // ============================================================
   const addFriendBtn = document.querySelector('#modalActionButtons .add-friend');
   const blockUserBtn = document.querySelector('#modalActionButtons .block-user');
@@ -568,13 +573,17 @@
 
 
   // ============================================================
-  // 🎯 مساعدات البنك (Play to Win) — شريط تحت يسار
+  //  مساعدات البنك (Play to Win) — شريط تحت يسار
   // ============================================================
   let helpsCatalog = {};
   let myLoadout = [];
   let myInventory = {};
   let devModeHelps = false;
   const helpsUsedLocal = new Set();
+  // ⏱️ حالة توقيت المساعدات (للقفل البصري)
+  let hQShown = false;      // سؤالي معروض الآن
+  let hAnswering = false;   // أكتب إجابة الآن
+  let hDone = false;        // انتهى وقتي بالجولة
 
   socket.emit('get_help_loadout', { token, game: 'bank' });
 
@@ -597,15 +606,24 @@
       if (!h) return;
       const qty = devModeHelps ? '∞' : String(myInventory[hid] || 0);
       const depleted = (!devModeHelps && (myInventory[hid] || 0) <= 0);
+      // ⏱️ قفل بصري حسب توقيت المساعدة
+      const timing = h.timing || 'playing';
+      const wrongPhase = hDone
+        || (timing === 'question' && (!hQShown || hAnswering));
       const btn = document.createElement('button');
       btn.className = 'bank-help-btn'
         + (helpsUsedLocal.has(hid) ? ' used' : '')
-        + (depleted ? ' depleted' : '');
+        + ((depleted || wrongPhase) ? ' depleted' : '');
       btn.title = `${h.name}: ${h.desc}`;
       btn.innerHTML = `<span class="hicon">${h.icon}</span>`
         + `<span class="hqty">${qty}</span>`;
       btn.addEventListener('click', () => {
         if (helpsUsedLocal.has(hid) || depleted) return;
+        if (wrongPhase) {
+          showToast(hDone ? '⏱️ انتهى وقتك بهذه الجولة'
+            : '🎯 تُستخدم وسؤالك معروض (ليس أثناء الكتابة)');
+          return;
+        }
         socket.emit('bank_use_help', { roomCode, helpId: hid, token });
       });
       bar.appendChild(btn);
@@ -628,7 +646,7 @@
     if (d && d.name) showToast(`${d.icon || '🎯'} الخصم استخدم: ${d.name}`);
   });
 
-  // 🔄 فرصة ثانية: نفس السؤال يُفتح مجدداً (+5ث)
+  //  فرصة ثانية: نفس السؤال يُفتح مجدداً (+5ث)
   socket.on('bank_second_chance', (d) => {
     setStatus('🔄 فرصة ثانية! جاوب مرة أخرى', 'bank');
     openAnswerBox(d.answerWindow || 13);

@@ -5,12 +5,12 @@
 
 
 // ============================================================
-// 🔌 الاتصال بالسوكيت
+//  الاتصال بالسوكيت
 // ============================================================
 const socket = io(API_URL, { transports: ['websocket', 'polling'], upgrade: true });
 
 // ============================================================
-// 📋 الحروف العربية
+//  الحروف العربية
 // ============================================================
 const arabicLetters = [
     'أ', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر',
@@ -19,7 +19,7 @@ const arabicLetters = [
 ];
 
 // ============================================================
-// 📊 المتغيرات الأساسية
+//  المتغيرات الأساسية
 // ============================================================
 let selectedHex    = null;
 let colorMenu      = null;
@@ -55,7 +55,7 @@ socket.on('connect', sendJoinPartyMode);
 
 
 // ============================================================
-// 🌟 تهيئة وإعداد اللوحة
+//  تهيئة وإعداد اللوحة
 // ============================================================
 function initGame() {
     updateScoreUI();
@@ -119,7 +119,7 @@ function shuffleLetters() {
 
 
 // ============================================================
-// 🖱️ التفاعل مع السداسيات
+//  التفاعل مع السداسيات
 // ============================================================
 function selectLetter(element) {
     if (colorMenu) { colorMenu.remove(); colorMenu = null; }
@@ -188,7 +188,7 @@ function changeColor(color) {
 
 
 // ============================================================
-// 🏆 منطق الفوز والتوصيل
+//  منطق الفوز والتوصيل
 // ============================================================
 function getNeighbors(row, col) {
     const neighbors = row % 2 === 0
@@ -288,7 +288,7 @@ function showFinalWinModal(color) {
 
 
 // ============================================================
-// 🤖 السوكيت: طلب سؤال والردود
+//  السوكيت: طلب سؤال والردود
 // ============================================================
 function requestAiQuestion() {
     if (!selectedLetter) return;
@@ -346,7 +346,7 @@ socket.on('host_linked_success', () => {
 
 
 // ============================================================
-// 🔗 الانضمام لوضع الجمعات
+//  الانضمام لوضع الجمعات
 // ============================================================
 async function sendJoinPartyMode() {
     const token    = getToken();
@@ -355,7 +355,7 @@ async function sendJoinPartyMode() {
 
     if (token) {
         try {
-            const res  = await fetch(`${API_URL}/auth/me?token=${token}`);
+            const res = await fetch(`${API_URL}/auth/me`, { headers: { 'Authorization': `Bearer ${token}` } });
             const data = await res.json();
             name   = data.player_name || name;
             avatar = data.avatar      || avatar;
@@ -373,7 +373,7 @@ async function sendJoinPartyMode() {
 
 
 // ============================================================
-// 🎨 الواجهة والتأثيرات
+//  الواجهة والتأثيرات
 // ============================================================
 function disableActionButtons() {
     if (changeQuestionBtn) { changeQuestionBtn.classList.remove('enabled'); changeQuestionBtn.disabled = true; }
@@ -408,7 +408,7 @@ function startConfetti() {
 
 
 // ============================================================
-// 🛑 إغلاق الجلسة والعودة للوبي
+//  إغلاق الجلسة والعودة للوبي
 // ============================================================
 window.closeSessionAndLeave = function (targetUrl) {
     ['huroofGameState', 'huroofGreenWins', 'huroofOrangeWins'].forEach(k => localStorage.removeItem(k));
@@ -418,7 +418,7 @@ window.closeSessionAndLeave = function (targetUrl) {
 
 
 // ============================================================
-// ⚡ تشغيل الصفحة
+//  تشغيل الصفحة
 // ============================================================
 window.addEventListener('load', () => {
     document.body.style.visibility = 'visible';

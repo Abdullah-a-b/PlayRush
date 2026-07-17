@@ -1,4 +1,4 @@
-/* ⚽ مسيرة لاعب — منطق العميل */
+/*  مسيرة لاعب — منطق العميل */
 (function () {
   'use strict';
   window.CURRENT_GAME = 'career';
@@ -127,7 +127,7 @@
   }
 
   function updateStrikes(strikes) {
-    // ⚔️ سترايكاتك + سترايكات خصمك (2 لكل لاعب) — مرئية للطرفين
+    //  سترايكاتك + سترايكات خصمك (2 لكل لاعب) — مرئية للطرفين
     // حتى تعرف متى تغامر بالجرس ومتى خصمك على الحافة.
     strikes = strikes || {};
     const myStrk = strikes[mySid] || 0;
@@ -174,7 +174,7 @@
     $('opponentName').textContent = playersStatsData.opponent.name;
     $('opponentAvatarImg').src    = playersStatsData.opponent.avatar;
 
-    // 👥 حالة الصداقة/الحظر من الخادم (نفس حروف)
+    //  حالة الصداقة/الحظر من الخادم (نفس حروف)
     if (typeof data.opponent_user_id !== 'undefined') _opponentUserId = data.opponent_user_id;
     if (typeof data.opponent_relation === 'string' && typeof applyOpponentRelation === 'function') {
       applyOpponentRelation(data.opponent_relation);
@@ -188,6 +188,8 @@
 
   // ===== أحداث اللعبة =====
   socket.on('career_new_player', (d) => {
+    hPhase = 'revealing'; hIBuzzed = false;
+    if (typeof renderHelpsBar === 'function') renderHelpsBar();
     updateScores(d.scores);
     updateProgress(d.playerIndex, d.totalPlayers, d.tiebreaker);
     $('statusText').textContent = d.status === 'current' ? '🟢 لاعب حالي' : '🔴 لاعب معتزل';
@@ -201,6 +203,8 @@
   });
 
   socket.on('career_reveal_state', (d) => {
+    hPhase = 'revealing'; hIBuzzed = false;
+    if (typeof renderHelpsBar === 'function') renderHelpsBar();
     renderClubs(d.clubs, true);
     updateScores(d.scores);
     updateStrikes(d.strikes);
@@ -218,6 +222,8 @@
   });
 
   socket.on('career_buzzed', (d) => {
+    hPhase = 'buzzed'; hIBuzzed = (d.sid === mySid);
+    if (typeof renderHelpsBar === 'function') renderHelpsBar();
     buzzBtn.disabled = true;
     if (d.sid === mySid) {
       stopRevealBar();
@@ -253,7 +259,7 @@
     }
   });
 
-  // ⚖️ الحكم الذكي يراجع إجابة حدّية — المؤقّت متوقف حتى الحسم
+  //  الحكم الذكي يراجع إجابة حدّية — المؤقّت متوقف حتى الحسم
   socket.on('career_judging', (d) => {
     const mine = d && d.sid === mySid;
     setStatus(mine ? '⚖️ الحكم الذكي يراجع إجابتك…'
@@ -360,7 +366,7 @@
   $('backToLobbyBtn').addEventListener('click', () => window.location.assign('../lobby.html?game=career'));
 
   // ============================================================
-  // 👤 بروفايل اللاعب — نسخة حروف بالضبط (بطاقة مسيرة لاعب بدل حروف)
+  //  بروفايل اللاعب — نسخة حروف بالضبط (بطاقة مسيرة لاعب بدل حروف)
   // ============================================================
   function openProfileModal(isMe) {
     const data  = isMe ? playersStatsData.me : playersStatsData.opponent;
@@ -393,7 +399,7 @@
   });
 
   // ============================================================
-  // 🛡️ الإبلاغ عن الخصم (نسخة حروف)
+  //  الإبلاغ عن الخصم (نسخة حروف)
   // ============================================================
   const reportModal     = document.getElementById('reportModal');
   const cancelReportBtn = document.getElementById('cancelReportBtn');
@@ -424,7 +430,7 @@
   });
 
   // ============================================================
-  // 👥 الصداقة والحظر (نسخة حروف — ديناميكية حسب الحالة)
+  //  الصداقة والحظر (نسخة حروف — ديناميكية حسب الحالة)
   // ============================================================
   const addFriendBtn = document.querySelector('#modalActionButtons .add-friend');
   const blockUserBtn = document.querySelector('#modalActionButtons .block-user');
@@ -540,7 +546,7 @@
     renderFriendButton();
   });
   // ============================================================
-  // 🎯 المساعدات (Play to Win) — شريط تحت يسار مثل حروف
+  //  المساعدات (Play to Win) — شريط تحت يسار مثل حروف
   // ============================================================
   let helpsCatalog = {};
   let myLoadout = [];
@@ -558,6 +564,10 @@
     renderHelpsBar();
   });
 
+  // ⏱️ حالة توقيت المساعدات: revealing (كشف) / buzzed (بعد جرسي) / idle
+  let hPhase = 'idle';
+  let hIBuzzed = false;
+
   function renderHelpsBar() {
     const bar = $('careerHelpsBar');
     if (!bar) return;
@@ -567,15 +577,26 @@
       if (!h) return;
       const qty = devModeHelps ? '∞' : String(myInventory[hid] || 0);
       const depleted = (!devModeHelps && (myInventory[hid] || 0) <= 0);
+      // ⏱️ قفل بصري: 'buzzed' بعد جرسك فقط؛ 'revealing' أثناء الكشف/الجرس
+      const timing = h.timing || 'revealing';
+      const wrongPhase = (timing === 'buzzed')
+        ? !hIBuzzed
+        : (hPhase !== 'revealing' && hPhase !== 'buzzed');
       const btn = document.createElement('button');
       btn.className = 'career-help-btn'
         + (helpsUsedLocal.has(hid) ? ' used' : '')
-        + (depleted ? ' depleted' : '');
+        + ((depleted || wrongPhase) ? ' depleted' : '');
       btn.title = `${h.name}: ${h.desc}`;
       btn.innerHTML = `<span class="hicon">${h.icon}</span>`
         + `<span class="hqty">${qty}</span>`;
       btn.addEventListener('click', () => {
         if (helpsUsedLocal.has(hid) || depleted) return;
+        if (wrongPhase) {
+          showToast(timing === 'buzzed'
+            ? '⏱️ تُستخدم بعد ضغطك الجرس'
+            : '🎯 تُستخدم أثناء عرض المسيرة');
+          return;
+        }
         socket.emit('career_use_help', { roomCode, helpId: hid, token });
       });
       bar.appendChild(btn);
@@ -614,7 +635,7 @@
     if (d.sid === mySid) showToast('🔒 قفل النقطتين: +2 بدل +1');
   });
   // ============================================================
-  // 🔌 أنيميشن انقطاع/عودة الخصم (موحّد — نسخة حروف)
+  //  أنيميشن انقطاع/عودة الخصم (موحّد — نسخة حروف)
   // ============================================================
   socket.on('opponent_disconnected', (data) => {
     if (typeof Swal === 'undefined') return;

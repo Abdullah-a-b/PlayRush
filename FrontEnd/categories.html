@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>اللوبي الرئيسي</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="stylesheet" href="css/design-system.css">
   <link rel="stylesheet" href="css/lobby.css" />
   <link rel="stylesheet" href="css/categories.css" />
   <link rel="stylesheet" href="css/theme_styles.css">
@@ -13,6 +15,9 @@
     <link rel="stylesheet" href="css/quick_chat.css">
     <script src="js/brand.js" defer></script>
   <link rel="stylesheet" href="css/email_copy.css">
+  <link rel="stylesheet" href="css/leaderboard.css">
+  <link rel="stylesheet" href="css/categories_hub.css">
+  <link rel="stylesheet" href="css/platform_guide.css">
 </head>
 <body>
   <div id="toastContainer" class="toast-container"></div>
@@ -69,8 +74,12 @@
 
     <nav class="main-navigation">
       <button class="nav-btn active" data-section="games"><i class="fa-solid fa-gamepad"></i> <span>ساحة الألعاب</span></button>
+      <button class="nav-btn" data-section="quests"><i class="fa-solid fa-list-check"></i> <span>المهام</span></button>
+      <button class="nav-btn" data-section="pass"><i class="fa-solid fa-crown"></i> <span>البطاقة الموسمية</span></button>
+      <button class="nav-btn" data-section="leaderboard"><i class="fa-solid fa-ranking-star"></i> <span>الصدارة</span></button>
       <button class="nav-btn" data-section="store"><i class="fa-solid fa-store"></i> <span>المتجر</span></button>
       <button class="nav-btn" data-section="friends" style="position:relative;"><i class="fa-solid fa-user-group"></i> <span>الأصدقاء</span><span id="friendsBadge" style="display:none;position:absolute;top:2px;left:8px;background:#f44336;color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:11px;align-items:center;justify-content:center;padding:0 4px;">0</span></button>
+      <button class="nav-btn" onclick="if(window.openPlatformGuide)window.openPlatformGuide()"><i class="fa-solid fa-book-open"></i> <span>دليل المنصة</span></button>
     </nav>
 
     <main class="main-content">
@@ -122,6 +131,18 @@
         </div>
       </section>
       
+      <section id="quests-section" class="content-section">
+        <div class="hub-wrap" id="questsHub"><div class="hub-loading">جارٍ التحميل…</div></div>
+      </section>
+
+      <section id="pass-section" class="content-section">
+        <div class="hub-wrap" id="passHub"><div class="hub-loading">جارٍ التحميل…</div></div>
+      </section>
+
+      <section id="leaderboard-section" class="content-section">
+        <div class="hub-wrap" id="leaderboardHub"><div class="hub-loading">جارٍ التحميل…</div></div>
+      </section>
+
       <section id="store-section" class="content-section">
           <div class="store-wrap">
               <div class="store-tabs" id="storeTabs">
@@ -204,6 +225,7 @@
                   <div class="input-group" style="margin-bottom: 15px; margin-top: 15px;">
                       <label style="color:#aaa; font-size: 13px;">اسم اللاعب</label>
                       <input type="text" id="editPlayerName" class="fancy-code-input" style="font-size: 18px; letter-spacing: 2px; text-transform: none; text-align: right;" value="">
+                      <div style="font-size:.75rem;color:#8b949e;margin-top:4px;">✏️ أول تغيير للاسم مجاني، وبعده 25💎</div>
                   </div>
                   <button class="play-btn" id="saveProfileBtn" style="background: #00d2ff; color:#000;">حفظ التغييرات</button>
               </div>
@@ -365,7 +387,11 @@
     </div>
   </div>
 
+  <script src="js/splash.js"></script>
   <script src="js/config.js" defer></script>
+  <script src="js/progression_api.js" defer></script>
+  <script src="js/categories_hub.js" defer></script>
+  <script src="js/platform_guide.js" defer></script>
     <script src="js/social_bar.js" defer></script>
   <script src="js/utils.js" defer></script>
   <script src="js/settings.js" defer></script>
@@ -383,5 +409,10 @@
     <script src="js/loadout.js" defer></script>
   <script src="js/anti_cheat.js" defer></script>
   <script src="js/email_copy.js" defer></script>
+  <script src="js/sound.js" defer></script>
+  <div class="pr-copyright" style="text-align:center;padding:14px 8px;font-size:.78rem;opacity:.55;">
+    © 2026 <strong>Isolated Person</strong> — PlayRush™ جميع الحقوق محفوظة &nbsp;·&nbsp; <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">الشروط والأحكام</a>
+  </div>
+  <script src="js/music.js" defer></script>
 </body>
 </html>

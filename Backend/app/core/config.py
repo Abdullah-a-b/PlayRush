@@ -8,7 +8,7 @@ class Settings:
     ALGORITHM = os.getenv("ALGORITHM", "HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 10080))
     
-    # روابط الأصول: فارغة افتراضياً → مسارات نسبية تعمل على أي عنوان (لابتوب/جوال/شبكة محلية).
+    # روابط الأصول: فارغة افتراضياً  مسارات نسبية تعمل على أي عنوان (لابتوب/جوال/شبكة محلية).
     # في الإنتاج فقط: اضبط FRONTEND_URL/BACKEND_URL في .env بدومينك الحقيقي.
     FRONTEND_URL = os.getenv("FRONTEND_URL", "").rstrip('/')
     BACKEND_URL = os.getenv("BACKEND_URL", "").rstrip('/')

@@ -3,7 +3,7 @@ body {
   background: linear-gradient(45deg, #2a0a3d, #4b1b6a); position: relative; min-height: 100vh; color: #fff; margin: 0;
 }
 
-/* 🚀 استدعاء الخطوط محلياً لسرعة البرق */
+/*  استدعاء الخطوط محلياً لسرعة البرق */
 @font-face {
     font-family: 'Tajawal';
     src: url('../assets/fonts/Tajawal-Regular.ttf') format('truetype');
@@ -44,17 +44,17 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.1); z-index: 2; position: relative; box-sizing: border-box;
 }
 
-h2 { text-align: center; margin-bottom: 5px; color: #facc15; font-weight: 900; letter-spacing: 1px; }
+h2 { text-align: center; margin-bottom: 5px; color: var(--brand-gold, #facc15); font-weight: 900; letter-spacing: 1px; }
 
 /* الدائرة المركزية (الصورة) */
 .profile-picture-container {
   width: 120px; height: 120px; margin: 0 auto 30px auto; position: relative; border-radius: 50%;
   cursor: pointer; border: 3px solid rgba(255, 255, 255, 0.2); transition: 0.3s;
 }
-.profile-picture-container:hover { border-color: #facc15; box-shadow: 0 0 20px rgba(250, 204, 21, 0.4); transform: scale(1.05); }
+.profile-picture-container:hover { border-color: var(--brand-gold, #facc15); box-shadow: 0 0 20px rgba(250, 204, 21, 0.4); transform: scale(1.05); }
 .profile-picture-container img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background: rgba(0,0,0,0.3); }
 .edit-badge {
-  position: absolute; bottom: 0; right: 0; background: #facc15; color: #2a0a3d; width: 35px; height: 35px;
+  position: absolute; bottom: 0; right: 0; background: var(--brand-gold, #facc15); color: #2a0a3d; width: 35px; height: 35px;
   border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 3px solid #2a0a3d; transition: 0.3s;
 }
 .profile-picture-container:hover .edit-badge { background: #fff; transform: rotate(15deg); }
@@ -62,11 +62,11 @@ h2 { text-align: center; margin-bottom: 5px; color: #facc15; font-weight: 900; l
 /* الحقول والأزرار */
 .input-group { position: relative; margin: 25px 0; width: 100%; }
 .input-group input { width: 100%; box-sizing: border-box; height: 50px; padding: 14px 45px 14px 40px; font-size: 15px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; background: rgba(0, 0, 0, 0.2); color: #fff; outline: none; transition: 0.3s; font-family: inherit; }
-.input-group input:focus { border-color: #facc15; box-shadow: 0 0 10px rgba(250, 204, 21, 0.2); }
+.input-group input:focus { border-color: var(--brand-gold, #facc15); box-shadow: 0 0 10px rgba(250, 204, 21, 0.2); }
 .input-group label { position: absolute; top: 50%; right: 45px; transform: translateY(-50%); color: #cbd5e1; font-size: 15px; pointer-events: none; transition: 0.3s; }
-.input-group input:focus + label, .input-group input:valid + label { top: 0; right: 35px; font-size: 13px; color: #facc15; background-color: #3b1554; border-radius: 4px; padding: 2px 8px; }
+.input-group input:focus + label, .input-group input:valid + label { top: 0; right: 35px; font-size: 13px; color: var(--brand-gold, #facc15); background-color: #3b1554; border-radius: 4px; padding: 2px 8px; }
 .icon { position: absolute; top: 50%; right: 15px; transform: translateY(-50%); color: #ba68c8; font-size: 18px; }
-button[type="submit"] { width: 100%; padding: 14px; background: linear-gradient(45deg, #f43f5e, #e11d48); border: none; color: white; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; font-family: inherit; transition: 0.2s; }
+button[type="submit"] { width: 100%; padding: 14px; background: linear-gradient(45deg, var(--brand-pink, #f43f5e), #e11d48); border: none; color: white; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; font-family: inherit; transition: 0.2s; }
 button[type="submit"]:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(225, 29, 72, 0.4); }
 
 /* النافذة المنبثقة (Modal) */
@@ -81,7 +81,7 @@ button[type="submit"]:hover { transform: translateY(-2px); box-shadow: 0 5px 15p
 }
 .modal-overlay.active .modal-content { transform: translateY(0); }
 .close-modal { position: absolute; top: 15px; right: 20px; font-size: 22px; cursor: pointer; color: #cbd5e1; transition: 0.2s; }
-.close-modal:hover { color: #f43f5e; transform: scale(1.1); }
+.close-modal:hover { color: var(--brand-pink, #f43f5e); transform: scale(1.1); }
 
 /* شبكة الصور */
 .avatars-grid {
@@ -105,8 +105,8 @@ button[type="submit"]:hover { transform: translateY(-2px); box-shadow: 0 5px 15p
 }
 .btn-upload { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; }
 .btn-upload:hover { background: rgba(255, 255, 255, 0.2); }
-.btn-remove { background: rgba(244, 63, 94, 0.2); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.5); display: none; }
-.btn-remove:hover { background: #f43f5e; color: #fff; }
+.btn-remove { background: rgba(244, 63, 94, 0.2); color: var(--brand-pink, #f43f5e); border: 1px solid rgba(244, 63, 94, 0.5); display: none; }
+.btn-remove:hover { background: var(--brand-pink, #f43f5e); color: #fff; }
 
 /* ===== Country dropdown styles (moved from HTML) ===== */
 .country-input {

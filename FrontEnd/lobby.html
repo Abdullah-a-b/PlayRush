@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>PlayRush - اللوبي</title>
+  <title>اللوبي</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/how_to_play.css">
+  <link rel="stylesheet" href="css/leaderboard.css">
   <link rel="stylesheet" href="css/lobby.css" />
   <link rel="stylesheet" href="css/theme_styles.css">
   <link rel="stylesheet" href="css/categories.css" />
@@ -13,6 +17,7 @@
     <link rel="stylesheet" href="css/quick_chat.css">
     <script src="js/brand.js" defer></script>
   <link rel="stylesheet" href="css/email_copy.css">
+  <link rel="stylesheet" href="css/categories_hub.css">
 </head>
 <body>
   <div id="toastContainer" class="toast-container"></div>
@@ -61,6 +66,9 @@
       <button class="nav-btn active" onclick="window.location.href='categories.html'"><i class="fa-solid fa-gamepad"></i> <span>ساحة الألعاب</span></button>
       <button class="nav-btn" onclick="openStoreModal()"><i class="fa-solid fa-store"></i> <span>المتجر</span></button>
       <button class="nav-btn" onclick="if(window.openLoadout)window.openLoadout()"><i class="fa-solid fa-wand-magic-sparkles"></i> <span>المساعدات</span></button>
+      <button class="nav-btn" onclick="if(window.openHowToPlay)window.openHowToPlay()"><i class="fa-solid fa-circle-question"></i> <span>كيف تلعب</span></button>
+      <button class="nav-btn" onclick="if(window.openLeaderboard)window.openLeaderboard()"><i class="fa-solid fa-ranking-star"></i> <span>الصدارة</span></button>
+      <button class="nav-btn" onclick="openLobbyPass()"><i class="fa-solid fa-crown"></i> <span>البطاقة الموسمية</span></button>
       <button class="nav-btn" id="friendsNavBtn" style="position:relative;"><i class="fa-solid fa-user-group"></i> <span>الأصدقاء</span><span id="friendsBadge" style="display:none;position:absolute;top:2px;left:8px;background:#f44336;color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:11px;align-items:center;justify-content:center;padding:0 4px;">0</span></button>
     </nav>
 
@@ -200,6 +208,7 @@
                   <div class="input-group" style="margin-bottom: 15px;">
                       <label style="color:#aaa; font-size: 13px;">اسم اللاعب</label>
                       <input type="text" id="editPlayerName" class="fancy-code-input" style="font-size: 18px; letter-spacing: 2px; text-transform: none; text-align: right;" value="">
+                      <div style="font-size:.75rem;color:#8b949e;margin-top:4px;">✏️ أول تغيير للاسم مجاني، وبعده 25💎</div>
                   </div>
                   <button class="play-btn" id="saveProfileBtn" style="background: #00d2ff; color:#000;">حفظ التغييرات</button>
               </div>
@@ -310,7 +319,7 @@
     </div>
   </div>
 
-  <!-- 👥 قسم الأصدقاء -->
+  <!--  قسم الأصدقاء -->
   <div id="friendsModal" class="modal" style="display: none;">
     <div class="modal-content" style="max-width: 440px;">
       <span class="close-modal" id="closeFriends">&times;</span>
@@ -379,7 +388,37 @@
     <script src="js/themes.js" defer></script>
     <script src="js/store.js" defer></script>
     <script src="js/loadout.js" defer></script>
+    <script src="js/progression_api.js" defer></script>
+  <script src="js/categories_hub.js" defer></script>
+    <script src="js/leaderboard_ui.js" defer></script>
+    <script src="js/how_to_play.js" defer></script>
     <script src="js/anti_cheat.js" defer></script>
   <script src="js/email_copy.js" defer></script>
+  <script src="js/sound.js" defer></script>
+  <script src="js/music.js" defer></script>
+
+<!-- 🎫 البطاقة الموسمية داخل اللوبي -->
+<div id="lobbyPassModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:6500;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#0d1117;border:1px solid rgba(250,204,21,.3);border-radius:18px;width:min(860px,96vw);max-height:88vh;display:flex;flex-direction:column;overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.08);">
+      <div style="font-weight:900;color:#facc15;"><i class="fa-solid fa-crown"></i> البطاقة الموسمية</div>
+      <button onclick="document.getElementById('lobbyPassModal').style.display='none'"
+              style="background:rgba(255,255,255,.08);border:none;color:#fff;width:34px;height:34px;border-radius:10px;cursor:pointer;font-size:1rem;">✕</button>
+    </div>
+    <div style="overflow-y:auto;padding:14px 18px;">
+      <div class="hub-wrap" id="passHub"><div class="hub-loading">جارٍ التحميل…</div></div>
+    </div>
+  </div>
+</div>
+<script>
+function openLobbyPass() {
+  var m = document.getElementById('lobbyPassModal');
+  m.style.display = 'flex';
+  if (window.CategoriesHub && CategoriesHub.renderPass) CategoriesHub.renderPass();
+}
+document.getElementById('lobbyPassModal').addEventListener('click', function (e) {
+  if (e.target === this) this.style.display = 'none';
+});
+</script>
 </body>
 </html>

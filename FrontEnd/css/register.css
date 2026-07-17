@@ -10,7 +10,7 @@ body {
   margin: 0;
 }
 
-/* 🚀 استدعاء الخطوط محلياً لسرعة البرق */
+/*  استدعاء الخطوط محلياً لسرعة البرق */
 @font-face {
     font-family: 'Tajawal';
     src: url('../assets/fonts/Tajawal-Regular.ttf') format('truetype');
@@ -83,7 +83,7 @@ body {
 .register-form h2 {
   text-align: center;
   margin-bottom: 30px;
-  color: #facc15; /* أصفر نيون */
+  color: var(--brand-gold, #facc15); /* أصفر نيون */
   font-weight: 900;
   letter-spacing: 1px;
 }
@@ -122,7 +122,7 @@ body {
 }
 
 .input-group input:focus {
-  border-color: #facc15;
+  border-color: var(--brand-gold, #facc15);
   box-shadow: 0 0 10px rgba(250, 204, 21, 0.2);
 }
 
@@ -146,7 +146,7 @@ body {
   top: 0;
   right: 35px;
   font-size: 13px;
-  color: #facc15;
+  color: var(--brand-gold, #facc15);
   background-color: #3b1554; /* لون يقارب الخلفية لتبدو مقطوعة */
   border-radius: 4px;
   padding: 2px 8px;
@@ -192,11 +192,11 @@ body {
   cursor: pointer;
   width: 16px;
   height: 16px;
-  accent-color: #facc15;
+  accent-color: var(--brand-gold, #facc15);
 }
 
 .terms-group a {
-  color: #facc15;
+  color: var(--brand-gold, #facc15);
   text-decoration: none;
   font-weight: bold;
 }
@@ -209,7 +209,7 @@ body {
 .register-form button[type="submit"] {
   width: 100%;
   padding: 14px;
-  background: linear-gradient(45deg, #f43f5e, #e11d48);
+  background: linear-gradient(45deg, var(--brand-pink, #f43f5e), #e11d48);
   border: none;
   color: white;
   border-radius: 8px;
@@ -263,7 +263,7 @@ hr {
 }
 
 .login-link a {
-  color: #facc15;
+  color: var(--brand-gold, #facc15);
   text-decoration: none;
   font-weight: bold;
 }

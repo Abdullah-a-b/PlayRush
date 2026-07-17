@@ -5,7 +5,7 @@
 
 
 // ============================================================
-// 🌐 إعداد الاتصال بالسيرفر
+//  إعداد الاتصال بالسيرفر
 // ============================================================
 
 /** رابط الـ API حسب البيئة (محلي / شبكة محلية / إنتاج) */
@@ -20,7 +20,7 @@ const API_URL = (isLocal || isLAN) ? CONFIG.API_URL : 'https://api.your-real-dom
 
 
 // ============================================================
-// 🗺️ قاموس أسماء الدول بالعربية
+//  قاموس أسماء الدول بالعربية
 // ============================================================
 
 const COUNTRY_NAMES = {
@@ -43,12 +43,12 @@ const GAME_THEMES = {
 
 
 // ============================================================
-// 🖼️ معالجة مسارات الصور
+//  معالجة مسارات الصور
 // ============================================================
 
 /**
  * يُعيد الرابط الصحيح لصورة اللاعب بغض النظر عن مصدرها.
- * 🛡️ مُحكم ضد XSS عبر avatar URL خبيث (javascript:, data:image/svg+xml, إلخ).
+ *  مُحكم ضد XSS عبر avatar URL خبيث (javascript:, data:image/svg+xml, إلخ).
  * @param {string} path - المسار المخزّن في قاعدة البيانات
  */
 function getCorrectAvatarUrl(path) {
@@ -60,7 +60,7 @@ function getCorrectAvatarUrl(path) {
     const p = String(path).trim();
     const lower = p.toLowerCase();
 
-    // 🛡️ نمنع كل البروتوكولات الخطيرة (javascript:, data:, vbscript:, file:, إلخ)
+    //  نمنع كل البروتوكولات الخطيرة (javascript:, data:, vbscript:, file:, إلخ)
     // ونسمح فقط بـ http/https + المسارات النسبية
     const dangerousProtocols = ['javascript:', 'vbscript:', 'data:', 'file:', 'ftp:', 'about:'];
     for (const proto of dangerousProtocols) {
@@ -70,7 +70,7 @@ function getCorrectAvatarUrl(path) {
         }
     }
 
-    // 🔧 روابط قديمة ثابتة (127.0.0.1/localhost) محفوظة قبل التحديث → نصلحها للعنوان الحالي
+    //  روابط قديمة ثابتة (127.0.0.1/localhost) محفوظة قبل التحديث → نصلحها للعنوان الحالي
     const staleMatch = p.match(/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/.*)$/i);
     if (staleMatch) {
         const sp = staleMatch[3];
@@ -88,7 +88,7 @@ function getCorrectAvatarUrl(path) {
     // إذا كان ملف مرفوع على السيرفر
     if (p.startsWith('/uploads')) return `${API_URL}${p}`;
 
-    // 🛡️ مسارات نسبية فقط — نأخذ اسم الملف فقط لمنع path traversal
+    //  مسارات نسبية فقط — نأخذ اسم الملف فقط لمنع path traversal
     const fileName = p.split('/').pop();
     // نسمح فقط بأسماء ملفات شرعية (حروف/أرقام/_/-/. ثم svg/png/jpg/jpeg/webp)
     if (!/^[a-zA-Z0-9_-]+\.(svg|png|jpg|jpeg|webp)$/i.test(fileName)) {
@@ -109,7 +109,7 @@ function fixLobbyAvatar(avatarValue, fallbackName) {
     const v = String(avatarValue).trim();
     const lower = v.toLowerCase();
 
-    // 🛡️ نمنع البروتوكولات الخطيرة
+    //  نمنع البروتوكولات الخطيرة
     const dangerousProtocols = ['javascript:', 'vbscript:', 'data:', 'file:', 'ftp:', 'about:'];
     for (const proto of dangerousProtocols) {
         if (lower.startsWith(proto)) {
@@ -121,7 +121,7 @@ function fixLobbyAvatar(avatarValue, fallbackName) {
 
     let name = v.split('/').pop();
     if (!name.includes('.')) name += '.svg';
-    // 🛡️ تحقق من اسم الملف
+    //  تحقق من اسم الملف
     if (!/^[a-zA-Z0-9_-]+\.(svg|png|jpg|jpeg|webp)$/i.test(name)) {
         return `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(fallbackName || 'Player')}`;
     }
@@ -130,7 +130,7 @@ function fixLobbyAvatar(avatarValue, fallbackName) {
 
 
 // ============================================================
-// 🔒 الحماية من XSS
+//  الحماية من XSS
 // ============================================================
 
 /**
@@ -169,7 +169,7 @@ function sanitizeText(str) {
 
 
 // ============================================================
-// 🔔 نظام التنبيهات (Toast)
+//  نظام التنبيهات (Toast)
 // ============================================================
 
 /**
@@ -206,7 +206,7 @@ function showToast(message, type = 'info') {
 
 
 // ============================================================
-// ✅ نافذة التأكيد المخصصة
+//  نافذة التأكيد المخصصة
 // ============================================================
 
 /**
@@ -235,7 +235,7 @@ function showConfirm(title, message, onConfirm, onCancel) {
 
 
 // ============================================================
-// 💬 الدردشة العامة
+//  الدردشة العامة
 // ============================================================
 
 /**
@@ -324,7 +324,7 @@ function addGlobalChatMessage(sender, text, isSystem = false, senderId = null, e
 
 
 // ============================================================
-// 📊 حساب المستوى والـ XP
+//  حساب المستوى والـ XP
 // ============================================================
 
 /**
@@ -350,7 +350,7 @@ function calcXpProgress(totalXp) {
 
 
 // ============================================================
-// 🏴 عرض علم الدولة
+//  عرض علم الدولة
 // ============================================================
 
 /**
@@ -380,7 +380,7 @@ function renderPlayerFlag(el, country, flagPrefix = '../') {
 
 
 // ============================================================
-// 🗑️ حذف الحساب
+//  حذف الحساب
 // ============================================================
 
 /**
@@ -421,7 +421,7 @@ function deleteAccount() {
 
 
 // ============================================================
-// 🚫 معالج الحظر الإجباري (force_logout)
+//  معالج الحظر الإجباري (force_logout)
 // يُستدعى من السيرفر عند حظر اللاعب — يجب أن يعمل في كل صفحة فيها socket
 // ============================================================
 

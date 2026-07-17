@@ -8,3 +8,7 @@ users.db
 .venv/
 .vscode/
 **/uploads/
+# أسرار البيئة — لا تُرفع أبداً
+.env.*
+!.env.example
+logs/

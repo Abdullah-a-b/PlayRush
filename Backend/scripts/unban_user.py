@@ -1,5 +1,5 @@
 """
-🔓 سكريبت فك الحظر — للمطوّر
+ سكريبت فك الحظر — للمطوّر
 
 الاستخدام:
     python scripts/unban_user.py --list           # يعرض كل الحسابات وحالتها
@@ -12,22 +12,23 @@ import os
 _BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _BASE)
 
-# 🔧 نحمّل .env صراحةً (السكريبت المستقل لا يحمّله تلقائياً)
+# نحمّل .env صراحةً (السكريبت المستقل لا يحمّله تلقائياً)
 try:
     from dotenv import load_dotenv
     env_path = os.path.join(_BASE, '.env')
     load_dotenv(env_path)
-    print(f"📁 حُمّل .env من: {env_path}")
+    print(f" حُمّل .env من: {env_path}")
 except Exception as e:
-    print(f"⚠️ تعذّر تحميل .env: {e}")
+    print(f" تعذّر تحميل .env: {e}")
 
 _db_url = os.environ.get("DATABASE_URL", "غير مضبوط")
 if "@" in _db_url:
-    print(f"🔌 قاعدة البيانات: ...@{_db_url.split('@')[-1]}")
+    print(f" قاعدة البيانات: ...@{_db_url.split('@')[-1]}")
 else:
-    print(f"🔌 قاعدة البيانات: {_db_url}")
+    print(f" قاعدة البيانات: {_db_url}")
 
-from app.core.database import SessionLocal, User
+from app.infrastructure.database import SessionLocal
+from app.domains.users.models import User
 from sqlalchemy import text
 
 
@@ -36,9 +37,9 @@ def list_all():
     try:
         users = db.query(User).all()
         if not users:
-            print("\n⚠️ لا يوجد أي حسابات في قاعدة البيانات!")
+            print("\n لا يوجد أي حسابات في قاعدة البيانات!")
             return
-        print(f"\n📋 كل الحسابات ({len(users)}):")
+        print(f"\n كل الحسابات ({len(users)}):")
         for u in users:
             mark = "🚫 محظور" if u.is_banned else "✅ نشط"
             score = getattr(u, 'anticheat_score', 0) or 0
@@ -54,7 +55,7 @@ def unban(identifier):
             (User.email == identifier) | (User.player_name == identifier)
         ).first()
         if not user:
-            print(f"\n❌ لم أجد حساباً بـ: '{identifier}'")
+            print(f"\n لم أجد حساباً بـ: '{identifier}'")
             print("   جرّب --list لرؤية كل الحسابات")
             return
         was = user.is_banned
@@ -65,8 +66,8 @@ def unban(identifier):
         except Exception:
             pass
         db.commit()
-        print(f"\n✅ تم فك الحظر: {user.player_name} ({user.email})")
-        print(f"   {'كان محظوراً → الآن نشط' if was else 'لم يكن محظوراً (صُفّر score)'}")
+        print(f"\n تم فك الحظر: {user.player_name} ({user.email})")
+        print(f"   {'كان محظوراً  الآن نشط' if was else 'لم يكن محظوراً (صُفّر score)'}")
     finally:
         db.close()
 
@@ -83,7 +84,7 @@ def unban_all():
         except Exception:
             pass
         db.commit()
-        print(f"\n✅ فُك الحظر عن {len(banned)} حساب + صُفّر score للكل")
+        print(f"\n فُك الحظر عن {len(banned)} حساب + صُفّر score للكل")
         for u in banned:
             print(f"   • {u.player_name} ({u.email})")
     finally:

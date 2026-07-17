@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ماذا تعرف — PlayRush</title>
+    <title>ماذا تعرف</title>
+    <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+    <link rel="stylesheet" href="../css/design-system.css">
     <link rel="stylesheet" href="../css/games/knowledge.css" />
     <link rel="stylesheet" href="../css/all.min.css">
     <link rel="stylesheet" href="../css/brand.css">
@@ -67,6 +69,9 @@
         <button id="submitAnswerBtn"><i class="fa-solid fa-paper-plane"></i></button>
     </div>
 
+    <!-- شريط المساعدات (نمط بقية الألعاب): يعرض تشكيلتك المجهّزة -->
+    <div class="bank-helps-bar" id="knHelpsBar"></div>
+
     <div class="bank-status-msg" id="statusMsg"></div>
 
     <!-- ملخص الجولة -->
@@ -75,7 +80,7 @@
     </div>
 </div>
 
-<!-- 📡 أوفرلاي فقدان الاتصال -->
+<!--  أوفرلاي فقدان الاتصال -->
 <div class="ready-overlay" id="dcOverlay" style="display:none;">
     <div class="ready-content">
         <div class="ready-title">📡 انقطع اتصال الخصم</div>
@@ -95,7 +100,7 @@
 <!-- انسحاب: يمين أسفل -->
 <button id="surrenderBtn" class="surrender-btn" title="انسحاب"><i class="fa-solid fa-flag"></i></button>
 
-<!-- 🎯 المساعدات: تحت يسار (مثل الأخوات) -->
+<!--  المساعدات: تحت يسار (مثل الأخوات) -->
 <div class="bank-helps-bar" id="bankHelpsBar"></div>
 
 <!-- رسائل جاهزة: فوق يسار -->
@@ -187,8 +192,10 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" async></script>
 <script src="../js/quick_chat.js" defer></script>
 <script src="../js/games/knowledge.js" defer></script>
-<script src="../js/games/knowledge_emojis.js" defer></script>
+<script src="../js/games/game_emojis.js" defer></script>
 <script src="../js/themes.js" defer></script>
 <script src="../js/anti_cheat.js" defer></script>
+  <script src="../js/sound.js" defer></script>
+  <script src="../js/music.js" defer></script>
 </body>
 </html>

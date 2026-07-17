@@ -6,13 +6,13 @@
 
 
 // ============================================================
-// 🖼️ مودال اختيار الأفاتار
+//  مودال اختيار الأفاتار
 // ============================================================
 
 /** قائمة الصور الجاهزة المتاحة للاختيار */
 const ONLINE_AVATARS = Array.from({ length: 60 }, (_, i) => `../assets/avatars/avatar_${i + 1}.svg`);
 
-// 🔒 الأفاتارات التي تُشترى من المتجر (16-60). الأفاتارات 1-15 مجانية.
+//  الأفاتارات التي تُشترى من المتجر (16-60). الأفاتارات 1-15 مجانية.
 const PURCHASABLE_AVATARS = {};
 for (let n = 16; n <= 60; n++) {
   PURCHASABLE_AVATARS[`avatar_${n}.svg`] = `avatar_${n}`;
@@ -148,7 +148,7 @@ function clearAvatarStyle(img) {
 
 
 // ============================================================
-// 🔐 نظام OTP (أمان الحساب)
+//  نظام OTP (أمان الحساب)
 // ============================================================
 
 /**
@@ -265,7 +265,7 @@ async function confirmSecurityChange(action, otp, newValue, token, onSuccess) {
 
 
 // ============================================================
-// 💾 حفظ الملف الشخصي
+//  حفظ الملف الشخصي
 // ============================================================
 
 /**
@@ -280,6 +280,26 @@ async function confirmSecurityChange(action, otp, newValue, token, onSuccess) {
  */
 async function saveProfile({ token, newName, avatarFile, avatarUrl, country, onSuccess }) {
     if (newName.length < 3) return showToast('الاسم يجب أن يكون 3 أحرف على الأقل', 'error');
+
+    // ✏️💎 تغيير الاسم يمر عبر نظام الجواهر (أول مرة مجاناً ثم 25💎)
+    const currentName = sessionStorage.getItem('playerName') || '';
+    if (newName !== currentName && currentName) {
+        try {
+            const nfd = new FormData();
+            nfd.append('new_name', newName);
+            const nres = await fetch(`${API_URL}/auth/settings/change-name`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: nfd,
+            });
+            const nd = await nres.json();
+            if (!nd.ok) return showToast(nd.error || 'تعذّر تغيير الاسم', 'error');
+            sessionStorage.setItem('playerName', nd.new_name);
+            showToast(nd.msg, 'success');
+        } catch (e) {
+            return showToast('خطأ بالاتصال أثناء تغيير الاسم', 'error');
+        }
+    }
 
     const fd = new FormData();
     fd.append('token',       token);
@@ -318,7 +338,7 @@ async function saveProfile({ token, newName, avatarFile, avatarUrl, country, onS
 
 
 // ============================================================
-// 🔊 إعدادات الصوت
+//  إعدادات الصوت
 // ============================================================
 
 /**
@@ -357,17 +377,76 @@ function initVolumeControls() {
     const sfxValue    = document.getElementById('sfxValue');
     const sfxIcon     = document.getElementById('sfxIcon');
 
+    // مساعد: هل نحن الآن في مزامنة DOM من sound.js؟ (نتجنب الحلقة)
+    const _isSyncing = () => window.PRSound?.isSyncingSliders?.() === true;
+
     if (musicSlider) {
         const saved = localStorage.getItem('musicSlider');
         if (saved) musicSlider.value = saved;
+        // إذا كان الصوت مكتوماً → أظهر 0 في السلايدر
+        if (window.PRSound?.isMuted()) musicSlider.value = '0';
         updateVolumeUI(musicSlider, musicValue, musicIcon, '#facc15');
-        musicSlider.addEventListener('input', () => updateVolumeUI(musicSlider, musicValue, musicIcon, '#facc15'));
+        musicSlider.addEventListener('input', () => {
+            updateVolumeUI(musicSlider, musicValue, musicIcon, '#facc15');
+            if (_isSyncing()) return;
+            const mv = parseInt(musicSlider.value);
+            const sv = parseInt(sfxSlider?.value ?? '0');
+            if (mv > 0 && window.PRSound?.isMuted()) {
+                // رُفع الموسيقى فوق 0 → ارفع الكتم
+                window.PRSound.setMuted(false, true);
+            } else if (mv === 0 && sv === 0 && !window.PRSound?.isMuted()) {
+                // كلا السلايدرين وصلا 0 → شغّل الكتم
+                window.PRSound.setMuted(true, true);
+            }
+        });
     }
 
     if (sfxSlider) {
         const saved = localStorage.getItem('sfxSlider');
         if (saved) sfxSlider.value = saved;
+        // إذا كان الصوت مكتوماً → أظهر 0 في السلايدر
+        if (window.PRSound?.isMuted()) sfxSlider.value = '0';
         updateVolumeUI(sfxSlider, sfxValue, sfxIcon, '#00d2ff');
-        sfxSlider.addEventListener('input', () => updateVolumeUI(sfxSlider, sfxValue, sfxIcon, '#00d2ff'));
+        sfxSlider.addEventListener('input', () => {
+            updateVolumeUI(sfxSlider, sfxValue, sfxIcon, '#00d2ff');
+            if (_isSyncing()) return;
+            const sv = parseInt(sfxSlider.value);
+            const mv = parseInt(musicSlider?.value ?? '0');
+            if (sv > 0 && window.PRSound?.isMuted()) {
+                // رُفع SFX فوق 0 → ارفع الكتم
+                window.PRSound.setMuted(false, true);
+            } else if (sv === 0 && mv === 0 && !window.PRSound?.isMuted()) {
+                // كلا السلايدرين وصلا 0 → شغّل الكتم
+                window.PRSound.setMuted(true, true);
+            }
+        });
     }
 }
+
+
+// ============================================================
+// ✏️ تغيير اسم اللاعب (أول مرة مجاناً ثم 25💎)
+// ============================================================
+window.changePlayerName = async function () {
+    const token = sessionStorage.getItem('token');
+    const current = sessionStorage.getItem('playerName') || '';
+    const input = prompt('الاسم الجديد (أول تغيير مجاني، بعدها 25💎):', current);
+    if (!input || input.trim() === current) return;
+    try {
+        const fd = new FormData();
+        fd.append('new_name', input.trim());
+        const res = await fetch(`${API_URL}/auth/settings/change-name`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: fd,
+        });
+        const d = await res.json();
+        if (d.ok) {
+            sessionStorage.setItem('playerName', d.new_name);
+            if (typeof showToast === 'function') showToast(d.msg);
+            setTimeout(() => location.reload(), 900);
+        } else {
+            alert(d.error || 'تعذّر تغيير الاسم');
+        }
+    } catch (e) { alert('خطأ بالاتصال'); }
+};

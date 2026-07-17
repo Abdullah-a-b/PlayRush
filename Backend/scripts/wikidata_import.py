@@ -1,11 +1,11 @@
 """
-⚽ استيراد لاعبين من Wikidata — تغذية قاعدة بيانات "مسيرة لاعب"
+ استيراد لاعبين من Wikidata — تغذية قاعدة بيانات "مسيرة لاعب"
 
   1. أشهر لاعبي كرة القدم (SPARQL بترتيب الشهرة + offset للتوسّع التدريجي).
   2. المسيرة بالأندية فقط (فلتر منتخبات مزدوج: بنيوي + نصّي).
   3. شعارات بـ3 مصادر متتالية (رغم عنها):
-     Wikidata P154 → TheSportsDB → صورة مقالة ويكيبيديا.
-  4. Upsert بـwikidata_id → التشغيل الدوري يحدّث بلا تكرار.
+     Wikidata P154  TheSportsDB  صورة مقالة ويكيبيديا.
+  4. Upsert بـwikidata_id  التشغيل الدوري يحدّث بلا تكرار.
   5. run_import() قابلة للاستدعاء من خلفية المنصة (تجديد تلقائي).
 
 التشغيل اليدوي:
@@ -25,11 +25,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 try:
     import requests
 except ImportError:
-    print("❌ pip install requests")
+    print(" pip install requests")
     sys.exit(1)
 
 from sqlalchemy import text as _sql_text
-from app.core.database import SessionLocal, CareerPlayer, engine
+from app.infrastructure.database import SessionLocal, engine
+from app.domains.games.models import CareerPlayer
 
 WDQS_URL = "https://query.wikidata.org/sparql"
 WD_API = "https://www.wikidata.org/w/api.php"
@@ -99,7 +100,7 @@ def _get_with_retry(url, params=None, max_tries=5, timeout=60):
     raise RuntimeError("استنفدت المحاولات")
 
 
-# 🗃️ كاش الكيانات عبر الدورة كاملة (الأندية تتكرر بين اللاعبين — نجلبها مرة واحدة)
+# كاش الكيانات عبر الدورة كاملة (الأندية تتكرر بين اللاعبين — نجلبها مرة واحدة)
 _ENTITY_CACHE = {}
 
 
@@ -212,10 +213,10 @@ def extract_nationality_qid(player_ent):
 
 def detect_status(player_ent, career_entries):
     """حالي/معتزل بدقة:
-    - نادٍ بلا تاريخ نهاية → حالي.
-    - P2032 (نهاية المسيرة) أو P570 (وفاة) → معتزل.
-    - بين ناديين (آخر نهاية خلال آخر سنتين) → حالي (مثل كاسيميرو).
-    - آخر نهاية أقدم من سنتين → معتزل."""
+    - نادٍ بلا تاريخ نهاية  حالي.
+    - P2032 (نهاية المسيرة) أو P570 (وفاة)  معتزل.
+    - بين ناديين (آخر نهاية خلال آخر سنتين)  حالي (مثل كاسيميرو).
+    - آخر نهاية أقدم من سنتين  معتزل."""
     import datetime as _dt
     if any(not e["has_end"] for e in career_entries):
         return "current"
@@ -254,8 +255,8 @@ def _save_img(fpath, content):
 
 
 def download_logo(club_qid, club_ent, en_name, redo=False):
-    """3 مصادر بالأولوية: TheSportsDB (شعارات رسمية حديثة) →
-    ويكيبيديا (svg/png فقط — نرفض صور jpg) → كومنز P154 (غالباً قديم — آخر ملاذ)."""
+    """3 مصادر بالأولوية: TheSportsDB (شعارات رسمية حديثة) 
+    ويكيبيديا (svg/png فقط — نرفض صور jpg)  كومنز P154 (غالباً قديم — آخر ملاذ)."""
     fname = f"club_{club_qid}.png"
     fpath = os.path.join(CLUBS_DIR, fname)
     if not redo and os.path.exists(fpath) and os.path.getsize(fpath) > 500:
@@ -272,7 +273,7 @@ def download_logo(club_qid, club_ent, en_name, redo=False):
                 teams = (r.json() or {}).get("teams") or []
                 if not teams:
                     continue
-                # ⚠️ أسماء مثل "Arsenal" تعيد أندية من دول مختلفة (لندن/بوليفيا/تولا).
+                # أسماء مثل "Arsenal" تعيد أندية من دول مختلفة (لندن/بوليفيا/تولا).
                 # نطابق الاسم الإنجليزي الأصلي بدقّة، ونرفض المطابقات الضعيفة تماماً.
                 orig_low = (en_name or "").lower().strip()
                 orig_nofc = re.sub(r"\b(fc|f\.c\.|cf|c\.f\.|afc|sc|club)\b", "",
@@ -289,7 +290,7 @@ def download_logo(club_qid, club_ent, en_name, redo=False):
                     elif tn == name.lower().strip():
                         s = 60                        # مطابقة variant المبحوث
                     else:
-                        return -1                     # اسم مختلف → مرفوض
+                        return -1                     # اسم مختلف  مرفوض
                     if (t.get("strSport") or "").lower() == "soccer":
                         s += 5
                     # إشارات الأندية الكبرى (دوري معروف)
@@ -301,7 +302,7 @@ def download_logo(club_qid, club_ent, en_name, redo=False):
                 scored = [(t, _score(t)) for t in teams]
                 scored = [(t, sc) for t, sc in scored if sc >= 0]  # نرفض المختلفة
                 if not scored:
-                    continue  # لا مطابقة موثوقة → ننتقل للمصدر التالي
+                    continue  # لا مطابقة موثوقة  ننتقل للمصدر التالي
                 scored.sort(key=lambda x: x[1], reverse=True)
                 badge = None
                 for t, sc in scored:
@@ -417,13 +418,13 @@ def run_import(limit=200, min_sitelinks=45, offset=0,
 
             for qid in qids:
                 ent = ents.get(qid, {})
-                # 🧒 فرز ثانوي: أكاديميات/شباب النادي قبل الفريق الأول
+                # فرز ثانوي: أكاديميات/شباب النادي قبل الفريق الأول
                 # (غالباً بلا P580 — نضعها في البداية لا النهاية)
                 _career = careers.get(qid, [])
                 for e in _career:
                     e["_youth"] = is_youth_team(club_ents.get(e["club"], {}))
                     if e["start"] == "+9999" and e["_youth"]:
-                        e["start"] = "+0000"  # شباب بلا تاريخ → البداية
+                        e["start"] = "+0000"  # شباب بلا تاريخ  البداية
                 _career.sort(key=lambda e: (e["start"], 0 if e["_youth"] else 1))
                 ar_name = _label(ent, ("ar",))
                 en_name = _label(ent, ("en",))
@@ -445,7 +446,7 @@ def run_import(limit=200, min_sitelinks=45, offset=0,
                         continue
 
                     is_youth = bool(e.get("_youth"))
-                    # 🧒 قاعدة الشباب: نُبقي فقط أكاديمية البداية (لامين يامال)،
+                    # قاعدة الشباب: نُبقي فقط أكاديمية البداية (لامين يامال)،
                     # ونحذف أي فريق شباب آخر (يعقّد اللعبة).
                     if is_youth and not (_starts_youth and _idx == 0):
                         continue
@@ -476,7 +477,7 @@ def run_import(limit=200, min_sitelinks=45, offset=0,
                     entry["_youth"] = is_youth
                     clubs_json.append(entry)
 
-                # 🧒 أكاديمية البداية بلا شعار → ترث شعار النادي الأم (لو ظهر لاحقاً)
+                # أكاديمية البداية بلا شعار  ترث شعار النادي الأم (لو ظهر لاحقاً)
                 for entry in clubs_json:
                     if "logo" not in entry and entry.get("_youth") \
                             and entry.get("_base") in _logo_by_base:

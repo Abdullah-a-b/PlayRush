@@ -1,5 +1,5 @@
 // ============================================================
-// 📡 presence.js — نظام الحضور بالفروقات (Delta Presence)
+//  presence.js — نظام الحضور بالفروقات (Delta Presence)
 // ============================================================
 // المشكلة القديمة: الخادم كان يبث قائمة المتصلين *كاملة للجميع* عند
 // كل انضمام/خروج — عند 5000 متصل: حدث واحد = 5000 رسالة × 5000 سجل.
@@ -16,7 +16,7 @@ const __presenceMap = new Map();   // pid → player
 let __presenceRenderFn = null;
 let __presenceTimer = null;
 
-// ⏱️ دمج الفروق المتتالية برسمة واحدة كل 400ms كحد أقصى —
+// ⏱ دمج الفروق المتتالية برسمة واحدة كل 400ms كحد أقصى —
 // يحمي المتصفح من إعادة بناء DOM آلاف المرات وقت الذروة.
 const PRESENCE_RENDER_THROTTLE_MS = 400;
 
@@ -39,9 +39,12 @@ function initPresence(sock, renderFn) {
     __presenceRenderFn = renderFn;
 
     // القائمة الكاملة — تصل مرة واحدة عند الانضمام/إعادة الاتصال
-    sock.on('online_players_snapshot', (list) => {
+    sock.on('online_players_snapshot', (data) => {
+        // الصيغتان: قائمة مباشرة، أو {players, total} عند الأعداد الكبيرة
+        const list = Array.isArray(data) ? data : (data && data.players) || [];
+        window.__presenceTotal = Array.isArray(data) ? null : (data && data.total) || null;
         __presenceMap.clear();
-        (list || []).forEach(p => { if (p && p.pid) __presenceMap.set(p.pid, p); });
+        list.forEach(p => { if (p && p.pid) __presenceMap.set(p.pid, p); });
         __schedulePresenceRender();
     });
 
@@ -51,12 +54,23 @@ function initPresence(sock, renderFn) {
         if (d.op === 'leave') {
             __presenceMap.delete(d.pid);
         } else if (d.player && d.player.pid) {
+            // 🔁 منع التكرار: انسحبتَ وعدت للوبي باتصال جديد بينما سجلّك
+            // القديم (داخل اللعبة) حي حتى انتهاء مهلته → نحذف أي مدخل
+            // بنفس الاسم وpid مختلف (الأحدث يفوز)
+            const nm = d.player.name;
+            if (nm) {
+                for (const [pid, pl] of __presenceMap) {
+                    if (pl && pl.name === nm && pid !== d.player.pid) {
+                        __presenceMap.delete(pid);
+                    }
+                }
+            }
             __presenceMap.set(d.player.pid, d.player);
         }
         __schedulePresenceRender();
     });
 
-    // 🔙 توافق خلفي: لو العميل الجديد قابل خادماً قديماً يبث القائمة الكاملة
+    //  توافق خلفي: لو العميل الجديد قابل خادماً قديماً يبث القائمة الكاملة
     sock.on('update_online_players', (list) => {
         __presenceMap.clear();
         (list || []).forEach((p, i) => {

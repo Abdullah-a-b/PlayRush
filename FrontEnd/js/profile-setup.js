@@ -77,7 +77,7 @@ window.addEventListener('load', () => {
     document.getElementById('closeModalBtn').addEventListener('click', closeModal);
     avatarModal.addEventListener('click', (e) => { if(e.target === avatarModal) closeModal(); });
 
-    // 4. رفع صورة مخصصة — 🔒 مؤجّل حالياً (العناصر محذوفة من HTML)
+    // 4. رفع صورة مخصصة —  مؤجّل حالياً (العناصر محذوفة من HTML)
     if (customFileInput && removeCustomBtn) {
     customFileInput.addEventListener('click', function() { this.value = ''; });
     customFileInput.addEventListener('change', function(e) {
@@ -117,12 +117,18 @@ window.addEventListener('load', () => {
     const profileMessage = document.getElementById('profileMessage');
 
     profileForm.addEventListener('submit', async (e) => {
+        const _consent = document.getElementById('ageTermsConsent');
+        if (_consent && !_consent.checked) {
+            e.preventDefault();
+            alert('يجب الإقرار بأن عمرك 13+ والموافقة على الشروط للمتابعة');
+            return;
+        }
         e.preventDefault();
         const playerName = document.getElementById('playerName').value.trim();
         const playerCountry = document.getElementById('playerCountry').value; 
         const token = sessionStorage.getItem('token');
 
-        // 🛡️ موافقة الشروط إجبارية (مهم قانونياً — خاصة لمستخدمي Google)
+        //  موافقة الشروط إجبارية (مهم قانونياً — خاصة لمستخدمي Google)
         const termsBox = document.getElementById('termsAgree');
         if (termsBox && !termsBox.checked) {
             profileMessage.textContent = "يجب الموافقة على الشروط والأحكام للمتابعة";
@@ -153,7 +159,7 @@ window.addEventListener('load', () => {
             formData.append('player_name', playerName);
             formData.append('country', playerCountry); 
 
-            // 🚀 السحر هنا: نرسل الملف تحت اسم "avatar_file"، أو النص تحت اسم "avatar_url"
+            //  السحر هنا: نرسل الملف تحت اسم "avatar_file"، أو النص تحت اسم "avatar_url"
             // (اسم الحقل يجب أن يطابق ما ينتظره الباك في setup-profile endpoint)
             if (typeof customAvatarFile !== 'undefined' && customAvatarFile) {
                 formData.append('avatar_file', customAvatarFile); // نرسل الملف للباك اند
@@ -194,7 +200,7 @@ window.addEventListener('load', () => {
 });
 
 // ==========================================
-// 🌍 محرك الدول (النسخة الجميلة - الجميلة والوفلاين!)
+//  محرك الدول (النسخة الجميلة - الجميلة والوفلاين!)
 // ==========================================
 
 // 1. القائمة المدمجة (سريعة جداً) مع رموز المسارات المحلية
@@ -231,7 +237,7 @@ function renderCountryOptions(countries) {
         const item = document.createElement('div');
         item.className = 'dropdown-item';
         
-        // 🚀 السحر هنا: قمنا بتضمين علامة <img> تشير للمجلد المحلي
+        //  السحر هنا: قمنا بتضمين علامة <img> تشير للمجلد المحلي
         item.innerHTML = `
             <img src="../assets/flags/${c.code}.svg" 
                  alt="${c.name} flag" 

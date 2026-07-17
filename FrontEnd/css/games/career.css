@@ -1,4 +1,4 @@
-/* ⚽ مسيرة لاعب */
+/*  مسيرة لاعب */
 :root {
   --ca-bg:#0f0f1a; --ca-panel:#1a1a2e; --ca-accent:#f5a623;
   --ca-green:#2ecc71; --ca-red:#e74c3c; --ca-blue:#4a90e2;
@@ -72,7 +72,7 @@ body{
 .career-buzz-btn:not(:disabled):active{transform:scale(.94)}
 .career-buzz-btn:disabled{opacity:.4;cursor:not-allowed;background:radial-gradient(circle at 40% 35%,#555,#333);box-shadow:none}
 .strikes-display{display:flex;gap:8px}
-/* ⚔️ السترايكات بجانب اسم كل لاعب — واضحة على الخلفية الداكنة:
+/*  السترايكات بجانب اسم كل لاعب — واضحة على الخلفية الداكنة:
    الخانة الفارغة إطار رمادي مرئي، والمملوءة حمراء متوهجة */
 .profile-info .strikes-display{gap:4px;margin-top:2px}
 .right-info .strikes-display{justify-content:flex-end}
@@ -142,7 +142,7 @@ body{
   .avatar-wrap img{width:36px;height:36px}
 }
 
-/* 😄 الإيموجيات المتحركة (نفس حروف) */
+/*  الإيموجيات المتحركة (نفس حروف) */
 .qc-emoji-row { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 4px; }
 .qc-emoji-btn { background: transparent; border: none; font-size: 26px; cursor: pointer; padding: 4px 6px; border-radius: 8px; transition: all 0.15s; }
 .qc-emoji-btn:hover { background: rgba(255,255,255,0.12); transform: scale(1.2); }
@@ -151,7 +151,7 @@ body{
 .emoji-fallback { font-size: 60px; display: inline-block; animation: emojiFloat 2s ease-in-out infinite; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4)); }
 @keyframes emojiFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 
-/* 👁 بطاقة بروفايل قابلة للنقر (نسخة حروف بالضبط) */
+/*  بطاقة بروفايل قابلة للنقر (نسخة حروف بالضبط) */
 .player-profile {
   cursor: pointer;
   transition: transform .2s, filter .2s, background .2s, border-color .2s;
@@ -200,7 +200,7 @@ body{
 .action-btn.block-user { background: linear-gradient(135deg,#7f8c8d,#616a6b); }
 .action-btn.report-user { background: linear-gradient(135deg,#e67e22,#d35400); }
 
-/* 🎯 شريط المساعدات — تحت يسار */
+/*  شريط المساعدات — تحت يسار */
 .career-helps-bar { position: fixed; bottom: 80px; left: 20px; z-index: 800;
   display: flex; flex-direction: column; gap: 8px; }
 .career-help-btn { width: 46px; height: 46px; border-radius: 12px; border: 1px solid rgba(255,255,255,.15);

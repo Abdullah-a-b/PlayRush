@@ -1,5 +1,5 @@
 """
-🛠️ قارئ وضع التطوير (Dev Mode)
+ قارئ وضع التطوير (Dev Mode)
 
 يقرأ ALLOW_SAME_IP من ملف .env **مباشرة** (لا من ذاكرة العملية)،
 فتعديل .env يسري خلال ثانية بدون إعادة تشغيل السيرفر.
@@ -37,7 +37,7 @@ def _read_env_file_flag() -> bool:
                         return val == '1'
         return False  # المفتاح غير موجود = إنتاج
     except FileNotFoundError:
-        # لا يوجد .env → نرجع لمتغير البيئة (احتياط)
+        # لا يوجد .env  نرجع لمتغير البيئة (احتياط)
         return os.environ.get("ALLOW_SAME_IP", "0") == "1"
     except Exception:
         return False

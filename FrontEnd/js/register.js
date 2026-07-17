@@ -41,6 +41,12 @@ window.addEventListener('load', () => {
     
     if (registerForm) {
         registerForm.addEventListener("submit", async function (e) {
+        const _consent = document.getElementById('ageTermsConsent');
+        if (_consent && !_consent.checked) {
+            e.preventDefault();
+            alert('يجب الإقرار بأن عمرك 13+ والموافقة على الشروط للمتابعة');
+            return;
+        }
             e.preventDefault();
 
             // Check cooldown
@@ -93,7 +99,7 @@ window.addEventListener('load', () => {
             formData.append("email", document.getElementById("email").value);
             formData.append("password", document.getElementById("password").value);
             
-            // 🌟 الكود النظيف: إرسال القيم الافتراضية للحساب الجديد فوراً (تم حذف نظام الضيف)
+            //  الكود النظيف: إرسال القيم الافتراضية للحساب الجديد فوراً (تم حذف نظام الضيف)
             formData.append("coins", 0);
             formData.append("gems", 0);
             formData.append("level", 1);

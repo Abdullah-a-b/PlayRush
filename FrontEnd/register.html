@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>إنشاء حساب - PlayRush</title>
+  <title>إنشاء حساب</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="stylesheet" href="css/design-system.css">
   <link rel="stylesheet" href="css/register.css" />
   <link rel="stylesheet" href="css/all.min.css">
     <link rel="stylesheet" href="css/brand.css">
@@ -11,6 +13,12 @@
     <script src="js/brand.js" defer></script>
 </head>
 <body>
+  <a href="index.html" id="backHomeBtn"
+     onclick="try{sessionStorage.setItem('pr_splash_company','1')}catch(e){}"
+     style="position:fixed;top:16px;inset-inline-start:16px;z-index:1000;display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:12px;background:rgba(22,27,34,.85);border:1px solid rgba(255,255,255,.15);color:#c9d1d9;text-decoration:none;font-size:.88rem;font-weight:700;">
+    <span>🏠</span> الرئيسية
+  </a>
+
   <div class="stars" id="stars"></div>
 
   <div class="register-form">
@@ -42,6 +50,11 @@
         <label for="terms">أوافق على <a href="terms.html" target="_blank">شروط وأحكام</a> PlayRush</label>
       </div>
 
+      <label style="display:flex;align-items:flex-start;gap:8px;margin:6px 0 12px;cursor:pointer;font-size:.88rem;opacity:.92;line-height:1.5;">
+        <input type="checkbox" id="ageTermsConsent" required style="width:16px;height:16px;margin-top:2px;accent-color:#facc15;cursor:pointer;flex-shrink:0;" />
+        <span>أُقرّ بأن عمري <strong>13 عاماً أو أكثر</strong> وأوافق على
+        <a href="terms.html" target="_blank">الشروط والأحكام</a></span>
+      </label>
       <button type="submit">تسجيل حساب</button>
     </form>
 
@@ -62,5 +75,10 @@
   <script src="js/utils.js" defer></script>
   <script src="js/register.js" defer></script>
   <script src="js/anti_cheat.js" defer></script>
+  <script src="js/sound.js" defer></script>
+  <div class="pr-copyright" style="text-align:center;padding:14px 8px;font-size:.78rem;opacity:.55;">
+    © 2026 <strong>Isolated Person</strong> — PlayRush™ جميع الحقوق محفوظة &nbsp;·&nbsp; <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">الشروط والأحكام</a>
+  </div>
+  <script src="js/music.js" defer></script>
 </body>
 </html>

@@ -6,24 +6,16 @@ from jose import jwt, JWTError
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 
-# 🔄 الاستيرادات الصحيحة من الهيكلة الجديدة
-from app.core.database import SessionLocal
-from app.models.user import User
+from app.infrastructure.database import get_db
+from app.domains.users.models import User
 from app.core.config import settings
 
-# 🔐 إعدادات التشفير
+# إعدادات التشفير
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = settings.ALGORITHM
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 def get_password_hash(password: str) -> str:
     """تشفير كلمة المرور مع ضمان عدم تجاوز الحد الأقصى 72 بايت"""
@@ -49,11 +41,10 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)):
     """حارس الأمن المطور: يصطاد التوكن من أي مكان يرسله الفرونت اند"""
     token = None
     
-    # 1. البحث في الرابط
-    if request.query_params.get("token"):
-        token = request.query_params.get("token")
-    # 2. البحث في الـ Headers
-    elif request.headers.get("Authorization"):
+    # 🔒 أُزيل قبول التوكن من query string — كان يتسرب لسجلات nginx
+    # وتاريخ المتصفح. المعتمد: Authorization header ثم form body.
+    # 1. البحث في الـ Headers
+    if request.headers.get("Authorization"):
         auth_header = request.headers.get("Authorization")
         if auth_header.startswith("Bearer "):
             token = auth_header.split(" ")[1]
@@ -80,7 +71,7 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)):
     if user is None:
         raise HTTPException(status_code=401, detail="حساب اللاعب لم يعد موجوداً")
 
-    # 🛡️ فحص الحظر — يمنع المحظور من استخدام أي API محمي
+    # فحص الحظر — يمنع المحظور من استخدام أي API محمي
     if getattr(user, 'is_banned', False):
         raise HTTPException(status_code=403, detail="تم حظر حسابك لانتهاك سياسات اللعب العادل والأمان.")
 

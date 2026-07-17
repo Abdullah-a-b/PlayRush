@@ -40,4 +40,3 @@ sentry-sdk[fastapi]==2.18.0
 # الذكاء الاصطناعي (Gemini) — للإثراء + AI Judge. اختياري (يعمل بدونه)
 google-generativeai==0.8.3
 
-install requests

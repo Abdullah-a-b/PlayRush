@@ -8,12 +8,12 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=8000,
         reload=True,
-        reload_dirs=["app"],                           # ✅ يراقب فقط app/ مش scripts/
+        reload_dirs=["app"],                           # يراقب فقط app/ مش scripts/
         reload_excludes=["*.db", "*.db-journal", "*.pyc", "logs/*"],
         loop="asyncio",
         log_level="info",
         access_log=False,
-        # ✅ هذي الإعدادات تخلي Ctrl+C يعمل:
+        # هذي الإعدادات تخلي Ctrl+C يعمل:
         timeout_graceful_shutdown=3,                   # 3 ثواني فقط ثم force quit
         ws_ping_interval=20.0,
         ws_ping_timeout=10.0,

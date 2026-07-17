@@ -1,5 +1,5 @@
 """
-🔡 مولّد أسئلة "حروف" من Wikidata — حقائق ثابتة محصّنة من الهلوسة.
+ مولّد أسئلة "حروف" من Wikidata — حقائق ثابتة محصّنة من الهلوسة.
 
 المبادئ الصارمة (شروط المطوّر — النسخة المنقّحة):
 1. صفر هلوسة: قوالب نصية ثابتة + قيم verbatim من مصادر موثوقة.
@@ -15,11 +15,11 @@
    تسرب أي نص ديني عابر من القوالب الخارجية لهذا السبب تحديداً.
 
 قواعد التحكيم العادل:
-- تُقبل فقط العلاقات الأحادية (دولة↔عاصمة، عنصر↔رمز/عدد ذري).
+- تُقبل فقط العلاقات الأحادية (دولةعاصمة، عنصررمز/عدد ذري).
   قالب متعدد الإجابات الصحيحة ("لاعب لعب لنادي X") يظلم من أجاب
   إجابة صحيحة أخرى — مرفوض.
-- عاصمة تظهر لدولتين → تُستبعد الدولتان (غموض).
-- دولة بأكثر من عملة رسمية → سؤال عملتها يُتخطّى.
+- عاصمة تظهر لدولتين  تُستبعد الدولتان (غموض).
+- دولة بأكثر من عملة رسمية  سؤال عملتها يُتخطّى.
 
 الإخراج: جدول questions مباشرة (game_mode='huroof') لأن حروف يقرأ
 من DB — مع extra_data={'letter','accepted_answers','source':'auto_wikidata'}
@@ -66,7 +66,7 @@ SELECT ?eLabelAr ?eLabelEn ?symbol ?z WHERE {
 
 _ARABIC_CHARS = set("ابتثجحخدذرزسشصضطظعغفقكلمنهويءآأؤإئى")
 
-# 🛡️ الحارس الديني (دوره الجديد): يمنع تسرب أي نص ديني من القوالب
+# الحارس الديني (دوره الجديد): يمنع تسرب أي نص ديني من القوالب
 # *الخارجية* (Wikidata) — لأن labels الخارجية فوضوية والهلوسة ممنوعة
 # في الديني قطعاً. المحتوى الديني يأتي حصراً من القائمة المنسّقة أدناه.
 _RELIGIOUS_GUARD = ("الله", "نبي", "النبي", "رسول", "قرآن", "سورة", "آية",
@@ -74,7 +74,7 @@ _RELIGIOUS_GUARD = ("الله", "نبي", "النبي", "رسول", "قرآن", 
                     "معبد", "دير ", "قديس", "بابا ")
 
 # ==========================================================
-# 📖 القائمة المنسّقة: سور المصحف بترتيبها (حقيقة ثابتة — مصدرها
+# القائمة المنسّقة: سور المصحف بترتيبها (حقيقة ثابتة — مصدرها
 # المصحف نفسه لا Wikidata). أي تعديل عليها يمر بمراجعة يدوية.
 # ==========================================================
 SURAHS = [
@@ -100,7 +100,7 @@ SURAHS = [
 assert len(SURAHS) == 114 and len(set(SURAHS)) == 114, "قائمة السور يجب أن تكون 114 فريدة"
 
 # ==========================================================
-# 📌 حقائق منسّقة للحروف النادرة (نفس آلية SURAHS الموثوقة)
+# حقائق منسّقة للحروف النادرة (نفس آلية SURAHS الموثوقة)
 # بعض الحروف (كـ ظ) لا يغطيها أي مصدر خارجي بكيان حقيقي —
 # والاختراع ممنوع. الحل: حقائق صلبة مدقّقة يدوياً هنا، والحرف
 # يبقى مشتقاً من الإجابة بالكود (لا يُكتب يدوياً فلا مجال لخطأ).
@@ -150,8 +150,8 @@ def _religious(*texts):
 def _answer_letter(ans):
     """يشتق حرف اللوحة من الإجابة الحقيقية — بنفس منطق المحرك حرفياً:
     إسقاط 'ال' ثم تطبيع الحرف الأول. يرجع None لو خارج حروف اللوحة."""
-    from app.games.huroof.events import normalize_letter
-    from app.games.huroof.engine import ARABIC_LETTERS
+    from app.domains.games.huroof.events import normalize_letter
+    from app.domains.games.huroof.engine import ARABIC_LETTERS
     t = (ans or "").strip()
     if t.startswith("ال") and len(t) > 3:
         t = t[2:]
@@ -162,7 +162,7 @@ def _answer_letter(ans):
 
 
 def _variants(ar, en):
-    """تنويعات الإملاء الحتمية (ج↔غ، حذف ألف المد...) — محرك مشترك."""
+    """تنويعات الإملاء الحتمية (جغ، حذف ألف المد...) — محرك مشترك."""
     from answer_variants import spelling_variants
     return spelling_variants(ar, en)
 
@@ -204,7 +204,7 @@ def build_country_questions(rows):
             e["curs"].add(cur)
             e["curs_en"][cur] = _g(b, "curEn")
 
-    # عاصمة مشتركة بين دولتين → غموض، تُستبعد الدولتان من قالب T1
+    # عاصمة مشتركة بين دولتين  غموض، تُستبعد الدولتان من قالب T1
     cap_owners = {}
     for c, e in by_country.items():
         for cap in e["caps"]:
@@ -215,11 +215,11 @@ def build_country_questions(rows):
     for country, e in sorted(by_country.items()):
         if _religious(country):
             continue
-        # T2 يحتاج عاصمة واحدة محددة؛ أكثر من عاصمة = غموض → تخطٍّ
+        # T2 يحتاج عاصمة واحدة محددة؛ أكثر من عاصمة = غموض  تخطٍّ
         cap = next(iter(e["caps"])) if len(e["caps"]) == 1 else None
         cap_en = e["caps_en"].get(cap, "") if cap else ""
 
-        # T1: "دولة عاصمتها X" → الإجابة اسم الدولة (الحرف من الدولة)
+        # T1: "دولة عاصمتها X"  الإجابة اسم الدولة (الحرف من الدولة)
         if cap and cap not in ambiguous_caps and _valid_answer(country) \
                 and _is_arabic(cap) and not _religious(cap):
             letter = _answer_letter(country)
@@ -232,7 +232,7 @@ def build_country_questions(rows):
                     "accepted_answers": _variants(country, e["en"]),
                 })
 
-        # T2: "عاصمة دولة X" → الإجابة العاصمة (الحرف من العاصمة)
+        # T2: "عاصمة دولة X"  الإجابة العاصمة (الحرف من العاصمة)
         if cap and _valid_answer(cap) and not _religious(cap):
             letter = _answer_letter(cap)
             if letter:
@@ -261,7 +261,7 @@ def build_country_questions(rows):
 
 
 def build_element_questions(rows):
-    """قوالب العناصر — علاقة أحادية مضمونة (رمز/عدد ذري ↔ عنصر واحد)."""
+    """قوالب العناصر — علاقة أحادية مضمونة (رمز/عدد ذري  عنصر واحد)."""
     qs, seen = [], set()
     for b in rows:
         name, en = _g(b, "eLabelAr"), _g(b, "eLabelEn")
@@ -285,8 +285,8 @@ def build_element_questions(rows):
 
 
 def build_quran_questions():
-    """📖 القالب الديني — من القائمة المنسّقة حصراً (لا Wikidata).
-    علاقة أحادية مطلقة: رقم الترتيب ↔ سورة واحدة. قالب رصين ثابت —
+    """ القالب الديني — من القائمة المنسّقة حصراً (لا Wikidata).
+    علاقة أحادية مطلقة: رقم الترتيب  سورة واحدة. قالب رصين ثابت —
     لا مجال لهزار ولا لهلوسة لأن لا شيء يُولَّد أصلاً."""
     qs = []
     for i, name in enumerate(SURAHS, start=1):
@@ -307,7 +307,8 @@ def build_quran_questions():
 
 def save_to_db(questions):
     """إدخال لجدول questions مع dedup بنص السؤال — لا يمس اليدوي."""
-    from app.core.database import SessionLocal, Question
+    from app.infrastructure.database import SessionLocal
+    from app.domains.games.models import Question
     db = SessionLocal()
     try:
         existing = {t for (t,) in db.query(Question.question_text).filter(
@@ -342,20 +343,20 @@ def run_import():
     qs = (build_country_questions(rows_c) + build_element_questions(rows_e)
           + build_quran_questions() + build_curated_questions())
     if len(qs) < 50:
-        print(f"⚠️ [huroof-import] نتائج قليلة ({len(qs)}) — إلغاء الدفعة (تحصين)")
+        print(f" [huroof-import] نتائج قليلة ({len(qs)}) — إلغاء الدفعة (تحصين)")
         return 0
     added = save_to_db(qs)
-    # 📊 تقرير التغطية: الحروف المغطاة والناقصة (الناقصة تُغطى يدوياً —
+    # تقرير التغطية: الحروف المغطاة والناقصة (الناقصة تُغطى يدوياً —
     # المولد لا يخترع أبداً إجابة لحرف بلا كيان حقيقي)
-    from app.games.huroof.engine import ARABIC_LETTERS
+    from app.domains.games.huroof.engine import ARABIC_LETTERS
     covered = {}
     for q in qs:
         covered[q["letter"]] = covered.get(q["letter"], 0) + 1
     missing = [l for l in ARABIC_LETTERS if l not in covered]
-    print(f"🔡 [huroof-import] وُلّد {len(qs)} سؤالاً، أُضيف {added} جديداً — "
+    print(f" [huroof-import] وُلّد {len(qs)} سؤالاً، أُضيف {added} جديداً — "
           f"تغطية {len(covered)}/{len(ARABIC_LETTERS)} حرفاً")
     if missing:
-        print(f"📊 [huroof-import] حروف بلا أسئلة مولّدة (تُغطى يدوياً): {' '.join(missing)}")
+        print(f" [huroof-import] حروف بلا أسئلة مولّدة (تُغطى يدوياً): {' '.join(missing)}")
     return added
 
 

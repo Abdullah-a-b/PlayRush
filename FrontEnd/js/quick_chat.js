@@ -1,16 +1,16 @@
 /**
- * 💬 نظام الرسائل الجاهزة (Quick Chat) — واجهة مشتركة.
+ *  نظام الرسائل الجاهزة (Quick Chat) — واجهة مشتركة.
  *
  * بديل آمن للدردشة الحرة: المستخدم يختار عبارة معتمدة من قائمة أزرار،
  * فيُرسَل معرّفها (id) فقط للخادم — لا يُكتب نص حر أبداً.
  *
  * الاستخدام:
- *   QuickChat.init({
- *     socket,                       // اتصال socket.io
- *     triggerBtn: domElement,       // الزر الذي يفتح لوحة العبارات
- *     event: 'send_chat_message',   // أو 'send_game_chat_message'
- *     extra: () => ({ gameMode })   // (اختياري) بيانات إضافية لكل رسالة
- *   });
+ * QuickChat.init({
+ * socket, // اتصال socket.io
+ * triggerBtn: domElement, // الزر الذي يفتح لوحة العبارات
+ * event: 'send_chat_message', // أو 'send_game_chat_message'
+ * extra: () => ({ gameMode }) // (اختياري) بيانات إضافية لكل رسالة
+ * });
  *
  * الخادم يرسل القائمة عبر 'quick_chat_catalog' بعد طلبها بـ 'get_quick_chat_catalog'.
  */

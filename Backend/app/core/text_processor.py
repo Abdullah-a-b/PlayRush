@@ -1,5 +1,5 @@
 """
-🔤 معالج النصوص العربية — لفحص إجابات اللعبة
+ معالج النصوص العربية — لفحص إجابات اللعبة
 
 يحل مشكلة رفض الإجابات الصحيحة بسبب اختلاف طريقة الكتابة:
 - "عَمّان" vs "عمان" (تشكيل)
@@ -13,7 +13,7 @@
 2. Fuzzy match (للأخطاء الإملائية)
 3. Token analysis (للكلمات الجزئية الصحيحة)
 
-⚠️ صفر مكتبات خارجية — كل شي مكتوب يدوياً ليعمل فوراً بدون تثبيت.
+ صفر مكتبات خارجية — كل شي مكتوب يدوياً ليعمل فوراً بدون تثبيت.
 """
 import re
 import unicodedata
@@ -37,7 +37,7 @@ def normalize_arabic(text: str) -> str:
     """
     يوحّد النص العربي لإزالة الفروق غير الجوهرية.
 
-    "عَمّان، العاصمة!" → "عمان العاصمه"
+    "عَمّان، العاصمة!"  "عمان العاصمه"
     """
     if not text:
         return ""
@@ -47,14 +47,14 @@ def normalize_arabic(text: str) -> str:
     # 1. إزالة التشكيل والتطويل
     text = _TASHKEEL.sub('', text)
 
-    # 2. توحيد الألف (أ إ آ ٱ → ا)
+    # 2. توحيد الألف (أ إ آ ٱ  ا)
     text = re.sub(r'[أإآٱ]', 'ا', text)
 
-    # 3. توحيد الياء (ى → ي) والهمزات
+    # 3. توحيد الياء (ى  ي) والهمزات
     text = text.replace('ى', 'ي')
     text = text.replace('ؤ', 'و').replace('ئ', 'ي').replace('ء', '')
 
-    # 4. توحيد التاء المربوطة (ة → ه) — يحل المدينة/المدينه
+    # 4. توحيد التاء المربوطة (ة  ه) — يحل المدينة/المدينه
     text = text.replace('ة', 'ه')
 
     # 5. توحيد الهاء/الكاف الفارسية
@@ -178,7 +178,7 @@ def check_answer(player_answer: str, correct_answer: str,
     if not p_norm:
         return {'verdict': 'reject', 'confidence': 1.0, 'method': 'empty', 'matched_answer': None}
 
-    # 🛡️ فحص الحرف المطلوب (خاص بلعبة حروف)
+    # فحص الحرف المطلوب (خاص بلعبة حروف)
     # مهم: نفحص الحرف على النص المطبّع العادي (قبل إزالة ال) لتجنب الأخطاء
     if required_letter:
         p_first = p_norm.replace(' ', '')
@@ -251,7 +251,7 @@ def check_answer(player_answer: str, correct_answer: str,
             matched_count = sum(1 for pt in player_set if token_matches(pt, accepted_token_set))
             match_ratio = matched_count / len(player_set)
 
-            # ✅ غطّى الإجابة الصحيحة كاملة → accept حتى لو فيه كلمات إضافية
+            # غطّى الإجابة الصحيحة كاملة  accept حتى لو فيه كلمات إضافية
             # ("برنابيو ستاديوم" يغطّي "برنابيو" بالكامل)
             if coverage >= 1.0:
                 # لكن نرفض لو الـ noise كثير جداً ويغيّر المعنى
@@ -262,7 +262,7 @@ def check_answer(player_answer: str, correct_answer: str,
                     return {'verdict': 'maybe', 'confidence': 0.6,
                             'method': 'token_noisy', 'matched_answer': correct_answer}
 
-            # تطابق جزئي → maybe (لـ AI لاحقاً)
+            # تطابق جزئي  maybe (لـ AI لاحقاً)
             if coverage >= 0.5:
                 return {'verdict': 'maybe', 'confidence': coverage,
                         'method': 'token_partial', 'matched_answer': correct_answer}
@@ -270,7 +270,7 @@ def check_answer(player_answer: str, correct_answer: str,
     # ==========================================
     # لا تطابق
     # ==========================================
-    # لو الـ fuzzy كان قريباً (لكن تحت العتبة) → maybe
+    # لو الـ fuzzy كان قريباً (لكن تحت العتبة)  maybe
     if best_ratio >= 0.5:
         return {'verdict': 'maybe', 'confidence': best_ratio,
                 'method': 'fuzzy_low', 'matched_answer': best_match}

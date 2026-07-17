@@ -1,11 +1,11 @@
 /* --- تنسيقات اللوبي الكبير --- */
 .games-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; margin-top: 20px; }
 .game-card { background: linear-gradient(145deg, rgba(255,255,255,0.05), rgba(0,0,0,0.4)); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 25px; text-align: center; cursor: pointer; transition: 0.3s; position: relative; overflow: hidden; }
-.game-card:hover { transform: translateY(-10px); border-color: #facc15; box-shadow: 0 10px 30px rgba(250, 204, 21, 0.2); }
+.game-card:hover { transform: translateY(-10px); border-color: var(--brand-gold, #facc15); box-shadow: 0 10px 30px rgba(250, 204, 21, 0.2); }
 .game-icon { font-size: 60px; margin-bottom: 15px; text-shadow: 0 0 15px rgba(255,255,255,0.2); }
 .game-title { color: #fff; font-size: 22px; margin-bottom: 10px; font-weight: 900; }
 .game-desc { color: #aaa; font-size: 14px; margin-bottom: 20px; line-height: 1.5; }
-.play-btn { background: linear-gradient(45deg, #facc15, #f59e0b); border: none; padding: 10px 25px; border-radius: 8px; color: #000; font-weight: bold; font-size: 16px; cursor: pointer; width: 100%; transition: 0.2s; }
+.play-btn { background: linear-gradient(45deg, var(--brand-gold, #facc15), #f59e0b); border: none; padding: 10px 25px; border-radius: 8px; color: #000; font-weight: bold; font-size: 16px; cursor: pointer; width: 100%; transition: 0.2s; }
 .play-btn:hover { transform: scale(1.05); }
 
 /* --- الإعدادات --- */
@@ -14,7 +14,7 @@
     flex-direction: row;
     gap: 20px; 
     height: 100%;
-    max-height: none; /* ✅ */
+    max-height: none; /*  */
     width: 100%;
     border-radius: 8px;
     overflow: hidden; 
@@ -40,12 +40,12 @@
     max-height: 100%; 
     overflow-y: auto !important; 
     overflow-x: hidden !important; 
-    padding: 0 15px 20px 15px; /* 🌟 15 بيكسل من اليمين واليسار لحماية المحتوى */
+    padding: 0 15px 20px 15px; /*  15 بيكسل من اليمين واليسار لحماية المحتوى */
     box-sizing: border-box;
-    min-width: 0; /* 🔥 هذا يمنع الانفجار داخل flex */
+    min-width: 0; /*  هذا يمنع الانفجار داخل flex */
 }
 
-/* 🌟 تجميل شريط التمرير */
+/*  تجميل شريط التمرير */
 .settings-content-area::-webkit-scrollbar { width: 6px; }
 .settings-content-area::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); border-radius: 10px; }
 .settings-content-area::-webkit-scrollbar-thumb { background: #00d2ff; border-radius: 10px; }
@@ -59,46 +59,46 @@
 .setting-panel { display: none; }
 .setting-panel.active { display: block; animation: fadeIn 0.3s ease; }
 
-/* 🌟 زر تسجيل الخروج الفخم */
+/*  زر تسجيل الخروج الفخم */
 .logout-tab { 
     margin-top: auto !important; /* يدفعه لأسفل القائمة بشكل طبيعي وبدون مشاكل */
-    margin-bottom: 20px !important; /* 🌟 مسحنا الـ 180px التي كانت تخرب الشكل */
-    border: 1px solid rgba(244, 63, 94, 0.3); color: #f43f5e; font-weight: bold; background: rgba(244, 63, 94, 0.05); text-align: center;
+    margin-bottom: 20px !important; /*  مسحنا الـ 180px التي كانت تخرب الشكل */
+    border: 1px solid rgba(244, 63, 94, 0.3); color: var(--brand-pink, #f43f5e); font-weight: bold; background: rgba(244, 63, 94, 0.05); text-align: center;
 }
-.logout-tab:hover { background: #f43f5e; color: #fff; box-shadow: 0 0 15px rgba(244, 63, 94, 0.4); }
+.logout-tab:hover { background: var(--brand-pink, #f43f5e); color: #fff; box-shadow: 0 0 15px rgba(244, 63, 94, 0.4); }
 
-/* 🌟 شبكة الصور في الإعدادات */
+/*  شبكة الصور في الإعدادات */
 .avatars-grid-container { display: none; margin-top: 15px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); }
 .avatars-wrapper { display: grid; grid-template-columns: repeat(auto-fit, minmax(60px, 1fr)); gap: 10px; max-height: 150px; overflow-y: auto; padding-left: 10px; }
 .avatars-wrapper::-webkit-scrollbar { width: 6px; }
 .avatars-wrapper::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
 .avatar-option { width: 60px; height: 60px; border-radius: 50%; cursor: pointer; transition: 0.2s; border: 2px solid transparent; background-color: rgba(255,255,255,0.05); }
 .avatar-option:hover { transform: scale(1.1); }
-.avatar-option.selected { border-color: #facc15; box-shadow: 0 0 15px rgba(250, 204, 21, 0.4); transform: scale(1.1); }
+.avatar-option.selected { border-color: var(--brand-gold, #facc15); box-shadow: 0 0 15px rgba(250, 204, 21, 0.4); transform: scale(1.1); }
 
-/* 🌟 حقول الأمان المصغرة */
+/*  حقول الأمان المصغرة */
 .security-flow { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-bottom: 20px; width: 100%; box-sizing: border-box; }
 .otp-input-group { display: none; margin-top: 15px; animation: fadeIn 0.3s ease; }
 
 /* --- الدردشة والتنبيهات --- */
 .chat-messages { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; justify-content: flex-end; }
-.chat-msg { background: rgba(0,0,0,0.4); padding: 8px 12px; border-radius: 8px; font-size: 13px; border-right: 3px solid #facc15; word-wrap: break-word; animation: slideIn 0.2s ease; }
-.chat-msg span.user { font-weight: bold; color: #facc15; margin-left: 5px; }
+.chat-msg { background: rgba(0,0,0,0.4); padding: 8px 12px; border-radius: 8px; font-size: 13px; border-right: 3px solid var(--brand-gold, #facc15); word-wrap: break-word; animation: slideIn 0.2s ease; }
+.chat-msg span.user { font-weight: bold; color: var(--brand-gold, #facc15); margin-left: 5px; }
 
 .toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
-.toast { background: rgba(24, 24, 27, 0.95); border-left: 4px solid #facc15; color: #fff; padding: 15px 25px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 15px; font-weight: bold; animation: toastSlideDown 0.3s ease forwards, toastFadeOut 0.3s ease 2.7s forwards; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
-.toast.success { border-color: #00ff88; } .toast.error { border-color: #f43f5e; } .toast.info { border-color: #00d2ff; }
+.toast { background: rgba(24, 24, 27, 0.95); border-left: 4px solid var(--brand-gold, #facc15); color: #fff; padding: 15px 25px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 15px; font-weight: bold; animation: toastSlideDown 0.3s ease forwards, toastFadeOut 0.3s ease 2.7s forwards; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+.toast.success { border-color: #00ff88; } .toast.error { border-color: var(--brand-pink, #f43f5e); } .toast.info { border-color: #00d2ff; }
 
 .confirm-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
 .confirm-box { background: linear-gradient(145deg, #18181b, #09090b); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 30px; text-align: center; width: 350px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); animation: zoomIn 0.2s ease; }
 .confirm-box h3 { color: #fff; margin-top: 0; margin-bottom: 15px; }
 .confirm-box p { color: #aaa; font-size: 14px; margin-bottom: 25px; line-height: 1.5; }
 .confirm-btns { display: flex; gap: 15px; justify-content: center; }
-.btn-yes { background: #f43f5e; color: #fff; border: none; padding: 10px 25px; border-radius: 8px; cursor: pointer; font-weight: bold; flex: 1; transition: 0.2s; }
+.btn-yes { background: var(--brand-pink, #f43f5e); color: #fff; border: none; padding: 10px 25px; border-radius: 8px; cursor: pointer; font-weight: bold; flex: 1; transition: 0.2s; }
 .btn-no { background: rgba(255,255,255,0.1); color: #fff; border: none; padding: 10px 25px; border-radius: 8px; cursor: pointer; font-weight: bold; flex: 1; transition: 0.2s; }
 .btn-yes:hover { background: #e11d48; } .btn-no:hover { background: rgba(255,255,255,0.2); }
 
-/* 🌟 تنسيقات أشرطة الصوت الاحترافية */
+/*  تنسيقات أشرطة الصوت الاحترافية */
 .volume-slider {     -webkit-appearance: none;
      appearance: none;
     width: 100%;
@@ -114,7 +114,7 @@
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: #facc15;
+    background: var(--brand-gold, #facc15);
     cursor: pointer;
     box-shadow: 0 0 10px rgba(250, 204, 21, 0.5);
     transition: 0.2s;
@@ -128,14 +128,14 @@
 .players-list {
     max-height: 250px;
     overflow-y: auto; /* تمرير عمودي فقط */
-    overflow-x: hidden !important; /* 🌟 حاسم: منع أي تمرير أفقي نهائياً */
+    overflow-x: hidden !important; /*  حاسم: منع أي تمرير أفقي نهائياً */
     padding: 10px;
     display: flex;
     flex-direction: column;
     gap: 8px;
 }
 
-/* 🌟 تصميم قائمة اللاعبين المتصلين - تم التحديث (فخم ونظيف) */
+/*  تصميم قائمة اللاعبين المتصلين - تم التحديث (فخم ونظيف) */
 .online-player-item {
     display: flex;
     align-items: center;
@@ -175,7 +175,7 @@
     font-size: 14px;
     font-weight: bold;
     margin-bottom: 3px;
-    margin-top: 3px; /* 🌟New: تم تنزيل الاسم قليلاً لتحت ليتناسق مع الصورة */
+    margin-top: 3px; /* New: تم تنزيل الاسم قليلاً لتحت ليتناسق مع الصورة */
 }
 
 .online-player-status {
@@ -186,7 +186,7 @@
     gap: 6px;
 }
 
-/* 🌟 النقطة الخضراء النابضة */
+/*  النقطة الخضراء النابضة */
 .status-dot {
     width: 8px;
     height: 8px;
@@ -196,7 +196,7 @@
     animation: pulseStatus 2s infinite;
 }
 
-/* 🌟 زر الرجوع داخل الإعدادات */
+/*  زر الرجوع داخل الإعدادات */
 .back-settings-btn {
     background: transparent; border: none; color: #aaa; cursor: pointer;
     font-size: 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;
@@ -207,14 +207,14 @@
 /* تأثير الانتقال الناعم بين الصفحات الداخلية */
 .view-fade-in { animation: fadeIn 0.3s ease-out forwards; }
 
-/* 🌟 السلاح السري: إجبار جميع العناصر داخل الإعدادات على عدم تجاوز الحدود */
+/*  السلاح السري: إجبار جميع العناصر داخل الإعدادات على عدم تجاوز الحدود */
 .settings-content-area * {
     box-sizing: border-box !important;
     max-width: 100% !important;
 }
 
 /* =========================================
-   🚀 الحل الجذري النهائي لمنع خروج الصناديق
+    الحل الجذري النهائي لمنع خروج الصناديق
    ========================================= */
 
 /* 1. إجبار جميع عناصر الإعدادات على احترام الحدود */
@@ -266,9 +266,9 @@
     padding: 20px;
     width: 90%;
     max-width: 700px;
-    max-height: 85vh; /* 🌟 لا يتجاوز الشاشة */
-    overflow-y: auto; /* 🌟 تمرير داخلي عند كثرة المحتوى */
-    margin: 0 !important; /* 🌟 إلغاء النزول القديم للأسفل */
+    max-height: 85vh; /*  لا يتجاوز الشاشة */
+    overflow-y: auto; /*  تمرير داخلي عند كثرة المحتوى */
+    margin: 0 !important; /*  إلغاء النزول القديم للأسفل */
     box-shadow: 0 0 30px rgba(0,0,0,0.8);
     position: relative;
     animation: modalFadeIn 0.3s ease;
@@ -284,8 +284,8 @@
     height: 100%; 
     background-color: rgba(0, 0, 0, 0.8); 
     backdrop-filter: blur(8px);
-    align-items: center; /* 🌟 توسيط عمودي (يرفع المربع للنص) */
-    justify-content: center; /* 🌟 توسيط أفقي */
+    align-items: center; /*  توسيط عمودي (يرفع المربع للنص) */
+    justify-content: center; /*  توسيط أفقي */
 }
 
 .toast-container {
@@ -298,7 +298,7 @@
 
 /* تمييز كرت اللاعب الحالي في القائمة */
 .online-player-item.is-me {
-    border: 2px solid #facc15 !important; /* حدود ذهبية */
+    border: 2px solid var(--brand-gold, #facc15) !important; /* حدود ذهبية */
     background-color: rgba(250, 204, 21, 0.08) !important; /* خلفية صفراء خفيفة جداً */
     box-shadow: 0 0 10px rgba(250, 204, 21, 0.2); /* توهج ذهبي */
     position: relative;
@@ -311,7 +311,7 @@
     position: absolute;
     top: -8px;
     right: 15px;
-    background: #facc15;
+    background: var(--brand-gold, #facc15);
     color: #000;
     padding: 2px 8px;
     border-radius: 10px;
@@ -361,7 +361,7 @@
 }
 
 /* -------------------------------------------
-   🛒 المتجر
+    المتجر
 ------------------------------------------- */
 .store-wrap { max-width: 900px; margin: 0 auto; padding: 10px; }
 .store-tabs {
@@ -410,12 +410,12 @@
     .store-tab { padding: 7px 12px; font-size: 12px; }
     .store-icon { font-size: 32px; }
 }
-/* 🎨 خيارات الثيم في الإعدادات */
+/*  خيارات الثيم في الإعدادات */
 .theme-option { background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 14px 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; font-family: inherit; transition: all 0.15s; }
 .theme-option:hover { border-color: #ffd700; transform: translateY(-2px); }
 .theme-option.active { border-color: #4a90e2; background: rgba(74,144,226,0.15); }
 
-/* 🎯 تجهيز المساعدات */
+/*  تجهيز المساعدات */
 .loadout-modal { display: none; position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,0.75); backdrop-filter: blur(4px); align-items: center; justify-content: center; }
 .loadout-box { background: linear-gradient(145deg, #1f1f3a, #15152b); border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; padding: 24px; width: 92%; max-width: 560px; max-height: 85vh; overflow-y: auto; position: relative; }
 .loadout-box h2 { color: #fff; margin-bottom: 6px; }

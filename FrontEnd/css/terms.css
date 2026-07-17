@@ -11,7 +11,7 @@ body {
   padding: 20px;
 }
 
-/* 🚀 استدعاء الخطوط محلياً لسرعة البرق */
+/*  استدعاء الخطوط محلياً لسرعة البرق */
 @font-face {
     font-family: 'Tajawal';
     src: url('../assets/fonts/Tajawal-Regular.ttf') format('truetype');
@@ -65,7 +65,7 @@ body {
 
 h2 {
   text-align: center;
-  color: #facc15;
+  color: var(--brand-gold, #facc15);
   margin-top: 0;
   margin-bottom: 20px;
   font-weight: 900;
@@ -103,7 +103,7 @@ p { margin-top: 0; text-align: justify; }
 .back-btn {
   width: 100%;
   padding: 14px;
-  background: linear-gradient(45deg, #f43f5e, #e11d48);
+  background: linear-gradient(45deg, var(--brand-pink, #f43f5e), #e11d48);
   border: none;
   color: white;
   border-radius: 8px;

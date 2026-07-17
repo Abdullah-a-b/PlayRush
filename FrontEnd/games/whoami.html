@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>من أنا</title>
+    <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+    <link rel="stylesheet" href="../css/design-system.css">
+    <link rel="stylesheet" href="../css/games/whoami.css" />
+    <link rel="stylesheet" href="../css/all.min.css">
+    <link rel="stylesheet" href="../css/brand.css">
+    <link rel="stylesheet" href="../css/social_bar.css">
+    <link rel="stylesheet" href="../css/quick_chat.css">
+    <link rel="stylesheet" href="../css/theme_styles.css">
+    <script src="../js/brand.js" defer></script>
+</head>
+<body>
+
+<!-- الشريط العلوي -->
+<div class="game-topbar">
+    <div class="player-profile left" id="myProfileBtn">
+        <div class="avatar-wrap"><img id="myAvatarImg" src="../assets/avatars/avatar_1.svg" alt=""></div>
+        <div class="profile-info">
+            <span id="myName" class="pname">أنت</span>
+            <span class="career-score" id="myScore">0</span>
+            <div class="strikes-display" id="myStrikes"></div>
+        </div>
+    </div>
+
+    <div class="game-center-head">
+        <div class="game-title">⚽ من أنا</div>
+        <div class="players-progress" id="playersProgress">
+            <span class="progress-dot"></span><span class="progress-dot"></span>
+            <span class="progress-dot"></span><span class="progress-dot"></span>
+            <span class="progress-dot"></span>
+        </div>
+        <div class="tiebreaker-badge" id="tiebreakerBadge" style="display:none;">⚡ كسر التعادل</div>
+    </div>
+
+    <div class="player-profile right" id="opponentProfileBtn" style="cursor:pointer;" title="بروفايل الخصم">
+        <div class="profile-info right-info">
+            <span id="opponentName" class="pname">الخصم</span>
+            <span class="career-score" id="opponentScore">0</span>
+            <div class="strikes-display" id="oppStrikes"></div>
+        </div>
+        <div class="avatar-wrap"><img id="opponentAvatarImg" src="../assets/avatars/avatar_2.svg" alt=""></div>
+    </div>
+</div>
+
+<!-- منطقة اللعب -->
+<div class="career-main">
+    <div class="player-status-banner current" id="statusBanner"><span id="statusText">🎭 —</span></div>
+    <div class="points-indicator" id="pointsIndicator"><span id="pointsValue">4</span> نقاط إذا أجبت الآن</div>
+
+    <div class="clubs-stage whoami-hints" id="hintsStage">
+        <div class="clubs-placeholder">جارٍ التحميل…</div>
+    </div>
+
+    <div class="reveal-timer-wrap" id="revealTimerWrap" style="display:none;">
+        <div class="reveal-timer-bar" id="revealTimerBar"></div>
+    </div>
+
+    <div class="bank-helps-bar" id="whoamiHelpsBar"></div>
+
+    <div class="buzz-zone">
+        <button class="career-buzz-btn" id="buzzBtn" disabled>
+            <i class="fa-solid fa-bell"></i><span>جرس</span>
+        </button>
+    </div>
+
+    <div class="answer-box" id="answerBox" style="display:none;">
+        <div class="answer-timer" id="answerTimer">10</div>
+        <input type="text" id="answerInput" placeholder="اكتب اسم الشخصية…" autocomplete="off">
+        <button id="submitAnswerBtn"><i class="fa-solid fa-paper-plane"></i></button>
+    </div>
+
+    <div class="career-status-msg" id="statusMsg"></div>
+</div>
+
+<!-- انسحاب: يمين أسفل -->
+<button id="surrenderBtn" class="surrender-btn" title="انسحاب"><i class="fa-solid fa-flag"></i></button>
+
+<!--  المساعدات: تحت يسار (مثل حروف) -->
+
+<!-- رسائل جاهزة: يسار أسفل -->
+<div class="ingame-quick-chat">
+    <button class="quick-chat-trigger ingame" id="gameQuickChatBtn" aria-label="رسالة جاهزة">
+        <i class="fa-solid fa-comment-dots"></i>
+    </button>
+</div>
+
+<!-- رسالة الفوز -->
+<div id="winMessageOverlay" class="win-message-overlay" style="display:none;">
+    <div class="win-message-box">
+        <div class="win-message-icon" id="winIcon">🏆</div>
+        <h2 id="winTitle">فزت!</h2>
+        <p id="winSubtitle"></p>
+        <button id="backToLobbyBtn" class="win-message-button">العودة للوبي</button>
+    </div>
+</div>
+
+<!-- تأكيد الانسحاب -->
+<div id="surrenderModal" class="win-message-overlay" style="display:none;">
+    <div class="win-message-box">
+        <div class="win-message-icon">🚪</div>
+        <h2>الانسحاب من المباراة؟</h2>
+        <p>ستُحتسب خسارة ويفوز خصمك.</p>
+        <button id="confirmSurrenderBtn" class="win-message-button surrender-confirm">نعم، انسحب</button>
+        <button id="cancelSurrenderBtn" class="win-message-button surrender-cancel">تراجع</button>
+    </div>
+</div>
+
+<!--  نافذة اختيار سبب الإبلاغ (نسخة حروف) -->
+<div id="reportModal" class="win-message-overlay" style="display:none;">
+    <div class="win-message-box">
+        <h2 style="color: #ff9800;">الإبلاغ عن الخصم</h2>
+        <p>اختر سبب البلاغ — البلاغات الكاذبة تقلل من موثوقية حسابك.</p>
+        <div style="display:flex; flex-direction:column; gap:8px; margin:15px 0;">
+            <button class="win-message-button report-reason" data-reason="toxic_chat" style="background:#555;">سلوك مسيء في الشات</button>
+            <button class="win-message-button report-reason" data-reason="cheating" style="background:#555;">غش أو استخدام برامج</button>
+            <button class="win-message-button report-reason" data-reason="bad_name" style="background:#555;">اسم مخالف</button>
+            <button class="win-message-button report-reason" data-reason="griefing" style="background:#555;">تخريب اللعب المتعمد</button>
+        </div>
+        <button id="cancelReportBtn" class="win-message-button surrender-cancel">إلغاء</button>
+    </div>
+</div>
+
+<!-- بروفايل اللاعب (نسخة حروف — بطاقة من أنا بدل حروف) -->
+<div id="playerProfileModal" class="profile-modal-overlay" style="display: none;">
+    <div class="profile-modal-box">
+        <button class="close-modal-btn" id="closeProfileBtn"><i class="fa-solid fa-xmark"></i></button>
+        <div class="profile-header">
+            <img id="modalAvatar" src="../assets/avatars/avatar_1.svg" alt="Avatar" class="modal-avatar">
+            <h2 id="modalPlayerName">اسم اللاعب</h2>
+            <img id="modalFlag" src="../assets/flags/SA.svg" alt="Flag" class="modal-flag">
+            <div id="modalRank" class="modal-rank"><i class="fa-solid fa-trophy" style="color: gold;"></i> التصنيف العالمي: #<span id="rankValue">1</span></div>
+        </div>
+
+        <div class="stats-container">
+            <div class="stats-card">
+                <h3>إحصائيات "من أنا"</h3>
+                <div class="stats-grid">
+                    <div class="stat-item"><span class="stat-value win" id="careerWins">0</span><span class="stat-label">فوز</span></div>
+                    <div class="stat-item"><span class="stat-value loss" id="careerLosses">0</span><span class="stat-label">خسارة</span></div>
+                    <div class="stat-item"><span class="stat-value total" id="careerTotal">0</span><span class="stat-label">لعب</span></div>
+                </div>
+            </div>
+            <div class="stats-card">
+                <h3>الإحصائيات العامة (كل الألعاب)</h3>
+                <div class="stats-grid">
+                    <div class="stat-item"><span class="stat-value win" id="globalWins">0</span><span class="stat-label">فوز</span></div>
+                    <div class="stat-item"><span class="stat-value loss" id="globalLosses">0</span><span class="stat-label">خسارة</span></div>
+                    <div class="stat-item"><span class="stat-value total" id="globalTotal">0</span><span class="stat-label">لعب</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-actions" id="modalActionButtons">
+            <button class="action-btn add-friend"><i class="fa-solid fa-user-plus"></i> إضافة صديق</button>
+            <button class="action-btn block-user"><i class="fa-solid fa-ban"></i> حظر</button>
+            <button class="action-btn report-user"><i class="fa-solid fa-flag"></i> إبلاغ</button>
+        </div>
+    </div>
+</div>
+
+<!-- أنيميشن استعد 3-2-1 (موحّد) -->
+<div class="ready-overlay" id="readyOverlay" style="display:none;">
+    <div class="ready-content">
+        <div class="ready-title" id="readyTitle">استعد!</div>
+        <div class="ready-count" id="readyCount">3</div>
+    </div>
+</div>
+
+<script src="../js/config.js" defer></script>
+    <script src="../js/social_bar.js" defer></script>
+<script src="../js/utils.js" defer></script>
+<script src="../js/socket.io.min.js" defer></script>
+<script src="../js/purify.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" async></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" async></script>
+<script src="../js/quick_chat.js" defer></script>
+<script src="../js/games/whoami.js" defer></script>
+<script src="../js/games/game_emojis.js" defer></script>
+<script src="../js/themes.js" defer></script>
+<script src="../js/anti_cheat.js" defer></script>
+  <script src="../js/sound.js" defer></script>
+  <script src="../js/music.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+/* دليل المنصة الشامل */
+.pg-overlay {
+  position: fixed; inset: 0; z-index: 9000;
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+  background: rgba(2, 6, 23, 0.8); backdrop-filter: blur(8px);
+  opacity: 0; transition: opacity .22s ease;
+}
+.pg-overlay.open { opacity: 1; }
+.pg-modal {
+  width: min(920px, 97vw); height: min(86vh, 720px); display: flex; flex-direction: column;
+  background: linear-gradient(165deg, #101a33, var(--brand-bg, #0f172a));
+  border: 1px solid rgba(250, 204, 21, .22); border-radius: 22px; overflow: hidden;
+  box-shadow: 0 40px 90px rgba(0, 0, 0, .65);
+  transform: translateY(16px) scale(.97); transition: transform .22s ease;
+}
+.pg-overlay.open .pg-modal { transform: translateY(0) scale(1); }
+.pg-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 22px; border-bottom: 1px solid rgba(255, 255, 255, .08); flex: 0 0 auto;
+}
+.pg-head h2 { margin: 0; font-size: 20px; font-weight: 900; color: var(--brand-gold, #facc15); }
+.pg-close {
+  width: 38px; height: 38px; border: none; border-radius: 10px;
+  background: rgba(255, 255, 255, .08); color: #f8fafc; font-size: 16px; cursor: pointer;
+}
+.pg-close:hover { background: var(--brand-pink, #f43f5e); }
+.pg-body { display: flex; flex: 1; min-height: 0; }
+.pg-nav {
+  flex: 0 0 210px; padding: 14px; border-inline-end: 1px solid rgba(255, 255, 255, .07);
+  overflow-y: auto; display: flex; flex-direction: column; gap: 6px;
+}
+.pg-nav-btn {
+  text-align: start; padding: 11px 13px; border: none; border-radius: 10px; cursor: pointer;
+  background: transparent; color: rgba(248, 250, 252, .7);
+  font-family: inherit; font-size: 13px; font-weight: 700; line-height: 1.4;
+}
+.pg-nav-btn:hover { background: rgba(255, 255, 255, .05); }
+.pg-nav-btn.active { background: rgba(250, 204, 21, .12); color: var(--brand-gold, #facc15); }
+.pg-content { flex: 1; overflow-y: auto; padding: 22px 26px; scroll-behavior: smooth; }
+.pg-section { margin-bottom: 32px; }
+.pg-section h3 {
+  margin: 0 0 14px; font-size: 20px; font-weight: 900; color: #f8fafc;
+  display: flex; align-items: center; gap: 10px;
+}
+.pg-sec-icon { font-size: 24px; }
+.pg-block {
+  margin-bottom: 14px; padding: 14px 16px; border-radius: 12px;
+  background: rgba(255, 255, 255, .04); border: 1px solid rgba(255, 255, 255, .06);
+}
+.pg-block h4 { margin: 0 0 6px; font-size: 15px; font-weight: 800; color: var(--brand-gold, #facc15); }
+.pg-block p { margin: 0; font-size: 14px; line-height: 1.9; color: rgba(248, 250, 252, .85); }
+
+@media (max-width: 640px) {
+  .pg-body { flex-direction: column; }
+  .pg-nav {
+    flex: 0 0 auto; flex-direction: row; overflow-x: auto; gap: 6px;
+    border-inline-end: none; border-bottom: 1px solid rgba(255, 255, 255, .07);
+  }
+  .pg-nav-btn { white-space: nowrap; flex: 0 0 auto; }
+}

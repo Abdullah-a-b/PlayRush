@@ -1,5 +1,5 @@
 """
-🤖 AI Enrichment — توليد answers_accepted مسبقاً (offline)
+ AI Enrichment — توليد answers_accepted مسبقاً (offline)
 
 الغرض: حلّ بطء الـ AI Judge اللحظي. بدل استدعاء AI أثناء اللعب (1-3 ثواني تأخير)،
 نولّد قائمة الإجابات المقبولة لكل سؤال **مرة واحدة offline** ونخزّنها في
@@ -27,7 +27,8 @@ import argparse
 # نضيف جذر المشروع للمسار
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.core.database import SessionLocal, Question
+from app.infrastructure.database import SessionLocal
+from app.domains.games.models import Question
 
 
 PROMPT_TEMPLATE = """أنت مساعد لتدقيق إجابات لعبة معرفية عربية.
@@ -46,7 +47,7 @@ PROMPT_TEMPLATE = """أنت مساعد لتدقيق إجابات لعبة معر
 def _load_gemini():
     """يحمّل عميل Gemini (باختيار نموذج متاح تلقائياً). None بأمان."""
     try:
-        from app.core.gemini_model import load_gemini_model
+        from app.infrastructure.gemini_model import load_gemini_model
         return load_gemini_model()
     except ImportError:
         # لو استُدعي السكربت خارج سياق التطبيق، نرجع لطريقة مباشرة
@@ -64,7 +65,7 @@ def _load_gemini():
                     continue
             return None
         except Exception as e:
-            print(f"⚠️ تعذّر تهيئة Gemini: {e}")
+            print(f" تعذّر تهيئة Gemini: {e}")
             return None
 
 
@@ -83,9 +84,9 @@ def _enrich_one(model, question_text, answer):
             clean.add(answer.strip())
             return sorted(clean)
     except json.JSONDecodeError:
-        print(f"   ⚠️ رد غير صالح JSON للسؤال (تخطّي)")
+        print(f"    رد غير صالح JSON للسؤال (تخطّي)")
     except Exception as e:
-        print(f"   ⚠️ خطأ توليد: {e}")
+        print(f"    خطأ توليد: {e}")
     return [answer.strip()]
 
 
@@ -124,7 +125,7 @@ def main():
     model = _load_gemini()
     if model is None:
         print("=" * 55)
-        print("❌ GEMINI_API_KEY غير موجود في البيئة.")
+        print(" GEMINI_API_KEY غير موجود في البيئة.")
         print("=" * 55)
         print("لتشغيل الإثراء:")
         print("  1. احصل على مفتاح مجاني: https://aistudio.google.com/apikey")
@@ -132,7 +133,7 @@ def main():
         print("  3. ثبّت المكتبة:   pip install google-generativeai")
         print("  4. أعد التشغيل")
         print()
-        print("💡 بدون الإثراء، التحكيم يعمل بطبقات Normalize→Fuzzy→Token")
+        print(" بدون الإثراء، التحكيم يعمل بطبقات NormalizeFuzzyToken")
         print("   (يحل ~80% من الحالات بلا AI).")
         return
 
@@ -147,12 +148,12 @@ def main():
 
         total = len(questions)
         if total == 0:
-            print("⚠️ لا توجد أسئلة في القاعدة. املأ الأسئلة أولاً.")
+            print(" لا توجد أسئلة في القاعدة. املأ الأسئلة أولاً.")
             return
 
-        print(f"📚 {total} سؤال للمعالجة"
+        print(f" {total} سؤال للمعالجة"
               f"{' (لعبة ' + args.game + ')' if args.game else ''}")
-        print(f"{'🔍 معاينة فقط' if args.dry_run else '💾 حفظ مُفعّل'}\n")
+        print(f"{' معاينة فقط' if args.dry_run else ' حفظ مُفعّل'}\n")
 
         enriched = skipped = failed = 0
         for i, q in enumerate(questions, 1):
@@ -167,7 +168,7 @@ def main():
                 failed += 1
             else:
                 enriched += 1
-                print(f"   ✅ {len(accepted)} صيغة: {accepted[:4]}...")
+                print(f"    {len(accepted)} صيغة: {accepted[:4]}...")
 
             if not args.dry_run:
                 _save_accepted(q, accepted)
@@ -176,9 +177,9 @@ def main():
             time.sleep(args.delay)  # احترام حدود Free Tier
 
         print(f"\n{'=' * 40}")
-        print(f"✅ مُثرى: {enriched} | ⏭️ متخطّى: {skipped} | ⚠️ فشل: {failed}")
+        print(f" مُثرى: {enriched} | ⏭ متخطّى: {skipped} |  فشل: {failed}")
         if args.dry_run:
-            print("🔍 (معاينة — لم يُحفظ شيء)")
+            print(" (معاينة — لم يُحفظ شيء)")
     finally:
         db.close()
 

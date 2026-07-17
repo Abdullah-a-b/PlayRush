@@ -1,5 +1,5 @@
 """
-🛡️ نظام Anti-Cheat على الباك إند
+ نظام Anti-Cheat على الباك إند
 
 الفلسفة: نفترض أن الفرونت **مخترَق دائماً** ونعتمد فقط على ما نراه على السيرفر.
 
@@ -28,7 +28,7 @@ logger = logging.getLogger("playrush.anticheat")
 # ==========================================
 # الحدود (مبنية على دراسات HCI لردود الأفعال البشرية)
 # ==========================================
-HUMAN_MIN_REACTION_MS = 80     # أسرع رد فعل بشري ممكن (visual stimulus → button)
+HUMAN_MIN_REACTION_MS = 80     # أسرع رد فعل بشري ممكن (visual stimulus  button)
 HUMAN_AVG_REACTION_MS = 250    # متوسط طبيعي
 SUSPICIOUS_REACTION_MS = 100   # أقل من هذا = مشتبه
 
@@ -260,7 +260,7 @@ async def report_violation(sid: str, sio, reason: str, severity: int = Severity.
     violation_scores[sid] += severity
 
     score = violation_scores[sid]
-    logger.warning(f"🚨 [anti-cheat] sid={sid[:8]} reason={reason} severity={severity} total_score={score}")
+    logger.warning(f" [anti-cheat] sid={sid[:8]} reason={reason} severity={severity} total_score={score}")
 
     # ==========================================
     # تطبيق العقوبات
@@ -292,7 +292,7 @@ async def _temp_ban(sid: str, sio, duration_sec: int, reason: str):
     """حظر مؤقت (5 دقائق افتراضياً)."""
     until = time.time() + duration_sec
     temp_bans[sid] = until
-    logger.warning(f"⏱️  [anti-cheat] temp_ban sid={sid[:8]} for {duration_sec}s reason={reason}")
+    logger.warning(f"⏱  [anti-cheat] temp_ban sid={sid[:8]} for {duration_sec}s reason={reason}")
     try:
         await sio.emit('force_logout', {
             'message': f'تم تعليق حسابك مؤقتاً ({duration_sec // 60} دقائق) لسلوك مريب.'
@@ -304,19 +304,19 @@ async def _temp_ban(sid: str, sio, duration_sec: int, reason: str):
 
 async def _permanent_ban(sid: str, sio, user_id: Optional[int], reason: str):
     """حظر دائم في DB."""
-    logger.error(f"🚫 [anti-cheat] PERMANENT BAN sid={sid[:8]} user_id={user_id} reason={reason}")
+    logger.error(f" [anti-cheat] PERMANENT BAN sid={sid[:8]} user_id={user_id} reason={reason}")
 
     if user_id:
         try:
-            from app.core.database import SessionLocal
-            from app.models.user import User
+            from app.infrastructure.database import SessionLocal
+            from app.domains.users.models import User
             db = SessionLocal()
             try:
                 user = db.query(User).filter(User.id == user_id).first()
                 if user:
                     user.is_banned = True
                     db.commit()
-                    logger.error(f"🚫 user {user.email} banned permanently in DB")
+                    logger.error(f" user {user.email} banned permanently in DB")
             finally:
                 db.close()
         except Exception as e:

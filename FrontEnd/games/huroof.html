@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>خلية الحروف — PlayRush</title>
+    <title>خلية الحروف</title>
+    <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+    <link rel="stylesheet" href="../css/design-system.css">
     <link rel="stylesheet" href="../css/games/huroof.css" />
     <link rel="stylesheet" href="../css/all.min.css">
     <link rel="stylesheet" href="../css/brand.css">
@@ -129,12 +131,12 @@
         <i class="fa-solid fa-flag"></i>
     </button>
 
-    <!-- 🎯 خانات المساعدات (3 خانات) -->
+    <!--  خانات المساعدات (3 خانات) -->
     <div id="helpSlots" class="help-slots">
         <!-- تُملأ ديناميكياً من JS -->
     </div>
 
-    <!-- 🛡️ نافذة اختيار سبب الإبلاغ (يفتحها زر "إبلاغ" في بروفايل الخصم) -->
+    <!--  نافذة اختيار سبب الإبلاغ (يفتحها زر "إبلاغ" في بروفايل الخصم) -->
     <div id="reportModal" class="win-message-overlay">
         <div class="win-message-box">
             <h2 style="color: #ff9800;">الإبلاغ عن الخصم</h2>
@@ -212,7 +214,7 @@
         <div class="spinner" style="display:none; margin-top:25px; width:45px; height:45px; border:4px solid rgba(255,255,255,0.15); border-top-color:#00d2ff; border-radius:50%; animation:overlaySpinner 0.8s linear infinite;"></div>
     </div>
 
-    <!-- 🏆 الفائز النهائي بالمباراة -->
+    <!--  الفائز النهائي بالمباراة -->
     <div id="winner-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.92); z-index:3000; justify-content:center; align-items:center; flex-direction:column; text-align:center;">
         <div style="background:#1a1a2e; padding:45px 50px; border-radius:20px; border:2px solid #ffd700; color:white; font-family:'Tajawal',sans-serif; box-shadow:0 0 40px rgba(255,215,0,0.3);">
             <div style="font-size:60px; margin-bottom:10px;">🏆</div>
@@ -229,7 +231,15 @@
         </button>
     </div>
 
-    <script src="../js/config.js" defer></script>
+    <!-- أنيميشن استعد 3-2-1 (موحّد مع بقية الألعاب) -->
+<div class="ready-overlay" id="readyOverlay" style="display:none;">
+    <div class="ready-content">
+        <div class="ready-title" id="readyTitle">استعد!</div>
+        <div class="ready-count" id="readyCount">3</div>
+    </div>
+</div>
+
+<script src="../js/config.js" defer></script>
     <script src="../js/social_bar.js" defer></script>
     <script src="../js/utils.js" defer></script>
     <script src="../js/socket.io.min.js" defer></script>
@@ -240,7 +250,9 @@
     <script src="../js/quick_chat.js" defer></script>
     <script src="../js/games/huroof.js" defer></script>
     <script src="../js/themes.js" defer></script>
-    <script src="../js/games/huroof_emojis.js" defer></script>
+    <script src="../js/games/game_emojis.js" defer></script>
     <script src="../js/anti_cheat.js" defer></script>
+  <script src="../js/sound.js" defer></script>
+  <script src="../js/music.js" defer></script>
 </body>
 </html>

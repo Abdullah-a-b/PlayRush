@@ -1,0 +1,75 @@
+/* «من أنا» — يرث تصميم مسيرة ويضيف تدفق المعلومات */
+@import url('career.css');
+/* تنسيق شريط المساعدات المشترك (bank-helps-bar / bank-help-btn / hqty / hicon) */
+@import url('bank.css');
+
+.whoami-hints {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: stretch;
+  max-width: 720px;
+  margin: 0 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: 46vh;
+  padding: 6px 4px;
+}
+.hint-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 12px;
+  font-size: 15px;
+  line-height: 1.8;
+  color: rgba(248, 250, 252, 0.92);
+  text-align: right;
+}
+.hint-card .hint-num {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 900;
+  color: #0d1117;
+  background: linear-gradient(45deg, var(--brand-gold, #facc15), #f59e0b);
+  border-radius: 8px;
+}
+.hint-card.hint-reveal-anim {
+  animation: hintPop 0.45s ease;
+  border-color: rgba(250, 204, 21, 0.45);
+}
+@keyframes hintPop {
+  0%   { transform: translateY(-8px); opacity: 0; }
+  100% { transform: translateY(0);   opacity: 1; }
+}
+
+/* ⏱️ بار توقيت الكشف — لون ذهبي واضح */
+.reveal-timer-bar{height:10px;border-radius:6px;
+  background:linear-gradient(90deg,#facc15,#f59e0b);
+  box-shadow:0 0 6px rgba(250,204,21,.45);
+  width:100%;transition:width linear}
+
+/* ✍️ صندوق الإجابة: طبقة ثابتة فوق المحتوى — لا يدفع التخطيط عند الجرس */
+.answer-box{position:fixed;left:50%;bottom:120px;transform:translateX(-50%);
+  z-index:900;background:rgba(22,27,34,.97);border:1px solid rgba(167,139,250,.4);
+  border-radius:16px;padding:16px 20px;display:flex;gap:10px;align-items:center;
+  box-shadow:0 12px 40px rgba(0,0,0,.5);width:min(480px,92vw)}
+.answer-box input{flex:1;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.15);
+  background:#0d1117;color:#fff;font-size:1rem}
+.answer-box button{padding:12px 22px;border:none;border-radius:10px;cursor:pointer;
+  background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;font-weight:800}
+
+/* ⏱️ حاوية بار الكشف: تحت بطاقة التلميحات، بعرض محدود بالوسط
+   نُلغي هنا height:6px و overflow:hidden الموروثَين من career.css */
+.reveal-timer-wrap{width:min(560px,88%);margin:12px auto 4px;
+  height:auto !important;overflow:visible !important;
+  background:rgba(255,255,255,.08);border-radius:8px;padding:3px;
+  box-shadow:inset 0 1px 3px rgba(0,0,0,.4)}

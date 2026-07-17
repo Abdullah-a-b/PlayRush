@@ -81,10 +81,10 @@ body {
     background: linear-gradient( 
     to bottom, 
     transparent 0%, 
-    transparent 20%, /* 👈 هنا يختفي المثلث العلوي */ 
+    transparent 20%, /*  هنا يختفي المثلث العلوي */ 
     #ff8c00 20%, /* يبدأ البرتقالي */ 
     #ff8c00 80%, /* ينتهي */ 
-    transparent 80%, /* 👈 يختفي المثلث السفلي */ 
+    transparent 80%, /*  يختفي المثلث السفلي */ 
     transparent 100% 
     );
     z-index: 2; 

@@ -3,3 +3,7 @@
 __pycache__/
 *.pyc
 .env
+# أسرار البيئة — لا تُرفع أبداً
+.env.*
+!.env.example
+logs/

@@ -1,5 +1,5 @@
 // ============================================================================
-// 🛡️ Frontend Anti-Cheat — Server-as-Source-of-Truth
+//  Frontend Anti-Cheat — Server-as-Source-of-Truth
 // ============================================================================
 // التغييرات الرئيسية:
 //   1. السيرفر هو مصدر الحقيقة — نسأل /auth/ban-status عند التحميل
@@ -11,7 +11,7 @@
 (function() {
     'use strict';
 
-    // 🛠️ وضع التطوير يُقرأ من السيرفر (ALLOW_SAME_IP في .env) — اللاعب لا يتحكم به
+    //  وضع التطوير يُقرأ من السيرفر (ALLOW_SAME_IP في .env) — اللاعب لا يتحكم به
     // يُضبط بعد رد /auth/ban-status. حتى يصل الرد، الحماية مفعّلة احتياطاً.
     let DEV_MODE = false;
 
@@ -25,7 +25,7 @@
     } catch (e) {}
 
     // ============================================================
-    // 🎯 الخطوة الأولى: مزامنة مع السيرفر
+    //  الخطوة الأولى: مزامنة مع السيرفر
     // قبل ما نطبّق أي ban من localStorage، نسأل السيرفر
     // لو السيرفر قال "غير محظور" → نمسح أي flag قديم
     // ============================================================
@@ -53,7 +53,7 @@
     }
 
     // ============================================================
-    // 🚀 نقطة البداية الذكية
+    //  نقطة البداية الذكية
     // 1. نسأل السيرفر أولاً
     // 2. لو "غير محظور" → نمسح أي ban flag محلي
     // 3. لو "محظور" → نطبّق الـ ban
@@ -62,7 +62,7 @@
     async function initialize() {
         const status = await syncBanStatusWithServer();
 
-        // 🛠️ نضبط وضع التطوير من رد السيرفر (مصدر موثوق)
+        //  نضبط وضع التطوير من رد السيرفر (مصدر موثوق)
         if (status && status.dev_mode === true) {
             DEV_MODE = true;
             try { console.log('%c🛠️ DEV MODE: anti-cheat معطّل بالكامل', 'color:#ff9800;font-weight:bold;font-size:14px;'); } catch(e){}
@@ -70,11 +70,11 @@
             return;  // لا نفعّل أي حماية — وضع تطوير
         }
 
-        // 🛡️ ليس وضع تطوير → نفعّل كل وسائل الحماية الآن
+        //  ليس وضع تطوير → نفعّل كل وسائل الحماية الآن
         activateProtections();
 
         if (status !== null) {
-            // ✅ السيرفر استجاب — هو مصدر الحقيقة
+            //  السيرفر استجاب — هو مصدر الحقيقة
             if (status.banned === true) {
                 executeBan('server_confirmed:' + (status.reason || 'banned'));
                 return;
@@ -100,11 +100,11 @@
     }
 
     // ============================================================
-    // 🎯 الكاشف الرئيسي: window size delta
+    //  الكاشف الرئيسي: window size delta
     // ============================================================
     let devToolsOpen = false;
     let detectionStartTime = Date.now();
-    let strictMode = false;  // ✨ يصبح true عند blur — حساسية أعلى
+    let strictMode = false;  //  يصبح true عند blur — حساسية أعلى
 
     function detectDevToolsBySize() {
         if (Date.now() - detectionStartTime < 2000) return;
@@ -122,7 +122,7 @@
     }
 
     // ============================================================
-    // 🎯 الكاشف الثاني: console timing
+    //  الكاشف الثاني: console timing
     // ============================================================
     function detectDevToolsByTiming() {
         const start = performance.now();
@@ -137,7 +137,7 @@
     }
 
     function runDetections() {
-        if (DEV_MODE) return;  // 🛠️ وضع التطوير — لا كشف
+        if (DEV_MODE) return;  //  وضع التطوير — لا كشف
         try {
             detectDevToolsBySize();
             detectDevToolsByTiming();
@@ -147,7 +147,7 @@
     }
 
     // ============================================================
-    // 🎯 Blur/Focus — مراقبة شديدة عند فقدان الـ focus
+    //  Blur/Focus — مراقبة شديدة عند فقدان الـ focus
     // الفلسفة: blur وحده ≠ خطر (الناس يفتحون tabs ثانية)
     // لكن blur + DevTools = ban
     // ============================================================
@@ -159,7 +159,7 @@
     }
 
     function startBlurMonitoring() {
-        // ✨ نُفعّل strict mode (الكاشف يضيف "_during_blur" للسبب لتمييزه)
+        //  نُفعّل strict mode (الكاشف يضيف "_during_blur" للسبب لتمييزه)
         strictMode = true;
         clearBlurTimers();
 
@@ -172,7 +172,7 @@
     }
 
     function stopBlurMonitoring() {
-        // ✨ بعد رجوع الـ focus، نفحص مرة أخيرة ثم نعود للوضع العادي
+        //  بعد رجوع الـ focus، نفحص مرة أخيرة ثم نعود للوضع العادي
         clearBlurTimers();
         runDetections();
         setTimeout(runDetections, 200);
@@ -194,7 +194,7 @@
     window.addEventListener('focus', stopBlurMonitoring);
 
     // ============================================================
-    // 🎯 mousemove نحو الـ tabs/url bar = شك إضافي
+    //  mousemove نحو الـ tabs/url bar = شك إضافي
     // ============================================================
     document.addEventListener('mousemove', function(e) {
         if (e.clientY < 0) {
@@ -205,7 +205,7 @@
     });
 
     // ============================================================
-    // 🎯 كل وسائل الحماية (تُفعّل فقط بعد التأكد أنه ليس وضع تطوير)
+    //  كل وسائل الحماية (تُفعّل فقط بعد التأكد أنه ليس وضع تطوير)
     // ============================================================
     function activateProtections() {
         // keyboard shortcuts
@@ -272,7 +272,7 @@
     }
 
     // ============================================================
-    // 🛠️ مراقب وضع التطوير — يعيد فحص dev_mode من السيرفر دورياً
+    //  مراقب وضع التطوير — يعيد فحص dev_mode من السيرفر دورياً
     // لو تغيّرت الحالة (مطور عدّل .env) → نعيد تحميل الصفحة لتطبيقها نظيفاً
     // ============================================================
     function startDevModeWatcher() {
@@ -288,11 +288,11 @@
     }
 
     // ============================================================
-    // 🎯 Violation Handler
+    //  Violation Handler
     // ============================================================
     let violationDebounce = 0;
     function triggerViolation(reason) {
-        if (DEV_MODE) return;  // 🛠️ وضع التطوير — لا عقوبات
+        if (DEV_MODE) return;  //  وضع التطوير — لا عقوبات
         const now = Date.now();
         if (now - violationDebounce < 3000) return;
         violationDebounce = now;
@@ -382,7 +382,7 @@
     }
 
     async function executeBan(reason) {
-        if (DEV_MODE && !String(reason).startsWith('server_confirmed')) return;  // 🛠️ تطوير
+        if (DEV_MODE && !String(reason).startsWith('server_confirmed')) return;  //  تطوير
         try {
             localStorage.setItem(BAN_KEY, '1');
         } catch (e) {}
@@ -431,7 +431,7 @@
     }
 
     // ============================================================
-    // 🚀 Start: نسأل السيرفر أولاً ثم نبدأ المراقبة
+    //  Start: نسأل السيرفر أولاً ثم نبدأ المراقبة
     // ============================================================
     initialize();
 

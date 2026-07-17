@@ -5,7 +5,7 @@
 
 
 // ============================================================
-// 🌟 استخراج التوكن من رابط Google OAuth وتنظيف الـ URL
+//  استخراج التوكن من رابط Google OAuth وتنظيف الـ URL
 // ============================================================
 (function extractGoogleToken() {
     const params = new URLSearchParams(window.location.search);
@@ -27,11 +27,11 @@ const socket = io(API_URL, { transports: ['websocket', 'polling'], upgrade: true
 window.PROFILE_GAME_MODE = null;
 // المتجر في categories: كل المساعدات + كل التجميليات
 window.STORE_CONTEXT = 'categories';
-// 🛡️ ربط معالج الحظر الإجباري — يستجيب لرسائل force_logout من السيرفر
+//  ربط معالج الحظر الإجباري — يستجيب لرسائل force_logout من السيرفر
 if (typeof attachForceLogoutHandler === 'function') attachForceLogoutHandler(socket);
 
 // ============================================================
-// 🔔 إعداد الإشعارات (مستوى أعلى — مستقل عن أي كود async قد يفشل)
+//  إعداد الإشعارات (مستوى أعلى — مستقل عن أي كود async قد يفشل)
 // ============================================================
 function renderNotifications(items, unread) {
     const list = document.getElementById('notificationsList');
@@ -104,14 +104,14 @@ let customAvatarFile = null;
 
 
 // ============================================================
-// 🚀 بدء التشغيل
+//  بدء التشغيل
 // ============================================================
 window.addEventListener('DOMContentLoaded', async () => {
 
     // ----------------------------------------
-    // 🌍 السوكيت: اللاعبين المتصلين والدردشة
+    //  السوكيت: اللاعبين المتصلين والدردشة
     // ----------------------------------------
-    // 📡 نظام الحضور بالفروقات (presence.js) — بدل بث القائمة الكاملة
+    //  نظام الحضور بالفروقات (presence.js) — بدل بث القائمة الكاملة
     initPresence(socket, (players) => {
         const countEl = document.getElementById('globalOnlineCount');
         if (countEl) countEl.textContent = players.length;
@@ -119,7 +119,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         const list = document.getElementById('globalPlayersList');
         if (!list) return;
 
-        // ✅ ترتيب: اللاعب الحالي أولاً ثم البقية كما هم
+        //  ترتيب: اللاعب الحالي أولاً ثم البقية كما هم
         // نستخدم نسخة جديدة بدل تعديل الأصلية (نفس مفهوم immutability)
         const myName = userDataCache?.player_name;
         const sorted = myName
@@ -131,7 +131,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             : players;
 
         list.innerHTML = '';
-        // 🛡️ سقف الرسم: العدّاد يعرض الكل، لكن القائمة ترسم أول 100 فقط —
+        //  سقف الرسم: العدّاد يعرض الكل، لكن القائمة ترسم أول 100 فقط —
         // آلاف عناصر DOM تجمّد المتصفح (خصوصاً الجوالات) عند 5000 متصل.
         const MAX_RENDER = 100;
         const hiddenCount = Math.max(0, sorted.length - MAX_RENDER);
@@ -161,10 +161,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 
             const div = document.createElement('div');
             div.className = 'online-player-item';
-            // ✅ تمييز اللاعب الحالي بنفس CSS class الموجود في categories.css
+            //  تمييز اللاعب الحالي بنفس CSS class الموجود في categories.css
             if (myName && p.name === myName) div.classList.add('is-me');
 
-            // 🛡️ نبني العناصر بـ DOM API بدل innerHTML لمنع XSS
+            //  نبني العناصر بـ DOM API بدل innerHTML لمنع XSS
             const img = document.createElement('img');
             img.src = getCorrectAvatarUrl(p.avatar);
             img.className = 'online-player-avatar';
@@ -219,7 +219,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     socket.on('new_chat_message', (msg) => {
         const chatMessages = document.getElementById('chatMessages');
         if (chatMessages) {
-            // 🛡️ نبني العنصر بـ DOM API لمنع XSS تماماً
+            //  نبني العنصر بـ DOM API لمنع XSS تماماً
             const el = document.createElement('div');
             el.className = `chat-message ${msg.isSystem ? 'system' : ''}`;
             if (msg.id) el.dataset.msgId = msg.id;
@@ -261,16 +261,25 @@ window.addEventListener('DOMContentLoaded', async () => {
     socket.on('connect', joinGlobalLobby);
 
     // ----------------------------------------
-    // 👤 جلب بيانات الحساب
+    //  جلب بيانات الحساب
     // ----------------------------------------
     try {
-        const res = await fetch(`${API_URL}/auth/me?token=${token}`);
+        const res= await fetch(`${API_URL}/auth/me`, { headers: { 'Authorization': `Bearer ${token}` } });
         if (!res.ok) {
             sessionStorage.removeItem('token');
+            try { localStorage.removeItem('token'); } catch (e) {}
             return window.location.replace('login.html');
         }
 
         userDataCache = await res.json();
+
+        // 📆 مكافأة تتابع الدخول اليومي (5→50🪙)
+        if (userDataCache.login_streak_reward) {
+            const r = userDataCache.login_streak_reward;
+            setTimeout(() => {
+                if (typeof showToast === 'function') showToast(r.msg || `📆 +${r.coins}🪙`);
+            }, 1200);
+        }
 
         // الاسم
         const nameEl = document.getElementById('playerName');
@@ -328,10 +337,18 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ----------------------------------------
-    // 🎮 التنقل بين الأقسام (ألعاب، متجر، أصدقاء)
+    //  التنقل بين الأقسام (ألعاب، متجر، أصدقاء)
     // ----------------------------------------
     const navBtns   = document.querySelectorAll('.nav-btn');
     const sections  = document.querySelectorAll('.content-section');
+    // 🎫 وصول مباشر لقسم (مثل زر الباس من اللوبي: categories.html#pass)
+    const _hashSec = (location.hash || '').replace('#', '');
+    if (_hashSec) {
+        setTimeout(() => {
+            const btn = document.querySelector(`.nav-btn[data-section="${_hashSec}"]`);
+            if (btn) btn.click();
+        }, 300);
+    }
 
     navBtns.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -351,7 +368,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     // ----------------------------------------
-    // ⚙️ الإعدادات
+    //  الإعدادات
     // ----------------------------------------
     const settingsModal      = document.getElementById('settingsModal');
     const globalSettingsBtn  = document.getElementById('globalSettingsBtn');
@@ -403,7 +420,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     // ----------------------------------------
-    // 🛡️ الأمان: تغيير الإيميل وكلمة المرور
+    //  الأمان: تغيير الإيميل وكلمة المرور
     // ----------------------------------------
     const securityMainView = document.getElementById('securityMainView');
     const emailChangeView  = document.getElementById('emailChangeView');
@@ -472,7 +489,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     // ----------------------------------------
-    // 🖼️ تغيير الأفاتار
+    //  تغيير الأفاتار
     // ----------------------------------------
     let selectedTempAvatar = null;
     const avatarModal           = document.getElementById('avatarModal');
@@ -525,7 +542,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     // ----------------------------------------
-    // 💾 حفظ الملف الشخصي
+    //  حفظ الملف الشخصي
     // ----------------------------------------
     document.getElementById('saveProfileBtn')?.addEventListener('click', () => {
         saveProfile({
@@ -552,12 +569,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     // ----------------------------------------
-    // 🔊 إعدادات الصوت
+    //  إعدادات الصوت
     // ----------------------------------------
     initVolumeControls();
 
     // ----------------------------------------
-    // 🔔 التنبيهات
+    //  التنبيهات
     // ----------------------------------------
     const notificationsBtn   = document.getElementById('notificationsBtn');
     const notificationsModal = document.getElementById('notificationsModal');
@@ -572,7 +589,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     closeNotifications?.addEventListener('click', () => { notificationsModal.style.display = 'none'; });
 
     // ----------------------------------------
-    // 💬 الرسائل الجاهزة (Quick Chat) — بديل آمن للدردشة الحرة
+    //  الرسائل الجاهزة (Quick Chat) — بديل آمن للدردشة الحرة
     // (الدردشة الحرة مؤجّلة، ستُضاف لاحقاً مع نظام إشراف)
     // ----------------------------------------
     const quickChatBtn = document.getElementById('globalQuickChatBtn');
@@ -585,7 +602,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ----------------------------------------
-    // 🖱️ إغلاق النوافذ عند النقر خارجها
+    //  إغلاق النوافذ عند النقر خارجها
     // ----------------------------------------
     window.addEventListener('click', (e) => {
         if (e.target === settingsModal)      closeSettings();

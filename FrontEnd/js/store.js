@@ -1,8 +1,8 @@
 /* ============================================================
-   🛒 المتجر (مشترك بين اللوبيات و categories)
-   يتطلب: socket عام + token + showToast + sanitizeHTML
-   السياق: window.STORE_CONTEXT = 'huroof' (لوبي) أو 'categories'
-   ============================================================ */
+ المتجر (مشترك بين اللوبيات و categories)
+ يتطلب: socket عام + token + showToast + sanitizeHTML
+ السياق: window.STORE_CONTEXT = 'huroof' (لوبي) أو 'categories'
+ ============================================================ */
 (function () {
   if (typeof window === 'undefined') return;
 
@@ -107,7 +107,7 @@
           scopeLabel = `<div class="store-scope general">💬 عامة (كل الدردشات)</div>`;
         }
       }
-      // 🎯 وسم اللعبة للمساعدات/الترقيات (مهم في صفحة categories التي تجمع الكل)
+      //  وسم اللعبة للمساعدات/الترقيات (مهم في صفحة categories التي تجمع الكل)
       if ((item.category === 'help' || item.category === 'upgrade') && item.game) {
         const GAME_LABELS = { huroof: 'خلية الحروف', career: 'مسيرة لاعب', bank: 'البنك' };
         const gname = GAME_LABELS[item.game] || item.game;

@@ -53,6 +53,7 @@
 
         <div id="spGameStats" style="display:none; margin-top:18px;">
           <div id="spGameTitle" style="color:#4a90e2; font-size:13px; margin-bottom:8px; font-weight:bold;">إحصائيات اللعبة</div>
+          <div id="spRankBadge" style="display:none; font-size:13px; font-weight:800; margin-bottom:10px;"></div>
           <div style="display:flex; justify-content:space-around; background:rgba(255,255,255,0.04); border-radius:12px; padding:12px;">
             <div><div id="spGameWins" style="color:#2ecc71; font-size:20px; font-weight:bold;">0</div><div style="color:#888; font-size:11px;">فوز</div></div>
             <div><div id="spGameLosses" style="color:#e74c3c; font-size:20px; font-weight:bold;">0</div><div style="color:#888; font-size:11px;">خسارة</div></div>
@@ -200,6 +201,13 @@
         _modal.querySelector('#spGameWins').textContent = s.game.wins ?? 0;
         _modal.querySelector('#spGameLosses').textContent = s.game.losses ?? 0;
         _modal.querySelector('#spGameTotal').textContent = s.game.total ?? 0;
+        // شارة الرتبة الموسمية
+        const rb = _modal.querySelector('#spRankBadge');
+        if (s.game_rank && s.game_rank.label) {
+          rb.style.display = '';
+          rb.innerHTML = `<i class="fa-solid fa-medal"></i> ${_esc(s.game_rank.label)} · ${_esc(s.game_rank.elo)} نقطة`;
+          rb.style.color = s.game_rank.color || '#facc15';
+        } else { rb.style.display = 'none'; }
       } else {
         gs.style.display = 'none';
       }

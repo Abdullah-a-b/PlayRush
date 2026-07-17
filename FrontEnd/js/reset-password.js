@@ -102,7 +102,7 @@ window.addEventListener('load', () => {
                     
                     window.location.replace("login.html");
                 } else {
-                    // 🌟 التعديل الجديد: التقاط حالة تطابق كلمة المرور
+                    //  التعديل الجديد: التقاط حالة تطابق كلمة المرور
                     if (data.detail === "كلمة المرور الجديدة مطابقة للقديمة") {
                         msgBox.textContent = "كلمة المرور لم تتغير (مطابقة للقديمة)! جاري التحويل...";
                         msgBox.style.color = "#facc15"; // لون أصفر تحذيري

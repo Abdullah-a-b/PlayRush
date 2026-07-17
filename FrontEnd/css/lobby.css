@@ -212,8 +212,8 @@ body {
     height: 100%; 
     background-color: rgba(0, 0, 0, 0.8); 
     backdrop-filter: blur(8px);
-    align-items: center; /* 🌟 توسيط عمودي (يرفع المربع للنص) */
-    justify-content: center; /* 🌟 توسيط أفقي */
+    align-items: center; /*  توسيط عمودي (يرفع المربع للنص) */
+    justify-content: center; /*  توسيط أفقي */
 }
   .modal-content {
     background: linear-gradient(180deg, #18181b 0%, #09090b 100%);
@@ -222,7 +222,7 @@ body {
     padding: 20px;
     width: 90%;
     max-width: 700px;
-    margin: 0 !important; /* 🌟 إلغاء النزول القديم للأسفل */
+    margin: 0 !important; /*  إلغاء النزول القديم للأسفل */
     box-shadow: 0 0 30px rgba(0,0,0,0.8);
     position: relative;
     animation: modalFadeIn 0.3s ease;
@@ -293,10 +293,10 @@ body {
       .team-slot.green-team .team-title { color: #00ff88; }
       .team-slot.orange-team .team-title { color: #ff8c00; }
       
-      .countdown-timer { font-size: 60px; font-weight: 900; color: #facc15; text-shadow: 0 0 20px rgba(250, 204, 21, 0.5); display: none; margin-top: 20px; animation: pop 1s infinite; }
+      .countdown-timer { font-size: 60px; font-weight: 900; color: var(--brand-gold, #facc15); text-shadow: 0 0 20px rgba(250, 204, 21, 0.5); display: none; margin-top: 20px; animation: pop 1s infinite; }
       @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
 
-/* 🛒 المتجر (نفس تصميم categories) */
+/*  المتجر (نفس تصميم categories) */
 .store-wrap { max-width: 900px; margin: 0 auto; }
 .store-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; }
 .store-tab { padding: 8px 18px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05); color: #ccc; cursor: pointer; font-family: inherit; font-size: 14px; transition: all 0.2s; }
@@ -316,12 +316,12 @@ body {
 .store-buy.locked { background: rgba(255,255,255,0.08); color: #888; cursor: not-allowed; }
 .store-buy.cant { background: rgba(231,76,60,0.2); color: #e57373; cursor: not-allowed; }
 
-/* 🎨 خيارات الثيم في الإعدادات */
+/*  خيارات الثيم في الإعدادات */
 .theme-option { background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 14px 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; font-family: inherit; transition: all 0.15s; }
 .theme-option:hover { border-color: #ffd700; transform: translateY(-2px); }
 .theme-option.active { border-color: #4a90e2; background: rgba(74,144,226,0.15); }
 
-/* 🎯 تجهيز المساعدات */
+/*  تجهيز المساعدات */
 .loadout-modal { display: none; position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,0.75); backdrop-filter: blur(4px); align-items: center; justify-content: center; }
 .loadout-box { background: linear-gradient(145deg, #1f1f3a, #15152b); border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; padding: 24px; width: 92%; max-width: 560px; max-height: 85vh; overflow-y: auto; position: relative; }
 .loadout-box h2 { color: #fff; margin-bottom: 6px; }

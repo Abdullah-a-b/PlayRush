@@ -1,5 +1,5 @@
 /* ============================================================
-   🎨 تصاميم الثيمات المتكاملة
+    تصاميم الثيمات المتكاملة
    كل ثيم: خلفية متدرّجة + نمط زخرفي متحرك + توهّج + ألوان عناصر
    يُفعّل عبر html[data-theme="..."]
    ============================================================ */
@@ -44,7 +44,7 @@ html[data-theme] .top-bar { position: relative; z-index: 1; }
 /* الشريط الجانبي (يحوي صندوق الرسائل) فوق الشريط العلوي ليفتح الصندوق كاملاً */
 html[data-theme] .sidebar { position: relative; z-index: 5; }
 
-/* 🌊 المحيط — موجات متحرّكة */
+/*  المحيط — موجات متحرّكة */
 html[data-theme="theme_ocean"] body::before {
   background:
     radial-gradient(ellipse 80% 50% at 50% 120%, rgba(0,188,212,0.25) 0%, transparent 60%),
@@ -53,7 +53,7 @@ html[data-theme="theme_ocean"] body::before {
 }
 @keyframes themeWave { from { transform: translateY(0); } to { transform: translateY(-20px); } }
 
-/* 🌲 الغابة — أوراق متناثرة */
+/*  الغابة — أوراق متناثرة */
 html[data-theme="theme_forest"] body::before {
   background:
     radial-gradient(circle at 15% 20%, rgba(102,187,106,0.12) 0%, transparent 25%),
@@ -61,7 +61,7 @@ html[data-theme="theme_forest"] body::before {
     radial-gradient(circle at 50% 50%, rgba(102,187,106,0.06) 0%, transparent 40%);
 }
 
-/* 🌸 الكرز — بتلات */
+/*  الكرز — بتلات */
 html[data-theme="theme_cherry"] body::before {
   background:
     radial-gradient(circle at 20% 30%, rgba(255,128,171,0.15) 0%, transparent 25%),
@@ -70,14 +70,14 @@ html[data-theme="theme_cherry"] body::before {
 }
 @keyframes themeFloat { from { transform: translateX(0); } to { transform: translateX(20px); } }
 
-/* 🌅 الغروب — توهّج دافئ */
+/*  الغروب — توهّج دافئ */
 html[data-theme="theme_sunset"] body::before {
   background:
     radial-gradient(ellipse 100% 60% at 50% 110%, rgba(255,152,0,0.28) 0%, transparent 55%),
     radial-gradient(circle at 25% 15%, rgba(230,81,0,0.12) 0%, transparent 35%);
 }
 
-/* 🤖 سايبر — شبكة نيون */
+/*  سايبر — شبكة نيون */
 html[data-theme="theme_cyber"] body::before {
   background:
     linear-gradient(rgba(0,229,255,0.05) 1px, transparent 1px),
@@ -88,7 +88,7 @@ html[data-theme="theme_cyber"] body::before {
 }
 @keyframes themeGrid { from { background-position: 0 0, 0 0, 0 0; } to { background-position: 40px 40px, 40px 40px, 0 0; } }
 
-/* 🌋 الحمم — توهّج ناري نابض */
+/*  الحمم — توهّج ناري نابض */
 html[data-theme="theme_lava"] body::before {
   background:
     radial-gradient(ellipse 90% 50% at 50% 115%, rgba(255,87,34,0.3) 0%, transparent 55%),
@@ -97,7 +97,7 @@ html[data-theme="theme_lava"] body::before {
 }
 @keyframes themePulse { from { opacity: 0.5; } to { opacity: 0.85; } }
 
-/* 🌌 المجرّة — نجوم وميض */
+/*  المجرّة — نجوم وميض */
 html[data-theme="theme_galaxy"] body::before {
   background:
     radial-gradient(circle at 25% 30%, rgba(171,71,188,0.18) 0%, transparent 35%),
@@ -111,7 +111,7 @@ html[data-theme="theme_galaxy"] body::before {
 }
 @keyframes themeTwinkle { from { opacity: 0.4; } to { opacity: 0.75; } }
 
-/* ❄️ الشفق — أضواء قطبية */
+/*  الشفق — أضواء قطبية */
 html[data-theme="theme_aurora"] body::before {
   background:
     linear-gradient(120deg, transparent 30%, rgba(100,255,218,0.1) 50%, transparent 70%),
@@ -120,7 +120,7 @@ html[data-theme="theme_aurora"] body::before {
 }
 @keyframes themeAurora { from { transform: translateX(-30px); opacity: 0.5; } to { transform: translateX(30px); opacity: 0.8; } }
 
-/* ✨ ذهبي — لمعان */
+/*  ذهبي — لمعان */
 html[data-theme="theme_gold"] body::before {
   background:
     radial-gradient(circle at 30% 30%, rgba(255,215,0,0.14) 0%, transparent 35%),
@@ -130,7 +130,7 @@ html[data-theme="theme_gold"] body::before {
 }
 @keyframes themeShimmer { from { opacity: 0.5; } to { opacity: 0.8; } }
 
-/* 💎 الماس — بريق متلألئ */
+/*  الماس — بريق متلألئ */
 html[data-theme="theme_diamond"] body::before {
   background:
     radial-gradient(circle at 30% 25%, rgba(179,229,252,0.18) 0%, transparent 30%),
@@ -185,7 +185,7 @@ html[data-theme] .xp-fill::after {
 @keyframes themeXpShine { from { transform: translateX(-100%); } to { transform: translateX(200%); } }
 
 /* ============================================================
-   🎨 زينة كبيرة في الوسط + تزيين الشات وقائمة المتصلين
+    زينة كبيرة في الوسط + تزيين الشات وقائمة المتصلين
    ============================================================ */
 
 /* عنصر زخرفي كبير في زاوية الوسط (يتغيّر حسب الثيم) */

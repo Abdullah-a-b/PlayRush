@@ -107,7 +107,7 @@ window.addEventListener('load', () => {
     }
 
     // ==========================================
-    // 🔐 التحقق من الرمز (Submit)
+    //  التحقق من الرمز (Submit)
     // ==========================================
     if (form) {
         form.addEventListener("submit", async (e) => {

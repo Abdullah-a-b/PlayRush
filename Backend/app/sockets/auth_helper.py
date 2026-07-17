@@ -1,8 +1,8 @@
 """
-🛡️ Socket.IO Authentication Helper
+ Socket.IO Authentication Helper
 التحقق من JWT في أحداث السوكيت الحساسة
 """
-from app.core.database import SessionLocal
+from app.infrastructure.database import SessionLocal
 from app.core.security import get_user_from_token
 
 

@@ -10,11 +10,11 @@ if (!token) window.location.replace('login.html');
 
 // الاتصال بالسوكيت
 const socket = io(API_URL, { transports: ['websocket', 'polling'], upgrade: true });
-// 🛡️ ربط معالج الحظر الإجباري — يستجيب لرسائل force_logout من السيرفر
+//  ربط معالج الحظر الإجباري — يستجيب لرسائل force_logout من السيرفر
 if (typeof attachForceLogoutHandler === 'function') attachForceLogoutHandler(socket);
 
 // ============================================================
-// 🔔 إعداد الإشعارات (مستوى أعلى — مستقل عن أي كود async قد يفشل)
+//  إعداد الإشعارات (مستوى أعلى — مستقل عن أي كود async قد يفشل)
 // ============================================================
 function renderNotifications(items, unread) {
     const list = document.getElementById('notificationsList');
@@ -68,7 +68,7 @@ socket.on('new_notification', (notif) => {
     fetchNotifs();  // نعيد جلب القائمة (مع throttle)
 });
 
-// 🛡️ throttle: يمنع الجلب المتكرر السريع (مثلاً عند إعادة اتصال متكررة)
+//  throttle: يمنع الجلب المتكرر السريع (مثلاً عند إعادة اتصال متكررة)
 let _lastNotifFetch = 0;
 function fetchNotifs() {
     const now = Date.now();
@@ -107,7 +107,7 @@ let customAvatarFile = null;
 
 
 // ============================================================
-// 🚀 بدء التشغيل
+//  بدء التشغيل
 // ============================================================
 window.addEventListener('DOMContentLoaded', async () => {
 
@@ -121,9 +121,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ----------------------------------------
-    // 🌍 السوكيت: اللاعبين المتصلين
+    //  السوكيت: اللاعبين المتصلين
     // ----------------------------------------
-    // 📡 نظام الحضور بالفروقات (presence.js) — بدل بث القائمة الكاملة
+    //  نظام الحضور بالفروقات (presence.js) — بدل بث القائمة الكاملة
     initPresence(socket, (allPlayers) => {
         const lobbyPlayers = allPlayers.filter(p =>
             p.location === selectedGameMode ||
@@ -144,7 +144,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         const list = document.getElementById('globalPlayersList');
         if (!list) return;
 
-        // ✅ ترتيب: اللاعب الحالي أولاً
+        //  ترتيب: اللاعب الحالي أولاً
         const myName = userDataCache?.player_name;
         const sortedLobbyPlayers = myName
             ? [...lobbyPlayers].sort((a, b) => {
@@ -155,7 +155,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             : lobbyPlayers;
 
         list.innerHTML = '';
-        // 🛡️ سقف الرسم: العدّاد يعرض الكل، والقائمة ترسم أول 100 فقط
+        //  سقف الرسم: العدّاد يعرض الكل، والقائمة ترسم أول 100 فقط
         const MAX_RENDER = 100;
         const hiddenCount = Math.max(0, sortedLobbyPlayers.length - MAX_RENDER);
         sortedLobbyPlayers.slice(0, MAX_RENDER).forEach(p => {
@@ -177,7 +177,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             div.className = 'online-player-item';
             if (userDataCache && p.name === userDataCache.player_name) div.classList.add('is-me');
 
-            // 🛡️ نبني العناصر بـ DOM API بدل innerHTML لمنع XSS
+            //  نبني العناصر بـ DOM API بدل innerHTML لمنع XSS
             const img = document.createElement('img');
             img.src = getCorrectAvatarUrl(p.avatar);
             img.className = 'online-player-avatar';
@@ -232,7 +232,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     socket.on('new_game_chat_message', (msg) => {
         const chatMessages = document.getElementById('chatMessages');
         if (chatMessages) {
-            // 🛡️ نبني العنصر بـ DOM API لمنع XSS تماماً (textContent آمن)
+            //  نبني العنصر بـ DOM API لمنع XSS تماماً (textContent آمن)
             const el = document.createElement('div');
             el.className = `chat-message ${msg.isSystem ? 'system' : ''}`;
 
@@ -270,13 +270,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     socket.on('connect', () => { if (userDataCache) joinLobby(); });
 
     // ----------------------------------------
-    // 📱 زر الجمعات (الـ Party)
+    //  زر الجمعات (الـ Party)
     // ----------------------------------------
     const localPartyBtn    = document.getElementById('localPartyBtn');
     const partyModeModal   = document.getElementById('partyModeModal');
 
     if (localPartyBtn) {
-        // 🎯 وضع الجمعات حصري للعبة "خلية الحروف" فقط
+        //  وضع الجمعات حصري للعبة "خلية الحروف" فقط
         localPartyBtn.style.display = (selectedGameMode === 'huroof') ? 'flex' : 'none';
         localPartyBtn.addEventListener('click', () => {
             if (partyModeModal) partyModeModal.style.display = 'flex';
@@ -284,10 +284,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ----------------------------------------
-    // 👤 جلب بيانات الحساب
+    //  جلب بيانات الحساب
     // ----------------------------------------
     try {
-        const res = await fetch(`${API_URL}/auth/me?token=${token}`);
+        const res= await fetch(`${API_URL}/auth/me`, { headers: { 'Authorization': `Bearer ${token}` } });
         if (!res.ok) {
             sessionStorage.removeItem('token');
             return window.location.replace('login.html');
@@ -352,7 +352,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     // ----------------------------------------
-    // 🔔 التنبيهات (مستمعات السوكيت مسجّلة في أعلى الملف)
+    //  التنبيهات (مستمعات السوكيت مسجّلة في أعلى الملف)
     // ----------------------------------------
     const notificationsBtn   = document.getElementById('notificationsBtn');
     const notificationsModal = document.getElementById('notificationsModal');
@@ -367,7 +367,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     closeNotifications?.addEventListener('click', () => { notificationsModal.style.display = 'none'; });
 
     // ----------------------------------------
-    // ⚙️ الإعدادات
+    //  الإعدادات
     // ----------------------------------------
     const settingsModal       = document.getElementById('settingsModal');
     const globalSettingsBtn   = document.getElementById('globalSettingsBtn');
@@ -419,7 +419,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     // ----------------------------------------
-    // 🛡️ الأمان
+    //  الأمان
     // ----------------------------------------
     const securityMainView = document.getElementById('securityMainView');
     const emailChangeView  = document.getElementById('emailChangeView');
@@ -480,7 +480,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     // ----------------------------------------
-    // 🖼️ تغيير الأفاتار
+    //  تغيير الأفاتار
     // ----------------------------------------
     let selectedTempAvatar   = null;
     const avatarModal           = document.getElementById('avatarModal');
@@ -532,7 +532,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     // ----------------------------------------
-    // 💾 حفظ الملف الشخصي
+    //  حفظ الملف الشخصي
     // ----------------------------------------
     document.getElementById('saveProfileBtn')?.addEventListener('click', () => {
         saveProfile({
@@ -555,12 +555,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     // ----------------------------------------
-    // 🔊 إعدادات الصوت
+    //  إعدادات الصوت
     // ----------------------------------------
     initVolumeControls();
 
     // ----------------------------------------
-    // ⚡ اللعب السريع (Matchmaking)
+    //  اللعب السريع (Matchmaking)
     // ----------------------------------------
     const quickPlayBtn        = document.getElementById('quickPlayBtn');
     const lobbyMainContent    = document.getElementById('lobbyMainContent');
@@ -665,7 +665,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     // ----------------------------------------
-    // 🎮 الغرف الخاصة
+    //  الغرف الخاصة
     // ----------------------------------------
     let currentRoomCode    = null;
     const waitingScreen    = document.getElementById('waitingScreen');
@@ -754,7 +754,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             const slot      = document.createElement('div');
             slot.className  = 'player-slot';
             slot.innerHTML  = `
-                <img src="${p.avatar || '../assets/avatars/avatar_1.svg'}"
+                <img loading="lazy" src="${p.avatar || '../assets/avatars/avatar_1.svg'}"
                      style="width:60px;height:60px;border-radius:50%;border:2px solid ${GAME_THEMES[selectedGameMode].color};margin-bottom:10px;object-fit:cover;">
                 <span style="color:#fff;font-size:14px;font-weight:bold;display:block;">${p.name} ${colorEmoji}</span>
             `;
@@ -808,7 +808,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     // ----------------------------------------
-    // 💬 الرسائل الجاهزة (Quick Chat) — بديل آمن للدردشة الحرة
+    //  الرسائل الجاهزة (Quick Chat) — بديل آمن للدردشة الحرة
     // ----------------------------------------
     const quickChatBtn = document.getElementById('globalQuickChatBtn');
     if (quickChatBtn && window.QuickChat) {
@@ -820,7 +820,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // 🎮 العب مع صديق → يفتح لوحة الأصدقاء (نظام الدعوة الآمن)
+    //  العب مع صديق → يفتح لوحة الأصدقاء (نظام الدعوة الآمن)
     document.getElementById('playWithFriendBtn')?.addEventListener('click', () => {
         const navBtn = document.getElementById('friendsNavBtn');
         if (navBtn) {
@@ -832,7 +832,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     // ----------------------------------------
-    // 📱 وضع الجمعات (Telegram Bot)
+    //  وضع الجمعات (Telegram Bot)
     // ----------------------------------------
     const generateBtn = document.getElementById('generateCodeBtn');
     const codeArea    = document.getElementById('codeDisplayArea');
@@ -903,7 +903,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     // ----------------------------------------
-    // 🖱️ إغلاق النوافذ عند النقر خارجها
+    //  إغلاق النوافذ عند النقر خارجها
     // ----------------------------------------
     window.addEventListener('click', (e) => {
         if (e.target === settingsModal)      closeSettings();
@@ -920,7 +920,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 // ============================================================
-// ⚽ تحميل مسبق لشعارات أندية "مسيرة لاعب" (كاش المتصفح)
+//  تحميل مسبق لشعارات أندية "مسيرة لاعب" (كاش المتصفح)
 // يعمل فقط في لوبي career، بعد استقرار اللوبي (لا يبطئه).
 // النتيجة: داخل اللعبة الشعارات تظهر فوراً (من الكاش/الملفات المحلية).
 // ============================================================

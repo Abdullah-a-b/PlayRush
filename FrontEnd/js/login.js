@@ -60,7 +60,7 @@ window.addEventListener('load', () => {
 
             const formData = new FormData();
             formData.append('username', document.getElementById('email').value);
-            formData.append('password', document.getElementById('password').value); // ✅ الحل الصحيح
+            formData.append('password', document.getElementById('password').value); //  الحل الصحيح
 
             try {
                 const response = await fetch(`${API_URL}/auth/login`, {
@@ -77,9 +77,19 @@ window.addEventListener('load', () => {
                     if (data.token) {
                         // توحيد استخدام الذاكرة لتكون sessionStorage
                         sessionStorage.setItem('token', data.token);
+                        // 💾 "تذكرني": دخول محفوظ حتى انتهاء صلاحية التوكن (7 أيام)
+                        try {
+                            const remember = document.getElementById('rememberMe');
+                            // 📱 التطبيق: الجلسة محفوظة دائماً (كما اتفقنا)
+                            if (window.PR_IS_APP || (remember && remember.checked)) {
+                                localStorage.setItem('token', data.token);
+                            } else {
+                                localStorage.removeItem('token');
+                            }
+                        } catch (e) {}
                     }
 
-                    // 🌟 التوجيه الذكي والفوري! (بدون انتظار لتخطي مشكلة التحديث)
+                    //  التوجيه الذكي والفوري! (بدون انتظار لتخطي مشكلة التحديث)
                     if (data.has_profile) {
                         window.location.replace('categories.html');
                     } else {
@@ -98,7 +108,7 @@ window.addEventListener('load', () => {
                     return; 
                 }
 
-                // 🚫 الحساب محظور → صفحة حظر لائقة بدل عرض JSON خام
+                //  الحساب محظور → صفحة حظر لائقة بدل عرض JSON خام
                 let rawMsg = data.detail || "";
                 if (response.status === 403 && typeof rawMsg === 'string' &&
                     (rawMsg.includes('حظر') || rawMsg.includes('محظور'))) {
@@ -107,7 +117,7 @@ window.addEventListener('load', () => {
                     return;
                 }
 
-                // 🚀 محرك قراءة الأخطاء الذكي بدلاً من [object Object]
+                //  محرك قراءة الأخطاء الذكي بدلاً من [object Object]
                 let errorMsg = data.detail || "خطأ في تسجيل الدخول";
                 
                 if (typeof errorMsg === 'object') {
