@@ -353,8 +353,9 @@ async def ai_status():
 @app.get("/health", tags=["System"])
 async def health_check():
     from app.infrastructure.database import SessionLocal
-    from app.sockets.state import connected_players, rooms as active_rooms
+    from app.sockets.state import connected_players
     from app.domains.games.core_manager import rooms
+    active_rooms = rooms
     from sqlalchemy import text
 
     db_ok = False
