@@ -1,0 +1,15 @@
+# لا نُدخل الأسرار ولا الملفات المؤقتة في الصورة
+.env
+.env.*
+!.env.example
+__pycache__/
+*.pyc
+*.pyo
+logs/
+*.log
+.git/
+.gitignore
+venv/
+.venv/
+*.md
+deploy/

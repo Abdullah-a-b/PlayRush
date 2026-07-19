@@ -11,9 +11,9 @@ sqlalchemy
 # PostgreSQL driver (مطلوب لو DATABASE_URL=postgresql://)
 psycopg2-binary
 
-# Scalability (اختياري للإنتاج): Redis لـ OTP cooldowns و Socket.IO multi-process
-# سيُضاف لاحقاً عند إعادة بناء نظام Redis
-# redis[asyncio]
+# Scalability: Redis لبثّ Socket.IO والحضور و rate limit عبر عدة workers
+# مطلوب فقط لو WORKERS>1 (على Fly: fly scale + Upstash Redis). آمن تركه.
+redis[asyncio]
 
 # الحماية والتشفير (JWT و Passwords)
 python-jose[cryptography]

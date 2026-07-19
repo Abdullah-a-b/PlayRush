@@ -1,0 +1,54 @@
+// ============================================================
+//  fly.toml — إعداد نشر PlayRush Backend على Fly.io
+//  عدّل: app (اسم فريد عالمياً) + primary_region (الأقرب للاعبيك)
+//  المناطق القريبة من الخليج: fra (فرانكفورت) أو cdg (باريس)
+// ============================================================
+app = "playrush-api"
+primary_region = "fra"
+
+[build]
+  dockerfile = "Dockerfile"
+
+# متغيرات غير سرّية (الأسرار تُضبط بأمر fly secrets — انظر الدليل)
+[env]
+  ENV = "production"
+  PORT = "8080"
+  WORKERS = "1"
+  ALGORITHM = "HS256"
+  CAREER_IMPORT_INTERVAL_DAYS = "7"
+  BANK_IMPORT_INTERVAL_DAYS = "7"
+  HUROOF_IMPORT_INTERVAL_DAYS = "7"
+  KNOWLEDGE_IMPORT_INTERVAL_DAYS = "7"
+  WHOAMI_IMPORT_INTERVAL_DAYS = "7"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # مهم للعبة الحيّة: لا نُطفئ الآلة تلقائياً حتى لا تنقطع مباريات WebSocket
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "connections"
+    # WebSocket يبقى اتصالاً مفتوحاً لكل لاعب — سقف مريح للآلة الواحدة
+    hard_limit = 400
+    soft_limit = 350
+
+# فحص صحة: Fly يتأكد أن التطبيق حيّ عبر /health
+[[http_service.checks]]
+  interval = "15s"
+  timeout = "4s"
+  grace_period = "30s"
+  method = "GET"
+  path = "/health"
+
+# ملاحظة: لا نستخدم قرصاً دائماً. مجلد data/ يحوي بنوك الأسئلة المشحونة
+# مع الكود (whoami_characters.json وغيرها) — لو ركّبنا قرصاً فوقه سيحجبها.
+# ملفات الحالة الصغيرة (import_state) تُفقد عند النشر لكنها غير مؤثرة:
+# المولّد يعيد العمل مرة ويتجاهل المكرّر. رفع الأفاتار المخصص مُعطّل
+# والأفاتارات جاهزة في الواجهة، فلا حاجة لقرص إطلاقاً.
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"     # ارفعها لـ1gb لو رأيت نفاد ذاكرة في fly logs
