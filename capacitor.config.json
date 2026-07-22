@@ -1,0 +1,19 @@
+{
+  "appId": "app.playrush.game",
+  "appName": "PlayRush",
+  "webDir": "FrontEnd",
+  "android": {
+    "allowMixedContent": false
+  },
+  "server": {
+    "androidScheme": "https",
+    "cleartext": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "backgroundColor": "#0f172a",
+      "showSpinner": false
+    }
+  }
+}

@@ -1,8 +1,21 @@
-﻿.venv/
-.vscode/
-__pycache__/
-*.pyc
+﻿
+# Capacitor / Android
+node_modules/
+android/
+ios/
+*.apk
+*.keystore
+
 .env
+**/.venv/
+**/.vscode/
+**/__pycache__/
+*.pyc
+users.db
+.DS_Store
+.venv/
+.vscode/
+**/uploads/
 # أسرار البيئة — لا تُرفع أبداً
 .env.*
 !.env.example
