@@ -452,7 +452,7 @@ function initVolumeControls() {
 window.changePlayerName = async function () {
     const token = sessionStorage.getItem('token');
     const current = sessionStorage.getItem('playerName') || '';
-    const input = prompt('الاسم الجديد (أول تغيير مجاني، بعدها 25💎):', current);
+    const input = await prPrompt('الاسم الجديد (أول تغيير مجاني، بعدها 25💎):', current, 'تغيير الاسم');
     if (!input || input.trim() === current) return;
     try {
         const fd = new FormData();
@@ -468,7 +468,7 @@ window.changePlayerName = async function () {
             if (typeof showToast === 'function') showToast(d.msg);
             setTimeout(() => location.reload(), 900);
         } else {
-            alert(d.error || 'تعذّر تغيير الاسم');
+            prAlert(d.error || 'تعذّر تغيير الاسم');
         }
-    } catch (e) { alert('خطأ بالاتصال'); }
+    } catch (e) { prAlert('خطأ بالاتصال'); }
 };

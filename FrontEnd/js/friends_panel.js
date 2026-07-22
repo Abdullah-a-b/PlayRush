@@ -254,13 +254,7 @@
           token, inviterId: inv.inviterId, gameMode: inv.gameMode, accept: false
         });
       };
-      if (typeof showConfirm === 'function') {
-        showConfirm('دعوة لعب', `دعاك ${name} للعب. تقبل؟`, ask, decline);
-      } else if (confirm(`دعاك ${inv.inviterName} للعب. تقبل؟`)) {
-        ask();
-      } else {
-        decline();
-      }
+      showConfirm('دعوة لعب', `دعاك ${name} للعب. تقبل؟`, ask, decline);
     });
 
     // صديقي رفض الدعوة

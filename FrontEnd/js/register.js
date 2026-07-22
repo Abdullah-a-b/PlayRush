@@ -44,7 +44,7 @@ window.addEventListener('load', () => {
         const _consent = document.getElementById('ageTermsConsent');
         if (_consent && !_consent.checked) {
             e.preventDefault();
-            alert('يجب الإقرار بأن عمرك 13+ والموافقة على الشروط للمتابعة');
+            prAlert('يجب الإقرار بأن عمرك 13+ والموافقة على الشروط للمتابعة');
             return;
         }
             e.preventDefault();
@@ -52,7 +52,7 @@ window.addEventListener('load', () => {
             // Check cooldown
             const now = Date.now();
             if (now - lastSubmitTime < COOLDOWN_MS) {
-                alert("يرجى الانتظار قبل محاولة التسجيل مرة أخرى.");
+                prAlert("يرجى الانتظار قبل محاولة التسجيل مرة أخرى.");
                 return;
             }
             lastSubmitTime = now;

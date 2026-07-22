@@ -209,29 +209,8 @@ function showToast(message, type = 'info') {
 //  نافذة التأكيد المخصصة
 // ============================================================
 
-/**
- * يفتح نافذة تأكيد مخصصة بدلاً من confirm() الافتراضية.
- * @param {string} title   - عنوان النافذة
- * @param {string} message - نص السؤال
- * @param {Function} onConfirm - دالة تُنفَّذ عند الضغط على "نعم"
- */
-function showConfirm(title, message, onConfirm, onCancel) {
-    const modal = document.getElementById('customConfirm');
-    document.getElementById('confirmTitle').textContent   = title;
-    document.getElementById('confirmMessage').textContent = message;
-    modal.style.display = 'flex';
-
-    // استنساخ الأزرار لإزالة أي event listeners سابقة
-    const yesBtn = document.getElementById('confirmYes');
-    const noBtn  = document.getElementById('confirmNo');
-    const newYes = yesBtn.cloneNode(true);
-    const newNo  = noBtn.cloneNode(true);
-    yesBtn.parentNode.replaceChild(newYes, yesBtn);
-    noBtn.parentNode.replaceChild(newNo, noBtn);
-
-    newYes.addEventListener('click', () => { modal.style.display = 'none'; onConfirm(); });
-    newNo.addEventListener('click',  () => { modal.style.display = 'none'; if (typeof onCancel === 'function') onCancel(); });
-}
+/* showConfirm انتقلت إلى js/ui_dialog.js (نافذة مستقلة تعمل في كل الصفحات
+   بلا الحاجة لعناصر HTML مسبقة). الاسم نفسه محفوظ للتوافق مع الكود القديم. */
 
 
 // ============================================================

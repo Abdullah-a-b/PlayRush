@@ -46,7 +46,7 @@ window.addEventListener('load', () => {
             // Check cooldown
             const now = Date.now();
             if (now - lastSubmitTime < COOLDOWN_MS) {
-                alert("يرجى الانتظار قبل محاولة تسجيل الدخول مرة أخرى.");
+                prAlert("يرجى الانتظار قبل محاولة تسجيل الدخول مرة أخرى.");
                 return;
             }
             lastSubmitTime = now;

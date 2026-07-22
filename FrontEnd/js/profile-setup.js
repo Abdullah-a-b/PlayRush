@@ -84,7 +84,7 @@ window.addEventListener('load', () => {
     const file = e.target.files[0];
     if (file) {
         if (file.size > 2 * 1024 * 1024) {
-            alert("حجم الصورة كبير جداً! الحد الأقصى هو 2 ميجابايت.");
+            prAlert("حجم الصورة كبير جداً! الحد الأقصى هو 2 ميجابايت.");
             return;
         }
         customAvatarFile = file; 
@@ -120,7 +120,7 @@ window.addEventListener('load', () => {
         const _consent = document.getElementById('ageTermsConsent');
         if (_consent && !_consent.checked) {
             e.preventDefault();
-            alert('يجب الإقرار بأن عمرك 13+ والموافقة على الشروط للمتابعة');
+            prAlert('يجب الإقرار بأن عمرك 13+ والموافقة على الشروط للمتابعة');
             return;
         }
         e.preventDefault();
@@ -281,24 +281,25 @@ document.addEventListener('click', (e) => {
 const cancelBtn = document.getElementById('cancelRegistrationBtn');
 if (cancelBtn) {
     cancelBtn.addEventListener('click', async () => {
-        if (!confirm('هل أنت متأكد أنك تريد إلغاء التسجيل وحذف الحساب؟')) return;
+        const ok = await prConfirm('هل أنت متأكد أنك تريد إلغاء التسجيل وحذف الحساب؟', 'إلغاء التسجيل');
+        if (!ok) return;
+
+        // التوكن قد يكون في أيٍّ من المخزنين (تسجيل عادي أو عبر جوجل)
+        const token = sessionStorage.getItem('token') || localStorage.getItem('token');
 
         try {
-            const response = await fetch(`${API_URL}/auth/cancel-registration`, {
+            await fetch(`${API_URL}/auth/cancel-registration`, {
                 method: "DELETE",
-                headers: {
-                    'Authorization': `Bearer ${sessionStorage.getItem('token')}`
-                }
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
             });
-
-            if (response.ok) {
-                // مسح البيانات من المتصفح والعودة لتسجيل الدخول
-                sessionStorage.clear();
-                localStorage.clear();
-                window.location.replace("login.html");
-            }
         } catch (error) {
-            console.error("خطأ في الاتصال");
+            console.error("خطأ في الاتصال أثناء إلغاء التسجيل");
         }
+
+        // نخرج المستخدم ونعيده لصفحة التسجيل في كل الأحوال —
+        // حتى لو فشل الطلب، يجب ألا يبقى عالقاً في صفحة الإعداد.
+        sessionStorage.clear();
+        localStorage.clear();
+        window.location.replace("register.html");
     });
 }

@@ -57,7 +57,7 @@
           if (other && _selected.includes(other)) {
             const oh = _helpById(other);
             if (typeof showToast === 'function') showToast(`⚠️ لا يمكن تجهيز "${h.name}" مع "${(oh && oh.name) || ''}" معاً`);
-            else alert(`لا يمكن تجهيز "${h.name}" مع "${(oh && oh.name) || ''}" معاً`);
+            else prAlert(`لا يمكن تجهيز "${h.name}" مع "${(oh && oh.name) || ''}" معاً`);
             return;
           }
         }
