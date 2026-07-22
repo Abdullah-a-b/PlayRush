@@ -40,6 +40,9 @@ async def trigger_career_start(sio, room_code):
 
 
 def register_career_events(sio):
+    # معالجات الصداقة/الحظر داخل اللعب (مشتركة)
+    from app.domains.games.sockets.social_handlers import register_social_handlers
+    register_social_handlers(sio, get_room_state)
     global _start_first_player
 
     def _load_random_player(used_ids, user_ids=None):

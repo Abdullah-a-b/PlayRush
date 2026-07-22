@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="../css/quick_chat.css">
     <link rel="stylesheet" href="../css/theme_styles.css">
     <script src="../js/brand.js" defer></script>
+  <link rel="stylesheet" href="../css/responsive.css">
 </head>
 <body>
 
@@ -184,5 +185,23 @@
 <script src="../js/anti_cheat.js" defer></script>
   <script src="../js/sound.js" defer></script>
   <script src="../js/music.js" defer></script>
+<!-- 🎮 كشف التطابق بين اللاعبين -->
+<div id="matchRevealOverlay">
+  <div class="mr-title">🎮 وجدنا لك خصماً!</div>
+  <div class="mr-vs-row">
+    <div class="mr-player">
+      <img id="mrMyAvatar" class="mr-avatar" src="../assets/avatars/avatar_1.svg" alt="">
+      <div class="mr-role-label">أنت</div>
+      <div id="mrMyName" class="mr-name">—</div>
+    </div>
+    <div class="mr-vs">VS</div>
+    <div class="mr-player right">
+      <img id="mrOppAvatar" class="mr-avatar" src="../assets/avatars/avatar_2.svg" alt="">
+      <div class="mr-role-label">الخصم</div>
+      <div id="mrOppName" class="mr-name">—</div>
+    </div>
+  </div>
+  <div class="mr-ready-bar"><div id="mrReadyFill" class="mr-ready-fill"></div></div>
+</div>
 </body>
 </html>

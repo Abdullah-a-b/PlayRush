@@ -113,11 +113,17 @@ async def _ai_startup_check():
         logger.error(f"[AI] خطأ أثناء الفحص: {e}")
 
 
+_telegram_task = None
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(" جاري تشغيل السيرفر...")
     logger.info(" [moderation] فلتر المحتوى المحلي مُفعّل")
     asyncio.create_task(_ai_startup_check())
+    # مستمع بوت تليجرام — يُطلق هنا داخل حلقة uvicorn الحيّة (وليس وقت الاستيراد،
+    # وإلا لا يعمل مع uvicorn/multiport). عملية واحدة فقط تسحب التحديثات (قفل داخلي).
+    global _telegram_task
+    _telegram_task = asyncio.create_task(telegram_bot_supervisor())
 
     # كل task محمية بـ supervisor — لا تموت بصمت
     from app.domains.games.importers.career_importer import career_auto_import_loop
@@ -484,7 +490,12 @@ register_telegram_events(sio)
 
 
 async def telegram_bot_supervisor():
-    """يحرس البوت ويعيد تشغيله لو فشل."""
+    """يحرس البوت ويعيد تشغيله لو فشل. عملية واحدة فقط تسحب التحديثات (قفل جهاز)."""
+    from app.infrastructure.telegram_bot import try_become_bot_leader
+    if not try_become_bot_leader():
+        logger.info(" [telegram_bot] هذا الـ worker ليس القائد — لن يسحب تحديثات البوت (تفادي 409)")
+        return
+    logger.info(" [telegram_bot] هذا الـ worker هو القائد — يسحب تحديثات البوت")
     while True:
         try:
             await telegram_bot_listener(sio)
@@ -497,6 +508,6 @@ async def telegram_bot_supervisor():
         await asyncio.sleep(5)
 
 
-sio.start_background_task(telegram_bot_supervisor)
+# (مستمع تليجرام يُطلق داخل lifespan على الحلقة الحيّة — انظر أعلى)
 
 app.mount('/socket.io', socket_app)

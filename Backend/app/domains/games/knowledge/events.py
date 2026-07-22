@@ -183,6 +183,9 @@ async def trigger_knowledge_start(sio, room_code):
 
 
 def register_knowledge_events(sio):
+    # معالجات الصداقة/الحظر داخل اللعب (مشتركة)
+    from app.domains.games.sockets.social_handlers import register_social_handlers
+    register_social_handlers(sio, get_room_state)
     global _sio_ref, _start_round_ref
     _sio_ref = sio
 

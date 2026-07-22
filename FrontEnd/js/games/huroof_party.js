@@ -331,6 +331,22 @@ socket.on('receive_host_code', (data) => {
     const btn     = document.getElementById('generateNewCodeBtn');
     if (display) display.textContent    = data.code;
     if (btn)     btn.style.display      = 'none';
+
+    const botUser = (data.bot || '@p_rushbot').replace('@', '');
+    if (display) {
+        let dl = document.getElementById('tgDeepLinkParty');
+        if (!dl) {
+            dl = document.createElement('a');
+            dl.id = 'tgDeepLinkParty';
+            dl.target = '_blank';
+            dl.rel = 'noopener';
+            dl.style.cssText = 'display:block;margin:14px auto 0;background:#229ED9;color:#fff;padding:12px 16px;border-radius:10px;font-weight:bold;text-decoration:none;max-width:320px;text-align:center;';
+            display.parentNode.insertBefore(dl, display.nextSibling);
+        }
+        dl.href = `https://t.me/${botUser}?start=${data.code}`;
+        dl.innerHTML = '📲 افتح تليجرام واربط تلقائياً';
+        dl.style.display = 'block';
+    }
 });
 
 socket.on('host_linked_success', () => {
@@ -465,21 +481,38 @@ window.addEventListener('load', () => {
 
     generateNewCodeBtn?.addEventListener('click', () => {
         if (newHostCodeDisplay) { newHostCodeDisplay.style.display = 'block'; newHostCodeDisplay.textContent = '⏳...'; }
-        socket.emit('generate_host_code', {});
+        let _pt = sessionStorage.getItem('partyToken');
+        if (!_pt) { _pt = 'pt_' + Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem('partyToken', _pt); }
+        socket.emit('register_party_token', { party_token: _pt });
+        socket.emit('generate_host_code', { party_token: _pt });
     });
 
-    // الإبلاغ عن خطأ
+    // الإبلاغ عن سؤال — إرسال مباشر لتيليجرام المطوّر (بلا كتابة، لأن الجميع بحوار حقيقي)
     reportQuestionBtn?.addEventListener('click', () => {
         if (reportStrikes >= MAX_STRIKES) return;
-        if (reportModal) {
-            reportModal.style.display = 'flex';
-            if (reportAnswerInput) reportAnswerInput.value = '';
-            if (reportFeedback)   reportFeedback.style.display = 'none';
-        }
+        const q      = (currentQuestionData?.question) || (document.getElementById('questionText')?.textContent || '').trim();
+        const a      = (currentQuestionData?.answer)   || '';
+        const letter = (currentQuestionData?.letter)   || selectedLetter || '';
+        socket.emit('report_party_question', { question: q, answer: a, letter });
+
+        // منع الإرسال المكرر لنفس السؤال + احتساب strike بسيط ضد الإزعاج
+        reportQuestionBtn.disabled         = true;
+        reportQuestionBtn.textContent      = '✅ تم إرسال البلاغ';
+        reportQuestionBtn.style.background = '#4caf50';
+        reportStrikes++;
+        localStorage.setItem('huroofReportStrikes', reportStrikes);
     });
 
-    submitReportBtn?.addEventListener('click', () => {
-        if (reportModal) reportModal.style.display = 'none';
+    socket.on('party_report_ack', (res) => {
+        if (!reportQuestionBtn) return;
+        if (res && res.ok) {
+            reportQuestionBtn.textContent      = '✅ تم إرسال البلاغ';
+            reportQuestionBtn.style.background = '#4caf50';
+        } else {
+            reportQuestionBtn.disabled         = false;
+            reportQuestionBtn.textContent      = 'تعذّر الإرسال — أعد المحاولة';
+            reportQuestionBtn.style.background = '#f44336';
+        }
     });
 
     // الاتصال المباشر (reconnect)

@@ -85,10 +85,20 @@
 
   // ===== أدوات =====
   function getValidAvatar(src) {
-    if (!src) return '../assets/avatars/avatar_1.svg';
-    if (src.startsWith('http') || src.startsWith('data:')) return src;
-    if (src.startsWith('../') || src.startsWith('/')) return src;
-    return `../assets/avatars/${src}`;
+    if (!src || String(src).trim() === '') return '../assets/avatars/avatar_1.svg';
+    let v = String(src).trim();
+    const staleMatch = v.match(/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/.*)$/i);
+    if (staleMatch) {
+      const path = staleMatch[3];
+      if (path.startsWith('/uploads')) return (typeof API_URL !== 'undefined' ? API_URL : '') + path;
+      const fn = path.split('/').pop();
+      return '../assets/avatars/' + fn;
+    }
+    if (v.startsWith('/uploads')) return (typeof API_URL !== 'undefined' ? API_URL : '') + v;
+    if (v.startsWith('http') || v.startsWith('data:')) return v;
+    if (v.startsWith('../') || v.startsWith('/')) { const n = v.split('/').pop(); return '../assets/avatars/' + (n.includes('.') ? n : n + '.svg'); }
+    const name = v.split('/').pop();
+    return '../assets/avatars/' + (name.includes('.') ? name : name + '.svg');
   }
 
   // ===== أنيميشن استعد 3-2-1 (موحّد) =====
@@ -259,7 +269,25 @@
   };
   let _opponentUserId = null;
 
-  socket.on('room_joined', (data) => {
+  
+/* ================================================================
+   🎮 showMatchReveal — كشف التطابق عند بدء المباراة
+   ================================================================ */
+function showMatchReveal(myName, myAvatarSrc, oppName, oppAvatarSrc) {
+  var overlay = document.getElementById('matchRevealOverlay');
+  if (!overlay) return;
+  var ge = function(id){ return document.getElementById(id); };
+  if (myName)       ge('mrMyName').textContent   = myName;
+  if (myAvatarSrc)  ge('mrMyAvatar').src         = myAvatarSrc;
+  if (oppName)      ge('mrOppName').textContent   = oppName;
+  if (oppAvatarSrc) ge('mrOppAvatar').src         = oppAvatarSrc;
+  overlay.classList.add('show');
+  var bar = ge('mrReadyFill');
+  if (bar) { bar.style.width = '0%'; void bar.offsetWidth; bar.style.width = '100%'; }
+  setTimeout(function(){ overlay.classList.remove('show'); }, 3200);
+}
+
+socket.on('room_joined', (data) => {
     const players = data.players || [];
     const me       = players.find(p => p.sid === socket.id || p.name === playerName);
     const opponent = players.find(p => p.sid !== socket.id && p.name !== playerName);
@@ -271,6 +299,20 @@
     $('myAvatarImg').src          = playersStatsData.me.avatar;
     $('opponentName').textContent = playersStatsData.opponent.name;
     $('opponentAvatarImg').src    = playersStatsData.opponent.avatar;
+    // 🎮 كشف التطابق بين اللاعبين
+    if (playersStatsData.opponent && playersStatsData.opponent.name) {
+      showMatchReveal(
+        playersStatsData.me.name, playersStatsData.me.avatar,
+        playersStatsData.opponent.name, playersStatsData.opponent.avatar
+      );
+    }
+    // 🎮 كشف التطابق بين اللاعبين
+    if (playersStatsData.opponent && playersStatsData.opponent.name) {
+      showMatchReveal(
+        playersStatsData.me.name, playersStatsData.me.avatar,
+        playersStatsData.opponent.name, playersStatsData.opponent.avatar
+      );
+    }
 
     //  حالة الصداقة/الحظر من الخادم (نفس حروف)
     if (typeof data.opponent_user_id !== 'undefined') _opponentUserId = data.opponent_user_id;
@@ -525,7 +567,7 @@
   cancelReportBtn?.addEventListener('click', () => { reportModal.style.display = 'none'; });
   document.querySelectorAll('.report-reason').forEach(btn => {
     btn.addEventListener('click', () => {
-      socket.emit('report_opponent', { roomCode, token, reason: btn.dataset.reason });
+      socket.emit('report_opponent', { roomCode, token, reason: btn.dataset.reason, target_id: _opponentUserId, game_mode: window.CURRENT_GAME });
       reportModal.style.display = 'none';
     });
   });
@@ -604,7 +646,7 @@
     if (blockState || friendState === 'pending') return;
     if (friendState === 'friends') {
       _pendingFriendAction = 'remove';
-      socket.emit('remove_friend_opponent', { roomCode, token });
+      socket.emit('remove_friend_opponent', { roomCode, token, target_id: _opponentUserId });
     } else if (friendState === 'incoming') {
       if (_opponentUserId) {
         socket.emit('respond_friend_request', { token, requester_id: _opponentUserId, accept: true });
@@ -614,13 +656,13 @@
       showToast('✅ تمت إضافة الصديق');
     } else {
       _pendingFriendAction = 'add';
-      socket.emit('friend_request_opponent', { roomCode, token });
+      socket.emit('friend_request_opponent', { roomCode, token, target_id: _opponentUserId });
     }
     document.getElementById('playerProfileModal').style.display = 'none';
   });
   blockUserBtn?.addEventListener('click', () => {
-    if (blockState) socket.emit('unblock_opponent', { roomCode, token });
-    else socket.emit('block_opponent', { roomCode, token });
+    if (blockState) socket.emit('unblock_opponent', { roomCode, token, target_id: _opponentUserId });
+    else socket.emit('block_opponent', { roomCode, token, target_id: _opponentUserId });
     document.getElementById('playerProfileModal').style.display = 'none';
   });
 

@@ -628,6 +628,8 @@ def register_lobby_events(sio):
 
         from app.domains.users.friends import respond_friend_request
         result = respond_friend_request(uid, requester_id, accept)
+        # friend_result: يستمع له game JS و player_profile؛ friend_response_result: يستمع له friends_panel
+        await sio.emit('friend_result', result, to=sid)
         await sio.emit('friend_response_result', result, to=sid)
 
         # لو قُبل، نُشعر صاحب الطلب (لو متصل)
@@ -830,10 +832,11 @@ def register_lobby_events(sio):
 
     @sio.on('report_player_by_id')
     async def report_player_by_id(sid, data):
-        """بلاغ عن لاعب عبر معرّفه. data: { token, target_id }"""
+        """بلاغ عن لاعب عبر معرّفه. data: { token, target_id, reason? }"""
         token = (data or {}).get('token')
         user, db = verify_socket_token(token)
         if not user:
+            await sio.emit('report_result', {'ok': False, 'msg': 'يجب تسجيل الدخول'}, to=sid)
             return
         reporter_id = user.id
         db.close()
@@ -841,13 +844,15 @@ def register_lobby_events(sio):
         try:
             target_id = int(target_id)
         except (TypeError, ValueError):
+            await sio.emit('report_result', {'ok': False, 'msg': 'هدف غير صالح'}, to=sid)
             return
+        reason = (data or {}).get('reason') or 'toxic_chat'
         try:
             from app.domains.support.player_reports import submit_report
-            submit_report(reporter_id, target_id, reason='toxic_chat', game_mode=None)
+            result = submit_report(reporter_id, target_id, reason=reason, game_mode=None)
         except Exception:
-            pass
-        await sio.emit('report_result', {'ok': True, 'msg': 'تم إرسال البلاغ'}, to=sid)
+            result = {'ok': False, 'msg': 'تعذّر إرسال البلاغ'}
+        await sio.emit('report_result', {'ok': result.get('ok', False), 'msg': result.get('msg', 'تم إرسال البلاغ')}, to=sid)
 
     @sio.on('invite_friend_to_play')
     async def invite_friend_to_play(sid, data):

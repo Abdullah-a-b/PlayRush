@@ -1,0 +1,705 @@
+/* ============================================================
+   responsive.css — طبقة التجاوب المركزية الشاملة
+   ------------------------------------------------------------
+   يُحمّل أخيراً في كل صفحة ليضمن الأولوية. يعالج:
+   1. منع التمرير الأفقي (root cause لأغلب «الطلوع برّا»)
+   2. مرونة الحاويات ذات العرض الثابت
+   3. تصغير الخطوط والأزرار على الجوال
+   4. جعل الصور والوسائط مرنة
+   لا يلمس منطق اللعبة — CSS بحت. متسق مع design-system tokens.
+   ============================================================ */
+
+/* ---- 1) الأساس: منع الطفح الأفقي عالمياً ---- */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;   /* يقتل الـ scroll الأفقي المزعج */
+}
+
+/* الصور والوسائط لا تتجاوز حاويتها أبداً */
+img, video, canvas, svg, iframe {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ============================================================
+   نقطة الكسر الرئيسية: الأجهزة اللوحية والجوالات (≤ 900px)
+   ============================================================ */
+@media (max-width: 900px) {
+  /* الحاويات العريضة الثابتة تصير مرنة */
+  .container, .wrapper, .card, .box, .panel,
+  .auth-box, .auth-card, .form-container,
+  .modal-content, .confirm-box, .loadout-box,
+  .waiting-card, .store-wrap, .hub-wrap {
+    max-width: 100% !important;
+    width: auto !important;
+  }
+}
+
+/* ============================================================
+   الجوالات (≤ 600px) — التصغير الفعلي
+   ============================================================ */
+@media (max-width: 600px) {
+  /* الخطوط: تصغير هرمي متناسق */
+  html { font-size: 15px; }
+  h1 { font-size: 1.6rem !important; }
+  h2 { font-size: 1.35rem !important; }
+  h3 { font-size: 1.15rem !important; }
+
+  /* الحشوات الكبيرة تتقلّص */
+  .card, .box, .panel, .modal-content, .auth-box,
+  .confirm-box, .loadout-box, .waiting-card {
+    padding: 18px !important;
+  }
+
+  /* الأزرار: أحجام لمس مريحة (44px حد أدنى موصى به عالمياً) */
+  button, .btn, .action-btn, .nav-btn {
+    min-height: 44px;
+    font-size: 0.95rem;
+  }
+
+  /* الحقول: عرض كامل + منع تكبير iOS التلقائي (16px) */
+  input, select, textarea {
+    width: 100%;
+    font-size: 16px !important;
+  }
+
+  /* استثناء: حقول رمز التحقق (OTP) تبقى صفاً مضغوطاً لا عموداً */
+  .otp-inputs { gap: 6px; }
+  .otp-inputs input {
+    width: 44px !important;
+    min-width: 0;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    text-align: center;
+  }
+
+  /* صفوف flex تنكسر لأعمدة على الجوال بدل الضغط الأفقي */
+  .row, .flex-row, .quick-actions, .btn-group,
+  .currency-section, .form-row {
+    flex-wrap: wrap;
+  }
+
+  /* الشبكات متعددة الأعمدة تصير عموداً واحداً */
+  .grid, .games-grid, .cards-grid, .categories-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* الجداول العريضة تصير قابلة للتمرير أفقياً داخل حاويتها فقط */
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}
+
+/* ============================================================
+   الجوالات الصغيرة جداً (≤ 380px)
+   ============================================================ */
+@media (max-width: 380px) {
+  html { font-size: 14px; }
+  .card, .box, .panel, .modal-content, .auth-box { padding: 14px !important; }
+}
+
+/* ============================================================
+   دعم الشاشات القصيرة أفقياً (landscape) — منع اقتصاص المحتوى
+   ============================================================ */
+@media (max-height: 480px) and (orientation: landscape) {
+  body { overflow-y: auto; height: auto; min-height: 100vh; }
+}
+
+/* ============================================================
+   الشريط السفلي الموحّد على الجوال — pr-unified-bar
+   يجمع: [البراند] [زر الصوت] [أيقونات السوشال]
+   في عنصر واحد fixed أسفل الشاشة — صفر تزاحم
+   ============================================================ */
+
+/* إخفاء العناصر المستقلة على الجوال (يُعوّض عنها بالشريط الموحّد) */
+@media (max-width: 640px) {
+  .brand-footer  { display: none !important; }
+  .social-bar    { display: none !important; }
+  .pr-copyright  { display: none !important; }
+
+  /* زر الصوت على الديسكتوب لا يظهر على الجوال (يدخل داخل الشريط) */
+  #prSoundBtn[style*="position:fixed"] { display: none !important; }
+}
+
+/* الشريط الموحّد */
+.pr-unified-bar {
+  display: none; /* مخفي افتراضياً — يظهر على الجوال فقط */
+}
+
+@media (max-width: 640px) {
+  .pr-unified-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    z-index: 4900;
+    background: rgba(10, 12, 16, 0.82);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+    padding: 0 12px;
+    gap: 8px;
+    font-family: 'Tajawal', system-ui, -apple-system, Arial, sans-serif;
+  }
+
+  /* قسم البراند — يسار */
+  .pub-brand {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+    direction: ltr; /* يمنع RTL من عكس ترتيب "Powered by Isolated Person" */
+  }
+  .pub-by {
+    font-size: 9px;
+    color: rgba(255,255,255,0.35);
+  }
+  .pub-name {
+    font-size: 10px;
+    font-weight: 600;
+    background: linear-gradient(90deg, #00ff88, #00d2ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+
+  /* قسم الصوت — وسط */
+  .pub-sound {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+  }
+  .pub-sound button {
+    background: none !important;
+    border: none !important;
+    font-size: 1.05rem !important;
+    cursor: pointer;
+    opacity: 0.8;
+    padding: 6px 10px;
+    line-height: 1;
+    color: #fff;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* قسم السوشال — يمين */
+  .pub-social {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .pub-social .social-icon {
+    width: 26px !important;
+    height: 26px !important;
+    font-size: 12px !important;
+    background: rgba(255,255,255,0.07) !important;
+  }
+
+  /* فضاء سفلي للمحتوى كي لا يختفي خلف الشريط */
+  body:not(.in-game) .landing-container,
+  body:not(.in-game) .lobby-container,
+  body:not(.in-game) .categories-container,
+  body:not(.in-game) .hub-wrap,
+  body:not(.in-game) .auth-box,
+  body:not(.in-game) .auth-card,
+  body:not(.in-game) .form-container {
+    padding-bottom: 48px !important;
+  }
+}
+
+/* شاشات ضيقة جداً */
+@media (max-width: 360px) {
+  .pr-unified-bar { height: 38px; padding: 0 8px; }
+  .pub-name       { font-size: 9px; }
+  .pub-social .social-icon { width: 24px !important; height: 24px !important; font-size: 11px !important; }
+}
+
+/* ============================================================
+   المرحلة الثانية — إعادة هيكلة Categories + اللوبيات للجوال
+   نقاط الكسر: ≤900px (تابلت)  ≤600px (جوال)  ≤400px (صغير)
+   ============================================================ */
+
+/* ── الجذر المشترك: نسمح بالتمرير ── */
+@media (max-width: 900px) {
+
+  /* 1. body: فك قيد الـ overflow واعطِ ارتفاع حر */
+  body {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    height: auto !important;
+    min-height: 100vh !important;
+  }
+
+  /* 2. الحاوية الرئيسية: من grid ثلاثي الأعمدة إلى عمود واحد */
+  .lobby-container {
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    padding: 8px !important;
+    gap: 8px !important;
+  }
+
+  /* 3. الـ top-bar: يتكيّف بدل التزاحم */
+  .top-bar {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    padding: 10px 12px !important;
+    height: auto !important;
+    border-radius: 12px !important;
+  }
+  .player-section {
+    flex: 1 1 100% !important;
+    justify-content: flex-start !important;
+  }
+  .currency-section {
+    flex: 1 1 auto !important;
+    justify-content: flex-start !important;
+    gap: 8px !important;
+  }
+  .controls-section {
+    flex-shrink: 0 !important;
+  }
+
+  /* 4. الـ nav: شريط أيقونات أفقي قابل للتمرير — نخفي النص */
+  .main-navigation {
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    padding: 6px !important;
+    gap: 4px !important;
+    border-radius: 12px !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  .main-navigation::-webkit-scrollbar { display: none !important; }
+  .nav-btn {
+    flex: 0 0 auto !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 3px !important;
+    padding: 8px 12px !important;
+    font-size: 10px !important;
+    min-width: 52px !important;
+    border-radius: 10px !important;
+  }
+  .nav-btn i { font-size: 18px !important; }
+  .nav-btn span { display: block !important; font-size: 10px !important; }
+
+  /* 5. المحتوى الرئيسي: يأخذ كامل العرض */
+  .main-content {
+    padding: 14px !important;
+    border-radius: 12px !important;
+    overflow-y: visible !important;
+  }
+
+  /* 6. الـ sidebar: يصير سفل الصفحة بدل جانبها */
+  .sidebar {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    padding-bottom: 48px !important; /* فضاء للشريط السفلي الموحّد */
+  }
+  .chat-panel, .online-players {
+    border-radius: 12px !important;
+  }
+  .chat-messages { max-height: 160px !important; }
+  .online-players .players-list { max-height: 200px !important; }
+}
+
+/* ── الجوال الصغير (≤ 600px) ── */
+@media (max-width: 600px) {
+
+  .lobby-container { padding: 6px !important; gap: 6px !important; }
+
+  /* top-bar مضغوط */
+  .top-bar { padding: 8px 10px !important; }
+  .player-avatar img { width: 38px !important; height: 38px !important; }
+  .player-info h3 { font-size: 13px !important; }
+  .player-level { font-size: 10px !important; gap: 5px !important; }
+  .xp-bar { width: 60px !important; }
+  .currency-item { padding: 5px 10px !important; font-size: 12px !important; }
+  .control-btn { width: 34px !important; height: 34px !important; }
+
+  /* nav: أيقونات فقط بدون نص */
+  .nav-btn span { display: none !important; }
+  .nav-btn { padding: 10px !important; min-width: 44px !important; }
+  .nav-btn i { font-size: 20px !important; }
+
+  /* كروت الألعاب: عمود واحد مريح */
+  .games-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .game-card {
+    padding: 16px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 14px !important;
+    text-align: right !important;
+  }
+  .game-icon {
+    font-size: 40px !important;
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+  }
+  .game-card > div:not(.game-icon) { flex: 1 !important; }
+  .game-title { font-size: 16px !important; margin-bottom: 4px !important; }
+  .game-desc { font-size: 12px !important; margin-bottom: 10px !important; }
+  .play-btn { font-size: 13px !important; padding: 8px 14px !important; }
+
+  /* جميع المودالات: مركزية في المنتصف */
+  .modal {
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 16px !important;
+  }
+  .modal-content {
+    width: 92% !important;
+    max-width: 480px !important;
+    max-height: 88vh !important;
+    border-radius: 16px !important;
+    margin: auto !important;
+    padding: 20px 16px !important;
+  }
+
+  /* الإعدادات: ارتفاع ثابت حتى لا يتحرك المودال عند تبديل الـ tabs */
+  #settingsModal .modal-content {
+    max-width: 700px !important;
+    height: 72vh !important;
+    max-height: 72vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+  .settings-content-area {
+    flex: 1 1 0 !important;
+    overflow-y: auto !important;
+    min-height: 0 !important;
+  }
+
+  /* الإعدادات: sidebar ينقلب لـ tabs أفقية */
+  .settings-layout {
+    flex-direction: column !important;
+    gap: 0 !important;
+    height: auto !important;
+  }
+  .settings-sidebar {
+    width: 100% !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    border-left: none !important;
+    border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+    padding: 0 0 8px 0 !important;
+    gap: 4px !important;
+    scrollbar-width: none !important;
+    height: auto !important;
+    flex-shrink: 0 !important;
+  }
+  .settings-sidebar::-webkit-scrollbar { display: none !important; }
+  .setting-tab {
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+    border-radius: 20px !important;
+    text-align: center !important;
+  }
+  .setting-tab i { margin-left: 4px !important; }
+  .logout-tab {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
+  .settings-content-area {
+    padding: 14px 10px !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  /* غرفة الانتظار */
+  .waiting-card { padding: 18px !important; }
+  .slots-area { flex-direction: column !important; }
+  .team-side { width: 100% !important; min-height: 80px !important; }
+  .vs-divider { transform: none !important; margin: 6px 0 !important; }
+  .code-box { width: 100% !important; padding: 8px !important; }
+  .code-box h1 { font-size: 1.8rem !important; letter-spacing: 3px !important; }
+
+  /* confirm box */
+  .confirm-box { width: 88% !important; padding: 22px !important; }
+}
+
+/* ── شاشات صغيرة جداً (≤ 400px) ── */
+@media (max-width: 400px) {
+  .lobby-container { padding: 4px !important; }
+  .game-card { padding: 12px !important; gap: 10px !important; }
+  .game-icon { font-size: 34px !important; }
+  .game-title { font-size: 14px !important; }
+  .game-desc { font-size: 11px !important; }
+  .currency-section { gap: 5px !important; }
+  .currency-item { padding: 4px 8px !important; font-size: 11px !important; }
+}
+
+/* ============================================================
+   إصلاح تسريب الـ Scroll + مودال الأفاتار على الجوال
+   ============================================================ */
+
+/* ── 1. overscroll-behavior: contain على كل container داخلي
+        يمنع الـ scroll من "الهروب" للصفحة لما يوصل النهاية ── */
+.modal-content,
+.settings-content-area,
+.chat-messages,
+.players-list,
+.avatars-wrapper,
+#modalAvatarsWrapper,
+.store-grid,
+.loadout-box,
+.main-navigation,
+.settings-sidebar,
+#notificationsList,
+#friendsListPanel,
+#friendsRequestsPanel,
+.main-content,
+.hub-wrap {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch; /* تمرير سلس على iOS */
+}
+
+/* ── 2. مودال الأفاتار — إعادة تصميم كاملة للجوال ── */
+@media (max-width: 640px) {
+
+  /* المودال: مركزي في المنتصف */
+  #avatarModal {
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 16px !important;
+  }
+
+  #avatarModal .modal-content {
+    width: 92% !important;
+    max-width: 380px !important;
+    max-height: 82vh !important;
+    border-radius: 16px !important;
+    margin: auto !important;
+    padding: 16px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  /* شبكة الأفاتارات: 4 في الصف بدل auto-fit */
+  #modalAvatarsWrapper {
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 10px !important;
+    max-height: 45vh !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    padding: 10px !important;
+  }
+
+  /* حجم كل أفاتار مناسب للمس */
+  #modalAvatarsWrapper img.avatar-option,
+  #modalAvatarsWrapper .avatar-option {
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 1 !important;
+    min-height: 58px !important;
+  }
+
+  /* زر التأكيد: ثابت في الأسفل */
+  #confirmAvatarSelection {
+    width: 100% !important;
+    margin-top: 6px !important;
+    padding: 12px !important;
+    font-size: 15px !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* مودال الإشعارات: مركزي مع ارتفاع مناسب */
+  #notificationsModal .modal-content {
+    max-width: 400px !important;
+    height: auto !important;
+    max-height: 75vh !important;
+    overflow-y: auto !important;
+    display: block !important;
+  }
+  #notificationsList {
+    max-height: 55vh !important;
+    overflow-y: auto !important;
+    min-height: 80px !important;
+  }
+}
+/* ============================================================
+   🎮 كشف التطابق بين اللاعبين — يظهر عند بدء أي مباراة
+   ============================================================ */
+#matchRevealOverlay {
+  position: fixed; inset: 0; z-index: 9000;
+  background: rgba(0,0,0,0.92);
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 0;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+#matchRevealOverlay.show {
+  opacity: 1; pointer-events: all;
+}
+.mr-title {
+  font-family: 'Tajawal','Cairo',system-ui,sans-serif;
+  font-size: 1.35rem; font-weight: 800; color: rgba(255,255,255,0.75);
+  margin-bottom: 28px; letter-spacing: 1px;
+  animation: mrFadeIn 0.4s 0.1s ease both;
+}
+.mr-vs-row {
+  display: flex; align-items: center; justify-content: center;
+  gap: 28px; width: 100%;
+}
+.mr-player {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  animation: mrSlideIn 0.5s ease-out forwards;
+  opacity: 0;
+}
+.mr-player.right { animation-name: mrSlideInRight; }
+@keyframes mrSlideIn {
+  from { transform: translateX(-44px); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+@keyframes mrSlideInRight {
+  from { transform: translateX(44px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+.mr-avatar {
+  width: 90px; height: 90px; border-radius: 50%;
+  border: 3px solid #ffd700;
+  box-shadow: 0 0 28px rgba(255,215,0,0.45);
+  object-fit: cover; background: #1a1a2e;
+}
+.mr-name {
+  font-family: 'Tajawal','Cairo',system-ui,sans-serif;
+  font-size: 1.05rem; font-weight: 800; color: #fff;
+  max-width: 120px; text-align: center;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mr-role-label {
+  font-size: 0.78rem; color: rgba(255,255,255,0.48);
+  font-family: 'Tajawal','Cairo',system-ui,sans-serif;
+}
+.mr-vs {
+  font-size: 2.5rem; font-weight: 900; color: #ffd700;
+  text-shadow: 0 0 22px rgba(255,215,0,0.65);
+  animation: mrVsPop 0.6s 0.3s ease-out both;
+  line-height: 1;
+}
+@keyframes mrVsPop {
+  from { transform: scale(0.2); opacity: 0; }
+  60%  { transform: scale(1.3); }
+  to   { transform: scale(1);   opacity: 1; }
+}
+.mr-ready-bar {
+  margin-top: 36px; height: 4px; width: 200px;
+  background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;
+}
+.mr-ready-fill {
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg, #ffd700, #ff9800);
+  border-radius: 4px;
+  transition: width 2.8s linear;
+}
+@keyframes mrFadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* جوال: أصغر */
+@media (max-width: 600px) {
+  .mr-avatar { width: 68px; height: 68px; }
+  .mr-vs { font-size: 1.9rem; }
+  .mr-name { font-size: 0.88rem; max-width: 88px; }
+  .mr-vs-row { gap: 16px; }
+  .mr-title { font-size: 1.1rem; margin-bottom: 22px; }
+  .mr-ready-bar { width: 160px; }
+}
+
+/* ============================================================
+   🎮 اللوبي — إخفاء السوشيال والبراند أثناء شاشة التطابق
+   ============================================================ */
+body.mm-active .social-bar,
+body.mm-active .brand-footer {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+/* الشريط الموحّد أيضاً لا داعي له في شاشة البحث/التطابق */
+body.mm-active .pr-unified-bar {
+  display: none !important;
+}
+
+/* ============================================================
+   🎮 وضع الجمعات — خيار مخصص للكمبيوتر فقط
+   ============================================================ */
+@media (max-width: 900px) {
+  /* إخفاء زر وضع الجمعات في اللوبي على الجوال */
+  #localPartyBtn {
+    display: none !important;
+  }
+}
+
+/* ============================================================
+   🎮 شاشة البحث/التطابق — تأخذ الشاشة كاملاً على الجوال
+   ============================================================ */
+@media (max-width: 900px) {
+  /* عند تفعيل شاشة التطابق: إخفاء الهيدر والنافيجيشن */
+  body.mm-active .top-bar,
+  body.mm-active .main-navigation,
+  body.mm-active header.top-bar,
+  body.mm-active nav.main-navigation {
+    display: none !important;
+  }
+
+  /* تثبيت شاشة التطابق كـ full-screen overlay */
+  body.mm-active .matchmaking-screen {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 2000 !important;
+    background: var(--bg-dark, #0d0f18) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 30px 20px !important;
+    overflow-y: auto !important;
+  }
+
+  /* تصغير بطاقات الفرق لتناسب الشاشة */
+  body.mm-active .teams-preview {
+    gap: 20px !important;
+    margin: 20px 0 !important;
+  }
+  body.mm-active .team-slot {
+    width: 120px !important;
+    padding: 14px !important;
+  }
+  body.mm-active .team-slot img {
+    width: 64px !important;
+    height: 64px !important;
+  }
+  body.mm-active .countdown-timer {
+    font-size: 48px !important;
+    margin-top: 16px !important;
+  }
+  body.mm-active #mmStatusTitle {
+    font-size: 22px !important;
+  }
+}

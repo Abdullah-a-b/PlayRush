@@ -54,6 +54,9 @@ async def trigger_whoami_start(sio, room_code):
 
 
 def register_whoami_events(sio):
+    # معالجات الصداقة/الحظر داخل اللعب (مشتركة)
+    from app.domains.games.sockets.social_handlers import register_social_handlers
+    register_social_handlers(sio, get_room_state)
     global _start_first_character
 
     def _pick_character(used_ids):

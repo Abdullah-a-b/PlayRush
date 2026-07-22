@@ -79,6 +79,8 @@ socket.on('new_notification', (notif) => {
         badge.textContent = (cur + 1) > 9 ? '9+' : (cur + 1);
         badge.style.display = 'flex';
     }
+    window.PRSound?.playNotif?.();
+    if (notif?.message && typeof showGlobalToast === 'function') showGlobalToast('🔔 ' + notif.message);
     fetchNotifs();
 });
 let _lastNotifFetch = 0;

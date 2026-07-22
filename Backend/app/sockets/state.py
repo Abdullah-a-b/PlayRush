@@ -12,6 +12,7 @@ party_session_sid: str | None = None
 
 active_codes = {}  
 host_chat_ids = {} 
+linked_hosts = {}   # party_token -> {chat_id, ts} : ربط ثابت ينجو من إعادة اتصال السوكت
 LAST_UPDATE_ID = 0 
 
 disconnect_timers = {}

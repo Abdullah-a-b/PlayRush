@@ -18,6 +18,7 @@
     <script src="js/brand.js" defer></script>
   <link rel="stylesheet" href="css/email_copy.css">
   <link rel="stylesheet" href="css/categories_hub.css">
+  <link rel="stylesheet" href="css/responsive.css">
 </head>
 <body>
   <div id="toastContainer" class="toast-container"></div>
@@ -116,7 +117,7 @@
         <div class="teams-preview" id="mmTeamsPreview">
             <div class="team-slot green-team">
                 <div class="team-title">الفريق الأخضر</div>
-                <img src="" id="mmGreenAvatar" alt="Player">
+                <img src="assets/avatars/avatar_1.svg" id="mmGreenAvatar" alt="Player">
                 <div style="color:#fff; font-weight:bold;" id="mmGreenName">--</div>
             </div>
             
@@ -124,7 +125,7 @@
             
             <div class="team-slot orange-team">
                 <div class="team-title">الفريق البرتقالي</div>
-                <img src="" id="mmOrangeAvatar" alt="Player">
+                <img src="assets/avatars/avatar_2.svg" id="mmOrangeAvatar" alt="Player">
                 <div style="color:#fff; font-weight:bold;" id="mmOrangeName">--</div>
             </div>
         </div>
@@ -241,6 +242,13 @@
                       <div style="display: flex; align-items: center; gap: 15px; width: 50%;">
                           <input type="range" id="sfxSlider" min="0" max="100" value="100" class="volume-slider" style="width: 100%;">
                           <span id="sfxValue" style="color: #aaa; width: 35px; font-size: 13px;">100%</span>
+                      </div>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                      <span style="display: flex; align-items: center; gap: 10px; color: #fff;"><i id="notifIcon" class="fa-solid fa-bell" style="color: #a78bfa; width: 20px;"></i> الإشعارات</span>
+                      <div style="display: flex; align-items: center; gap: 15px; width: 50%;">
+                          <input type="range" id="notifSlider" min="0" max="100" value="80" class="volume-slider" style="width: 100%;">
+                          <span id="notifValue" style="color: #aaa; width: 35px; font-size: 13px;">80%</span>
                       </div>
                   </div>
               </div>
@@ -365,9 +373,9 @@
         </button>
 
         <div id="codeDisplayArea" style="display: none; margin-top: 20px;">
-            <p style="color: #ffeb3b; font-size: 14px;">أرسل هذا الرمز للبوت الآن (صالح لـ 20 ثانية):</p>
+            <p style="color: #ffeb3b; font-size: 14px;">أرسل هذا الرمز للبوت، أو اضغط الزر بالأسفل للربط تلقائياً (صالح 30 ثانية):</p>
             <h1 id="secretCodeText" style="font-size: 60px; letter-spacing: 10px; margin: 10px 0; text-shadow: 0 0 20px #ffeb3b;">----</h1>
-            <p id="timerText" style="color: red; font-weight: bold;">يختفي العرض بعد: 5</p>
+            <p id="timerText" style="color: #bbb; font-weight: bold;">الرمز صالح لمدة 30 ثانية</p>
         </div>
     </div>
 </div>

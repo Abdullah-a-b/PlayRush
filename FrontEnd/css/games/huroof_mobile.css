@@ -1,0 +1,361 @@
+/* ============================================================================
+   خلية الحروف — تخطيط الجوال النهائي
+   ============================================================================
+   الحسابات الرياضية (size = 13vmin | main-container = 94vmin):
+   ─────────────────────────────────────────────────────────
+   hex-height  = 13 × 1.1547 = 15.01vmin
+   orange-area = cells-container × 0.84 × 0.83 ≈ 65.5vmin
+   5 cells     = 5 × 13 = 65vmin  →  يدخل تماماً في المنطقة البرتقالية ✓
+   tight-step  = 13 × 0.866 = 11.26vmin  (= √3/2 × size)
+   X-shift     = 13 × 0.5  = 6.5vmin   (نصف عرض خلية)
+
+   grid-top    = 47.5% − 25% × 94 = 44.65 − 23.5 = 21.15vmin
+
+   الصف │ الموضع Y في الحاوية │ المنطقة
+   ─────┼──────────────────────┼──────────────────
+     1  │ 21.15vmin            │ خضراء علوية  ✓ (14.25-28vmin)
+     2  │ 32.41vmin            │ برتقالية     ✓ (27-66vmin)
+     3  │ 43.67vmin            │ برتقالية     ✓
+     4  │ 54.93vmin            │ برتقالية     ✓
+     5  │ 66.19vmin            │ خضراء سفلية ✓ (66-80vmin)
+   ─────────────────────────────────────────────────────────
+   لماذا كان 15vmin خطأً؟ 5×15=75 > 65.5vmin → الخلايا تطغى خارج اللوحة
+   وتظهر على الإطار البنفسجي = تبدو "مقطوعة" على الجانبين.
+   ============================================================================ */
+
+html, body { background: #2a0a3d !important; }
+
+/* ── زر كتم الصوت العائم ── */
+.pr-sound-float {
+    position: fixed;
+    bottom: 84px !important; left: 22px !important;
+    z-index: 99999;
+    width: 44px; height: 44px; border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(22, 27, 34, 0.92);
+    color: #fff; font-size: 1.15rem; line-height: 1;
+    cursor: pointer; opacity: 0.85;
+    display: flex; align-items: center; justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.pr-sound-float:hover { opacity: 1; transform: scale(1.08); }
+.pr-sound-float:active { transform: scale(0.94); }
+
+@media (min-width: 901px) {
+    .help-slots { bottom: 20px; left: 22px; }
+}
+
+/* ============================================================================
+   ≤ 900px — أجهزة لوحية وجوالات
+   ============================================================================ */
+@media (max-width: 900px) {
+
+    /* ─── حماية شبكة الحروف من قواعد responsive.css العامة ─── */
+    .cells-container .grid {
+        display: flex !important;
+        grid-template-columns: none !important;
+    }
+
+    /* ─── حماية الشريط العلوي من theme_styles.css ─── */
+    .top-bar,
+    html[data-theme] .top-bar {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 62px !important; min-height: 62px !important;
+        padding: 6px 10px !important; gap: 6px !important;
+        background: rgba(20, 8, 32, 0.96) !important;
+        backdrop-filter: blur(10px) !important;
+        border-bottom: 1px solid rgba(255, 235, 59, 0.14) !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
+        flex-direction: row !important; flex-wrap: nowrap !important;
+        align-items: center !important; justify-content: space-between !important;
+        border-radius: 0 !important;
+        z-index: 100 !important;
+    }
+    .player-profile {
+        min-width: 0 !important; flex: 0 1 auto !important;
+        gap: 7px !important; padding: 4px 6px !important;
+        border-radius: 12px !important;
+        background: rgba(255, 255, 255, 0.04) !important;
+    }
+    .player-profile.left  { flex-direction: row !important; }
+    .player-profile.right { flex-direction: row !important; }
+    .player-profile::after { display: none !important; }
+    .avatar {
+        width: 38px !important; height: 38px !important;
+        font-size: 15px !important; border-width: 2px !important;
+        overflow: hidden !important; flex-shrink: 0 !important;
+    }
+    .avatar img { width: 100% !important; height: 100% !important; object-fit: cover !important; border-radius: 50% !important; }
+    .info { min-width: 0 !important; }
+    .info span {
+        font-size: 12.5px !important; letter-spacing: 0 !important;
+        text-transform: none !important; max-width: 68px !important;
+        overflow: hidden !important; text-overflow: ellipsis !important;
+        white-space: nowrap !important; display: inline-block !important; vertical-align: middle !important;
+    }
+    .country-flag { width: 17px !important; height: 12px !important; border-radius: 2px !important; }
+    .my-color-box { padding: 0 !important; background: transparent !important; }
+    .color-circle { width: 13px !important; height: 13px !important; border-width: 2px !important; }
+    .center-info { flex: 1 1 auto !important; gap: 5px !important; min-width: 0 !important; }
+    .rounds-display {
+        gap: 9px !important; padding: 3px 12px !important;
+        background: rgba(0, 0, 0, 0.35) !important; border-radius: 16px !important;
+    }
+    .round-text { font-size: 0.78rem !important; letter-spacing: 0 !important; }
+    .score-dot { width: 9px !important; height: 9px !important; border-width: 1.5px !important; }
+    #turn-status-badge, .turn-badge {
+        font-size: 0.7rem !important; padding: 3px 12px !important;
+        min-width: 0 !important; border-radius: 14px !important;
+    }
+
+    /* ─── منطقة اللعب واللوحة ─── */
+    .game-layout {
+        display: flex !important; flex-direction: column !important;
+        align-items: center !important; justify-content: flex-start !important;
+        padding-top: 68px !important; height: 100vh !important; overflow: hidden !important;
+    }
+    .main-container {
+        width: 94vmin !important; height: 94vmin !important;
+        max-width: 460px !important; max-height: 460px !important;
+        margin: 4px auto 0 !important; flex-shrink: 0 !important;
+        display: flex !important; align-items: center !important; justify-content: center !important;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       إصلاح شبكة الحروف السداسية
+       ═══════════════════════════════════════════════════════════════ */
+
+    /* ❶ تعريف --hex-size على .grid
+         الحساب: المنطقة البرتقالية ≈ 65.5vmin عرضاً
+         لتملأ 5 خلايا + إزاحة الصفوف الزوجية: 5.5 × size = 65.5vmin → size ≈ 11.9vmin
+         نستخدم flex لتمركز الشبكة بدلاً من absolute positioning */
+    .grid {
+        --hex-size: 11.9vmin;
+
+        position: absolute !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        width: 100% !important;
+        height: 100% !important;
+        z-index: 3 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    /* ❷ حجم الخلية + الخط */
+    .hex {
+        --hex-size: 11.9vmin !important;
+        font-size: 4.4vmin !important;
+        margin: 0 -0.2vmin !important;  /* تداخل أفقي طفيف لسد الفجوات الماسية */
+    }
+
+    /* ❸ الصفوف: تداخل رأسي لسد الفراغات بين الخلايا السداسية
+         زيادة طفيفة في التداخل لإغلاق الفجوات تماماً */
+    .hex-row {
+        display: flex !important;
+        justify-content: center !important;
+        margin-top: calc(var(--hex-size) * -0.295) !important;
+        margin-bottom: 0 !important;
+        width: 100% !important;
+    }
+    .hex-row:first-child {
+        margin-top: 0 !important;
+    }
+
+    /* ❹ إزاحة أفقية للصفوف الزوجية فقط (نصف عرض الخلية)
+         الصفوف الفردية (1,3,5): بلا إزاحة — تملأ العرض الكامل
+         الصفوف الزوجية (2,4): إزاحة +0.5 × size لليمين */
+    .hex-row:nth-child(1) {
+        transform: none !important;
+    }
+    .hex-row:nth-child(2) {
+        transform: translateX(calc(var(--hex-size) * 0.5)) !important;
+    }
+    .hex-row:nth-child(3) {
+        transform: none !important;
+    }
+    .hex-row:nth-child(4) {
+        transform: translateX(calc(var(--hex-size) * 0.5)) !important;
+    }
+    .hex-row:nth-child(5) {
+        transform: none !important;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       صندوق السؤال/الإجابة — تصميم جوال شامل
+       ═══════════════════════════════════════════════════════════════ */
+    .question-sidebar,
+    .question-sidebar.active {
+        position: fixed !important;
+        top: auto !important;
+        bottom: 68px !important;
+        left: 8px !important; right: 8px !important;
+        width: auto !important; max-width: none !important;
+        max-height: 38vh !important;
+        transform: none !important;
+        margin: 0 !important; padding: 0 !important;
+        border: none !important;
+        border-radius: 20px !important;
+        overflow: hidden !important;
+        background: linear-gradient(160deg, #3d1560 0%, #200a38 100%) !important;
+        box-shadow:
+            0 -4px 24px rgba(0, 0, 0, 0.55),
+            0 0 0 1.5px rgba(255, 235, 59, 0.3) inset,
+            0 1px 0 rgba(255, 255, 255, 0.06) inset !important;
+    }
+    .question-sidebar .sidebar-content {
+        padding: clamp(10px, 3vw, 16px) clamp(12px, 4vw, 18px) clamp(12px, 3vw, 18px) !important;
+        max-height: 38vh !important;
+        overflow-y: auto !important; -webkit-overflow-scrolling: touch !important;
+        display: flex !important; flex-direction: column !important; gap: 10px !important;
+    }
+    .question-sidebar .letter-indicator,
+    .question-sidebar #currentLetterDisplay {
+        font-size: clamp(0.95rem, 3.5vw, 1.1rem) !important;
+        font-weight: 800 !important; color: #ffe14d !important;
+        text-align: center !important; margin: 0 !important;
+        padding: 0 0 10px 0 !important;
+        border-bottom: 1px solid rgba(255, 235, 59, 0.2) !important;
+        text-shadow: 0 0 12px rgba(255, 152, 0, 0.45) !important;
+        line-height: 1.3 !important;
+    }
+    .question-sidebar .question-box {
+        background: rgba(0, 0, 0, 0.3) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-inline-start: 3px solid rgba(255, 140, 0, 0.65) !important;
+        border-radius: 14px !important;
+        padding: clamp(10px, 3vw, 14px) !important;
+        margin: 0 !important; min-height: 44px !important;
+        display: flex !important; align-items: center !important; justify-content: center !important;
+    }
+    .question-sidebar .question-box #questionText,
+    .question-sidebar #questionText {
+        font-size: clamp(0.85rem, 3.2vw, 1rem) !important;
+        line-height: 1.6 !important; color: #f0e8ff !important;
+        margin: 0 !important; text-align: center !important; word-break: break-word !important;
+    }
+    .question-sidebar #systemMessageDisplay {
+        font-size: clamp(0.78rem, 2.8vw, 0.88rem) !important;
+        margin: 0 !important; text-align: center !important; color: #5ae8ff !important;
+    }
+    .question-sidebar #buzzerBtn {
+        width: 100% !important;
+        font-size: clamp(0.95rem, 3.5vw, 1.05rem) !important;
+        padding: clamp(11px, 3.5vw, 14px) !important;
+        border-radius: 14px !important; margin: 0 !important; letter-spacing: 0.5px !important;
+    }
+    .question-sidebar #submitAnswerBtn,
+    .question-sidebar #voteSkipBtn {
+        width: 100% !important;
+        font-size: clamp(0.88rem, 3.2vw, 1rem) !important;
+        padding: clamp(10px, 3vw, 13px) !important;
+        border-radius: 13px !important; margin: 0 !important;
+    }
+    .question-sidebar #playerAnswerInput {
+        width: 100% !important; box-sizing: border-box !important;
+        padding: clamp(10px, 3vw, 13px) !important;
+        font-size: clamp(0.88rem, 3.2vw, 1rem) !important;
+        border-radius: 13px !important; margin: 0 !important;
+    }
+
+    /* ─── شريط التحكم السفلي ─── */
+    .help-slots {
+        position: fixed !important; bottom: 12px !important;
+        left: 8px !important; right: auto !important;
+        flex-direction: row !important; gap: 6px !important; z-index: 250 !important;
+    }
+    .help-slot { width: 46px !important; height: 46px !important; border-radius: 12px !important; }
+    .help-slot .help-icon { font-size: 18px !important; }
+    .help-slot .help-name { font-size: 6.5px !important; }
+    .surrender-btn {
+        bottom: 12px !important; right: 8px !important; top: auto !important;
+        width: 44px !important; height: 44px !important; font-size: 17px !important; z-index: 250 !important;
+    }
+    .pr-sound-float {
+        bottom: 12px !important; left: auto !important; right: 60px !important;
+        width: 44px !important; height: 44px !important; z-index: 99999 !important;
+    }
+    .ingame-quick-chat { top: 70px !important; left: 8px !important; bottom: auto !important; }
+    .quick-chat-trigger.ingame { width: 40px !important; height: 40px !important; font-size: 1rem !important; }
+}
+
+/* ============================================================================
+   ≤ 600px — جوالات
+   (main-container ↗ قليلاً لأن الشاشة أصغر والمتاح أقل)
+   ============================================================================ */
+@media (max-width: 600px) {
+    .top-bar { height: 58px !important; min-height: 58px !important; }
+    .game-layout { padding-top: 64px !important; }
+    .avatar { width: 34px !important; height: 34px !important; }
+    .info span { font-size: 11.5px !important; max-width: 60px !important; }
+    .round-text { font-size: 0.72rem !important; }
+    #turn-status-badge, .turn-badge { font-size: 0.64rem !important; padding: 3px 9px !important; }
+
+    .main-container {
+        width: 96vmin !important; height: 96vmin !important;
+        max-width: 400px !important; max-height: 400px !important;
+    }
+    /* زيادة طفيفة في الحجم لأن الـvmin على الجوال الصغير أصغر بالبكسل */
+    .grid { --hex-size: 12vmin; }
+    .hex { --hex-size: 12vmin !important; font-size: 4.5vmin !important; }
+
+    .question-sidebar,
+    .question-sidebar.active { bottom: 66px !important; max-height: 35vh !important; border-radius: 18px !important; }
+    .question-sidebar .sidebar-content { max-height: 35vh !important; }
+    .help-slot { width: 44px !important; height: 44px !important; }
+    .surrender-btn { width: 42px !important; height: 42px !important; }
+    .pr-sound-float { width: 42px !important; height: 42px !important; right: 58px !important; }
+}
+
+/* ============================================================================
+   ≤ 430px — جوالات متوسطة (Galaxy A / iPhone 14)
+   ============================================================================ */
+@media (max-width: 430px) {
+    .main-container {
+        width: 97vmin !important; height: 97vmin !important;
+        max-width: 360px !important; max-height: 360px !important;
+    }
+    .grid { --hex-size: 12.5vmin; }
+    .hex { --hex-size: 12.5vmin !important; font-size: 4.8vmin !important; }
+
+    .question-sidebar,
+    .question-sidebar.active {
+        bottom: 64px !important; max-height: 33vh !important;
+        left: 6px !important; right: 6px !important;
+    }
+    .question-sidebar .sidebar-content { max-height: 33vh !important; padding: 10px 12px 12px !important; }
+}
+
+/* ============================================================================
+   ≤ 380px — شاشات صغيرة جداً (iPhone SE / Galaxy A صغير)
+   ============================================================================ */
+@media (max-width: 380px) {
+    .main-container {
+        width: 98vmin !important; height: 98vmin !important;
+        max-width: 330px !important; max-height: 330px !important;
+    }
+    .grid { --hex-size: 13vmin; }
+    .hex { --hex-size: 13vmin !important; font-size: 5vmin !important; }
+
+    .info span { font-size: 10.5px !important; max-width: 52px !important; }
+    #turn-status-badge, .turn-badge { font-size: 0.58rem !important; padding: 2px 7px !important; }
+    .help-slot { width: 40px !important; height: 40px !important; }
+    .help-slot .help-icon { font-size: 16px !important; }
+    .surrender-btn { width: 38px !important; height: 38px !important; }
+    .pr-sound-float { width: 38px !important; height: 38px !important; right: 52px !important; }
+
+    .question-sidebar,
+    .question-sidebar.active {
+        bottom: 62px !important; max-height: 31vh !important;
+        left: 4px !important; right: 4px !important; border-radius: 16px !important;
+    }
+    .question-sidebar .sidebar-content { max-height: 31vh !important; padding: 9px 10px !important; }
+}

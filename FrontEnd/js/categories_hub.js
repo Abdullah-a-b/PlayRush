@@ -18,6 +18,7 @@
   }
   function toast(m) { if (typeof showToast === 'function') showToast(m); }
   function avatarUrl(a) {
+    if (typeof getCorrectAvatarUrl === 'function') return getCorrectAvatarUrl(a);
     if (typeof getValidAvatarUrl === 'function') return getValidAvatarUrl(a);
     return a || 'assets/avatars/avatar_1.svg';
   }

@@ -118,6 +118,25 @@ def respond_friend_request(friend_id: int, user_id: int, accept: bool) -> dict:
         db.close()
 
 
+def remove_friend(user_id: int, friend_id: int) -> dict:
+    """حذف الصداقة (المقبولة) بين مستخدمين — مسار موحّد بدل SQL المتناثر."""
+    _init()
+    db = SessionLocal()
+    try:
+        result = db.execute(text("""
+            DELETE FROM friendships
+            WHERE status = 'accepted'
+              AND ((user_id = :a AND friend_id = :b)
+                OR (user_id = :b AND friend_id = :a))
+        """), {"a": user_id, "b": friend_id})
+        db.commit()
+        if result.rowcount:
+            return {'ok': True, 'msg': 'تم حذف الصديق'}
+        return {'ok': False, 'msg': 'لم يُعثر على صداقة'}
+    finally:
+        db.close()
+
+
 def get_friends(user_id: int) -> list:
     """قائمة الأصدقاء المقبولين مع أسمائهم وحالة الاتصال."""
     _init()

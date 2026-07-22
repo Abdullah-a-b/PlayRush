@@ -19,6 +19,24 @@
   }
   function _toast(m) { if (typeof showToast === 'function') showToast(m); }
 
+  //  يحوّل أي قيمة أفاتار (مسار مرفوع / رابط قديم / اسم ملف) إلى رابط صالح
+  function _avatarSrc(v) {
+    if (typeof getCorrectAvatarUrl === 'function') return getCorrectAvatarUrl(v);
+    // احتياطي لو غاب utils.js
+    if (!v || String(v).trim() === '') return 'assets/avatars/avatar_1.svg';
+    const s = String(v).trim();
+    const stale = s.match(/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/.*)$/i);
+    if (stale) {
+      const p = stale[3];
+      if (p.startsWith('/uploads')) return (typeof API_URL !== 'undefined' ? API_URL : '') + p;
+      return 'assets/avatars/' + p.split('/').pop();
+    }
+    if (s.startsWith('/uploads')) return (typeof API_URL !== 'undefined' ? API_URL : '') + s;
+    if (s.startsWith('http') || s.startsWith('data:')) return s;
+    const name = s.split('/').pop();
+    return 'assets/avatars/' + (name.includes('.') ? name : name + '.svg');
+  }
+
   // اللعبة الحالية: من sessionStorage (lobby محدّدة) أو null (categories)
   function _currentGameMode() {
     // categories تحذف selectedGameMode عند دخولها، lobby تضبطها
@@ -44,7 +62,7 @@
                   width:380px; max-width:92vw; max-height:85vh; overflow-y:auto; padding:26px;
                   position:relative; box-shadow:0 0 30px rgba(0,0,0,0.6); text-align:center;">
         <span id="spClose" style="position:absolute; top:14px; left:18px; color:#aaa; font-size:26px; cursor:pointer; line-height:1;">✕</span>
-        <img id="spAvatar" src="" style="width:84px; height:84px; border-radius:50%; background:#222; border:3px solid #4a90e2; object-fit:cover;">
+        <img id="spAvatar" src="" onerror="this.onerror=null;this.src='assets/avatars/avatar_1.svg'" style="width:84px; height:84px; border-radius:50%; background:#222; border:3px solid #4a90e2; object-fit:cover;">
         <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-top:12px;">
           <img id="spFlag" src="" style="width:22px; height:15px; border-radius:2px;" onerror="this.style.display='none'">
           <h3 id="spName" style="color:#fff; margin:0; font-size:18px;">—</h3>
@@ -164,8 +182,8 @@
 
   function _onReportClick() {
     const token = _token();
+    if (!_state.targetId) { _toast('تعذّر تحديد اللاعب'); return; }
     socket.emit('report_player_by_id', { token, target_id: _state.targetId });
-    _toast('🚩 تم إرسال البلاغ');
   }
 
   // الدالة العامة: تفتح البروفايل بجلب البيانات من الخادم
@@ -179,6 +197,19 @@
 
   // استقبال البيانات وعرضها
   if (typeof socket !== 'undefined' && socket) {
+    socket.on('report_result', (res) => {
+      _toast((res && res.ok ? '✅ ' : '⚠️ ') + ((res && res.msg) || 'تعذّر إرسال البلاغ'));
+    });
+    socket.on('friend_result', (res) => {
+      _toast((res && res.ok ? '✅ ' : '⚠️ ') + ((res && res.msg) || 'تعذّر إتمام العملية'));
+      if (res && res.ok) _renderFriendBtn();
+    });
+    socket.on('block_result', (res) => {
+      if (res && !res.ok) { _state.relation = 'none'; _renderFriendBtn(); }
+    });
+    socket.on('unblock_result', (res) => {
+      if (res && !res.ok) { _state.relation = 'none'; _renderFriendBtn(); }
+    });
     socket.on('player_profile_result', (res) => {
       if (!res || !res.ok) { _toast((res && res.msg) || 'تعذّر جلب البروفايل'); return; }
       _ensureModal();
@@ -186,7 +217,7 @@
       _state.targetId = res.target_id;
       _state.relation = res.relation || 'none';
 
-      _modal.querySelector('#spAvatar').src = s.avatar || '';
+      _modal.querySelector('#spAvatar').src = _avatarSrc(s.avatar);
       _modal.querySelector('#spName').textContent = _esc(s.name || 'لاعب');
       const flag = _modal.querySelector('#spFlag');
       if (s.flag) { flag.src = s.flag; flag.style.display = ''; } else { flag.style.display = 'none'; }

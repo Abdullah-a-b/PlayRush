@@ -376,27 +376,32 @@ function initVolumeControls() {
     const sfxSlider   = document.getElementById('sfxSlider');
     const sfxValue    = document.getElementById('sfxValue');
     const sfxIcon     = document.getElementById('sfxIcon');
+    const notifSlider = document.getElementById('notifSlider');
+    const notifValue  = document.getElementById('notifValue');
+    const notifIcon   = document.getElementById('notifIcon');
 
     // مساعد: هل نحن الآن في مزامنة DOM من sound.js؟ (نتجنب الحلقة)
     const _isSyncing = () => window.PRSound?.isSyncingSliders?.() === true;
 
+    // هل الثلاثة كلهم صفر؟ → يجب الكتم
+    const _allZero = () =>
+        parseInt(musicSlider?.value ?? '0') === 0 &&
+        parseInt(sfxSlider?.value   ?? '0') === 0 &&
+        parseInt(notifSlider?.value ?? '0') === 0;
+
     if (musicSlider) {
         const saved = localStorage.getItem('musicSlider');
         if (saved) musicSlider.value = saved;
-        // إذا كان الصوت مكتوماً → أظهر 0 في السلايدر
         if (window.PRSound?.isMuted()) musicSlider.value = '0';
         updateVolumeUI(musicSlider, musicValue, musicIcon, '#facc15');
         musicSlider.addEventListener('input', () => {
             updateVolumeUI(musicSlider, musicValue, musicIcon, '#facc15');
             if (_isSyncing()) return;
             const mv = parseInt(musicSlider.value);
-            const sv = parseInt(sfxSlider?.value ?? '0');
             if (mv > 0 && window.PRSound?.isMuted()) {
-                // رُفع الموسيقى فوق 0 → ارفع الكتم
-                window.PRSound.setMuted(false, true);
-            } else if (mv === 0 && sv === 0 && !window.PRSound?.isMuted()) {
-                // كلا السلايدرين وصلا 0 → شغّل الكتم
-                window.PRSound.setMuted(true, true);
+                window.PRSound.setMuted(false, true);  // أي سلايدر > 0 → ارفع الكتم
+            } else if (_allZero() && !window.PRSound?.isMuted()) {
+                window.PRSound.setMuted(true, true);   // الثلاثة = 0 → كتم
             }
         });
     }
@@ -404,20 +409,37 @@ function initVolumeControls() {
     if (sfxSlider) {
         const saved = localStorage.getItem('sfxSlider');
         if (saved) sfxSlider.value = saved;
-        // إذا كان الصوت مكتوماً → أظهر 0 في السلايدر
         if (window.PRSound?.isMuted()) sfxSlider.value = '0';
         updateVolumeUI(sfxSlider, sfxValue, sfxIcon, '#00d2ff');
         sfxSlider.addEventListener('input', () => {
             updateVolumeUI(sfxSlider, sfxValue, sfxIcon, '#00d2ff');
             if (_isSyncing()) return;
             const sv = parseInt(sfxSlider.value);
-            const mv = parseInt(musicSlider?.value ?? '0');
             if (sv > 0 && window.PRSound?.isMuted()) {
-                // رُفع SFX فوق 0 → ارفع الكتم
                 window.PRSound.setMuted(false, true);
-            } else if (sv === 0 && mv === 0 && !window.PRSound?.isMuted()) {
-                // كلا السلايدرين وصلا 0 → شغّل الكتم
+            } else if (_allZero() && !window.PRSound?.isMuted()) {
                 window.PRSound.setMuted(true, true);
+            }
+        });
+    }
+
+    // ── سلايدر صوت الإشعارات — متكامل مع نظام الكتم ──
+    if (notifSlider) {
+        const saved = localStorage.getItem('notifSlider');
+        notifSlider.value = saved !== null ? saved : '80';
+        if (window.PRSound?.isMuted()) notifSlider.value = '0';
+        updateVolumeUI(notifSlider, notifValue, notifIcon, '#a78bfa');
+        notifSlider.addEventListener('input', () => {
+            updateVolumeUI(notifSlider, notifValue, notifIcon, '#a78bfa');
+            if (_isSyncing()) return;
+            const nv = parseInt(notifSlider.value);
+            if (nv > 0 && window.PRSound?.isMuted()) {
+                window.PRSound.setMuted(false, true);  // رفع الكتم
+            } else if (_allZero() && !window.PRSound?.isMuted()) {
+                window.PRSound.setMuted(true, true);   // كتم
+            } else if (nv > 0) {
+                // معاينة فورية عند تحريك السلايدر (فقط لو غير مكتوم)
+                window.PRSound?.playNotif?.();
             }
         });
     }

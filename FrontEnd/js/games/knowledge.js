@@ -87,9 +87,21 @@
   }
 
   function getValidAvatar(src) {
-    if (!src) return '../assets/avatars/avatar_1.svg';
-    if (src.startsWith('http') || src.startsWith('data:') || src.startsWith('../') || src.startsWith('/')) return src;
-    return `../assets/avatars/${src}`;
+    if (!src || String(src).trim() === '') return '../assets/avatars/avatar_1.svg';
+    let v = String(src).trim();
+    // نعالج الروابط القديمة الثابتة (127.0.0.1/localhost) المحفوظة قبل التحديث
+    const staleMatch = v.match(/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/.*)$/i);
+    if (staleMatch) {
+      const path = staleMatch[3];
+      if (path.startsWith('/uploads')) return (typeof API_URL !== 'undefined' ? API_URL : '') + path;
+      const fn = path.split('/').pop();
+      return '../assets/avatars/' + fn;
+    }
+    if (v.startsWith('/uploads')) return (typeof API_URL !== 'undefined' ? API_URL : '') + v;
+    if (v.startsWith('http') || v.startsWith('data:')) return v;
+    if (v.startsWith('../') || v.startsWith('/')) { const n = v.split('/').pop(); return '../assets/avatars/' + (n.includes('.') ? n : n + '.svg'); }
+    const name = v.split('/').pop();
+    return '../assets/avatars/' + (name.includes('.') ? name : name + '.svg');
   }
   function setStatus(t, type) {
     const el = $('statusMsg');
@@ -230,7 +242,25 @@
     t._to = setTimeout(() => { t.style.opacity = '0'; }, 3000);
   }
 
-  socket.on('room_joined', (data) => {
+  
+/* ================================================================
+   🎮 showMatchReveal — كشف التطابق عند بدء المباراة
+   ================================================================ */
+function showMatchReveal(myName, myAvatarSrc, oppName, oppAvatarSrc) {
+  var overlay = document.getElementById('matchRevealOverlay');
+  if (!overlay) return;
+  var ge = function(id){ return document.getElementById(id); };
+  if (myName)       ge('mrMyName').textContent   = myName;
+  if (myAvatarSrc)  ge('mrMyAvatar').src         = myAvatarSrc;
+  if (oppName)      ge('mrOppName').textContent   = oppName;
+  if (oppAvatarSrc) ge('mrOppAvatar').src         = oppAvatarSrc;
+  overlay.classList.add('show');
+  var bar = ge('mrReadyFill');
+  if (bar) { bar.style.width = '0%'; void bar.offsetWidth; bar.style.width = '100%'; }
+  setTimeout(function(){ overlay.classList.remove('show'); }, 3200);
+}
+
+socket.on('room_joined', (data) => {
     const players = data.players || [];
     //  الجذر الأمتن: الخادم يرسل your_sid صراحةً (يعرف sid المستقبِل
     // يقيناً). نعتمده أولاً — لا تخمين من socket.id ولا مطابقة اسم قد تفشل.
@@ -249,6 +279,20 @@
     $('myAvatarImg').src          = playersStatsData.me.avatar;
     $('opponentName').textContent = playersStatsData.opponent.name;
     $('opponentAvatarImg').src    = playersStatsData.opponent.avatar;
+    // 🎮 كشف التطابق بين اللاعبين
+    if (playersStatsData.opponent && playersStatsData.opponent.name) {
+      showMatchReveal(
+        playersStatsData.me.name, playersStatsData.me.avatar,
+        playersStatsData.opponent.name, playersStatsData.opponent.avatar
+      );
+    }
+    // 🎮 كشف التطابق بين اللاعبين
+    if (playersStatsData.opponent && playersStatsData.opponent.name) {
+      showMatchReveal(
+        playersStatsData.me.name, playersStatsData.me.avatar,
+        playersStatsData.opponent.name, playersStatsData.opponent.avatar
+      );
+    }
     if (typeof data.opponent_user_id !== 'undefined') _opponentUserId = data.opponent_user_id;
     if (typeof data.opponent_relation === 'string') applyOpponentRelation(data.opponent_relation);
     socket.emit('knowledge_state', { roomCode });
@@ -616,7 +660,7 @@
   cancelReportBtn?.addEventListener('click', () => { reportModal.style.display = 'none'; });
   document.querySelectorAll('.report-reason').forEach(btn => {
     btn.addEventListener('click', () => {
-      socket.emit('report_opponent', { roomCode, token, reason: btn.dataset.reason });
+      socket.emit('report_opponent', { roomCode, token, reason: btn.dataset.reason, target_id: _opponentUserId, game_mode: window.CURRENT_GAME });
       reportModal.style.display = 'none';
     });
   });
@@ -688,20 +732,20 @@
     if (blockState || friendState === 'pending') return;
     if (friendState === 'friends') {
       _pendingFriendAction = 'remove';
-      socket.emit('remove_friend_opponent', { roomCode, token });
+      socket.emit('remove_friend_opponent', { roomCode, token, target_id: _opponentUserId });
     } else if (friendState === 'incoming') {
       if (_opponentUserId) socket.emit('respond_friend_request', { token, requester_id: _opponentUserId, accept: true });
       friendState = 'friends'; renderFriendButton();
       showToast('✅ تمت إضافة الصديق');
     } else {
       _pendingFriendAction = 'add';
-      socket.emit('friend_request_opponent', { roomCode, token });
+      socket.emit('friend_request_opponent', { roomCode, token, target_id: _opponentUserId });
     }
     document.getElementById('playerProfileModal').style.display = 'none';
   });
   blockUserBtn?.addEventListener('click', () => {
-    if (blockState) socket.emit('unblock_opponent', { roomCode, token });
-    else socket.emit('block_opponent', { roomCode, token });
+    if (blockState) socket.emit('unblock_opponent', { roomCode, token, target_id: _opponentUserId });
+    else socket.emit('block_opponent', { roomCode, token, target_id: _opponentUserId });
     document.getElementById('playerProfileModal').style.display = 'none';
   });
   socket.on('friend_result', (data) => {

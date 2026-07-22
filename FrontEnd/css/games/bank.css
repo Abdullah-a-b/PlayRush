@@ -239,3 +239,61 @@ body{font-family:'Tajawal','Segoe UI',sans-serif;
   display: flex; align-items: center; justify-content: center; line-height: 1;
   box-shadow: 0 0 0 2px rgba(13, 17, 23, .85); }
 .bank-help-btn.depleted .hqty { background: #777; }
+
+
+/* ===================================================================
+   📱 رسبونسف الجوال — البنك
+   =================================================================== */
+
+/* ── متوسط (<= 768px): إحماء بسيط ── */
+@media (max-width: 768px) {
+  .game-topbar { padding: 8px 14px; }
+  .pname { max-width: 90px; }
+}
+
+/* ── جوال صغير (<= 600px): الضغط الفعلي ── */
+@media (max-width: 600px) {
+  /* == الشريط العلوي == */
+  .game-topbar { padding: 6px 10px; gap: 4px; }
+  .avatar-wrap img { width: 36px !important; height: 36px !important; }
+  .pname { max-width: 74px; font-size: .78rem; }
+  .bank-safe { font-size: 1.2rem; }
+  .game-center-head .game-title { font-size: .90rem; }
+  .round-badges { gap: 5px; margin-top: 3px; }
+  .round-dot { width: 20px; height: 20px; font-size: .68rem; }
+
+  /* == منطقة اللعب == */
+  .bank-main { padding: 16px 12px; gap: 14px; }
+  .temp-timer-row { gap: 14px; }
+  .temp-balance { padding: 8px 16px; }
+  .tb-value { font-size: 1.5rem; }
+  .turn-timer { width: 52px; height: 52px; font-size: 1.25rem; }
+  .question-card { padding: 14px 12px; min-height: 90px; }
+  .q-text { font-size: 1.0rem; line-height: 1.5; }
+
+  /* == أزرار الإجابة والبنك: يملآن الصف بدل أن ينكسرا == */
+  .action-buttons { width: 100%; gap: 10px; }
+  .btn-answer, .btn-bank {
+    flex: 1 1 130px; padding: 12px 10px;
+    font-size: .92rem; justify-content: center;
+  }
+
+  /* == صندوق الكتابة المضمّن == */
+  .answer-box { max-width: 100%; }
+
+  /* == الأزرار الثابتة: فوق الشريط الموحّد (40px) == */
+  .surrender-btn  { bottom: 56px !important; right: 12px !important; width: 42px; height: 42px; font-size: .95rem; }
+  .bank-helps-bar { bottom: 106px !important; left: 12px !important; gap: 6px; }
+  .ingame-quick-chat { top: 70px !important; left: 10px !important; }
+  .quick-chat-trigger.ingame { width: 40px; height: 40px; font-size: 1rem; }
+  .opp-activity { top: 70px !important; right: 12px !important; font-size: .78rem; }
+}
+
+/* ── شاشات ضيّقة جداً (<= 390px) ── */
+@media (max-width: 390px) {
+  .pname { max-width: 58px; font-size: .74rem; }
+  .bank-safe { font-size: 1.05rem; }
+  .btn-answer, .btn-bank { flex: 1 1 100px; font-size: .85rem; padding: 11px 8px; }
+  .bank-main { gap: 10px; }
+  .round-dot { width: 18px; height: 18px; }
+}

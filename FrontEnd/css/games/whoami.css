@@ -67,9 +67,65 @@
 .answer-box button{padding:12px 22px;border:none;border-radius:10px;cursor:pointer;
   background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;font-weight:800}
 
-/* ⏱️ حاوية بار الكشف: تحت بطاقة التلميحات، بعرض محدود بالوسط
-   نُلغي هنا height:6px و overflow:hidden الموروثَين من career.css */
+/* ⏱️ حاوية بار الكشف */
 .reveal-timer-wrap{width:min(560px,88%);margin:12px auto 4px;
   height:auto !important;overflow:visible !important;
   background:rgba(255,255,255,.08);border-radius:8px;padding:3px;
   box-shadow:inset 0 1px 3px rgba(0,0,0,.4)}
+
+
+/* ===================================================================
+   📱 رسبونسف الجوال — من أنا
+   • شريط المساعدات يصبح أفقياً على الجوال (بدل عمودي) ليأخذ ارتفاع
+     صف واحد فقط، فلا يتداخل مع صندوق الإجابة.
+   • صندوق الإجابة يرتفع فوق شريط المساعدات مباشرة.
+   =================================================================== */
+
+@media (max-width: 600px) {
+  /* == قائمة التلميحات == */
+  .whoami-hints { max-height: 30vh !important; }
+  .hint-card { font-size: 13px; padding: 10px 12px; line-height: 1.6; }
+  .hint-card .hint-num { width: 20px; height: 20px; font-size: 11px; }
+
+  /* == بار الكشف == */
+  .reveal-timer-wrap { margin: 8px auto 2px !important; }
+
+  /* == شريط المساعدات: أفقي بدل عمودي، على الشريط السفلي الموحّد == */
+  .bank-helps-bar {
+    bottom: 12px !important;
+    left: 12px !important;
+    right: auto !important;
+    flex-direction: row !important;
+    gap: 6px !important;
+    z-index: 250 !important;
+  }
+  .bank-help-btn { width: 44px !important; height: 44px !important; }
+
+  /* == زر الانسحاب: بجوار المساعدات في نفس الصف == */
+  .surrender-btn {
+    bottom: 12px !important;
+    right: 12px !important;
+    width: 44px !important;
+    height: 44px !important;
+  }
+
+  /* == صندوق الإجابة: فوق صف المساعدات مباشرة (12 + 44 + 10 = 66px) == */
+  .answer-box {
+    bottom: 72px !important;
+    width: min(calc(100vw - 20px), 480px) !important;
+    padding: 12px 14px !important;
+    z-index: 950 !important;
+  }
+
+  /* == الشريط الجانبي العلوي == */
+  .ingame-quick-chat { top: 70px !important; left: 10px !important; }
+  .quick-chat-trigger.ingame { width: 40px !important; height: 40px !important; }
+}
+
+@media (max-width: 390px) {
+  .whoami-hints { max-height: 24vh !important; }
+  .hint-card { font-size: 12px; padding: 8px 10px; }
+  .bank-help-btn { width: 40px !important; height: 40px !important; }
+  .surrender-btn { width: 40px !important; height: 40px !important; }
+  .answer-box { bottom: 66px !important; }
+}

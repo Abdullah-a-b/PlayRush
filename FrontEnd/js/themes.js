@@ -17,6 +17,13 @@
     theme_diamond: { name: 'الماس', icon: '💎', vars: { '--theme-primary': '#0288d1', '--theme-accent': '#b3e5fc', '--theme-bg1': '#070f14', '--theme-bg2': '#0d1f28', '--theme-bg3': '#10303d' } },
   };
 
+  function _themeKey() {
+    const tok = (typeof getToken === 'function') ? getToken()
+      : (localStorage.getItem('token') || sessionStorage.getItem('token') || '');
+    const suffix = tok ? tok.slice(-14) : '';
+    return suffix ? ('equipped_theme_' + suffix) : 'equipped_theme';
+  }
+
   function _token() {
     return (typeof getToken === 'function') ? getToken()
       : (localStorage.getItem('token') || sessionStorage.getItem('token'));
@@ -115,18 +122,18 @@
     if (theme) {
       Object.entries(theme.vars).forEach(([k, v]) => root.style.setProperty(k, v));
       root.setAttribute('data-theme', themeId);
-      try { localStorage.setItem('equipped_theme', themeId); } catch (_) {}
+      try { localStorage.setItem(_themeKey(), themeId); } catch (_) {}
       _injectFxKeyframes();
       _spawnFx(themeId);
     } else {
       root.removeAttribute('data-theme');
-      try { localStorage.removeItem('equipped_theme'); } catch (_) {}
+      try { localStorage.removeItem(_themeKey()); } catch (_) {}
       _clearFx();
     }
   };
 
   // تطبيق الثيم المحفوظ فوراً
-  try { const s = localStorage.getItem('equipped_theme'); if (s) window.applyTheme(s); } catch (_) {}
+  try { const s = localStorage.getItem(_themeKey()); if (s) window.applyTheme(s); } catch (_) {}
 
   // ===== شبكة اختيار الثيم في الإعدادات =====
   let _ownedThemes = [];

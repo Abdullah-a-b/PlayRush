@@ -115,7 +115,12 @@
   if (searchBtn && searchInput) {
     const doSearch = () => {
       let q = (searchInput.value || '').trim().toUpperCase();
-      if (!q) return;
+      if (!q) {
+        // حقل فارغ → نصفّر النتائج
+        const box = document.getElementById('friendSearchResult');
+        if (box) box.innerHTML = '';
+        return;
+      }
       // نقبل الإدخال مع أو بدون البادئة PR-
       if (!q.startsWith('PR-') && /^\d+$/.test(q)) q = 'PR-' + q;
       const resultBox = document.getElementById('friendSearchResult');
@@ -177,6 +182,7 @@
           setTimeout(() => { const q = document.getElementById('friendSearchInput'); if (q && q.value) document.getElementById('friendSearchBtn').click(); }, 400);
         } else {
           socket.emit('send_friend_request_by_id', { token, friend_id: p.id });
+          window.PRSound?.playFriendReq?.();
           if (typeof showToast === 'function') showToast('✅ أُرسل طلب الصداقة');
           btn.disabled = true;
           btn.textContent = 'طلب معلّق';

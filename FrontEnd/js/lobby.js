@@ -10,6 +10,29 @@ if (!token) window.location.replace('login.html');
 
 // الاتصال بالسوكيت
 const socket = io(API_URL, { transports: ['websocket', 'polling'], upgrade: true });
+
+// ============================================================
+//  رمز جلسة ثابت لوضع الجمعات — ينجو من إعادة اتصال السوكت
+//  (لو خرجت لتليجرام ورجعت وقد تغيّر sid، يظل الربط يوصل للصفحة)
+// ============================================================
+function getPartyToken() {
+    let t = sessionStorage.getItem('partyToken');
+    if (!t) {
+        t = 'pt_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        sessionStorage.setItem('partyToken', t);
+    }
+    return t;
+}
+socket.on('connect', () => {
+    const t = getPartyToken();
+    socket.emit('register_party_token', { party_token: t });
+    socket.emit('check_host_link',      { party_token: t });
+});
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        socket.emit('check_host_link', { party_token: getPartyToken() });
+    }
+});
 //  ربط معالج الحظر الإجباري — يستجيب لرسائل force_logout من السيرفر
 if (typeof attachForceLogoutHandler === 'function') attachForceLogoutHandler(socket);
 
@@ -64,6 +87,7 @@ socket.on('new_notification', (notif) => {
         badge.textContent = (cur + 1) > 9 ? '9+' : (cur + 1);
         badge.style.display = 'flex';
     }
+    window.PRSound?.playNotif?.();
     if (typeof showGlobalToast === 'function') showGlobalToast('🔔 ' + notif.message);
     fetchNotifs();  // نعيد جلب القائمة (مع throttle)
 });
@@ -575,6 +599,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     quickPlayBtn?.addEventListener('click', () => {
         lobbyMainContent.style.display   = 'none';
         matchmakingScreen.style.display  = 'flex';
+        document.body.classList.add('mm-active');
         mmRadar.style.display            = 'block';
         mmTeamsPreview.style.display     = 'none';
         mmCountdown.style.display        = 'none';
@@ -592,6 +617,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     cancelMatchmakingBtn?.addEventListener('click', () => {
         socket.emit('cancel_quick_play');
         matchmakingScreen.style.display = 'none';
+        document.body.classList.remove('mm-active');
         lobbyMainContent.style.display  = 'block';
     });
 
@@ -605,6 +631,24 @@ window.addEventListener('DOMContentLoaded', async () => {
         cancelMatchmakingBtn.textContent = 'رجوع';
     });
 
+
+    // مساعدة: معالجة مسار الأفاتار للعرض في شاشة التطابق
+    function mmAvatarSrc(src) {
+        if (!src || String(src).trim() === '') return 'assets/avatars/avatar_1.svg';
+        let v = String(src).trim();
+        // نعالج الروابط القديمة الثابتة (127.0.0.1/localhost)
+        const staleMatch = v.match(/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/.*)$/i);
+        if (staleMatch) {
+            const path = staleMatch[3];
+            if (path.startsWith('/uploads')) return (typeof API_URL !== 'undefined' ? API_URL : '') + path;
+            const fn = path.split('/').pop();
+            return `assets/avatars/${fn}`;
+        }
+        if (v.startsWith('/uploads')) return (typeof API_URL !== 'undefined' ? API_URL : '') + v;
+        if (v.startsWith('http') || v.startsWith('data:') || v.startsWith('/') || v.startsWith('../')) return v;
+        const name = v.split('/').pop();
+        return `assets/avatars/${name.includes('.') ? name : name + '.svg'}`;
+    }
     socket.on('match_found', (data) => {
         try {
             sessionStorage.setItem('gameRoomCode', data.room_code);
@@ -619,6 +663,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             if (fm) fm.style.display = 'none';
             lobbyMainContent.style.display  = 'none';
             matchmakingScreen.style.display = 'flex';
+            document.body.classList.add('mm-active');
 
             mmRadar.style.display          = 'none';
             mmTeamsPreview.style.display   = 'flex';
@@ -635,10 +680,10 @@ window.addEventListener('DOMContentLoaded', async () => {
                 const color = p.color || p.team || (i === 0 ? 'green' : 'orange');
                 if (color === 'green') {
                     document.getElementById('mmGreenName').textContent = p.name || 'لاعب';
-                    document.getElementById('mmGreenAvatar').src       = p.avatar || 'assets/avatars/avatar_1.svg';
+                    document.getElementById('mmGreenAvatar').src       = mmAvatarSrc(p.avatar);
                 } else {
                     document.getElementById('mmOrangeName').textContent = p.name || 'لاعب';
-                    document.getElementById('mmOrangeAvatar').src       = p.avatar || 'assets/avatars/avatar_1.svg';
+                    document.getElementById('mmOrangeAvatar').src       = mmAvatarSrc(p.avatar);
                 }
             });
 
@@ -728,6 +773,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     function enterWaitingScreen(code, isHost) {
         lobbyMainContent.style.display   = 'none';
         matchmakingScreen.style.display  = 'none';
+        document.body.classList.remove('mm-active');
         waitingScreen.style.display      = 'flex';
         document.getElementById('roomCodeDisplay').textContent = code;
 
@@ -840,7 +886,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const timerText   = document.getElementById('timerText');
 
     generateBtn?.addEventListener('click', () => {
-        socket.emit('generate_host_code', {});
+        socket.emit('generate_host_code', { party_token: getPartyToken() });
         generateBtn.style.display = 'none';
         codeArea.style.display    = 'block';
         codeText.innerText        = 'جاري...';
@@ -849,34 +895,40 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     socket.on('receive_host_code', (data) => {
-        codeText.innerText = data.code;
-
-        let totalTime   = 20;
-        let displayTime = 5;
-
-        timerText.innerText   = `يختفي العرض بعد: ${displayTime}`;
-        timerText.style.color = 'red';
+        codeText.innerText     = data.code;
         codeText.style.display = 'block';
+
+        // زر فتح تليجرام تلقائياً بالرمز (رابط عميق) — ربط بضغطة بلا كتابة
+        const botUser = (data.bot || '@p_rushbot').replace('@', '');
+        let dl = document.getElementById('tgDeepLink');
+        if (!dl) {
+            dl = document.createElement('a');
+            dl.id = 'tgDeepLink';
+            dl.target = '_blank';
+            dl.rel = 'noopener';
+            dl.style.cssText = 'display:block;margin:16px auto 0;background:#229ED9;color:#fff;padding:13px 18px;border-radius:10px;font-weight:bold;text-decoration:none;max-width:340px;';
+            if (codeArea) codeArea.appendChild(dl);
+        }
+        dl.href = `https://t.me/${botUser}?start=${data.code}`;
+        dl.innerHTML = '📲 افتح تليجرام واربط تلقائياً';
+        dl.style.display = 'block';
+
+        let totalTime = 30; // 30 ثانية — قصيرة عمداً حتى لا يلتقط أحدٌ الرمز ويخرّب على المستضيف
+        timerText.style.color = '#bbb';
+        timerText.innerText   = `الرمز صالح لمدة ${totalTime} ثانية`;
 
         if (codeInterval) clearInterval(codeInterval);
 
         codeInterval = setInterval(() => {
             totalTime--;
-            displayTime--;
-
-            if (displayTime > 0) {
-                timerText.innerText = `يختفي العرض بعد: ${displayTime}`;
-            } else if (displayTime === 0) {
-                codeText.innerText    = '****';
-                timerText.innerText   = `الرمز فعال لمدة ${totalTime} ثانية...`;
-                timerText.style.color = '#bbb';
-            } else if (totalTime > 0) {
-                timerText.innerText = `الرمز فعال لمدة ${totalTime} ثانية...`;
+            if (totalTime > 0) {
+                timerText.innerText = `الرمز صالح لمدة ${totalTime} ثانية`;
             } else {
                 clearInterval(codeInterval);
                 codeText.innerText    = '❌';
                 timerText.innerText   = 'انتهت صلاحية الرمز!';
                 timerText.style.color = 'red';
+                if (dl) dl.style.display = 'none';
                 setTimeout(() => {
                     if (generateBtn) generateBtn.style.display = 'block';
                     if (codeArea)    codeArea.style.display    = 'none';
@@ -886,7 +938,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     socket.on('host_linked_success', () => {
+        if (window.__hostLinkedHandled) return;   // مرة واحدة فقط لكل تحميل صفحة
+        window.__hostLinkedHandled = true;
         if (codeInterval) clearInterval(codeInterval);
+        // نمسح التوكن حتى لا يُعاد فحص الربط ويعيد فتح الصفحة عند الرجوع للوبي
+        try { sessionStorage.removeItem('partyToken'); } catch (e) {}
         if (partyModeModal) {
             partyModeModal.innerHTML = `
                 <div style="background:#1a1a2e;padding:40px;border-radius:20px;color:white;width:90%;max-width:500px;box-shadow:0 0 30px rgba(0,255,136,0.5);border:2px solid #00ff88;">

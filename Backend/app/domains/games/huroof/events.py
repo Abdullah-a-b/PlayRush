@@ -1205,26 +1205,17 @@ def register_huroof_events(sio):
     @sio.event
     async def report_opponent(sid, data):
         """
-        بلاغ عن الخصم. يُقبل فقط من لاعب فعلي في غرفة فعلية ضد الهدف.
-        data: { roomCode, token, reason }
+        بلاغ عن الخصم. يُحقّق الهوية عبر التوكن، ويحدّد الهدف من الغرفة إن توفّرت
+        على هذا الـ worker، وإلا يعتمد target_id المرسل من الواجهة (يعمل مع تعدّد الـ workers).
+        data: { roomCode, token, reason, target_id?, game_mode? }
         """
+        data = data or {}
         room_code = data.get('roomCode')
         token = data.get('token')
         reason = data.get('reason', 'other')
+        game_mode = data.get('game_mode')
+        client_target = data.get('target_id')
 
-        room = get_room_state(room_code)
-        if not room:
-            await sio.emit('report_result', {'ok': False, 'msg': 'الغرفة غير موجودة'}, to=sid)
-            return
-
-        # المُبلّغ لازم يكون لاعباً في الغرفة
-        reporter = next((p for p in room['players'] if p['sid'] == sid), None)
-        target = next((p for p in room['players'] if p['sid'] != sid), None)
-        if not reporter or not target:
-            await sio.emit('report_result', {'ok': False, 'msg': 'لست في هذه المباراة'}, to=sid)
-            return
-
-        # نتحقق من هوية المُبلّغ عبر التوكن
         from app.sockets.auth_helper import verify_socket_token
         user, db = verify_socket_token(token)
         if not user:
@@ -1233,9 +1224,23 @@ def register_huroof_events(sio):
         reporter_id = user.id
         db.close()
 
-        # نجلب user_id الهدف من خريطة الغرفة
-        user_ids = room.get('user_ids') or {}
-        target_id = target.get('user_id') or user_ids.get(target['sid'])
+        # 1) نحاول التحديد من الغرفة (تحقّق أدق أنّ الهدف خصم فعلي) إن كانت متاحة هنا
+        target_id = None
+        room = get_room_state(room_code) if room_code else None
+        if room:
+            target = next((p for p in room['players'] if p['sid'] != sid), None)
+            if target:
+                target_id = target.get('user_id') or (room.get('user_ids') or {}).get(target['sid'])
+            if not game_mode:
+                game_mode = room.get('game_mode')
+
+        # 2) fallback: هوية الخصم من الواجهة — تعمل عبر أي worker بلا اعتماد على الغرفة
+        if not target_id and client_target is not None:
+            try:
+                target_id = int(client_target)
+            except (TypeError, ValueError):
+                target_id = None
+
         if not target_id:
             await sio.emit('report_result', {'ok': False, 'msg': 'تعذّر تحديد الخصم'}, to=sid)
             return
@@ -1246,155 +1251,13 @@ def register_huroof_events(sio):
             target_id=target_id,
             reason=reason,
             room_code=room_code,
-            game_mode=room.get('game_mode', 'huroof'),
+            game_mode=game_mode or 'unknown',
         )
         await sio.emit('report_result', {'ok': result['ok'], 'msg': result['msg']}, to=sid)
 
     # ==========================================
     # الصداقة والحظر (من بروفايل الخصم)
     # ==========================================
-    @sio.event
-    async def friend_request_opponent(sid, data):
-        """طلب صداقة للخصم. data: { roomCode, token }"""
-        room = get_room_state(data.get('roomCode'))
-        if not room:
-            await sio.emit('friend_result', {'ok': False, 'msg': 'الغرفة غير موجودة'}, to=sid)
-            return
-        target = next((p for p in room['players'] if p['sid'] != sid), None)
-        if not target:
-            await sio.emit('friend_result', {'ok': False, 'msg': 'لا يوجد خصم'}, to=sid)
-            return
-
-        from app.sockets.auth_helper import verify_socket_token
-        user, db = verify_socket_token(data.get('token'))
-        if not user:
-            await sio.emit('friend_result', {'ok': False, 'msg': 'يجب تسجيل الدخول'}, to=sid)
-            return
-        requester_id = user.id
-        db.close()
-
-        target_id = target.get('user_id') or (room.get('user_ids') or {}).get(target['sid'])
-        if not target_id:
-            await sio.emit('friend_result', {'ok': False, 'msg': 'تعذّر تحديد الخصم'}, to=sid)
-            return
-
-        from app.domains.users.friends import send_friend_request
-        result = send_friend_request(requester_id, target_id)
-        await sio.emit('friend_result', result, to=sid)
-        # نُشعر الخصم بطلب وارد: إشعار دائم + دفع حي لو متصل
-        if result['ok']:
-            from app.domains.notifications.service import add_notification, find_online_sid
-            notif = add_notification(
-                target_id, 'friend_request',
-                f'أرسل لك {user.player_name} طلب صداقة',
-                sender_id=requester_id
-            )
-            online_sid = find_online_sid(target_id)
-            if online_sid and notif:
-                await sio.emit('new_notification', notif, to=online_sid)
-            # 🆕 toast تفاعلي لحظي للخصم داخل المباراة (غير معطّل)
-            opp = next((p for p in room['players'] if p['sid'] != sid), None)
-            if opp:
-                await sio.emit('ingame_friend_request', {
-                    'requesterId': requester_id,
-                    'requesterName': user.player_name,
-                }, to=opp['sid'])
-
-    @sio.event
-    async def remove_friend_opponent(sid, data):
-        """حذف الخصم من الأصدقاء (في المباراة الودية). data: { roomCode, token }"""
-        room = get_room_state(data.get('roomCode'))
-        if not room:
-            await sio.emit('friend_result', {'ok': False, 'msg': 'الغرفة غير موجودة'}, to=sid)
-            return
-        target = next((p for p in room['players'] if p['sid'] != sid), None)
-        if not target:
-            await sio.emit('friend_result', {'ok': False, 'msg': 'لا يوجد خصم'}, to=sid)
-            return
-
-        from app.sockets.auth_helper import verify_socket_token
-        user, db = verify_socket_token(data.get('token'))
-        if not user:
-            await sio.emit('friend_result', {'ok': False, 'msg': 'يجب تسجيل الدخول'}, to=sid)
-            return
-        uid = user.id
-        db.close()
-
-        target_id = target.get('user_id') or (room.get('user_ids') or {}).get(target['sid'])
-        if not target_id:
-            await sio.emit('friend_result', {'ok': False, 'msg': 'تعذّر تحديد الخصم'}, to=sid)
-            return
-
-        from app.infrastructure.database import engine
-        from sqlalchemy import text
-        try:
-            with engine.connect() as conn:
-                conn.execute(text("""
-                    DELETE FROM friendships
-                    WHERE status = 'accepted'
-                      AND ((user_id = :a AND friend_id = :b) OR (user_id = :b AND friend_id = :a))
-                """), {"a": uid, "b": target_id})
-                conn.commit()
-            await sio.emit('friend_result', {'ok': True, 'msg': 'تم حذف الصديق'}, to=sid)
-            # 🆕 نُعلم الطرف الآخر أن الصداقة أُزيلت ليُحدّث زره إلى "إضافة صديق"
-            await sio.emit('opponent_unfriended', {}, to=target['sid'])
-        except Exception:
-            await sio.emit('friend_result', {'ok': False, 'msg': 'تعذّر حذف الصديق'}, to=sid)
-
-    @sio.event
-    async def block_opponent(sid, data):
-        """حظر الخصم. data: { roomCode, token }"""
-        room = get_room_state(data.get('roomCode'))
-        if not room:
-            await sio.emit('block_result', {'ok': False, 'msg': 'الغرفة غير موجودة'}, to=sid)
-            return
-        target = next((p for p in room['players'] if p['sid'] != sid), None)
-        if not target:
-            await sio.emit('block_result', {'ok': False, 'msg': 'لا يوجد خصم'}, to=sid)
-            return
-
-        from app.sockets.auth_helper import verify_socket_token
-        user, db = verify_socket_token(data.get('token'))
-        if not user:
-            await sio.emit('block_result', {'ok': False, 'msg': 'يجب تسجيل الدخول'}, to=sid)
-            return
-        blocker_id = user.id
-        db.close()
-
-        target_id = target.get('user_id') or (room.get('user_ids') or {}).get(target['sid'])
-        if not target_id:
-            await sio.emit('block_result', {'ok': False, 'msg': 'تعذّر تحديد الخصم'}, to=sid)
-            return
-
-        from app.domains.users.friends import block_user
-        result = block_user(blocker_id, target_id)
-        await sio.emit('block_result', result, to=sid)
-
-    @sio.event
-    async def unblock_opponent(sid, data):
-        """رفع الحظر عن الخصم. data: { roomCode, token }"""
-        room = get_room_state(data.get('roomCode'))
-        if not room:
-            await sio.emit('unblock_result', {'ok': False, 'msg': 'الغرفة غير موجودة'}, to=sid)
-            return
-        target = next((p for p in room['players'] if p['sid'] != sid), None)
-        if not target:
-            await sio.emit('unblock_result', {'ok': False, 'msg': 'لا يوجد خصم'}, to=sid)
-            return
-
-        from app.sockets.auth_helper import verify_socket_token
-        user, db = verify_socket_token(data.get('token'))
-        if not user:
-            await sio.emit('unblock_result', {'ok': False, 'msg': 'يجب تسجيل الدخول'}, to=sid)
-            return
-        my_id = user.id
-        db.close()
-
-        target_id = target.get('user_id') or (room.get('user_ids') or {}).get(target['sid'])
-        if not target_id:
-            await sio.emit('unblock_result', {'ok': False, 'msg': 'تعذّر تحديد الخصم'}, to=sid)
-            return
-
-        from app.domains.users.friends import unblock_user
-        result = unblock_user(my_id, target_id)
-        await sio.emit('unblock_result', result, to=sid)
+    # الصداقة والحظر (من بروفايل الخصم) — عبر الوحدة المشتركة
+    from app.domains.games.sockets.social_handlers import register_social_handlers
+    register_social_handlers(sio, get_room_state)

@@ -52,3 +52,79 @@
   border:1px solid rgba(255,255,255,.15);background:#0d1117;color:#fff;font-size:1rem}
 .answer-box button{padding:12px 18px;border:none;border-radius:10px;cursor:pointer;
   background:linear-gradient(135deg,#4ade80,#16a34a);color:#fff;font-weight:800}
+
+
+/* ===================================================================
+   📱 رسبونسف الجوال — ماذا تعرف
+   (يرث bank.css لذا نُصلح فقط ما يختلف)
+   =================================================================== */
+
+@media (max-width: 600px) {
+  /* صندوق الإجابة ثابت — يبقى فوق الشريط الموحّد (40px) */
+  .answer-box { bottom: 56px !important; width: min(calc(100vw - 20px), 480px) !important; }
+
+  /* رقاقات الإجابات المذكورة */
+  .kn-said { gap: 4px; margin: 4px 0; min-height: 18px; }
+  .kn-chip { font-size: .76rem; padding: 2px 9px; }
+
+  /* شريط الوقت */
+  .kn-timer-wrap { margin: 2px 0 6px; }
+
+  /* ملخص الجولة */
+  .kn-round-over { padding: 10px 12px; font-size: .9rem; }
+
+  /* أزرار ثابتة: مثل البنك + إصلاح الانسحاب */
+  .surrender-btn  { bottom: 56px !important; right: 12px !important; }
+  .bank-helps-bar { bottom: 106px !important; left: 12px !important; }
+  .ingame-quick-chat { top: 70px !important; left: 10px !important; }
+  .quick-chat-trigger.ingame { width: 40px !important; height: 40px !important; }
+}
+
+/* ===================================================================
+   🔧 إصلاح الجوال — منع الـ scroll + إعادة تموضع صندوق الإجابة
+   =================================================================== */
+@media (max-width: 768px) {
+  /* منع الصفحة من الـ scroll نهائياً — اللعبة fixed layout */
+  html, body {
+    overflow: hidden !important;
+    height: 100vh !important;
+    position: fixed !important;
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 600px) {
+  /* صندوق الإجابة: يرتفع فوق شريط المساعدات (bottom:106px + ارتفاع ~60px) */
+  .answer-box {
+    bottom: 170px !important;
+    width: min(calc(100vw - 20px), 480px) !important;
+    padding: 10px 14px !important;
+  }
+  /* تصغير طفيف لتوفير المساحة */
+  .answer-box input { padding: 10px 12px !important; font-size: 15px !important; }
+  .answer-box button { padding: 10px 14px !important; }
+  .answer-box .answer-timer { min-width: 34px !important; height: 34px !important; font-size: 0.95rem !important; }
+}
+
+/* ===================================================================
+   🔧 إصلاح موضع صندوق الإجابة — رفع أكثر فوق شريط المساعدات
+   =================================================================== */
+@media (max-width: 600px) {
+  /* المساعدات: bottom:106px ارتفاع~50px → قمتها على 156px
+     الصندوق ارتفاعه ~55px → يجب أن تكون قاعدته على 156+55+10 = 221px */
+  .answer-box {
+    bottom: 220px !important;
+    left: 8px !important;
+    right: 8px !important;
+    transform: none !important;
+    width: auto !important;
+  }
+  /* المساعدات: صف أفقي صريح */
+  .bank-helps-bar {
+    bottom: 100px !important;
+    left: 8px !important;
+    right: auto !important;
+    flex-direction: row !important;
+    gap: 6px !important;
+  }
+}

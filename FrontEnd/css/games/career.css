@@ -229,3 +229,54 @@ body{
 .ready-count.pop{animation:countPop .9s ease-out}
 @keyframes countPop{0%{transform:scale(2.5);opacity:0}30%{transform:scale(1);opacity:1}100%{transform:scale(.8);opacity:.6}}
 @keyframes fadeInUp{from{transform:translateY(15px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+
+/* ===================================================================
+   📱 رسبونسف الجوال — مسيرة لاعب
+   =================================================================== */
+
+@media (max-width: 768px) {
+  .game-topbar { padding: 8px 14px; }
+  .pname { max-width: 90px; }
+  .clubs-stage { min-height: 160px; }
+}
+
+@media (max-width: 600px) {
+  /* == الشريط العلوي == */
+  .game-topbar { padding: 6px 10px; gap: 4px; }
+  .avatar-wrap img { width: 36px !important; height: 36px !important; }
+  .pname { max-width: 74px; font-size: .78rem; }
+  .career-score { font-size: 1.15rem !important; }
+  .game-center-head .game-title { font-size: .90rem; }
+  .players-progress { gap: 4px; }
+  .progress-dot { width: 10px !important; height: 10px !important; }
+
+  /* == منطقة اللعب == */
+  .career-main { padding: 14px 12px; gap: 12px; }
+
+  /* == الأندية: أصغر قليلاً == */
+  .clubs-stage { min-height: 148px; gap: 10px; padding: 12px 8px; }
+  .club-card { width: 95px !important; min-height: 116px !important; gap: 7px; padding: 10px 6px; }
+  .club-logo { width: 56px !important; height: 56px !important; }
+  .club-name { font-size: .78rem; }
+
+  /* == زر الجرس == */
+  .career-buzz-btn { width: 88px !important; height: 88px !important; }
+  .career-buzz-btn i { font-size: 1.85rem !important; }
+  .career-buzz-btn span { font-size: .80rem !important; }
+
+  /* == الأزرار الثابتة == */
+  .surrender-btn   { bottom: 56px !important; right: 12px !important; width: 42px; height: 42px; font-size: .95rem; }
+  .career-helps-bar{ bottom: 106px !important; left: 12px !important; gap: 6px; }
+  .ingame-quick-chat { top: 70px !important; left: 10px !important; }
+  .quick-chat-trigger.ingame { width: 40px; height: 40px; font-size: 1rem; }
+}
+
+@media (max-width: 390px) {
+  .pname { max-width: 58px; font-size: .74rem; }
+  .career-score { font-size: 1.0rem !important; }
+  .club-card  { width: 84px !important; min-height: 106px !important; }
+  .club-logo  { width: 48px !important; height: 48px !important; }
+  .career-buzz-btn { width: 76px !important; height: 76px !important; }
+  .career-main { gap: 9px; }
+}

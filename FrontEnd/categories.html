@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="css/leaderboard.css">
   <link rel="stylesheet" href="css/categories_hub.css">
   <link rel="stylesheet" href="css/platform_guide.css">
+  <link rel="stylesheet" href="css/responsive.css">
 </head>
 <body>
   <div id="toastContainer" class="toast-container"></div>
@@ -322,6 +323,15 @@
                       <div style="display: flex; align-items: center; gap: 15px; width: 50%;">
                           <input type="range" id="sfxSlider" min="0" max="100" value="100" class="volume-slider">
                           <span id="sfxValue" style="color: #aaa; width: 35px; text-align: left; font-size: 13px;">100%</span>
+                      </div>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                      <span style="display: flex; align-items: center; gap: 10px;">
+                          <i id="notifIcon" class="fa-solid fa-bell" style="color: #a78bfa; width: 20px;"></i> صوت الإشعارات
+                      </span>
+                      <div style="display: flex; align-items: center; gap: 15px; width: 50%;">
+                          <input type="range" id="notifSlider" min="0" max="100" value="80" class="volume-slider">
+                          <span id="notifValue" style="color: #aaa; width: 35px; text-align: left; font-size: 13px;">80%</span>
                       </div>
                   </div>
               </div>

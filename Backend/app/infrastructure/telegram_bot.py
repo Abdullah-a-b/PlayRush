@@ -1,25 +1,153 @@
 import os
 import time
 import asyncio
+import socket
 import requests
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # يضمن تحميل .env مهما كان ترتيب الاستيراد
+except Exception:
+    pass
 from app.sockets.state import active_codes, host_chat_ids
 import app.sockets.state as state
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 BOT_USERNAME = "@p_rushbot"
 
+# قفل على مستوى الجهاز: يضمن أن عملية واحدة فقط تسحب تحديثات البوت.
+# ضروري لأن WORKERS>1 (خصوصاً وضع المنافذ المتعددة على ويندوز) يشغّل عدة
+# عمليات، ولو سحبت كلها نفس التوكن يحدث 409 Conflict ولا أحد يستقبل الرسائل.
+_bot_lock_sock = None
+
+def try_become_bot_leader(port=8399):
+    """يحاول حجز منفذ محلي ثابت. أول عملية تنجح تصبح 'القائد' وتسحب التحديثات؛
+    بقية العمليات تفشل في الحجز فلا تسحب (تتجنّب 409)."""
+    global _bot_lock_sock
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.bind(("127.0.0.1", port))
+        s.listen(1)
+        _bot_lock_sock = s  # نبقيه مفتوحاً طوال عمر العملية
+        return True
+    except OSError:
+        try:
+            s.close()
+        except Exception:
+            pass
+        return False
+
+
+# ---- تخزين الرموز/الروابط: Redis (مشترك بين الـ workers) مع سقوط للذاكرة ----
+import json as _json
+
+def _redis():
+    try:
+        from app.infrastructure.redis_client import redis_enabled, get_redis
+        if redis_enabled():
+            return get_redis()
+    except Exception:
+        pass
+    return None
+
+async def _store_code(code, sid, party_token):
+    active_codes[code] = {"sid": sid, "party_token": party_token, "expires": time.time() + 30}
+    r = _redis()
+    if r is not None:
+        try:
+            await r.setex(f"pr:hostcode:{code}", 30, _json.dumps({"sid": sid, "party_token": party_token}))
+        except Exception:
+            pass
+
+async def _pop_code(code):
+    """يرجّع {sid, party_token} ويحذف الرمز — يفحص Redis أولاً ثم الذاكرة."""
+    r = _redis()
+    if r is not None:
+        try:
+            raw = await r.get(f"pr:hostcode:{code}")
+            if raw:
+                await r.delete(f"pr:hostcode:{code}")
+                data = _json.loads(raw)
+                active_codes.pop(code, None)
+                return data
+        except Exception:
+            pass
+    entry = active_codes.pop(code, None)
+    if entry:
+        return {"sid": entry.get("sid"), "party_token": entry.get("party_token")}
+    return None
+
+async def _mark_linked(party_token, chat_id):
+    if not party_token:
+        return
+    state.linked_hosts[party_token] = {"chat_id": chat_id, "ts": time.time()}
+    r = _redis()
+    if r is not None:
+        try:
+            await r.setex(f"pr:linked:{party_token}", 300, str(chat_id))
+        except Exception:
+            pass
+
+async def _is_linked(party_token):
+    if not party_token:
+        return False
+    rec = state.linked_hosts.get(party_token)
+    if rec and (time.time() - rec['ts'] < 300):
+        return True
+    r = _redis()
+    if r is not None:
+        try:
+            return bool(await r.get(f"pr:linked:{party_token}"))
+        except Exception:
+            pass
+    return False
+
+async def _consume_linked(party_token):
+    """يحذف الربط بعد تسليمه مرة واحدة — يمنع إعادة توجيه الصفحة عند الرجوع للّوبي."""
+    if not party_token:
+        return
+    state.linked_hosts.pop(party_token, None)
+    r = _redis()
+    if r is not None:
+        try:
+            await r.delete(f"pr:linked:{party_token}")
+        except Exception:
+            pass
+
 async def telegram_bot_listener(sio):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates"
-    
+
+    if not TELEGRAM_TOKEN:
+        print(" [telegram] TELEGRAM_TOKEN غير مضبوط — البوت لن يستقبل أي رسالة")
+        return
+
+    # مهم: نحذف أي webhook مضبوط على البوت، وإلا getUpdates يرجع 409 ولن نستقبل رسائل
+    # (الرموز/الدعم /reply /close كلها تعتمد على استقبال الرسائل عبر getUpdates)
+    try:
+        r = await asyncio.to_thread(requests.get, f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/deleteWebhook?drop_pending_updates=true", timeout=5)
+        print(f" [telegram] deleteWebhook(drop_pending) -> {r.status_code}")
+    except Exception as e:
+        print(" [telegram] deleteWebhook فشل:", e)
+
     while True:
         try:
             current_time = time.time()
             expired = [c for c, data in active_codes.items() if data['expires'] < current_time]
             for c in expired:
                 del active_codes[c]
+            # تنظيف الروابط الثابتة القديمة (أكثر من 5 دقائق)
+            stale = [t for t, rec in state.linked_hosts.items() if current_time - rec['ts'] > 300]
+            for t in stale:
+                del state.linked_hosts[t]
 
             response = await asyncio.to_thread(requests.get, f"{url}?offset={state.LAST_UPDATE_ID + 1}&timeout=1", timeout=2)
-            
+
+            if response.status_code != 200:
+                # 409 = بوت آخر يسحب التحديثات (سيرفر منشور + محلي معاً) أو webhook باقٍ
+                try:
+                    print(f" [telegram] getUpdates status {response.status_code}: {response.text[:200]}")
+                except Exception:
+                    pass
+
             if response.status_code == 200:
                 data = response.json()
                 for update in data.get("result", []):
@@ -32,7 +160,30 @@ async def telegram_bot_listener(sio):
                     admin_id = os.environ.get("TELEGRAM_ADMIN_CHAT_ID")
                     is_admin = admin_id and str(chat_id) == str(admin_id)
 
-                    if text in ["/start", "بدء"]:
+                    # محاولة الربط: الرسالة نفسها (رمز)، أو payload بعد /start (رابط عميق)
+                    candidate = None
+                    if text.startswith("/start "):
+                        candidate = text.split(" ", 1)[1].strip()
+                    elif text and not text.startswith("/"):
+                        candidate = text
+
+                    link_entry = await _pop_code(candidate) if candidate else None
+
+                    if link_entry:
+                        sid = link_entry.get('sid')
+                        party_token = link_entry.get('party_token')
+                        host_chat_ids['admin'] = chat_id
+                        await _mark_linked(party_token, chat_id)
+
+                        if party_token:
+                            await sio.emit('host_linked_success', {}, room=f"party:{party_token}")
+                        if sid:
+                            await sio.emit('host_linked_success', {}, to=sid)
+
+                        success_msg = "🎯 تم ربطك بنجاح كمدير للجلسة! الإجابات ستصلك هنا."
+                        await asyncio.to_thread(requests.post, f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", data={'chat_id': chat_id, 'text': success_msg})
+
+                    elif text in ["/start", "بدء"]:
                         # رسالة عامة للاعبين (إدارة الجلسة) + أوامر الدعم تظهر للأدمن فقط
                         welcome_msg = "👋 أهلاً بك في مدير لعبة PlayRush!\n\n🔑 لربط جلسة لعبة: أرسل الرمز السري الذي يظهر على الشاشة."
                         if is_admin:
@@ -55,16 +206,6 @@ async def telegram_bot_listener(sio):
                             await _handle_close_command(sio, text, chat_id)
                         else:
                             await _send_tg(chat_id, "🔒 هذا الأمر مخصّص لإدارة الدعم فقط.")
-
-                    elif text in active_codes:
-                        sid = active_codes[text]['sid']
-                        host_chat_ids['admin'] = chat_id 
-                        del active_codes[text] 
-                        
-                        await sio.emit('host_linked_success', {}, to=sid)
-                        
-                        success_msg = "🎯 تم ربطك بنجاح كمدير للجلسة! الإجابات ستصلك هنا."
-                        await asyncio.to_thread(requests.post, f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", data={'chat_id': chat_id, 'text': success_msg})
         except Exception:
             pass 
         
@@ -186,9 +327,54 @@ def register_telegram_events(sio):
     import random
     @sio.event
     async def generate_host_code(sid, data):
+        party_token = (data or {}).get('party_token')
         code = str(random.randint(1000, 9999))
-        active_codes[code] = {"sid": sid, "expires": time.time() + 20}
+        await _store_code(code, sid, party_token)
+        if party_token:
+            await sio.enter_room(sid, f"party:{party_token}")
         await sio.emit('receive_host_code', {"code": code, "bot": BOT_USERNAME}, to=sid)
+
+    @sio.event
+    async def report_party_question(sid, data):
+        """إبلاغ عن سؤال في وضع الجمعات — يُرسل لتيليجرام المطوّر (الأدمن) بضغطة، بلا كتابة."""
+        data = data or {}
+        question = str(data.get('question', '')).strip()[:400]
+        answer   = str(data.get('answer', '')).strip()[:200]
+        letter   = str(data.get('letter', '')).strip()[:8]
+
+        admin_id = os.environ.get("TELEGRAM_ADMIN_CHAT_ID")
+        if not admin_id:
+            await sio.emit('party_report_ack', {'ok': False, 'msg': 'لم يتم ضبط قناة الإبلاغ.'}, to=sid)
+            return
+
+        msg = (
+            "🚩 بلاغ عن سؤال (وضع الجمعات)\n"
+            f"— الحرف: {letter or '—'}\n"
+            f"— السؤال: {question or '—'}\n"
+            f"— الإجابة المسجّلة: {answer or '—'}"
+        )
+        await _send_tg(admin_id, msg)
+        await sio.emit('party_report_ack', {'ok': True, 'msg': 'تم إرسال البلاغ للمطوّر. شكراً!'}, to=sid)
+
+    @sio.event
+    async def register_party_token(sid, data):
+        # عند كل اتصال/إعادة اتصال: نعيد إدخال السوكت للغرفة الثابتة + نسلّم الربط لو تم أثناء الانقطاع
+        party_token = (data or {}).get('party_token')
+        if not party_token:
+            return
+        await sio.enter_room(sid, f"party:{party_token}")
+        if await _is_linked(party_token):
+            await sio.emit('host_linked_success', {}, to=sid)
+            await _consume_linked(party_token)
+
+    @sio.event
+    async def check_host_link(sid, data):
+        party_token = (data or {}).get('party_token')
+        if not party_token:
+            return
+        if await _is_linked(party_token):
+            await sio.emit('host_linked_success', {}, to=sid)
+            await _consume_linked(party_token)
 
     @sio.event
     async def close_host_session(sid, data):

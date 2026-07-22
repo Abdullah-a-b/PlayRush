@@ -137,6 +137,9 @@ async def trigger_bank_start(sio, room_code):
 
 
 def register_bank_events(sio):
+    # معالجات الصداقة/الحظر داخل اللعب (مشتركة)
+    from app.domains.games.sockets.social_handlers import register_social_handlers
+    register_social_handlers(sio, get_room_state)
     global _start_first_round
 
     def _safe_by_name(room, gs):

@@ -94,9 +94,27 @@ function getValidAvatarSrc(avatarValue) {
     }
     if (v.startsWith('http') || v.startsWith('data:')) return v;
     if (v.startsWith('/uploads')) return `${API_URL}${v}`;
+    //  مسارات نسبية أو مطلقة محلية → نأخذ اسم الملف فقط
     const name = v.split('/').pop();
+    if (!name) return '../assets/avatars/avatar_1.svg';
     return `../assets/avatars/${name.includes('.') ? name : name + '.svg'}`;
 }
+
+//  رسم أفاتار اللاعب مبكراً من الجلسة (قبل وصول بيانات الخادم) حتى لا تظهر صورة فارغة
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        const myImg = document.getElementById('myAvatarImg');
+        if (myImg && playerAvatar) myImg.src = getValidAvatarSrc(playerAvatar);
+        // احتياطي: أي أفاتار يفشل تحميله يرجع للصورة الافتراضية
+        ['myAvatarImg', 'opponentAvatarImg', 'mrMyAvatar', 'mrOppAvatar', 'modalAvatar'].forEach((id, i) => {
+            const el = document.getElementById(id);
+            if (el) el.onerror = function () {
+                this.onerror = null;
+                this.src = `../assets/avatars/avatar_${(i % 2) + 1}.svg`;
+            };
+        });
+    } catch (e) {}
+});
 
 
 // ============================================================
@@ -105,6 +123,24 @@ function getValidAvatarSrc(avatarValue) {
 socket.on('connect', () => {
     socket.emit('join_room', { room_code: roomCode, token, player_name: playerName, avatar: playerAvatar });
 });
+
+
+/* ================================================================
+   🎮 showMatchReveal — كشف التطابق عند بدء المباراة
+   ================================================================ */
+function showMatchReveal(myName, myAvatarSrc, oppName, oppAvatarSrc) {
+  var overlay = document.getElementById('matchRevealOverlay');
+  if (!overlay) return;
+  var ge = function(id){ return document.getElementById(id); };
+  if (myName)       ge('mrMyName').textContent   = myName;
+  if (myAvatarSrc)  ge('mrMyAvatar').src         = myAvatarSrc;
+  if (oppName)      ge('mrOppName').textContent   = oppName;
+  if (oppAvatarSrc) ge('mrOppAvatar').src         = oppAvatarSrc;
+  overlay.classList.add('show');
+  var bar = ge('mrReadyFill');
+  if (bar) { bar.style.width = '0%'; void bar.offsetWidth; bar.style.width = '100%'; }
+  setTimeout(function(){ overlay.classList.remove('show'); }, 3200);
+}
 
 socket.on('room_joined', (data) => {
     const me       = data.players.find(p => p.sid === socket.id || p.name === playerName);
@@ -134,6 +170,13 @@ socket.on('room_joined', (data) => {
     }
 
     updateTopBarUI();
+    // 🎮 كشف التطابق بين اللاعبين
+    if (playersStatsData.opponent && playersStatsData.opponent.name) {
+      showMatchReveal(
+        playersStatsData.me.name, playersStatsData.me.avatar,
+        playersStatsData.opponent.name, playersStatsData.opponent.avatar
+      );
+    }
 });
 
 socket.on('update_players_stats', (players) => {
@@ -747,7 +790,7 @@ cancelReportBtn?.addEventListener('click', () => {
 document.querySelectorAll('.report-reason').forEach(btn => {
     btn.addEventListener('click', () => {
         const reason = btn.dataset.reason;
-        socket.emit('report_opponent', { roomCode, token, reason });
+        socket.emit('report_opponent', { roomCode, token, reason, target_id: _opponentUserId, game_mode: window.CURRENT_GAME });
         reportModal.style.display = 'none';
     });
 });
@@ -846,7 +889,7 @@ addFriendBtn?.addEventListener('click', () => {
     if (blockState || friendState === 'pending') return;  // معطّل أثناء الحظر أو انتظار الرد
     if (friendState === 'friends') {
         _pendingFriendAction = 'remove';
-        socket.emit('remove_friend_opponent', { roomCode, token });
+        socket.emit('remove_friend_opponent', { roomCode, token, target_id: _opponentUserId });
     } else if (friendState === 'incoming') {
         // الخصم أرسل لي طلباً → أقبله
         if (_opponentUserId) {
@@ -857,15 +900,15 @@ addFriendBtn?.addEventListener('click', () => {
         showToast('✅ تمت إضافة الصديق');
     } else {
         _pendingFriendAction = 'add';
-        socket.emit('friend_request_opponent', { roomCode, token });
+        socket.emit('friend_request_opponent', { roomCode, token, target_id: _opponentUserId });
     }
     document.getElementById('playerProfileModal').style.display = 'none';
 });
 blockUserBtn?.addEventListener('click', () => {
     if (blockState) {
-        socket.emit('unblock_opponent', { roomCode, token });
+        socket.emit('unblock_opponent', { roomCode, token, target_id: _opponentUserId });
     } else {
-        socket.emit('block_opponent', { roomCode, token });
+        socket.emit('block_opponent', { roomCode, token, target_id: _opponentUserId });
     }
     document.getElementById('playerProfileModal').style.display = 'none';
 });
