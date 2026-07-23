@@ -38,6 +38,8 @@ GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT")
 # يجب أن يكون رابط الواجهة كاملاً (http://host:port) وإلا تنكسر إعادة
 # التوجيه بعد تسجيل الدخول بجوجل. يُضبط في .env
 FRONTEND_BASE_URL = os.environ.get("FRONTEND_URL", "").rstrip("/")
+# مخطط الرابط العميق للتطبيق (يطابق ما هو مسجّل في AndroidManifest)
+APP_DEEP_LINK_SCHEME = os.environ.get("APP_DEEP_LINK_SCHEME", "playrush")
 if not FRONTEND_BASE_URL:
     logger.warning(
         "FRONTEND_URL غير مضبوط في .env — تسجيل الدخول بجوجل سيفشل عند إعادة التوجيه. "
@@ -224,7 +226,11 @@ async def reset_password(repo: UserRepository, background_tasks: BackgroundTasks
     return {"message": "تم تغيير كلمة المرور بنجاح"}
 
 
-def build_google_auth_url() -> str:
+def build_google_auth_url(client: str = "web") -> str:
+    """يبني رابط مصادقة جوجل.
+    client="app" يعني أن الطلب صادر من تطبيق Capacitor، فنمرّره داخل state
+    ليعرف الـcallback أن يعيد التوجيه إلى رابط عميق بدل موقع الويب."""
+    state = "app" if client == "app" else "web"
     return (
         f"https://accounts.google.com/o/oauth2/v2/auth"
         f"?response_type=code"
@@ -232,11 +238,12 @@ def build_google_auth_url() -> str:
         f"&redirect_uri={GOOGLE_REDIRECT_URI}"
         f"&scope=openid%20email%20profile"
         f"&access_type=offline"
+        f"&state={state}"
     )
 
 
 async def handle_google_callback(repo: UserRepository, background_tasks: BackgroundTasks,
-                                 code: str) -> str:
+                                 code: str, state: str = "web") -> str:
     """يبادل الكود مع Google ويرجع رابط إعادة التوجيه النهائي للواجهة."""
     token_url = "https://oauth2.googleapis.com/token"
     token_data = {
@@ -299,9 +306,14 @@ async def handle_google_callback(repo: UserRepository, background_tasks: Backgro
         needs_profile_setup = True
 
     playrush_token = create_access_token(data={"sub": user.email})
-    if needs_profile_setup:
-        return f"{FRONTEND_BASE_URL}/profile-setup.html?token={playrush_token}"
-    return f"{FRONTEND_BASE_URL}/categories.html?token={playrush_token}"
+    page = "profile-setup" if needs_profile_setup else "categories"
+
+    # 📱 طلب صادر من التطبيق → رابط عميق يعيد التوكن للتطبيق نفسه
+    # (بدل موقع الويب، وإلا انتهت الجلسة داخل المتصفح خارج التطبيق)
+    if state == "app":
+        return f"{APP_DEEP_LINK_SCHEME}://auth?token={playrush_token}&page={page}"
+
+    return f"{FRONTEND_BASE_URL}/{page}.html?token={playrush_token}"
 
 
 def setup_profile(repo: UserRepository, current_user: User, player_name: str,

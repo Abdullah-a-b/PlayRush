@@ -1,12 +1,4 @@
-﻿
-# Capacitor / Android
-node_modules/
-android/
-ios/
-*.apk
-*.keystore
-
-.env
+﻿.env
 **/.venv/
 **/.vscode/
 **/__pycache__/
@@ -20,3 +12,12 @@ users.db
 .env.*
 !.env.example
 logs/
+
+
+
+# Capacitor / Android
+node_modules/
+android/
+ios/
+*.apk
+*.keystore

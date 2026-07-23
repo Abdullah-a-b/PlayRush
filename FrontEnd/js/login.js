@@ -1,5 +1,5 @@
 // نضع هذا السطر في بداية الملف
-document.getElementById('google-login-btn').href = `${CONFIG.API_URL}/auth/google/login`;
+// ربط زر جوجل انتقل إلى js/google_auth.js (يدعم الويب والتطبيق)
 
 
 let lastSubmitTime = 0;

@@ -104,8 +104,9 @@ async def reset_password(
 
 @router.get("/google/login")
 @limiter.limit("10/minute")  # يمنع redirect spam
-async def google_login(request: Request):
-    return RedirectResponse(url=service.build_google_auth_url())
+async def google_login(request: Request, client: str = "web"):
+    # client=app يأتي من تطبيق Capacitor ليعود التوكن عبر رابط عميق
+    return RedirectResponse(url=service.build_google_auth_url(client))
 
 
 @router.get("/google/callback")
@@ -114,9 +115,10 @@ async def google_callback(
     request: Request,
     code: str,
     background_tasks: BackgroundTasks,
+    state: str = "web",
     repo: UserRepository = Depends(get_user_repo),
 ):
-    target_url = await service.handle_google_callback(repo, background_tasks, code)
+    target_url = await service.handle_google_callback(repo, background_tasks, code, state)
     return RedirectResponse(url=target_url)
 
 

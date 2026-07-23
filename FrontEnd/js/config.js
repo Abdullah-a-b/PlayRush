@@ -9,8 +9,11 @@
 const PROD_API_ORIGIN = 'https://playrush-api.azurewebsites.net';   // ← ضع دومين الباك إند الفعلي
 
 // 📱 كشف بيئة التطبيق (Capacitor/WebView): التطبيق يحمّل الواجهة من
-// حزمة محلية (capacitor:// أو file://) فلا يصلح الاستنتاج من العنوان.
+// حزمة محلية. مع androidScheme:"https" يكون العنوان https://localhost،
+// فلا يكفي فحص البروتوكول — نعتمد جسر Capacitor نفسه (window.Capacitor)
+// وهو يُحقن دائماً داخل التطبيق ولا يوجد إطلاقاً في متصفح عادي.
 const PR_IS_APP = window.PR_IS_APP === true
+    || (typeof window.Capacitor !== 'undefined')
     || /^(capacitor|file|ionic):$/.test(window.location.protocol);
 
 window.PR_IS_APP = PR_IS_APP;  // متاح لكل المنصة (الجلسات/الواجهات)

@@ -6,7 +6,9 @@
    ============================================================ */
 (function () {
     // داخل تطبيق Capacitor الملفات محلية أصلاً — لا حاجة لـSW
+    // (نفحص جسر Capacitor لأن androidScheme:"https" يجعل العنوان https://localhost)
     var isApp = window.PR_IS_APP === true
+        || (typeof window.Capacitor !== 'undefined')
         || /^(capacitor|file|ionic):$/.test(window.location.protocol);
     if (isApp || !('serviceWorker' in navigator)) return;
 
