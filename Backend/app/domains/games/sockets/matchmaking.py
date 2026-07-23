@@ -61,7 +61,7 @@ async def _cluster_try_match(sio, r, game_mode):
                 p1_item, p1 = entries[i]
                 p2_item, p2 = entries[j]
                 # فحوصات الصلاحية نفسها (نفس المستخدم/IP/تقابل حديث/حظر/صداقة)
-                if not await asyncio.to_thread(pair_is_valid, p1, p2):
+                if not await asyncio.to_thread(pair_is_valid, p1, p2, game_mode):
                     continue
                 # نخرجهما ذرّياً — لو أحدهما أُخرج قبلنا نتراجع
                 if await r.lrem(_MMQ + game_mode, 1, p1_item) == 0:

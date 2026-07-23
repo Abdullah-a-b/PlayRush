@@ -12,11 +12,20 @@
  in-memory الآن. Redis-ready: البنية بسيطة (dict) تنتقل لـ Redis بسهولة لاحقاً.
 """
 import time
+import os
 
 # ==========================================
 # إعدادات قابلة للضبط
 # ==========================================
-REMATCH_COOLDOWN = 30 * 60        # 30 دقيقة: لا يُطابَق نفس الزوج خلالها
+# مدة منع تكرار نفس الزوج (بالدقائق) — تُضبط بمتغيّر البيئة REMATCH_COOLDOWN_MIN.
+# في الفترة التجريبية بعدد لاعبين قليل، القيمة العالية تُقفل الجميع بسرعة
+# فيظنون المنصة معطّلة؛ لذلك اجعلها صغيرة (مثلاً 3) أثناء البيتا،
+# وارفعها تدريجياً كلما زاد عدد اللاعبين.
+try:
+    _COOLDOWN_MIN = float(os.environ.get("REMATCH_COOLDOWN_MIN", "5"))
+except (TypeError, ValueError):
+    _COOLDOWN_MIN = 5.0
+REMATCH_COOLDOWN = int(_COOLDOWN_MIN * 60)
 COLLUSION_WINDOW = 6 * 60 * 60    # 6 ساعات: نافذة عدّ المواجهات المتكررة
 # جدول تقليل الجائزة حسب عدد المواجهات في النافذة
 # مرة 1-2 = كامل، 3 = نصف، 4 = ربع، 5+ = صفر
@@ -28,6 +37,12 @@ REWARD_MULTIPLIER_MIN = 0.0       # 5+ مواجهات = صفر
 # matchup_history[pair_key] = [timestamp1, timestamp2, ...]
 # ==========================================
 matchup_history = {}
+
+# منع تكرار الزوج — منفصل لكل لعبة:
+# last_match_by_game[(pair_key, game_mode)] = timestamp
+# هكذا من لعب "حروف" مع فلان يظل قادراً على مواجهته في "البنك" فوراً،
+# بينما يبقى عدّ التواطؤ (matchup_history) عاماً عبر كل الألعاب.
+last_match_by_game = {}
 
 
 def _pair_key(user_id_a, user_id_b) -> str:
@@ -42,24 +57,25 @@ def _clean_old(timestamps: list, window: int) -> list:
     return [t for t in timestamps if t >= cutoff]
 
 
-def were_recently_matched(user_id_a, user_id_b) -> bool:
+def were_recently_matched(user_id_a, user_id_b, game_mode=None) -> bool:
     """
-    الطبقة 1: هل تقابل هذان اللاعبان خلال فترة الـ cooldown؟
-    يُستدعى من الـ matchmaking لمنع المطابقة المتكررة.
+    الطبقة 1: هل تقابل هذان اللاعبان مؤخراً في *نفس اللعبة*؟
+    الحظر منفصل لكل لعبة — لا يمنع مواجهتهما في لعبة أخرى.
     """
     if user_id_a is None or user_id_b is None:
         return False
     key = _pair_key(user_id_a, user_id_b)
-    history = matchup_history.get(key, [])
-    if not history:
+    last_match = last_match_by_game.get((key, game_mode))
+    if last_match is None:
         return False
-    last_match = max(history)
     return (time.time() - last_match) < REMATCH_COOLDOWN
 
 
-def record_matchup(user_id_a, user_id_b) -> None:
+def record_matchup(user_id_a, user_id_b, game_mode=None) -> None:
     """
     يسجّل مواجهة بين لاعبين (يُستدعى عند بدء المباراة).
+    • matchup_history: عام عبر كل الألعاب (يُستخدم لتقليل الجائزة عند التواطؤ)
+    • last_match_by_game: منفصل لكل لعبة (يُستخدم لمنع التكرار الفوري)
     """
     if user_id_a is None or user_id_b is None:
         return
@@ -67,6 +83,7 @@ def record_matchup(user_id_a, user_id_b) -> None:
     history = _clean_old(matchup_history.get(key, []), COLLUSION_WINDOW)
     history.append(time.time())
     matchup_history[key] = history
+    last_match_by_game[(key, game_mode)] = time.time()
 
 
 def get_reward_multiplier(user_id_a, user_id_b) -> float:

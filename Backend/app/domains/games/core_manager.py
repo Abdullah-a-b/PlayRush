@@ -107,7 +107,7 @@ def remove_from_queue(sid):
     return False
 
 
-def pair_is_valid(p1, p2):
+def pair_is_valid(p1, p2, game_mode=None):
     """ كل فحوصات صلاحية التطابق (مستخرجة لتشاركها المسار المحلي
     والمسار العنقودي على Redis): نفس المستخدم/IP، تقابل حديث،
     حظر متبادل، صداقة (منع تواطؤ)."""
@@ -118,7 +118,7 @@ def pair_is_valid(p1, p2):
                p1.get('ip') not in (None, 'unknown') and
                p1.get('ip') == p2.get('ip'))
     recently_matched = (not _allow_same_ip() and
-                        were_recently_matched(p1.get('user_id'), p2.get('user_id')))
+                        were_recently_matched(p1.get('user_id'), p2.get('user_id'), game_mode))
     is_blocked = False
     are_friends_pair = False
     if p1.get('user_id') and p2.get('user_id'):
@@ -168,7 +168,7 @@ def create_match_room(p1, p2, game_mode):
     }
 
     # نسجّل المواجهة (anti-collusion) + نمرّر user_ids للغرفة للمكافآت
-    record_matchup(p1.get('user_id'), p2.get('user_id'))
+    record_matchup(p1.get('user_id'), p2.get('user_id'), game_mode)
     rooms[room_code]['user_ids'] = {
         p1['sid']: p1.get('user_id'),
         p2['sid']: p2.get('user_id'),
@@ -185,7 +185,7 @@ def check_queue_for_match(game_mode):
     p1 = queue[0]
     p2_index = None
     for i in range(1, len(queue)):
-        if pair_is_valid(p1, queue[i]):
+        if pair_is_valid(p1, queue[i], game_mode):
             p2_index = i
             break
 
