@@ -92,7 +92,21 @@
             el.classList.add('hide');
             setTimeout(() => el.remove(), 550);
         };
-        if (mode === 'company') {
+        // 📱 داخل التطبيق: قيد التشغيل التلقائي للصوت غير موجود، وشاشة
+        // «المس للبدء» تبدو تعليقاً. لذلك نبدأ فوراً وبمدة أقصر.
+        var IS_APP = window.PR_IS_APP === true || (typeof window.Capacitor !== 'undefined');
+
+        if (mode === 'company' && IS_APP) {
+            try {
+                window.__prSplashCtx = window.__prSplashCtx
+                    || new (window.AudioContext || window.webkitAudioContext)();
+                window.__prSplashCtx.resume();
+            } catch (e) {}
+            blip(392, 0.5, 0.07, 0.25, 'sine');
+            blip(587, 0.7, 0.07, 0.7, 'sine');
+            el.addEventListener('click', close);   // نقرة = تخطٍّ فوري
+            setTimeout(close, 1400);
+        } else if (mode === 'company') {
             // 🔓 حل autoplay الجذري: شاشة «المس للبدء» — النقرة الأولى
             // تفتح الصوت شرعاً (سياسة المتصفح) ثم يبدأ الأنيميشن بصوته كاملاً.
             const anims = el.querySelectorAll('.pr-sp-company, .pr-sp-sub, .pr-sp-skip');
