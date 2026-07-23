@@ -35,7 +35,7 @@ async def _token_from_request(request: Request) -> str | None:
 
 
 @router.post("/register")
-@limiter.limit("5/hour")  # يمنع إنشاء عشرات الحسابات من نفس IP
+@limiter.limit("40/hour")  # مرفوع: مجلس كامل قد يسجّل من نفس الـIP (واي فاي/CGNAT)
 async def register(
     request: Request,
     background_tasks: BackgroundTasks,
@@ -60,7 +60,7 @@ async def verify_code(
 
 
 @router.post("/login")
-@limiter.limit("10/minute")
+@limiter.limit("30/minute")
 async def login(
     request: Request,
     background_tasks: BackgroundTasks,
@@ -128,7 +128,7 @@ async def logout(token: str = Form(...)):
 
 
 @router.post("/setup-profile")
-@limiter.limit("10/hour")  # يمنع spam لرفع الصور وتغيير الاسم
+@limiter.limit("40/hour")  # مرفوع: نفس سبب /register
 async def setup_profile(
     request: Request,
     player_name: str = Form(...),

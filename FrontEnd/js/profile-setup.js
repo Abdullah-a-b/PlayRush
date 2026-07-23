@@ -171,7 +171,19 @@ window.addEventListener('load', () => {
                 method: "POST",
                 body: formData
             });
-            const data = await response.json();
+
+            // نقرأ الرد بأمان: قد لا يكون JSON (مثل ردّ 429 أو صفحة خطأ من المنصة)
+            let data = {};
+            try { data = await response.json(); } catch (e) { data = {}; }
+
+            // 429 = تجاوز حدّ المحاولات — رسالة واضحة بدل "خطأ بالسيرفر" المضلّلة
+            if (response.status === 429) {
+                profileMessage.textContent = "حاولت كثيراً خلال وقت قصير. انتظر قليلاً ثم أعد المحاولة.";
+                profileMessage.style.color = "#ffb020";
+                submitBtn.disabled = false;
+                submitBtn.textContent = "دخول للوبي 🚀";
+                return;
+            }
 
             if (response.ok) {
                 profileMessage.textContent = "تم الحفظ! جاري توجيهك للوبي...";
@@ -191,7 +203,7 @@ window.addEventListener('load', () => {
                 submitBtn.textContent = "دخول للوبي 🚀";
             }
         } catch (error) {
-            profileMessage.textContent = "خطأ في الاتصال بالسيرفر";
+            profileMessage.textContent = "تعذّر الوصول للسيرفر. تحقّق من اتصالك بالإنترنت وأعد المحاولة.";
             profileMessage.style.color = "#ff4d4d";
             submitBtn.disabled = false;
             submitBtn.textContent = "دخول للوبي 🚀";
