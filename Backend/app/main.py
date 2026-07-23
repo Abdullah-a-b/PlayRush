@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 import socketio
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from app.core.limiter import limiter
 
@@ -223,6 +224,11 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
+
+# ProxyHeadersMiddleware: يجعل request.client.host يحتوي IP الحقيقي للمستخدم
+# عبر كل المنصة (ليس فقط في الـ Rate Limiter).
+# مطلوب لأن Azure App Service يضع reverse proxy أمام التطبيق.
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 # ==========================================
 # CORS
