@@ -365,6 +365,27 @@ async def ai_status():
         result["detail"] = f"تعذّر تحميل النموذج: {str(e)[:120]}"
     return result
 
+@app.get("/app-version", tags=["System"])
+async def app_version():
+    """أحدث إصدار للتطبيق — يستعلمه التطبيق عند التشغيل لينبّه المستخدم.
+
+    التطبيق يُوزَّع خارج المتاجر، فلا يوجد تحديث تلقائي. هذا المسار
+    يخبر النسخ القديمة أن هناك أحدث منها ويعطيها رابط التنزيل.
+
+    تُضبط القيم من متغيّرات البيئة بلا إعادة نشر:
+      APP_LATEST_VERSION   مثال: 1.1.0
+      APP_MIN_VERSION      أقل إصدار مسموح (أقل منه = تحديث إلزامي)
+      APP_DOWNLOAD_URL     رابط التنزيل (ثابت — استبدل الملف في Drive)
+      APP_UPDATE_NOTES     نص قصير لما تغيّر
+    """
+    return {
+        "latest": os.environ.get("APP_LATEST_VERSION", "1.0.0"),
+        "min_supported": os.environ.get("APP_MIN_VERSION", "1.0.0"),
+        "url": os.environ.get("APP_DOWNLOAD_URL", ""),
+        "notes": os.environ.get("APP_UPDATE_NOTES", ""),
+    }
+
+
 @app.get("/health", tags=["System"])
 async def health_check():
     from app.infrastructure.database import SessionLocal

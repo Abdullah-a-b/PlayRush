@@ -6,7 +6,6 @@
     "allowMixedContent": false
   },
   "server": {
-    "url": "https://playrush.pages.dev",
     "androidScheme": "https",
     "cleartext": false
   },
