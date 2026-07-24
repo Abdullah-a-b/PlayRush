@@ -60,10 +60,12 @@ def main():
     from app.infrastructure.ai_judge import judge_answer
 
     t0 = time.time()
+    # التوقيع الصحيح: (question_text, correct_answer, player_answer, timeout)
     verdict = asyncio.run(judge_answer(
-        question="اذكر لوناً من ألوان قوس قزح",
-        player_answer="أحمر",
-        accepted_answers=["أحمر", "أزرق", "أخضر"],
+        "اذكر لوناً من ألوان قوس قزح",
+        "أحمر",
+        "احمر",
+        timeout=5.0,
     ))
     judge_ms = int((time.time() - t0) * 1000)
     print(f"[/] judge_answer: accept={verdict.get('accept')} "
