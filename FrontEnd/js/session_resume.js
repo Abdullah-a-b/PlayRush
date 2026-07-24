@@ -27,6 +27,15 @@
     }
 
     async function resume() {
+        // خرج المستخدم للتو صراحةً → لا نستأنف جلسته رغماً عنه.
+        // (العلامة تُستهلك مرة واحدة ثم تُمسح)
+        try {
+            if (sessionStorage.getItem('pr_logged_out') === '1') {
+                sessionStorage.removeItem('pr_logged_out');
+                return;
+            }
+        } catch (e) {}
+
         var t = token();
         if (!t) return;                     // لا جلسة محفوظة — نعرض الصفحة عادةً
         if (!api()) return;

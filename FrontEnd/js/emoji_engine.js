@@ -92,18 +92,27 @@
         return _waitLottie().then(function (ready) {
             if (!ready) { holder.textContent = fallbackText || ''; return null; }
             return load(emojiId).then(function (data) {
+                // للإطار الثابت نستخدم SVG: مُصيّر canvas لا يرسم شيئاً
+                // قبل التشغيل، فكانت خانات اللوحة تظهر فارغة تماماً.
+                // SVG يبني الإطار فوراً وبلا تكلفة مستمرة (لا حركة).
+                var useCanvas = IS_TOUCH && animate;
+
                 var anim = window.lottie.loadAnimation({
                     container: holder,
-                    renderer: IS_TOUCH ? 'canvas' : 'svg',
+                    renderer: useCanvas ? 'canvas' : 'svg',
                     loop: false,
                     autoplay: false,
                     animationData: data,          // من الذاكرة — بلا طلب شبكة جديد
-                    rendererSettings: { progressiveLoad: true, clearCanvas: true }
+                    rendererSettings: { progressiveLoad: false, clearCanvas: true }
                 });
 
                 if (!animate) {
-                    // إطار ثابت: يظهر شكل الإيموجي بلا أي استهلاك للمعالج
-                    try { anim.goToAndStop(0, true); } catch (e) {}
+                    // نرسم الإطار الأول فور جهوز البنية (وليس قبلها)
+                    var draw = function () {
+                        try { anim.goToAndStop(0, true); } catch (e) {}
+                    };
+                    anim.addEventListener('DOMLoaded', draw);
+                    draw();
                     return anim;
                 }
 

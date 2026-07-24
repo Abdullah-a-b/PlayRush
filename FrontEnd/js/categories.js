@@ -426,7 +426,14 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('logoutSettingsBtn')?.addEventListener('click', () => {
         showConfirm('تسجيل الخروج', 'هل أنت متأكد أنك تريد الخروج؟', () => {
-            sessionStorage.removeItem('token');
+            // خروج حقيقي: نمسح المخزنين معاً.
+            // مسح sessionStorage وحده كان يُبقي توكن "تذكرني" في
+            // localStorage فيُعاد تسجيل الدخول تلقائياً عند فتح الصفحة.
+            try {
+                sessionStorage.removeItem('token');
+                localStorage.removeItem('token');
+                sessionStorage.setItem('pr_logged_out', '1');
+            } catch (e) {}
             window.location.replace('login.html');
         });
     });

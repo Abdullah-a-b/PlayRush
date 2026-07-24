@@ -445,7 +445,12 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('logoutSettingsBtn')?.addEventListener('click', () => {
         showConfirm('تسجيل الخروج', 'هل أنت متأكد من رغبتك في تسجيل الخروج؟', () => {
-            sessionStorage.clear();
+            // خروج حقيقي: نمسح "تذكرني" في localStorage أيضاً
+            try {
+                sessionStorage.clear();
+                localStorage.removeItem('token');
+                sessionStorage.setItem('pr_logged_out', '1');
+            } catch (e) {}
             window.location.replace('login.html');
         });
     });
