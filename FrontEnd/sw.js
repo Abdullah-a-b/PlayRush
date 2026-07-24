@@ -12,7 +12,7 @@
    • التحديث فوري (skipWaiting + clients.claim) بلا انتظار.
    ============================================================ */
 
-const VERSION     = 'playrush-v1';
+const VERSION     = 'playrush-v2';
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 
@@ -50,6 +50,13 @@ function isAsset(url) {
     return /\.(png|jpg|jpeg|gif|svg|webp|woff2?|ttf|eot|mp3|ogg|wav)$/i.test(url.pathname);
 }
 
+// ملفات الكود: نخدمها من الكاش فوراً ثم نحدّثها في الخلفية.
+// هذا يجعل التنقّل بين الصفحات شبه فوري داخل التطبيق (الذي يحمّل
+// من الشبكة بعد server.url)، ويصل التحديث في الفتحة التالية.
+function isCode(url) {
+    return /\.(css|js)$/i.test(url.pathname);
+}
+
 self.addEventListener('fetch', (event) => {
     const req = event.request;
     if (req.method !== 'GET') return;
@@ -76,7 +83,24 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // كل ما عدا ذلك (HTML/JS/CSS): الشبكة أولاً، والكاش شبكة أمان فقط
+    // CSS/JS: من الكاش فوراً + تحديث صامت في الخلفية (stale-while-revalidate)
+    if (isCode(url)) {
+        event.respondWith(
+            caches.match(req).then((hit) => {
+                const net = fetch(req).then((res) => {
+                    if (res && res.ok) {
+                        const copy = res.clone();
+                        caches.open(SHELL_CACHE).then((c) => c.put(req, copy));
+                    }
+                    return res;
+                }).catch(() => hit);
+                return hit || net;
+            })
+        );
+        return;
+    }
+
+    // كل ما عدا ذلك (HTML): الشبكة أولاً، والكاش شبكة أمان فقط
     event.respondWith(
         fetch(req)
             .then((res) => {

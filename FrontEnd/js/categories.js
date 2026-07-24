@@ -11,7 +11,8 @@
     const params = new URLSearchParams(window.location.search);
     const t = params.get('token');
     if (t) {
-        sessionStorage.setItem('token', t);
+        if (window.prSaveToken) window.prSaveToken(t);
+        else sessionStorage.setItem('token', t);
         window.history.replaceState({}, document.title, window.location.pathname);
     }
 })();
@@ -494,7 +495,8 @@ window.addEventListener('DOMContentLoaded', async () => {
             const res  = await fetch(`${API_URL}/auth/settings/update-security`, {});
             const data = res.ok ? await res.json() : {};
             if (data.new_token) {
-                sessionStorage.setItem('token', data.new_token);
+                if (window.prSaveToken) window.prSaveToken(data.new_token);
+                else sessionStorage.setItem('token', data.new_token);
                 setTimeout(() => window.location.reload(), 1500);
             }
         });

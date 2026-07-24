@@ -7,10 +7,13 @@
 (function () {
     // داخل تطبيق Capacitor الملفات محلية أصلاً — لا حاجة لـSW
     // (نفحص جسر Capacitor لأن androidScheme:"https" يجعل العنوان https://localhost)
-    var isApp = window.PR_IS_APP === true
-        || (typeof window.Capacitor !== 'undefined')
-        || /^(capacitor|file|ionic):$/.test(window.location.protocol);
-    if (isApp || !('serviceWorker' in navigator)) return;
+    // نُسجّل الـservice worker كلما كانت الصفحة تُخدم عبر http(s) —
+    // بما في ذلك داخل التطبيق. فبعد تحويله ليحمّل من الموقع (server.url)
+    // صار كل انتقال بين الصفحات يُنزّل كل الملفات من جديد، فيبدو بطيئاً.
+    // الكاش يجعل التنقّل شبه فوري. نتخطّاه فقط في المخططات المحلية
+    // (capacitor:// أو file://) حيث لا ينطبق أصلاً.
+    var localScheme = /^(capacitor|file|ionic):$/.test(window.location.protocol);
+    if (localScheme || !('serviceWorker' in navigator)) return;
 
     window.addEventListener('load', function () {
         navigator.serviceWorker.register('/sw.js').then(function (reg) {

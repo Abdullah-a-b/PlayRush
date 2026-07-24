@@ -73,6 +73,17 @@ document.addEventListener('click', function(e) {
     }
 });
 
+// ===== حفظ التوكن في المخزنين معاً =====
+// كان بعض المسارات (جوجل/إكمال الملف/تجديد التوكن) يحفظ في
+// sessionStorage فقط، فتضيع الجلسة بإغلاق المتصفح رغم "تذكرني".
+window.prSaveToken = function (t) {
+    if (!t) return;
+    try {
+        sessionStorage.setItem('token', t);
+        localStorage.setItem('token', t);   // يعيش أسبوعاً = صلاحية التوكن
+    } catch (e) {}
+};
+
 // ===== PR_SESSION_BRIDGE: تذكُّر الدخول (زي المواقع العالمية) =====
 // من فعّل "تذكرني": توكنه في localStorage (يعيش 7 أيام = صلاحية التوكن
 // بالخادم). عند فتح تبويب/جلسة جديدة ننسخه لsessionStorage فيعمل كل

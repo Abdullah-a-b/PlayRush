@@ -2,7 +2,8 @@
 const urlParams = new URLSearchParams(window.location.search);
 const tokenFromUrl = urlParams.get('token');
 if (tokenFromUrl) {
-    sessionStorage.setItem('token', tokenFromUrl);
+    if (window.prSaveToken) window.prSaveToken(tokenFromUrl);
+    else sessionStorage.setItem('token', tokenFromUrl);
     window.history.replaceState({}, document.title, window.location.pathname);
 }
 
