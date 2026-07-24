@@ -115,15 +115,18 @@ async def _ai_startup_check():
 
 
 _telegram_task = None
+_ai_task = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(" جاري تشغيل السيرفر...")
     logger.info(" [moderation] فلتر المحتوى المحلي مُفعّل")
-    asyncio.create_task(_ai_startup_check())
+    global _telegram_task, _ai_task
+    # نحتفظ بمرجع للمهمتين: مهمة asyncio بلا مرجع قوي قد يجمعها كانس
+    # المهملات قبل أن تكتمل، فلا تُطبع حالة الذكاء الاصطناعي إطلاقاً.
+    _ai_task = asyncio.create_task(_ai_startup_check())
     # مستمع بوت تليجرام — يُطلق هنا داخل حلقة uvicorn الحيّة (وليس وقت الاستيراد،
     # وإلا لا يعمل مع uvicorn/multiport). عملية واحدة فقط تسحب التحديثات (قفل داخلي).
-    global _telegram_task
     _telegram_task = asyncio.create_task(telegram_bot_supervisor())
 
     # كل task محمية بـ supervisor — لا تموت بصمت

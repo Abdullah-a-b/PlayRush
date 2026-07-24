@@ -25,23 +25,16 @@ const QuickChat = (function () {
     return `${inGames ? '../' : ''}assets/emojis/${emojiId}.json`;
   }
 
-  // تحميل Lottie في حاوية — يعيد المحاولة لو المكتبة لم تجهز بعد
-  function _loadEmojiInto(holder, emojiId, fallbackText, tries) {
-    tries = tries || 0;
-    if (typeof window.lottie !== 'undefined' && window.lottie.loadAnimation) {
-      try {
-        window.lottie.loadAnimation({
-          container: holder, renderer: 'svg', loop: true, autoplay: true,
-          path: _emojiPath(emojiId),
-        });
-        return;
-      } catch (_) { holder.textContent = fallbackText; return; }
+  // تحميل الإيموجي عبر المحرّك المشترك (ذاكرة مؤقتة + canvas على الجوال).
+  // داخل لوحة الاختيار نعرض إطاراً ثابتاً فقط — تشغيل ~16 أنيميشن معاً
+  // كان يُعلّق التطبيق. الحركة تظهر عند اللمس وعند إرسال الرسالة.
+  function _loadEmojiInto(holder, emojiId, fallbackText, animate) {
+    if (window.PREmoji) {
+      return window.PREmoji.render(holder, emojiId, fallbackText,
+                                   { animate: animate === true });
     }
-    if (tries < 20) {
-      setTimeout(() => _loadEmojiInto(holder, emojiId, fallbackText, tries + 1), 250);
-    } else {
-      holder.textContent = fallbackText;  // تعذّر تحميل Lottie → نص احتياطي
-    }
+    holder.textContent = fallbackText || '';
+    return Promise.resolve(null);
   }
 
   function _buildPanel(instance) {
@@ -75,7 +68,13 @@ const QuickChat = (function () {
           holder.style.margin = '0 auto';
           holder.style.fontSize = '28px';
           btn.appendChild(holder);
-          _loadEmojiInto(holder, ph.emojiId, ph.text);
+          // ثابت افتراضياً؛ يتحرك عند اللمس/المرور فقط
+          _loadEmojiInto(holder, ph.emojiId, ph.text, false).then(function (anim) {
+            if (!anim) return;
+            var play = function () { if (window.PREmoji) window.PREmoji.playOnce(anim); };
+            btn.addEventListener('pointerenter', play);
+            btn.addEventListener('touchstart', play, { passive: true });
+          });
         } else {
           btn.textContent = ph.text;
         }

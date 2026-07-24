@@ -24,6 +24,21 @@
         violations = parseInt(localStorage.getItem(STORAGE_KEY)) || 0;
     } catch (e) {}
 
+    // تصفير لمرة واحدة: المخالفات التي تراكمت على أجهزة اللمس كانت ناتجة
+    // عن فتح لوحة المفاتيح (خطأ في الفحص بالحجم) لا عن غش حقيقي.
+    try {
+        var _touchNow = (typeof window.matchMedia === 'function'
+                            && window.matchMedia('(pointer: coarse)').matches)
+                         || ('ontouchstart' in window)
+                         || (navigator.maxTouchPoints > 0);
+        if (_touchNow && !localStorage.getItem('cv_kbfix')) {
+            violations = 0;
+            localStorage.setItem(STORAGE_KEY, '0');
+            localStorage.removeItem(BAN_KEY);
+            localStorage.setItem('cv_kbfix', '1');
+        }
+    } catch (e) {}
+
     // ============================================================
     //  الخطوة الأولى: مزامنة مع السيرفر
     // قبل ما نطبّق أي ban من localStorage، نسأل السيرفر
@@ -106,8 +121,21 @@
     let detectionStartTime = Date.now();
     let strictMode = false;  //  يصبح true عند blur — حساسية أعلى
 
+    // أجهزة اللمس: فتح لوحة المفاتيح يقلّص innerHeight بمئات البكسلات،
+    // فيبدو كأن أدوات المطور فُتحت. الفحص بالحجم غير صالح هنا إطلاقاً،
+    // وكان يعاقب المستخدم لمجرد الكتابة (تحذير ثم حظر).
+    const IS_TOUCH = (typeof window.matchMedia === 'function'
+                        && window.matchMedia('(pointer: coarse)').matches)
+                     || ('ontouchstart' in window)
+                     || (navigator.maxTouchPoints > 0);
+
     function detectDevToolsBySize() {
+        if (IS_TOUCH) return;                                   // جوال/لوحي: تخطَّ الفحص
         if (Date.now() - detectionStartTime < 2000) return;
+
+        // حتى على سطح المكتب: لا نحكم أثناء الكتابة في حقل
+        const el = document.activeElement;
+        if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
 
         const widthDiff = window.outerWidth - window.innerWidth;
         const heightDiff = window.outerHeight - window.innerHeight;

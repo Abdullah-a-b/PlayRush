@@ -137,6 +137,14 @@ def _tokenize(text: str) -> list[str]:
     return tokens
 
 
+def _bare(token: str) -> str:
+    """يزيل «ال» التعريف من بداية الكلمة للمقارنة فقط.
+    «الشيكل» → «شيكل» — لازم لأن الإجابات المستوردة كثيراً ما تبدأ بأل."""
+    if token.startswith('ال') and len(token) > 4:
+        return token[2:]
+    return token
+
+
 def _token_weight(token: str) -> float:
     """
     وزن الكلمة — الكلمات الطويلة/النادرة أهم.
@@ -201,6 +209,30 @@ def check_answer(player_answer: str, correct_answer: str,
         if p_norm == normalize_arabic(correct):
             return {'verdict': 'accept', 'confidence': 1.0,
                     'method': 'exact', 'matched_answer': correct}
+
+    # ==========================================
+    # الطبقة 1.5: مطابقة الكلمة المفتاحية (رأس الإجابة)
+    # ==========================================
+    # الإجابات المستوردة كثيراً ما تكون وصفاً كاملاً:
+    #   «شيكل إسرائيلي جديد» / «الريال السعودي»
+    # واللاعب ينطق الجوهر فقط: «شيكل» / «ريال».
+    # بدون هذه الطبقة تسقط الإجابة الصحيحة في حساب التغطية
+    # (1 من 3 = 0.33 < 0.5) وتُرفض قبل أن تصل للذكاء الاصطناعي.
+    p_tokens_head = _tokenize(player_answer)
+    if len(p_tokens_head) == 1:
+        p_head = p_tokens_head[0]
+        for correct in all_correct:
+            c_tokens = _tokenize(correct)
+            if not c_tokens:
+                continue
+            # كلمة مفتاحية مميّزة (4 أحرف فأكثر) تكفي وحدها
+            if _bare(p_head) == _bare(c_tokens[0]) and len(_bare(p_head)) >= 4:
+                return {'verdict': 'accept', 'confidence': 0.9,
+                        'method': 'head_word', 'matched_answer': correct}
+            # كلمة قصيرة أو ليست الأولى → حالة حدّية يحسمها الذكاء الاصطناعي
+            if _bare(p_head) in [_bare(t) for t in c_tokens]:
+                return {'verdict': 'maybe', 'confidence': 0.7,
+                        'method': 'token_in_answer', 'matched_answer': correct}
 
     # ==========================================
     # الطبقة 2: Fuzzy match

@@ -149,32 +149,97 @@ def advance_state(game_state, new_stage):
     game_state.state_version += 1
     return game_state.state_version
 
+import re as _re
+
+# محارف التشكيل والمحارف غير المرئية التي تُفشل المطابقة رغم تطابق الشكل
+_AR_DIACRITICS = _re.compile(r'[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]')
+_INVISIBLE     = _re.compile(r'[\u0640\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]')
+_PUNCT         = _re.compile(r'[\.\,\;\:\!\?\-\_\(\)\[\]\{\}«»"\'`ـ/\\]')
+
+# تعريبات مختلفة لنفس الكلمة — تُطبَّق بعد التطبيع (بلا مسافات ولا تشكيل).
+# محدّدة عمداً: لا نعمّم تبادل الحروف حتى لا تُقبل كلمات مختلفة المعنى.
+_SPELLING_VARIANTS = [
+    ('شيكل', 'شيقل'),        # عملة إسرائيل/فلسطين
+    ('طوكيو', 'توكيو'),
+    ('واشنطن', 'واشنطون'),
+    ('موسكو', 'موسكوو'),
+    ('بكين', 'بيجين'),
+    ('استانبول', 'اسطنبول'),
+    ('قطر', 'كطر'),
+    ('جنيه', 'جنيهه'),
+    ('يورو', 'اورو'),
+    ('دولار', 'دولر'),
+]
+
 def clean_text_for_match(t):
-    """فلتر تنظيف النصوص للتحكيم اللحظي"""
+    """تطبيع عربي شامل للتحكيم اللحظي.
+
+    كان يعالج (ة/أ/إ/آ) فقط، فتفشل إجابات صحيحة بسبب فروق غير مرئية:
+    التشكيل، التطويل، الكاف/الياء الفارسية، ومحارف الاتجاه المخفية.
+    """
     t = str(t).strip()
-    t = t.replace("ال", "", 1) if t.startswith("ال") else t
-    return t.replace(" ", "").replace("ة", "ه").replace("أ", "ا").replace("إ", "ا").replace("آ", "ا")
+    t = _INVISIBLE.sub('', t)
+    t = _AR_DIACRITICS.sub('', t)       # حذف الحركات (شِيكِل → شيكل)
+    t = _PUNCT.sub('', t)
+
+    # توحيد صور الحروف
+    t = (t.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا').replace('ٱ', 'ا')
+          .replace('ة', 'ه')
+          .replace('ى', 'ي').replace('ی', 'ي')      # ألف مقصورة وياء فارسية
+          .replace('ك', 'ك').replace('ک', 'ك')      # كاف فارسية → عربية
+          .replace('ؤ', 'و').replace('ئ', 'ي').replace('ء', ''))
+
+    if t.startswith('ال'):
+        t = t[2:]
+    return t.replace(' ', '')
+
+
+def _core_forms(text):
+    """صيغ مقبولة للإجابة: الكاملة + الكلمة الأولى (للإجابات المركّبة).
+    مثال: «شيكل إسرائيلي جديد» → يُقبل أيضاً «شيكل»."""
+    raw = str(text).strip()
+    forms = {clean_text_for_match(raw)}
+    words = [w for w in _re.split(r'\s+', raw) if w]
+    if len(words) > 1:
+        forms.add(clean_text_for_match(words[0]))
+        forms.add(clean_text_for_match(' '.join(words[:2])))
+
+    # صيغ إملائية بديلة معتمدة (تعريب مختلف لنفس الكلمة).
+    # قائمة محدّدة عمداً — لا نجعل ق=ك عموماً لأن ذلك يخلط كلمات مختلفة.
+    extra = set()
+    for f in forms:
+        for a, b in _SPELLING_VARIANTS:
+            if a in f: extra.add(f.replace(a, b))
+            if b in f: extra.add(f.replace(b, a))
+    forms |= extra
+    return {f for f in forms if f}
+
 
 def check_answer_fast_track(player_ans, correct_ans, accepted_list, required_letter):
-    """التحكيم اللحظي (0 ملي ثانية) - 3 فلاتر"""
+    """التحكيم اللحظي (0 ملي ثانية)"""
     p_clean = clean_text_for_match(player_ans)
     req_clean = clean_text_for_match(required_letter)
-    
-    # 1. فلتر الإعدام الفوري (الكلمة لا تبدأ بالحرف المطلوب)
+
+    # 1. الكلمة لا تبدأ بالحرف المطلوب
     if not p_clean.startswith(req_clean):
         return False, "wrong_letter"
-        
-    # 2. فلتر الفوز الفوري (تطابق مع الإجابة الرسمية)
-    c_clean = clean_text_for_match(correct_ans)
-    if p_clean == c_clean:
+
+    # 2. تطابق مع الإجابة الرسمية أو إحدى صيغها المختصرة
+    if p_clean in _core_forms(correct_ans):
         return True, "exact_match"
-        
-    # 3. فلتر الفوز الفوري (تطابق مع قائمة المرادفات المسموحة)
-    for acc in accepted_list:
-        if p_clean == clean_text_for_match(acc):
+
+    # 3. تطابق مع قائمة المرادفات المسموحة (وصيغها المختصرة أيضاً)
+    for acc in (accepted_list or []):
+        if p_clean in _core_forms(acc):
             return True, "accepted_match"
-            
-    # 4. إذا مرت من كل هذا، نحيلها للمحكمة العليا (الذكاء الاصطناعي)
+
+    # 4. الإجابة جزء مطابق من بداية الإجابة الرسمية (٤ أحرف فأكثر)
+    #    يقبل «شيكل» مقابل «شيكلإسرائيليجديد» بلا قبول تخمينات قصيرة.
+    c_full = clean_text_for_match(correct_ans)
+    if len(p_clean) >= 4 and c_full.startswith(p_clean):
+        return True, "prefix_match"
+
+    # 5. غير ذلك → المحكمة العليا (الذكاء الاصطناعي)
     return False, "إجابة خاطئة"
 
 

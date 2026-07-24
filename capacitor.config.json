@@ -6,15 +6,16 @@
     "allowMixedContent": false
   },
   "server": {
+    "url": "https://playrush.pages.dev",
     "androidScheme": "https",
     "cleartext": false
   },
   "plugins": {
     "SplashScreen": {
       "launchShowDuration": 400,
+      "launchAutoHide": true,
       "backgroundColor": "#0f172a",
-      "showSpinner": false,
-      "launchAutoHide": true
+      "showSpinner": false
     }
   }
 }

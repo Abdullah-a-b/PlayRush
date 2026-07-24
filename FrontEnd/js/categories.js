@@ -268,9 +268,19 @@ window.addEventListener('DOMContentLoaded', async () => {
     try {
         const res= await fetch(`${API_URL}/auth/me`, { headers: { 'Authorization': `Bearer ${token}` } });
         if (!res.ok) {
-            sessionStorage.removeItem('token');
-            try { localStorage.removeItem('token'); } catch (e) {}
-            return window.location.replace('login.html');
+            // 401/403 = التوكن فعلاً غير صالح → نمسح الجلسة ونعيد لتسجيل الدخول.
+            // أي شيء آخر (429 تجاوز حدّ، 5xx ازدحام، تعثّر لحظي) = عطل مؤقت،
+            // فلا نمسح "تذكّرني" — وإلا خرج المستخدم من حسابه بلا سبب حقيقي.
+            if (res.status === 401 || res.status === 403) {
+                sessionStorage.removeItem('token');
+                try { localStorage.removeItem('token'); } catch (e) {}
+                return window.location.replace('login.html');
+            }
+
+            if (typeof showToast === 'function') {
+                showToast('تعذّر تحميل بياناتك مؤقتاً. أعد تحميل الصفحة بعد قليل.', 'error');
+            }
+            return;
         }
 
         userDataCache = await res.json();

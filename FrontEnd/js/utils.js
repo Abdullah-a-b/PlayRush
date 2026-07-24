@@ -261,32 +261,15 @@ function addGlobalChatMessage(sender, text, isSystem = false, senderId = null, e
             holder.style.verticalAlign = 'middle';
             holder.style.fontSize = '26px';
             msgDiv.appendChild(holder);
-            const inGames = window.location.pathname.includes('/games/');
-            const path = `${inGames ? '../' : ''}assets/emojis/${emojiId}.json`;
-            (function tryLoad(tries) {
-                if (typeof window.lottie !== 'undefined' && window.lottie.loadAnimation) {
-                    try {
-                        const anim = window.lottie.loadAnimation({
-                            container: holder, renderer: 'svg', loop: false, autoplay: true, path,
-                        });
-                        // تكرار ديناميكي خفيف: يعيد التشغيل بعد فترات عشوائية (لا يلفت النظر)
-                        let _plays = 0;
-                        anim.addEventListener('complete', function _onDone() {
-                            _plays++;
-                            if (_plays >= 6) return; // يتوقف بعد عدة مرات
-                            // انتظار عشوائي ثم إعادة (إيقاع غير منتظم = طبيعي)
-                            const wait = 2500 + Math.random() * 4000;
-                            setTimeout(() => {
-                                try { anim.goToAndPlay(0, true); } catch (_) {}
-                            }, wait);
-                        });
-                    } catch (_) { holder.textContent = sanitizeText(text); }
-                } else if (tries < 20) {
-                    setTimeout(() => tryLoad(tries + 1), 250);
-                } else {
-                    holder.textContent = sanitizeText(text);
-                }
-            })(0);
+            // عبر المحرّك المشترك: ملف واحد محفوظ بالذاكرة + canvas على الجوال.
+            // تكرار أقل على الجوال حفاظاً على سلاسة اللعب.
+            if (window.PREmoji) {
+                const _replays = window.PREmoji.isTouch ? 2 : 6;
+                window.PREmoji.render(holder, emojiId, sanitizeText(text),
+                                      { animate: true, replays: _replays });
+            } else {
+                holder.textContent = sanitizeText(text);
+            }
         } else {
             const textSpan = document.createElement('span');
             textSpan.style.color = '#ddd';
@@ -386,12 +369,23 @@ function deleteAccount() {
                         window.location.replace('./index.html');
                     }, 2000);
                 } else {
-                    const data = await res.json();
-                    showToast(`❌ حدث خطأ: ${data.detail || 'لم نتمكن من الحذف'}`, 'error');
+                    // نقرأ الرد بأمان: قد لا يكون JSON (خطأ 500 أو صفحة من المنصة)
+                    let data = {};
+                    try { data = await res.json(); } catch (e) { data = {}; }
+
+                    let msg;
+                    if (res.status === 429) {
+                        msg = 'حاولت الحذف مراراً. انتظر قليلاً ثم أعد المحاولة.';
+                    } else if (res.status === 401) {
+                        msg = 'انتهت جلستك. سجّل الدخول مجدداً ثم أعد المحاولة.';
+                    } else {
+                        msg = data.detail || `تعذّر الحذف (رمز ${res.status})`;
+                    }
+                    showToast(`❌ ${msg}`, 'error');
                 }
             } catch (err) {
                 console.error('deleteAccount error:', err);
-                showToast('❌ حدث خطأ في الاتصال بالخادم.', 'error');
+                showToast('❌ تعذّر الوصول للخادم. تحقّق من اتصالك بالإنترنت.', 'error');
             }
         }
     );
