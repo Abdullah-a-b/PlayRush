@@ -41,17 +41,13 @@
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45) !important;
 }
 
-/* ── ٥) انتقالات أسرع = إحساس أرشق على الجوال ── */
+/* ── ٥) انتقالات أسرع = إحساس أرشق على الجوال ──
+   ملاحظة مهمة: نختصر transition فقط (استجابة لمسة المستخدم).
+   لا نمسّ animation-duration إطلاقاً — الأنيميشنات الزخرفية
+   (تعويم الصندوق، تدرّج الخلفية، الوميض) مضبوطة بمدد مقصودة،
+   وسحقها يجعلها تهتز بسرعة مزعجة. */
 .pr-app * {
     transition-duration: 0.18s !important;
-    animation-duration: 0.25s;
-}
-/* استثناء: الحركات الدائمة تحتاج مدتها الأصلية */
-.pr-app .particle,
-.pr-app .star,
-.pr-app [class*="spin"],
-.pr-app [class*="pulse"] {
-    animation-duration: revert !important;
 }
 
 /* ── ٦) تسريع التمرير ── */

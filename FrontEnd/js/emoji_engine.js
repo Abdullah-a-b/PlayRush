@@ -69,9 +69,11 @@
 
     function _register(anim) {
         _live.push(anim);
+        // عند تجاوز السقف: نوقف الأقدم فقط ولا نتلفه.
+        // إتلافه كان يمسح الإيموجي من الرسائل القديمة فتختفي من الشات.
         while (_live.length > MAX_LIVE) {
             var old = _live.shift();
-            try { old.stop(); old.destroy(); } catch (e) {}
+            try { old.pause(); } catch (e) {}
         }
     }
 
