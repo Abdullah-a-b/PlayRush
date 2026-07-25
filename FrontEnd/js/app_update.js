@@ -44,11 +44,18 @@
     }
 
     function openLink(url) {
+        // نجرّب عدة طرق بالترتيب — بعض WebViews القديمة تحجب بعضها
         try {
             var B = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser;
             if (B && B.open) { B.open({ url: url }); return; }
         } catch (e) {}
-        window.open(url, '_system') || (window.location.href = url);
+        try {
+            var w = window.open(url, '_system');
+            if (w) return;
+        } catch (e) {}
+        try { window.open(url, '_blank'); } catch (e) {}
+        // الملاذ الأخير: التنقّل المباشر
+        try { window.location.href = url; } catch (e) {}
     }
 
     function show(info, mandatory) {
@@ -88,6 +95,19 @@
         dl.onclick = function () { openLink(info.url); };
         box.appendChild(dl);
 
+        // رابط ظاهر يمكن نسخه — ملاذ أخير لو فشلت كل طرق الفتح
+        var linkRow = document.createElement('div');
+        linkRow.style.cssText =
+            'margin-top:12px;padding:9px;border-radius:9px;background:rgba(0,0,0,.28);' +
+            'font-size:.72rem;color:#cbb8e6;word-break:break-all;direction:ltr;text-align:center;';
+        linkRow.textContent = info.url;
+        linkRow.onclick = function () {
+            try {
+                if (navigator.clipboard) navigator.clipboard.writeText(info.url);
+            } catch (e) {}
+        };
+        box.appendChild(linkRow);
+
         if (!mandatory) {
             var later = document.createElement('button');
             later.textContent = 'لاحقاً';
@@ -109,8 +129,7 @@
     async function check() {
         if (!isApp() || !api()) return;          // التنبيه للتطبيق فقط
 
-        var current = await installedVersion();
-        if (!current) return;                    // تعذّر معرفة الإصدار المثبَّت
+        var current = await installedVersion();   // قد تكون null في نسخ قديمة جداً
 
         var info;
         try {
@@ -120,6 +139,16 @@
         } catch (e) { return; }                  // بلا إنترنت — لا نزعج المستخدم
 
         if (!info || !info.url) return;
+
+        // لو تعذّر معرفة الإصدار المثبَّت (إضافة App غير متوفرة في نسخة
+        // قديمة)، نفترض أنها قديمة ونعرض التنبيه إن كان هناك حدّ أدنى
+        // مطلوب — فالهدف إيصال رابط التحميل لمن لا يستطيع التحديث تلقائياً.
+        if (!current) {
+            if (info.min_supported && info.min_supported !== '0.0.0') {
+                show(info, true);                 // إلزامي مع زر التحميل
+            }
+            return;
+        }
 
         var mandatory = cmp(current, info.min_supported) < 0;
         var outdated  = cmp(current, info.latest) < 0;
