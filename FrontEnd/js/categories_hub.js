@@ -214,6 +214,18 @@
           esc(item.rank_label) + ' · ' + esc(item.games) + ' ألعاب</div>';
         row.appendChild(info);
         row.appendChild(el('div', 'glb-elo', esc(item.avg_elo) + '<span> نقطة</span>'));
+
+        // النقر على الصف = فتح بروفايل اللاعب (user_id رقمي يفهمه الخادم)
+        var uid = item.user_id;
+        if (uid != null) {
+          row.style.cursor = 'pointer';
+          row.title = 'عرض البروفايل';
+          row.addEventListener('click', function () {
+            if (typeof window.openPlayerProfileById === 'function') {
+              window.openPlayerProfileById(uid);
+            }
+          });
+        }
         box.appendChild(row);
       });
       hub.appendChild(box);
