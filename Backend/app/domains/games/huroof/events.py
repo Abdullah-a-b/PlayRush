@@ -3,6 +3,8 @@ import html
 import random
 import json
 import time
+import secrets
+import string
 
 # ==========================================
 # الاستيرادات من الهيكلة الجديدة (تأكد من مطابقتها لمساراتك)
@@ -11,6 +13,7 @@ from app.infrastructure.database import SessionLocal
 from app.domains.games.models import Question
 from app.domains.users.models import User
 from app.domains.games.core_manager import get_room_state, rooms
+from app.domains.games.huroof.engine import HuroofGameState
 from app.domains.wallet.reward_service import record_match_result
 from app.infrastructure.telegram_bot import send_secret_to_mobile
 
@@ -246,6 +249,11 @@ def check_answer_fast_track(player_ans, correct_ans, accepted_list, required_let
 # ==========================================
 # تسجيل أحداث السوكيت للعبة حروف
 # ==========================================
+# خطّافات الوضع الفردي: تُملأ داخل register، وتُستدعى من دوال اللعبة
+# لإشعار البوت (فارغة تماماً في الأونلاين، فلا أثر عليه).
+_SOLO_HOOKS = {}
+
+
 def register_huroof_events(sio):
     """تغليف الدوال والأحداث لكي تتمكن من استخدام كائن sio"""
 
@@ -255,6 +263,9 @@ def register_huroof_events(sio):
         await sio.emit('huroof_turn_changed',
                        {'turn_sid': turn_sid, 'turn_color': turn_color},
                        room=room_code)
+        # الوضع الفردي: لو صار الدور للبوت، يبدأ اختياره
+        if getattr(gs, 'is_solo', False) and 'after_turn' in _SOLO_HOOKS:
+            sio.start_background_task(_SOLO_HOOKS['after_turn'], room_code)
 
     def is_players_turn(room, gs, sid):
         """هل هذا الـ sid صاحب الدور؟ نتحقق عبر اللون (مستقر) لا الـ sid فقط،
@@ -308,6 +319,8 @@ def register_huroof_events(sio):
                 gs.buzzed_player = None
                 await sio.emit('huroof_last_chance', {'timer': 30}, room=room_code)
                 sio.start_background_task(huroof_timer_task, room_code, version, 30, 'timeout_buzz_r3')
+                if getattr(gs, 'is_solo', False) and 'consider_buzz' in _SOLO_HOOKS:
+                    sio.start_background_task(_SOLO_HOOKS['consider_buzz'], room_code, version, 30)
 
             elif timeout_type == 'timeout_answer_r1':
                 # 1 اللاعب الأول أضاع الـ 15 ثانية -> ينتقل للخصم بـ 20 ثانية (المحاولة الأولى)
@@ -315,6 +328,8 @@ def register_huroof_events(sio):
                 gs.buzzed_player = gs.p2 if gs.buzzed_player == gs.p1 else gs.p1
                 await sio.emit('huroof_chance_transfer', {'to_sid': gs.buzzed_player, 'timer': 20, 'round': 'r2'}, room=room_code)
                 sio.start_background_task(huroof_timer_task, room_code, version, 20, 'timeout_answer_r2')
+                if getattr(gs, 'is_solo', False) and 'on_transfer' in _SOLO_HOOKS:
+                    sio.start_background_task(_SOLO_HOOKS['on_transfer'], room_code, version, 20)
                 
             elif timeout_type == 'timeout_answer_r2':
                 # 2 الخصم أضاع الـ 20 ثانية -> فشل الكل في الأولى، نفتح المحاولة الثانية
@@ -323,6 +338,8 @@ def register_huroof_events(sio):
                 gs.buzzed_player = None
                 await sio.emit('huroof_last_chance', {'timer': 30}, room=room_code)
                 sio.start_background_task(huroof_timer_task, room_code, version, 30, 'timeout_buzz_r3')
+                if getattr(gs, 'is_solo', False) and 'consider_buzz' in _SOLO_HOOKS:
+                    sio.start_background_task(_SOLO_HOOKS['consider_buzz'], room_code, version, 30)
                 
             elif timeout_type == 'timeout_answer_r3':
                 # 3 اللاعب أضاع الـ 12 ثانية (في المحاولة الثانية) -> ينتقل للخصم بـ 12 ثانية
@@ -330,6 +347,8 @@ def register_huroof_events(sio):
                 gs.buzzed_player = gs.p2 if gs.buzzed_player == gs.p1 else gs.p1
                 await sio.emit('huroof_chance_transfer', {'to_sid': gs.buzzed_player, 'timer': 12, 'round': 'r4'}, room=room_code)
                 sio.start_background_task(huroof_timer_task, room_code, version, 12, 'timeout_answer_r4')
+                if getattr(gs, 'is_solo', False) and 'on_transfer' in _SOLO_HOOKS:
+                    sio.start_background_task(_SOLO_HOOKS['on_transfer'], room_code, version, 12)
 
             elif timeout_type == 'timeout_answer_r4' or timeout_type == 'timeout_buzz_r3':
                 # 4 انتهت كل الفرص أو لم يضغط أحد في الفرصة الثانية
@@ -432,6 +451,10 @@ def register_huroof_events(sio):
 
         sio.start_background_task(huroof_timer_task, room_code, version, 40, 'timeout_buzz_r1')
 
+        # الوضع الفردي: نُشعر البوت أن سؤالاً ظهر (نافذة 40ث) ليقرّر البزّ
+        if getattr(gs, 'is_solo', False) and 'consider_buzz' in _SOLO_HOOKS:
+            sio.start_background_task(_SOLO_HOOKS['consider_buzz'], room_code, version, 40)
+
     async def process_answer_result(room_code, is_correct, player_ans, result=None):
         room = get_room_state(room_code)
         if not room or not room.get('game_state'): return
@@ -507,6 +530,10 @@ def register_huroof_events(sio):
                         await sio.emit('huroof_new_round_started', {
                             'turn': gs.turn
                         }, room=room_code)
+
+                        # الوضع الفردي: لو الدور الأول في الجولة للبوت، يبدأ
+                        if getattr(gs, 'is_solo', False) and 'after_turn' in _SOLO_HOOKS:
+                            sio.start_background_task(_SOLO_HOOKS['after_turn'], room_code)
             else:
                 advance_state(gs, 'selecting')
                 gs.turn = sid
@@ -541,6 +568,8 @@ def register_huroof_events(sio):
                 gs.buzzed_player = gs.p2 if gs.buzzed_player == gs.p1 else gs.p1
                 await sio.emit('huroof_chance_transfer', {'to_sid': gs.buzzed_player, 'timer': 20, 'round': 'r2'}, room=room_code)
                 sio.start_background_task(huroof_timer_task, room_code, version, 20, 'timeout_answer_r2')
+                if getattr(gs, 'is_solo', False) and 'on_transfer' in _SOLO_HOOKS:
+                    sio.start_background_task(_SOLO_HOOKS['on_transfer'], room_code, version, 20)
                 
             elif gs.stage == 'answer_r2':
                 # نهاية المرحلة الأولى  الفرصة الأخيرة (نفس السؤال). لا نكشف الإجابة بعد.
@@ -548,12 +577,16 @@ def register_huroof_events(sio):
                 version = advance_state(gs, 'question') 
                 gs.buzzed_player = None
                 await sio.emit('huroof_last_chance', {'timer': 30}, room=room_code) 
+                if getattr(gs, 'is_solo', False) and 'consider_buzz' in _SOLO_HOOKS:
+                    sio.start_background_task(_SOLO_HOOKS['consider_buzz'], room_code, version, 30)
                 
             elif gs.stage == 'answer_r3':
                 version = advance_state(gs, 'answer_r4')
                 gs.buzzed_player = gs.p2 if gs.buzzed_player == gs.p1 else gs.p1
                 await sio.emit('huroof_chance_transfer', {'to_sid': gs.buzzed_player, 'timer': 12, 'round': 'r4'}, room=room_code)
                 sio.start_background_task(huroof_timer_task, room_code, version, 12, 'timeout_answer_r4')
+                if getattr(gs, 'is_solo', False) and 'on_transfer' in _SOLO_HOOKS:
+                    sio.start_background_task(_SOLO_HOOKS['on_transfer'], room_code, version, 12)
                 
             elif gs.stage == 'answer_r4':
                 # 🆕 نكشف الإجابة للطرفين (كلاهما أخطأ في كل المحاولات)
@@ -1322,6 +1355,187 @@ def register_huroof_events(sio):
 
     # ==========================================
     # الصداقة والحظر (من بروفايل الخصم)
+    # ============================================================
+    #  الوضع الفردي (اللعب ضد الكمبيوتر) — طبقة الربط
+    # ------------------------------------------------------------
+    #  معزولة تماماً: كل شيء محروس بـ gs.is_solo، فلا يمسّ الأونلاين.
+    #  البوت لاعب وهمي (sid=__BOT__) بلا اتصال. حلقات خلفية تراقب
+    #  المراحل وتتصرّف نيابةً عنه عبر نفس دوال اللعبة الداخلية.
+    # ============================================================
+    from app.domains.games.huroof import solo_bot as _solo
+
+    async def _bot_take_turn_select(room_code):
+        """دور البوت في الاختيار: يختار خلية ثم يعرض السؤال."""
+        await asyncio.sleep(random.uniform(1.2, 2.5))
+        room = get_room_state(room_code)
+        if not room or room.get('state') != 'playing': return
+        gs = room.get('game_state')
+        if not gs or not getattr(gs, 'is_solo', False): return
+        if gs.stage != 'selecting' or gs.turn != _solo.BOT_SID: return
+
+        idx = _solo.choose_hex(gs.board, gs.bot_color, gs.bot_difficulty)
+        if idx is None: return
+        gs.active_hex = gs.board[idx]
+        await sio.emit('huroof_hex_locked',
+                       {'hexIndex': idx, 'letter': gs.active_hex['letter']},
+                       room=room_code)
+        await trigger_new_question(room_code)
+
+    async def _bot_consider_buzz(room_code, version, window_seconds):
+        """عند ظهور سؤال: يقرّر البوت هل/متى يبزّ، وينفّذ إن لم يسبقه اللاعب."""
+        room = get_room_state(room_code)
+        if not room or not room.get('game_state'): return
+        gs = room['game_state']
+        if not getattr(gs, 'is_solo', False): return
+
+        q = gs.current_question or {}
+        qd = q.get('difficulty', 'medium')
+        attempt = getattr(gs, 'attempts', 1)
+        decision = _solo.decide_on_question(gs.bot_difficulty, qd, window_seconds, attempt)
+        gs.bot_knows_current = decision['knows']
+
+        if not decision['will_buzz']:
+            return
+
+        await asyncio.sleep(decision['delay'])
+
+        room = get_room_state(room_code)
+        if not room or room.get('state') != 'playing': return
+        gs = room.get('game_state')
+        if not gs or gs.state_version != version: return
+        if gs.stage not in ('question', 'buzz_r1', 'buzz_r3'): return
+        if gs.buzzed_player is not None: return
+
+        gs.buzzed_player = _solo.BOT_SID
+        if getattr(gs, 'attempts', 1) == 1:
+            t, new_stage, tt = 15, 'answer_r1', 'timeout_answer_r1'
+        else:
+            t, new_stage, tt = 12, 'answer_r3', 'timeout_answer_r3'
+        v2 = advance_state(gs, new_stage)
+        await sio.emit('huroof_buzzed', {'sid': _solo.BOT_SID, 'time': t}, room=room_code)
+        sio.start_background_task(huroof_timer_task, room_code, v2, t, tt)
+
+        await asyncio.sleep(random.uniform(1.5, 3.5))
+        room = get_room_state(room_code)
+        if not room or room.get('state') != 'playing': return
+        gs = room.get('game_state')
+        if not gs or gs.state_version != v2: return
+        if gs.buzzed_player != _solo.BOT_SID: return
+
+        gs.state_version += 1
+        is_correct = bool(getattr(gs, 'bot_knows_current', False))
+        ans_text = gs.current_question.get('answer', '') if is_correct else '—'
+        await process_answer_result(room_code, is_correct, ans_text)
+
+    async def _solo_after_turn(room_code):
+        """يُستدعى بعد تغيّر الدور: لو صار دور البوت، يبدأ اختياره."""
+        room = get_room_state(room_code)
+        if not room: return
+        gs = room.get('game_state')
+        if gs and getattr(gs, 'is_solo', False) and gs.turn == _solo.BOT_SID:
+            sio.start_background_task(_bot_take_turn_select, room_code)
+
+    async def _bot_answer_transfer(room_code, version, window_seconds):
+        """الفرصة انتقلت للبوت (اللاعب أخطأ). البوت يجيب إن كان يعرف.
+        لا بزّ هنا — الدور صار له مباشرة بنافذة window_seconds."""
+        room = get_room_state(room_code)
+        if not room or not room.get('game_state'): return
+        gs = room['game_state']
+        if not getattr(gs, 'is_solo', False): return
+        if gs.buzzed_player != _solo.BOT_SID: return
+
+        # هل يعرف؟ (المحاولة المنقولة عادةً attempt=1 لكن بعد خطأ الخصم)
+        q = gs.current_question or {}
+        knows = _solo.bot_knows_answer(gs.bot_difficulty, q.get('difficulty', 'medium'),
+                                       getattr(gs, 'attempts', 1))
+        # تأخير بشري ضمن النافذة (لا يستهلكها كلها)
+        await asyncio.sleep(random.uniform(2.0, min(window_seconds * 0.7, 8.0)))
+
+        room = get_room_state(room_code)
+        if not room or room.get('state') != 'playing': return
+        gs = room.get('game_state')
+        if not gs or gs.state_version != version: return
+        if gs.buzzed_player != _solo.BOT_SID: return
+
+        gs.state_version += 1
+        ans_text = gs.current_question.get('answer', '') if knows else '—'
+        await process_answer_result(room_code, knows, ans_text)
+
+    async def _solo_on_transfer(room_code, version, window_seconds):
+        """يُستدعى عند نقل الفرصة: لو المستلِم هو البوت، يردّ."""
+        room = get_room_state(room_code)
+        if not room: return
+        gs = room.get('game_state')
+        if gs and getattr(gs, 'is_solo', False) and gs.buzzed_player == _solo.BOT_SID:
+            sio.start_background_task(_bot_answer_transfer, room_code, version, window_seconds)
+
+    # نُتيح لـ trigger_new_question و emit_turn_changed إشعارَ البوت
+    # عبر خطّافات مشتركة (تُملأ هنا، وتُقرأ هناك بأمان لو موجودة).
+    _SOLO_HOOKS['consider_buzz'] = _bot_consider_buzz
+    _SOLO_HOOKS['after_turn'] = _solo_after_turn
+    _SOLO_HOOKS['on_transfer'] = _solo_on_transfer
+
+    @sio.event
+    async def huroof_start_solo(sid, data):
+        """يبدأ مباراة فردية: لاعب حقيقي ضد البوت.
+        data: { difficulty: beginner|medium|hard|expert }"""
+        difficulty = (data or {}).get('difficulty', _solo.DEFAULT_DIFFICULTY)
+        if difficulty not in _solo.DIFFICULTIES:
+            difficulty = _solo.DEFAULT_DIFFICULTY
+
+        player = connected_players.get(sid)
+        if not player:
+            await sio.emit('solo_error', {'msg': 'تعذّر بدء اللعب'}, to=sid)
+            return
+
+        human_color = random.choice(['green', 'orange'])
+        bot_color = 'orange' if human_color == 'green' else 'green'
+
+        alphabet = string.ascii_uppercase + string.digits
+        room_code = 'S' + ''.join(secrets.choice(alphabet) for _ in range(5))
+
+        p_human = {'sid': sid, 'name': player.get('name', 'لاعب'),
+                   'avatar': player.get('avatar'), 'token': player.get('token'),
+                   'user_id': player.get('user_id')}
+        p_bot = {'sid': _solo.BOT_SID, 'name': _solo.BOT_NAME,
+                 'avatar': 'assets/avatars/avatar_1.svg', 'token': None,
+                 'user_id': None}
+
+        p1, p2 = (p_human, p_bot) if human_color == 'green' else (p_bot, p_human)
+
+        gs = HuroofGameState(p1['sid'], p2['sid'], room_code=room_code,
+                             players=[p1, p2])
+        gs.is_solo = True
+        gs.bot_difficulty = difficulty
+        gs.bot_color = bot_color
+        gs.bot_knows_current = False
+
+        rooms[room_code] = {
+            'code': room_code, 'type': 'solo', 'game_mode': 'huroof',
+            'state': 'playing', 'created_at': time.time(), 'is_solo': True,
+            'players': [
+                {'sid': p1['sid'], 'name': p1['name'], 'avatar': p1['avatar'],
+                 'user_id': p1.get('user_id'), 'color': 'green',
+                 'role': 'host' if p1['sid'] == sid else 'bot'},
+                {'sid': p2['sid'], 'name': p2['name'], 'avatar': p2['avatar'],
+                 'user_id': p2.get('user_id'), 'color': 'orange',
+                 'role': 'host' if p2['sid'] == sid else 'bot'},
+            ],
+            'user_ids': {},          # فارغ عمداً: لا تصنيف في الفردي
+            'game_state': gs,
+        }
+        await sio.enter_room(sid, room_code)
+
+        await sio.emit('solo_started', {
+            'room_code': room_code, 'your_color': human_color,
+            'bot_color': bot_color, 'difficulty': difficulty,
+            'difficulty_label': _solo.get_difficulty(difficulty)['label'],
+        }, to=sid)
+        await sio.emit('huroof_board_init', {'board': gs.board}, room=room_code)
+        await sio.emit('huroof_new_round_started', {'turn': gs.turn}, room=room_code)
+
+        await _solo_after_turn(room_code)
+
     # ==========================================
     # الصداقة والحظر (من بروفايل الخصم) — عبر الوحدة المشتركة
     from app.domains.games.sockets.social_handlers import register_social_handlers
