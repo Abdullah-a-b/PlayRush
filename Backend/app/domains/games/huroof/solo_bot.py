@@ -216,12 +216,42 @@ def _goal_distance(idx, color, board):
     return adjacency + edge_pull * 1.2 + edge_bonus
 
 
+def _completes_win(board_colors, idx, color):
+    """هل أخذ هذه الخلية يُكمل جسر البوت من حافة لحافة؟
+    نحاكي التلوين ثم نفحص الاتصال بـ BFS (نفس منطق المحرّك)."""
+    sim = list(board_colors)
+    sim[idx] = color
+
+    if color == 'green':
+        starts = [i for i in range(25) if sim[i] == 'green' and i // 5 == 0]
+        target = lambda x: x // 5 == 4
+    else:
+        starts = [i for i in range(25) if sim[i] == 'orange' and i % 5 == 0]
+        target = lambda x: x % 5 == 4
+
+    for start in starts:
+        visited, queue = set(), [start]
+        while queue:
+            cur = queue.pop(0)
+            if cur in visited:
+                continue
+            visited.add(cur)
+            if target(cur):
+                return True
+            r, c = cur // 5, cur % 5
+            for n in _hex_neighbors(r, c):
+                if sim[n] == color and n not in visited:
+                    queue.append(n)
+    return False
+
+
 def choose_hex(board, bot_color, difficulty_name):
     """يختار البوت خلية في دوره.
 
     مبتدئ: عشوائي بحت.
-    مستويات أعلى: يبني جسره من سلسلته الحالية نحو حافته الهدف،
-    ويوازن مع قطع جسر الخصم.
+    مستويات أعلى: (1) لو خلية تُكمل الفوز يأخذها فوراً،
+                  (2) لو خلية تمنع فوز الخصم الوشيك يأخذها،
+                  (3) وإلا يبني جسره متّصلاً نحو حافته.
     """
     empties = _empty_cells(board)
     if not empties:
@@ -234,12 +264,26 @@ def choose_hex(board, bot_color, difficulty_name):
         return random.choice(empties)
 
     opp_color = "orange" if bot_color == "green" else "green"
+    colors = [h.get('color') for h in board]
 
+    # (1) خلية تُكمل فوز البوت → أولوية قصوى مطلقة
+    for idx in empties:
+        if _completes_win(colors, idx, bot_color):
+            return idx
+
+    # (2) خلية تمنع فوز الخصم الوشيك (لو كان الخصم سيفوز بها) → نأخذها
+    #     (المستويات الأعلى فقط تعي الدفاع)
+    if strat >= 0.6:
+        for idx in empties:
+            if _completes_win(colors, idx, opp_color):
+                return idx
+
+    # (3) بناء الجسر العادي
     scored = []
     for idx in empties:
-        mine = _goal_distance(idx, bot_color, board)     # بناء جسري
-        block = _goal_distance(idx, opp_color, board) * 0.5  # قطع الخصم
-        jitter = random.uniform(0, 1.5)                  # لمسة بشرية خفيفة
+        mine = _goal_distance(idx, bot_color, board)
+        block = _goal_distance(idx, opp_color, board) * 0.5
+        jitter = random.uniform(0, 1.5)
         scored.append((mine + block + jitter, idx))
 
     scored.sort(reverse=True)

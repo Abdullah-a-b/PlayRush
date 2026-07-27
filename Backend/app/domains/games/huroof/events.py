@@ -398,15 +398,45 @@ def register_huroof_events(sio):
 
         # التدرّج حتى لا يبقى الحرف بلا سؤال أبداً (لكل الأنظمة):
         #   1) جديد غير مرئي  →  2) غير مستخدم بالمباراة (ولو رآه سابقاً)
-        #   →  3) أي سؤال للحرف (نعيد الاستخدام)  →  4) توليد فوري (إن توفّر)
+        #   →  3) توليد AI جديد (يقلّل التكرار)  →  4) إعادة استخدام قديم
         source = 'fresh'
         if not valid_qs:
             valid_qs = [q for q in letter_qs if q['id'] not in used]
             source = 'seen_ok'
+
+        # 3) توليد سؤال جديد بالـAI — نحاول حين تقلّ الأسئلة الجديدة،
+        #    لتخفيف التكرار المزعج. نتخطّاه بصمت لو تعذّر (بلا إبطاء اللعبة).
         if not valid_qs:
-            valid_qs = letter_qs[:]        # نعيد استخدام أي سؤال للحرف
+            try:
+                from app.infrastructure.ai_judge import generate_huroof_question
+                gen = await generate_huroof_question(norm_letter, timeout=6.0)
+            except Exception:
+                gen = None
+            if gen and gen.get('answer'):
+                gs.current_question = {
+                    'question': gen['question'], 'answer': gen['answer'],
+                    'category': gen.get('category', 'مُولّد'),
+                    'accepted_answers': gen.get('accepted_answers', []),
+                    'difficulty': gen.get('difficulty', 'medium'),
+                }
+                gs.question_shown_at = time.time()
+                asyncio.create_task(send_secret_to_mobile(
+                    gs.current_question['question'], gs.current_question['answer']))
+                version = advance_state(gs, 'question')
+                gs.buzzed_player = None
+                await sio.emit('huroof_new_question', {
+                    'questionData': gs.current_question, 'round': 'r1',
+                    'timer': 40, 'changed': is_change
+                }, room=room_code)
+                sio.start_background_task(huroof_timer_task, room_code, version, 40, 'timeout_buzz_r1')
+                if getattr(gs, 'is_solo', False) and 'consider_buzz' in _SOLO_HOOKS:
+                    sio.start_background_task(_SOLO_HOOKS['consider_buzz'], room_code, version, 40)
+                return
+
+        # 4) إعادة استخدام أي سؤال للحرف (الملاذ قبل الأخير)
+        if not valid_qs:
+            valid_qs = letter_qs[:]
             source = 'reused'
-            # نصفّر سجل المستخدَم لهذا الحرف حتى لا نكرّر نفسه فوراً
             if hasattr(gs, 'used_questions'):
                 gs.used_questions = [qid for qid in gs.used_questions
                                      if qid not in {q['id'] for q in letter_qs}]

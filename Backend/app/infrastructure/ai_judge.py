@@ -116,3 +116,91 @@ async def judge_answer(question_text, correct_answer, player_answer, timeout=2.0
 def should_use_judge(verdict):
     """هل نحتاج AI Judge لهذه الحالة؟ فقط للحالات الحدّية 'maybe'."""
     return verdict == "maybe"
+
+
+# ============================================================
+#  توليد أسئلة حروف عبر الذكاء الاصطناعي
+# ------------------------------------------------------------
+#  يُستدعى حين تنفد أسئلة القاعدة لحرف معيّن، فيولّد سؤالاً جديداً
+#  إجابته تبدأ بذلك الحرف. يعيد None بأمان عند أي فشل (فيتراجع
+#  النظام للسلوك الاحتياطي).
+# ============================================================
+import json as _json
+import re as _re2
+
+_GEN_PROMPT = """أنت مولّد أسئلة للعبة معرفية عربية اسمها "خلية الحروف".
+المطلوب: سؤال معلومات عامة إجابته كلمة أو كلمتان تبدأ بحرف "{letter}".
+
+قواعد صارمة:
+- الإجابة يجب أن تبدأ فعلاً بحرف "{letter}".
+- سؤال واضح له إجابة واحدة قاطعة (لا رأي، لا غموض).
+- تنويع المجالات (جغرافيا، علوم، تاريخ، رياضة، دين، ثقافة عامة).
+- تجنّب الأسئلة السهلة جداً أو الغامضة جداً.
+
+أعد النتيجة بصيغة JSON فقط بلا أي نص إضافي:
+{{"question": "نص السؤال", "answer": "الإجابة", "category": "المجال", "difficulty": "easy أو medium أو hard"}}
+"""
+
+
+def _extract_json(text):
+    """يستخرج أول كائن JSON من نصّ قد يحوي زيادات."""
+    if not text:
+        return None
+    # نزيل أسوار الكود إن وُجدت
+    text = text.replace("```json", "").replace("```", "").strip()
+    m = _re2.search(r'\{.*\}', text, _re2.DOTALL)
+    if not m:
+        return None
+    try:
+        return _json.loads(m.group(0))
+    except Exception:
+        return None
+
+
+async def generate_huroof_question(letter, timeout=8.0):
+    """يولّد سؤالاً جديداً لحرف معيّن. None عند أي فشل.
+
+    نتحقّق أن الإجابة تبدأ بالحرف المطلوب قبل القبول — حتى لا نُدخل
+    سؤالاً لا ينتمي للحرف.
+    """
+    model = _get_model()
+    if model is None:
+        return None
+
+    letter = (letter or "").strip()
+    if not letter:
+        return None
+
+    prompt = _GEN_PROMPT.format(letter=letter)
+
+    async def _call():
+        def _sync():
+            resp = model.generate_content(prompt)
+            return (resp.text or "").strip()
+        return await asyncio.to_thread(_sync)
+
+    try:
+        text = await asyncio.wait_for(_call(), timeout=timeout)
+    except Exception:
+        return None
+
+    data = _extract_json(text)
+    if not data or not data.get("question") or not data.get("answer"):
+        return None
+
+    answer = str(data["answer"]).strip()
+
+    # تحقّق أن الإجابة تبدأ بالحرف المطلوب (بعد إزالة "ال" التعريف)
+    bare = answer[2:] if answer.startswith("ال") else answer
+    if not bare or bare[0] != letter:
+        return None
+
+    return {
+        "question": str(data["question"]).strip(),
+        "answer": answer,
+        "category": str(data.get("category", "مُولّد")).strip() or "مُولّد",
+        "difficulty": data.get("difficulty", "medium")
+            if data.get("difficulty") in ("easy", "medium", "hard") else "medium",
+        "accepted_answers": [],
+        "generated": True,
+    }
