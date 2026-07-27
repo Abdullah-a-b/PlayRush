@@ -152,6 +152,8 @@ socket.on('solo_started', (data) => {
                         'الكمبيوتر (' + (data.difficulty_label || '') + ')',
                         '../assets/avatars/avatar_1.svg');
     } catch (e) {}
+    // نطلب كتالوج المساعدات الآن بعد أن صار لدينا رمز الغرفة
+    setTimeout(() => socket.emit('huroof_get_helps_catalog', { roomCode: activeRoom() }), 300);
 });
 
 socket.on('solo_error', (data) => {

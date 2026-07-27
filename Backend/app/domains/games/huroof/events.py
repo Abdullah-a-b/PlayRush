@@ -1548,9 +1548,46 @@ def register_huroof_events(sio):
             'bot_color': bot_color, 'difficulty': difficulty,
             'difficulty_label': _solo.get_difficulty(difficulty)['label'],
         }, to=sid)
-        await sio.emit('huroof_board_init', {'board': gs.board}, room=room_code)
-        await sio.emit('huroof_new_round_started', {'turn': gs.turn}, room=room_code)
 
+        # نبني room_joined بنفس بنية الأونلاين — الواجهة تقرأ اللون
+        # وإحصائيات اللاعبين من هذا الحدث (players[].color + .stats).
+        try:
+            from app.domains.wallet.reward_service import get_player_full_stats
+            my_stats = await get_player_full_stats(player.get('token'),
+                                                   player.get('name', 'لاعب'),
+                                                   player.get('avatar', ''))
+        except Exception:
+            my_stats = {'name': player.get('name', 'لاعب'),
+                        'avatar': player.get('avatar', ''), 'wins': 0, 'losses': 0}
+
+        bot_stats = {'name': _solo.BOT_NAME, 'avatar': 'assets/avatars/avatar_1.svg',
+                     'wins': 0, 'losses': 0, 'elo': 0, 'rank_label': _solo.get_difficulty(difficulty)['label']}
+
+        def _pub(p, color, stats):
+            return {'sid': p['sid'], 'name': p['name'], 'avatar': p.get('avatar'),
+                    'color': color, 'stats': stats,
+                    'role': 'host' if p['sid'] == sid else 'bot'}
+
+        if human_color == 'green':
+            players_pub = [_pub(p1, 'green', my_stats), _pub(p2, 'orange', bot_stats)]
+        else:
+            players_pub = [_pub(p1, 'green', bot_stats), _pub(p2, 'orange', my_stats)]
+
+        await sio.emit('room_joined', {
+            'code': room_code, 'game_mode': 'huroof', 'state': 'playing',
+            'is_solo': True, 'players': players_pub, 'your_sid': sid,
+            'opponent_relation': 'none', 'opponent_user_id': None,
+        }, to=sid)
+        await sio.emit('update_players_stats', players_pub, to=sid)
+
+        # نطابق تسلسل بدء الأونلاين: board_init ثم turn_changed
+        await sio.emit('huroof_board_init', {'board': gs.board}, room=room_code)
+        await sio.emit('huroof_turn_changed', {
+            'turn_sid': gs.turn,
+            'turn_color': ('green' if gs.turn == gs.p1 else 'orange')
+        }, room=room_code)
+
+        # لو الدور الأول للبوت، يبدأ اختياره
         await _solo_after_turn(room_code)
 
     # ==========================================
