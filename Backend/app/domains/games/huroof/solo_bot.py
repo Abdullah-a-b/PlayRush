@@ -283,12 +283,28 @@ def choose_hex(board, bot_color, difficulty_name):
     for idx in empties:
         mine = _goal_distance(idx, bot_color, board)
         block = _goal_distance(idx, opp_color, board) * 0.5
-        jitter = random.uniform(0, 1.5)
-        scored.append((mine + block + jitter, idx))
+        scored.append((mine + block, idx))
 
     scored.sort(reverse=True)
-    top_k = scored[:min(3, len(scored))]
-    return random.choice(top_k)[1]
+
+    # كلما ارتفع المستوى قلّ العشوائية:
+    #   خبير: من أفضل خيار (شبه حتمي) — لا خلايا غريبة
+    #   صعب:  من أفضل خيارين
+    #   متوسط: من أفضل ثلاثة
+    if strat >= 0.9:
+        pool = scored[:1] if len(scored) >= 1 else scored
+        # نادراً (10%) يوسّع لأفضل خيارين ليبقى بشرياً غير متوقّع تماماً
+        if len(scored) >= 2 and random.random() < 0.10:
+            pool = scored[:2]
+    elif strat >= 0.6:
+        pool = scored[:min(2, len(scored))]
+    else:
+        pool = scored[:min(3, len(scored))]
+
+    # كسر التعادل بين المتساويين فعلياً فقط
+    best_score = pool[0][0]
+    tied = [p for p in pool if abs(p[0] - best_score) < 0.5] or pool
+    return random.choice(tied)[1]
 
 
 # ============================================================

@@ -42,14 +42,25 @@ def _load_huroof_questions_cached():
                 extra = {}
             ans = (q.correct_answer or '').strip()
             core = ans[2:] if ans.startswith("ال") else ans
+            # حرفان صالحان فقط (تحفّظاً): الحرف الأول كما هو، والحرف بعد ال.
+            # لا نوزّع على كلمات الإجابة كلها — يربك اللاعب ويُظهر السؤال
+            # تحت حرف لا يفكّر فيه. تصنيف السؤال الأدقّ مسؤولية القاعدة.
+            valid_letters = set()
+            if ans:
+                valid_letters.add(normalize_letter(ans[0]))
+            if core:
+                valid_letters.add(normalize_letter(core[0]))
+            valid_letters.discard('')
             rows.append({
                 'id': q.id,
                 'question_text': q.question_text,
                 'correct_answer': q.correct_answer,
                 'category': q.category,
+                'difficulty': (extra.get('difficulty') if extra.get('difficulty') in ('easy','medium','hard') else 'medium'),
                 'accepted_answers': extra.get('accepted_answers', []),
                 'letter_extra': normalize_letter(extra.get('letter', '') or ''),
                 'letter_ans': normalize_letter(core[0]) if core else '',
+                'valid_letters': valid_letters,
             })
         _HUROOF_QCACHE['rows'] = rows
         _HUROOF_QCACHE['ts'] = now
@@ -390,7 +401,8 @@ def register_huroof_events(sio):
         # قائمة الحرف كاملةً (كل أسئلة هذا الحرف بغضّ النظر عن الرؤية)
         letter_qs = [
             q for q in all_qs
-            if (q['letter_extra'] == norm_letter or q['letter_ans'] == norm_letter)
+            if (norm_letter in q.get('valid_letters', set())
+                or q['letter_extra'] == norm_letter or q['letter_ans'] == norm_letter)
         ]
         # المفضّل: جديد تماماً (لم يُستخدم في المباراة ولم يره اللاعبان)
         valid_qs = [q for q in letter_qs
