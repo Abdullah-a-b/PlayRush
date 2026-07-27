@@ -188,32 +188,42 @@ def _goal_distance(idx, color, board):
     row, col = idx // 5, idx % 5
     mine = _bot_cells(board, color)
 
-    # 1) ملاصقة سداسية حقيقية لسلسلة البوت — الأهم بفارق كبير.
-    #    خلية معزولة عند الحافة لا تبني جسراً؛ الاتصال هو الأساس.
+    # 1) ملاصقة سداسية حقيقية لسلسلة البوت — يجب أن تطغى على كل شيء،
+    #    وإلا قفز البوت بين حافتين متباعدتين بلا سلسلة متّصلة.
     neighbors = set(_hex_neighbors(row, col))
     touching = any(c in neighbors for c in mine)
-    adjacency = 10 if touching else 0
+    adjacency = 20 if touching else 0
 
-    # 2) التقدّم نحو الحافة الأبعد
     if color == 'green':
+        # الأخضر يصل صف0↔صف4 (عمودي). نكافئ التقدّم عبر الصفوف
+        # نحو الحافة الأبعد، ونعاقب البقاء في نفس صفوف السلسلة.
         rows = [c // 5 for c in mine]
         if not mine:
-            edge_pull = 2 - abs(row - 2)
+            progress = 2 - abs(row - 2)          # ابدأ من الوسط
         else:
             reached_top, reached_bot = min(rows), max(rows)
-            edge_pull = row if (4 - reached_bot) >= reached_top else (4 - row)
-        # 3) مكافأة بلوغ حافة الهدف — فقط لو الخلية متّصلة بسلسلتنا
-        edge_bonus = 3 if (row in (0, 4) and touching) else 0
+            # الحافة الأبعد التي لم نصلها
+            if (4 - reached_bot) >= reached_top:
+                progress = row - reached_bot       # نريد النزول أكثر
+            else:
+                progress = reached_top - row       # نريد الصعود أكثر
+            progress = max(0, progress) * 3        # نكافئ التقدّم العمودي بقوة
+        edge_bonus = 4 if (row in (0, 4) and touching) else 0
     else:  # orange
+        # البرتقالي يصل عمود0↔عمود4 (أفقي).
         cols = [c % 5 for c in mine]
         if not mine:
-            edge_pull = 2 - abs(col - 2)
+            progress = 2 - abs(col - 2)
         else:
             reached_left, reached_right = min(cols), max(cols)
-            edge_pull = col if (4 - reached_right) >= reached_left else (4 - col)
-        edge_bonus = 3 if (col in (0, 4) and touching) else 0
+            if (4 - reached_right) >= reached_left:
+                progress = col - reached_right
+            else:
+                progress = reached_left - col
+            progress = max(0, progress) * 3
+        edge_bonus = 4 if (col in (0, 4) and touching) else 0
 
-    return adjacency + edge_pull * 1.2 + edge_bonus
+    return adjacency + progress + edge_bonus
 
 
 def _completes_win(board_colors, idx, color):

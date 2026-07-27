@@ -147,6 +147,15 @@ socket.on('connect', () => {
 // 🤖 بدء المباراة الفردية: نخزّن رمز الغرفة ونعرض الخصم "الكمبيوتر"
 socket.on('solo_started', (data) => {
     soloRoomCode = data.room_code;
+    // نضبط لوني مباشرة من الخادم (مصدر موثوق) قبل أي حدث آخر
+    if (data.your_color) {
+        myColor = data.your_color;
+        var gt = document.querySelector('.game-title');
+        if (gt) {
+            gt.textContent = 'خلية الحروف - أنت اللاعب ' + (myColor === 'green' ? 'الأخضر 🟢' : 'البرتقالي 🟠');
+            gt.style.color = myColor === 'green' ? '#4CAF50' : '#FF9800';
+        }
+    }
     try {
         showMatchReveal(playerName, getCorrectAvatarUrl(playerAvatar),
                         'الكمبيوتر (' + (data.difficulty_label || '') + ')',

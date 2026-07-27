@@ -1442,7 +1442,10 @@ def register_huroof_events(sio):
         if not gs or not getattr(gs, 'is_solo', False): return
         if gs.stage != 'selecting' or gs.turn != _solo.BOT_SID: return
 
-        idx = _solo.choose_hex(gs.board, gs.bot_color, gs.bot_difficulty)
+        # لون البوت يُشتقّ من موضعه (p1=أخضر, p2=برتقالي) — نفس مصدر المحرّك
+        # تماماً، فيستحيل أن يبني باتجاه لون آخر.
+        bot_color = 'green' if _solo.BOT_SID == gs.p1 else 'orange'
+        idx = _solo.choose_hex(gs.board, bot_color, gs.bot_difficulty)
         if idx is None: return
         gs.active_hex = gs.board[idx]
         await sio.emit('huroof_hex_locked',
