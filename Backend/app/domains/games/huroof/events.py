@@ -1390,9 +1390,10 @@ def register_huroof_events(sio):
 
         q = gs.current_question or {}
         qd = q.get('difficulty', 'medium')
+        q_answer = q.get('answer', '')       # نثبّت إجابة *هذا* السؤال
         attempt = getattr(gs, 'attempts', 1)
         decision = _solo.decide_on_question(gs.bot_difficulty, qd, window_seconds, attempt)
-        gs.bot_knows_current = decision['knows']
+        knows = decision['knows']            # محلّي — لا يُداس بحلقة أخرى
 
         if not decision['will_buzz']:
             return
@@ -1405,6 +1406,8 @@ def register_huroof_events(sio):
         if not gs or gs.state_version != version: return
         if gs.stage not in ('question', 'buzz_r1', 'buzz_r3'): return
         if gs.buzzed_player is not None: return
+        # حراسة إضافية: السؤال نفسه لم يتبدّل (يمنع البزّ على سؤال قديم)
+        if (gs.current_question or {}).get('answer', '') != q_answer: return
 
         gs.buzzed_player = _solo.BOT_SID
         if getattr(gs, 'attempts', 1) == 1:
@@ -1421,11 +1424,12 @@ def register_huroof_events(sio):
         gs = room.get('game_state')
         if not gs or gs.state_version != v2: return
         if gs.buzzed_player != _solo.BOT_SID: return
+        # حراسة: نفس السؤال ما زال معروضاً
+        if (gs.current_question or {}).get('answer', '') != q_answer: return
 
         gs.state_version += 1
-        is_correct = bool(getattr(gs, 'bot_knows_current', False))
-        ans_text = gs.current_question.get('answer', '') if is_correct else '—'
-        await process_answer_result(room_code, is_correct, ans_text)
+        ans_text = q_answer if knows else '—'
+        await process_answer_result(room_code, knows, ans_text)
 
     async def _solo_after_turn(room_code):
         """يُستدعى بعد تغيّر الدور: لو صار دور البوت، يبدأ اختياره."""
@@ -1561,6 +1565,7 @@ def register_huroof_events(sio):
                         'avatar': player.get('avatar', ''), 'wins': 0, 'losses': 0}
 
         bot_stats = {'name': _solo.BOT_NAME, 'avatar': 'assets/avatars/avatar_1.svg',
+                     'flag': '../assets/flags/EARTH.svg',
                      'wins': 0, 'losses': 0, 'elo': 0, 'rank_label': _solo.get_difficulty(difficulty)['label']}
 
         def _pub(p, color, stats):

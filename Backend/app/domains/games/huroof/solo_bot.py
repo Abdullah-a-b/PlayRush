@@ -158,11 +158,65 @@ def _progress_score(idx, color):
         return col + center_bonus
 
 
+def _bot_cells(board, color):
+    """فهارس خلايا البوت الحالية."""
+    return [i for i, h in enumerate(board) if h.get('color') == color]
+
+
+def _goal_distance(idx, color, board):
+    """كم تُقرّب هذه الخلية البوتَ من إكمال جسره؟
+
+    الأخضر يصل الصف 0 بالصف 4؛ البرتقالي العمود 0 بالعمود 4.
+    نكافئ: (أ) الخلايا الملاصقة لسلسلة البوت الحالية (تمدّها)،
+           (ب) التقدّم نحو الحافة الأبعد التي لم يصلها بعد.
+    """
+    row, col = idx // 5, idx % 5
+    mine = _bot_cells(board, color)
+
+    # أقصى امتداد وصل له البوت نحو كل حافة
+    if color == 'green':
+        rows = [c // 5 for c in mine]
+        reached_top = min(rows) if rows else 2
+        reached_bot = max(rows) if rows else 2
+        # نريد التوسّع نحو الحافة الأبعد
+        if not mine:
+            edge_pull = 2 - abs(row - 2)         # ابدأ من الوسط عمودياً
+        elif (4 - reached_bot) >= reached_top:
+            edge_pull = row                       # امتدّ للأسفل
+        else:
+            edge_pull = 4 - row                   # امتدّ للأعلى
+        axis = col                                # نفضّل الاستمرار بنفس العمود
+        same_axis_bonus = 3 if any(c % 5 == col for c in mine) else 0
+    else:  # orange
+        cols = [c % 5 for c in mine]
+        reached_left = min(cols) if cols else 2
+        reached_right = max(cols) if cols else 2
+        if not mine:
+            edge_pull = 2 - abs(col - 2)
+        elif (4 - reached_right) >= reached_left:
+            edge_pull = col
+        else:
+            edge_pull = 4 - col
+        axis = row
+        same_axis_bonus = 3 if any(c // 5 == row for c in mine) else 0
+
+    # مكافأة الملاصقة لخلية للبوت (تمديد متّصل لا قفز عشوائي)
+    adjacency = 0
+    for c in mine:
+        cr, cc = c // 5, c % 5
+        if abs(cr - row) <= 1 and abs(cc - col) <= 1:
+            adjacency = 4
+            break
+
+    return edge_pull * 1.5 + adjacency + same_axis_bonus
+
+
 def choose_hex(board, bot_color, difficulty_name):
     """يختار البوت خلية في دوره.
 
-    استراتيجية = 0 (مبتدئ): عشوائي بحت.
-    استراتيجية عالية (خبير): يوازن بين تقدّم جسره وقطع جسر الخصم.
+    مبتدئ: عشوائي بحت.
+    مستويات أعلى: يبني جسره من سلسلته الحالية نحو حافته الهدف،
+    ويوازن مع قطع جسر الخصم.
     """
     empties = _empty_cells(board)
     if not empties:
@@ -171,25 +225,19 @@ def choose_hex(board, bot_color, difficulty_name):
     cfg = get_difficulty(difficulty_name)
     strat = cfg["strategy"]
 
-    # مبتدئ أو حظّ عشوائي ضمن المستوى → اختيار عشوائي
     if strat <= 0.0 or random.random() > strat:
         return random.choice(empties)
 
     opp_color = "orange" if bot_color == "green" else "green"
 
-    # نقيّم كل خلية فارغة: تقدّمي + قيمة تعطيل الخصم + لمسة عشوائية
-    # العشوائية مهمة: بدونها يختار الخبير نفس الخلية "المثالية" دائماً
-    # فيبدو آلياً مكشوفاً. الاستراتيجية المتقدّمة (أقرب خلية للسلسلة
-    # الحالية) تأتي في تحسين لاحق.
     scored = []
     for idx in empties:
-        mine = _progress_score(idx, bot_color)
-        block = _progress_score(idx, opp_color) * 0.6
-        jitter = random.uniform(0, 2.5)   # يكسر التطابق الآلي
+        mine = _goal_distance(idx, bot_color, board)     # بناء جسري
+        block = _goal_distance(idx, opp_color, board) * 0.5  # قطع الخصم
+        jitter = random.uniform(0, 1.5)                  # لمسة بشرية خفيفة
         scored.append((mine + block + jitter, idx))
 
     scored.sort(reverse=True)
-    # نختار من أفضل 3 خلايا (لا الأفضل حصراً) — تنوّع بشري
     top_k = scored[:min(3, len(scored))]
     return random.choice(top_k)[1]
 
