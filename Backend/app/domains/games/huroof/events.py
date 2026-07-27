@@ -387,22 +387,46 @@ def register_huroof_events(sio):
         all_qs = await asyncio.to_thread(_load_huroof_questions_cached)
 
         used = set(gs.used_questions) if hasattr(gs, 'used_questions') else set()
-        valid_qs = [
+        # قائمة الحرف كاملةً (كل أسئلة هذا الحرف بغضّ النظر عن الرؤية)
+        letter_qs = [
             q for q in all_qs
-            if q['id'] not in used and q['id'] not in combined_seen
-            and (q['letter_extra'] == norm_letter or q['letter_ans'] == norm_letter)
+            if (q['letter_extra'] == norm_letter or q['letter_ans'] == norm_letter)
         ]
+        # المفضّل: جديد تماماً (لم يُستخدم في المباراة ولم يره اللاعبان)
+        valid_qs = [q for q in letter_qs
+                    if q['id'] not in used and q['id'] not in combined_seen]
+
+        # التدرّج حتى لا يبقى الحرف بلا سؤال أبداً (لكل الأنظمة):
+        #   1) جديد غير مرئي  →  2) غير مستخدم بالمباراة (ولو رآه سابقاً)
+        #   →  3) أي سؤال للحرف (نعيد الاستخدام)  →  4) توليد فوري (إن توفّر)
+        source = 'fresh'
+        if not valid_qs:
+            valid_qs = [q for q in letter_qs if q['id'] not in used]
+            source = 'seen_ok'
+        if not valid_qs:
+            valid_qs = letter_qs[:]        # نعيد استخدام أي سؤال للحرف
+            source = 'reused'
+            # نصفّر سجل المستخدَم لهذا الحرف حتى لا نكرّر نفسه فوراً
+            if hasattr(gs, 'used_questions'):
+                gs.used_questions = [qid for qid in gs.used_questions
+                                     if qid not in {q['id'] for q in letter_qs}]
 
         if not valid_qs:
-            print(f" نفدت الأسئلة الجديدة لحرف '{norm_letter}' بالنسبة لهذين اللاعبَين.")
-            fallback = {
-                "question": f"نفدت الأسئلة الجديدة لحرف ({norm_letter}) لكلاكما. اختاروا حرفاً آخر.",
-                "answer": "لا يوجد",
-                "category": "نفدت الأسئلة",
-                "letter": norm_letter,
-                "accepted_answers": []
-            }
-            await sio.emit('receive_ai_question', fallback, room=room_code)
+            # لا يوجد ولا سؤال واحد لهذا الحرف في القاعدة إطلاقاً (نادر جداً).
+            # التوليد الفوري بالـAI ميزة مستقبلية؛ حالياً الملاذ الأخير:
+            # نختار خلية أخرى تلقائياً بدل ترك الشاشة معلّقة.
+            print(f" لا يوجد أي سؤال لحرف '{norm_letter}' في القاعدة. اختيار حرف آخر.")
+            empties = [i for i, h in enumerate(gs.board)
+                       if h.get('color') not in ('green', 'orange')]
+            if empties:
+                new_idx = random.choice(empties)
+                gs.active_hex = gs.board[new_idx]
+                await sio.emit('huroof_hex_locked',
+                               {'hexIndex': new_idx, 'letter': gs.active_hex['letter']},
+                               room=room_code)
+                gs.state_version += 1
+                await asyncio.sleep(0.5)
+                await trigger_new_question(room_code, is_change=True)
             return
 
         # اختيار التصنيف: لو اللاعب صاحب الدور اختار تصنيفاً مسبقاً، نُفضّله
@@ -760,8 +784,10 @@ def register_huroof_events(sio):
         if gs.stage in ['buzz_r1', 'buzz_r3', 'question']:
             gs.skip_votes.add(sid)
             await sio.emit('huroof_skip_voted', {'sid': sid}, room=room_code)
-            
-            if len(gs.skip_votes) >= 2:
+
+            # الوضع الفردي: صوت اللاعب وحده يكفي (البوت "يوافق" فوراً)
+            solo = getattr(gs, 'is_solo', False)
+            if solo or len(gs.skip_votes) >= 2:
                 # 🆕 نكشف الإجابة الصحيحة للطرفين قبل تغيير السؤال (اتفقا على التغيير)
                 correct_answer = ''
                 if gs.current_question:
@@ -769,7 +795,8 @@ def register_huroof_events(sio):
                 if correct_answer:
                     await sio.emit('huroof_reveal_answer', {'correct_answer': correct_answer}, room=room_code)
                     await asyncio.sleep(2)
-                await sio.emit('huroof_timeout_info', {'msg': 'تم الاتفاق! جاري جلب سؤال جديد...'}, room=room_code)
+                await sio.emit('huroof_timeout_info', {'msg': 'جاري جلب سؤال جديد...'}, room=room_code)
+                gs.skip_votes = set()
                 gs.state_version += 1 
                 await trigger_new_question(room_code, is_change=True)
 

@@ -156,11 +156,9 @@ socket.on('solo_started', (data) => {
     setTimeout(() => socket.emit('huroof_get_helps_catalog', { roomCode: activeRoom() }), 300);
 
     // تحسينات الوضع الفردي في الواجهة:
-    // 1) نخفي الدردشة (لا فائدة منها ضد بوت)
-    ['ingameQuickChatWrap', 'gameQuickChatBtn'].forEach(function (id) {
-        var el = document.getElementById(id);
-        if (el) el.style.display = 'none';
-    });
+    // 1) نخفي الدردشة (لا فائدة منها ضد بوت) — عبر صنف على body
+    //    ليصمد أمام إعادة بناء quick_chat.js للأزرار.
+    document.body.classList.add('solo-mode');
     // 2) علم الكمبيوتر = كوكب الأرض
     setTimeout(function () {
         var f = document.getElementById('opponentFlagImg');

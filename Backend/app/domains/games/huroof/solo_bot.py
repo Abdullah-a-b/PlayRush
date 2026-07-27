@@ -163,52 +163,57 @@ def _bot_cells(board, color):
     return [i for i, h in enumerate(board) if h.get('color') == color]
 
 
-def _goal_distance(idx, color, board):
-    """كم تُقرّب هذه الخلية البوتَ من إكمال جسره؟
+def _hex_neighbors(row, col):
+    """جيران الخلية السداسية — نفس منطق المحرّك بالضبط."""
+    if row % 2 == 0:
+        moves = [(-1, 0), (-1, 1), (0, -1), (0, 1), (1, 0), (1, 1)]
+    else:
+        moves = [(-1, -1), (-1, 0), (0, -1), (0, 1), (1, -1), (1, 0)]
+    out = []
+    for dr, dc in moves:
+        r, c = row + dr, col + dc
+        if 0 <= r < 5 and 0 <= c < 5:
+            out.append(r * 5 + c)
+    return out
 
-    الأخضر يصل الصف 0 بالصف 4؛ البرتقالي العمود 0 بالعمود 4.
-    نكافئ: (أ) الخلايا الملاصقة لسلسلة البوت الحالية (تمدّها)،
-           (ب) التقدّم نحو الحافة الأبعد التي لم يصلها بعد.
+
+def _goal_distance(idx, color, board):
+    """تقييم خلية لبناء جسر البوت.
+
+    نكافئ (بترتيب الأهمية):
+      1. الملاصقة السداسية الحقيقية لسلسلة البوت (تمدّها متّصلة)
+      2. التقدّم نحو الحافة الأبعد التي لم يصلها بعد
+      3. الوصول لحافة هدف مباشرة (صف 0/4 للأخضر، عمود 0/4 للبرتقالي)
     """
     row, col = idx // 5, idx % 5
     mine = _bot_cells(board, color)
 
-    # أقصى امتداد وصل له البوت نحو كل حافة
+    # 1) ملاصقة سداسية حقيقية لسلسلة البوت — الأهم بفارق كبير.
+    #    خلية معزولة عند الحافة لا تبني جسراً؛ الاتصال هو الأساس.
+    neighbors = set(_hex_neighbors(row, col))
+    touching = any(c in neighbors for c in mine)
+    adjacency = 10 if touching else 0
+
+    # 2) التقدّم نحو الحافة الأبعد
     if color == 'green':
         rows = [c // 5 for c in mine]
-        reached_top = min(rows) if rows else 2
-        reached_bot = max(rows) if rows else 2
-        # نريد التوسّع نحو الحافة الأبعد
         if not mine:
-            edge_pull = 2 - abs(row - 2)         # ابدأ من الوسط عمودياً
-        elif (4 - reached_bot) >= reached_top:
-            edge_pull = row                       # امتدّ للأسفل
+            edge_pull = 2 - abs(row - 2)
         else:
-            edge_pull = 4 - row                   # امتدّ للأعلى
-        axis = col                                # نفضّل الاستمرار بنفس العمود
-        same_axis_bonus = 3 if any(c % 5 == col for c in mine) else 0
+            reached_top, reached_bot = min(rows), max(rows)
+            edge_pull = row if (4 - reached_bot) >= reached_top else (4 - row)
+        # 3) مكافأة بلوغ حافة الهدف — فقط لو الخلية متّصلة بسلسلتنا
+        edge_bonus = 3 if (row in (0, 4) and touching) else 0
     else:  # orange
         cols = [c % 5 for c in mine]
-        reached_left = min(cols) if cols else 2
-        reached_right = max(cols) if cols else 2
         if not mine:
             edge_pull = 2 - abs(col - 2)
-        elif (4 - reached_right) >= reached_left:
-            edge_pull = col
         else:
-            edge_pull = 4 - col
-        axis = row
-        same_axis_bonus = 3 if any(c // 5 == row for c in mine) else 0
+            reached_left, reached_right = min(cols), max(cols)
+            edge_pull = col if (4 - reached_right) >= reached_left else (4 - col)
+        edge_bonus = 3 if (col in (0, 4) and touching) else 0
 
-    # مكافأة الملاصقة لخلية للبوت (تمديد متّصل لا قفز عشوائي)
-    adjacency = 0
-    for c in mine:
-        cr, cc = c // 5, c % 5
-        if abs(cr - row) <= 1 and abs(cc - col) <= 1:
-            adjacency = 4
-            break
-
-    return edge_pull * 1.5 + adjacency + same_axis_bonus
+    return adjacency + edge_pull * 1.2 + edge_bonus
 
 
 def choose_hex(board, bot_color, difficulty_name):
