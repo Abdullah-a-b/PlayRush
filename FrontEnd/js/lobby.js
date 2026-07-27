@@ -307,6 +307,20 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // الوضع الفردي (ضد الكمبيوتر) — حصري لخلية الحروف حالياً
+    const soloModeBtn = document.getElementById('soloModeBtn');
+    if (soloModeBtn) {
+        soloModeBtn.style.display = (selectedGameMode === 'huroof') ? 'flex' : 'none';
+        soloModeBtn.addEventListener('click', () => {
+            if (window.openSoloLevelPicker) {
+                window.openSoloLevelPicker('huroof');
+            } else {
+                // احتياط: انتقال مباشر بمستوى متوسط
+                window.location.href = 'games/huroof.html?solo=1&difficulty=medium';
+            }
+        });
+    }
+
     // ----------------------------------------
     //  جلب بيانات الحساب
     // ----------------------------------------

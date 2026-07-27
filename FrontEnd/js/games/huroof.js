@@ -134,7 +134,11 @@ document.addEventListener('DOMContentLoaded', () => {
 socket.on('connect', () => {
     if (IS_SOLO) {
         // الوضع الفردي: نطلب من الخادم إنشاء مباراة ضد البوت
-        socket.emit('huroof_start_solo', { difficulty: SOLO_DIFF });
+        // نرسل التوكن والبيانات لأن الصفحة قد تُفتح مباشرة دون لوبي
+        socket.emit('huroof_start_solo', {
+            difficulty: SOLO_DIFF, token: token,
+            name: playerName, avatar: playerAvatar
+        });
     } else {
         socket.emit('join_room', { room_code: roomCode, token, player_name: playerName, avatar: playerAvatar });
     }

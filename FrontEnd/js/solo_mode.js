@@ -81,6 +81,9 @@
         });
     }
 
+    // نُتيح فتح شاشة الاختيار من أي مكان (مثلاً زر اللوبي)
+    window.openSoloLevelPicker = openLevelPicker;
+
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {

@@ -1478,15 +1478,32 @@ def register_huroof_events(sio):
     @sio.event
     async def huroof_start_solo(sid, data):
         """يبدأ مباراة فردية: لاعب حقيقي ضد البوت.
-        data: { difficulty: beginner|medium|hard|expert }"""
+        data: { difficulty, token?, name?, avatar? }"""
         difficulty = (data or {}).get('difficulty', _solo.DEFAULT_DIFFICULTY)
         if difficulty not in _solo.DIFFICULTIES:
             difficulty = _solo.DEFAULT_DIFFICULTY
 
+        # اللاعب قد يصل صفحة حروف مباشرة دون المرور باللوبي العام،
+        # فلا يكون في connected_players بعد. نتحقّق من التوكن هنا ونسجّله.
         player = connected_players.get(sid)
         if not player:
-            await sio.emit('solo_error', {'msg': 'تعذّر بدء اللعب'}, to=sid)
-            return
+            token = (data or {}).get('token')
+            player_name = str((data or {}).get('name', 'لاعب'))[:30]
+            avatar = (data or {}).get('avatar', '')
+            user_id = None
+            try:
+                from app.sockets.auth_helper import verify_socket_token
+                user, db = verify_socket_token(token)
+                if user:
+                    player_name = user.player_name or player_name
+                    avatar = user.avatar or avatar
+                    user_id = user.id
+                    db.close()
+            except Exception:
+                pass
+            player = {'name': player_name, 'avatar': avatar,
+                      'user_id': user_id, 'token': token}
+            connected_players[sid] = player
 
         human_color = random.choice(['green', 'orange'])
         bot_color = 'orange' if human_color == 'green' else 'green'
