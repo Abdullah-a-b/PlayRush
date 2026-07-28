@@ -257,8 +257,9 @@ html.kb-open .question-sidebar { pointer-events: auto !important; }
     .question-sidebar.keyboard-open #playerAnswerInput {
         padding: 10px !important;
     }
+    /* إخفاء الأزرار المجمعة والـ answer container أثناء الكتابة */
     .question-sidebar.keyboard-open #answer-container,
-    .question-sidebar.keyboard-open .action-row { display: none !important; }
+    .question-sidebar.keyboard-open .action-buttons-container { display: none !important; }
 
     .question-sidebar .sidebar-content {
         padding: clamp(10px, 3vw, 16px) clamp(12px, 4vw, 18px) clamp(12px, 3vw, 18px) !important;
@@ -295,14 +296,38 @@ html.kb-open .question-sidebar { pointer-events: auto !important; }
         font-size: clamp(0.78rem, 2.8vw, 0.88rem) !important;
         margin: 0 !important; text-align: center !important; color: #5ae8ff !important;
     }
-    .question-sidebar #buzzerBtn {
+    
+    /* ── أزرار أنا أعرف وتغيير السؤال جنباً إلى جنب ── */
+    .action-buttons-container {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 8px !important;
+        margin: 10px 0 !important;
         width: 100% !important;
-        font-size: clamp(0.95rem, 3.5vw, 1.05rem) !important;
-        padding: clamp(11px, 3.5vw, 14px) !important;
-        border-radius: 14px !important; margin: 0 !important; letter-spacing: 0.5px !important;
     }
-    .question-sidebar #submitAnswerBtn,
-    .question-sidebar #voteSkipBtn {
+    .action-buttons-container #buzzerBtn {
+        flex: 1.6 !important;
+        margin: 0 !important;
+        font-size: clamp(0.95rem, 3.5vw, 1.1rem) !important;
+        padding: clamp(10px, 3vw, 14px) !important;
+        border-radius: 14px !important; letter-spacing: 0.5px !important;
+    }
+    .action-buttons-container #voteSkipBtn {
+        flex: 1 !important;
+        margin: 0 !important;
+        font-size: clamp(0.75rem, 2.5vw, 0.9rem) !important;
+        padding: clamp(10px, 3vw, 14px) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 4px !important;
+        line-height: 1.2 !important;
+        text-align: center !important;
+        border-radius: 13px !important;
+    }
+
+    .question-sidebar #submitAnswerBtn {
         width: 100% !important;
         font-size: clamp(0.88rem, 3.2vw, 1rem) !important;
         padding: clamp(10px, 3vw, 13px) !important;
@@ -407,342 +432,4 @@ html.kb-open .question-sidebar { pointer-events: auto !important; }
         left: 4px !important; right: 4px !important; border-radius: 16px !important;
     }
     .question-sidebar .sidebar-content { max-height: inherit !important; padding: 9px 10px !important; }
-}
-
-/* ============================================================================
-   🎨 تصميم الصورة المرجعية — خلية الحروف (جوال)
-   التيمبلايت السداسي يبقى كما هو — التصغير عبر scale فقط
-   ============================================================================ */
-@media (max-width: 900px) {
-
-    html, body { background: #1e0b36 !important; }
-
-    /* ── الشريط العلوي ── */
-    .top-bar,
-    html[data-theme] .top-bar {
-        height: auto !important;
-        min-height: 72px !important;
-        padding: 8px 10px 6px !important;
-        background: #1e0b36 !important;
-        border-bottom: none !important;
-        box-shadow: none !important;
-    }
-    .player-profile {
-        background: #2d1454 !important;
-        border: 1px solid rgba(255, 255, 255, 0.08) !important;
-        border-radius: 16px !important;
-        padding: 6px 8px !important;
-        gap: 6px !important;
-    }
-    .player-profile::after { display: none !important; }
-    .avatar {
-        width: 40px !important;
-        height: 40px !important;
-        border: 2.5px solid #4caf50 !important;
-        background: #1a3d1a !important;
-    }
-    .avatar.opponent {
-        border-color: #ff9800 !important;
-        background: #3d2a0a !important;
-    }
-    .info span {
-        font-size: 11px !important;
-        font-weight: 700 !important;
-        color: #fff !important;
-        max-width: 58px !important;
-    }
-    .center-info { gap: 4px !important; }
-    .rounds-display {
-        flex-direction: column !important;
-        gap: 2px !important;
-        padding: 0 !important;
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-    }
-    .round-text {
-        font-size: 0.72rem !important;
-        color: rgba(255, 255, 255, 0.75) !important;
-        text-shadow: none !important;
-        letter-spacing: 0 !important;
-        line-height: 1.1 !important;
-    }
-    #turn-status-badge, .turn-badge {
-        font-size: 0.68rem !important;
-        padding: 4px 14px !important;
-        border-radius: 20px !important;
-        background: #3d1560 !important;
-        border: 1px solid rgba(168, 85, 247, 0.35) !important;
-        color: #d8b4fe !important;
-        min-width: 0 !important;
-        margin-top: 2px !important;
-    }
-    .turn-badge.my-turn {
-        background: rgba(46, 204, 113, 0.18) !important;
-        border-color: #2ecc71 !important;
-        color: #2ecc71 !important;
-    }
-    .turn-badge.opponent-turn {
-        background: rgba(168, 85, 247, 0.2) !important;
-        border-color: rgba(168, 85, 247, 0.5) !important;
-        color: #d8b4fe !important;
-    }
-
-    /* ── اللوحة: تصغير موحّد بدون لمس هندسة الشبكة ── */
-    .game-layout {
-        padding-top: 78px !important;
-    }
-    .game-layout .main-container {
-        transform: scale(0.9);
-        transform-origin: center top;
-        margin-top: 0 !important;
-    }
-
-    /* ── لوحة السؤال ── */
-    .question-sidebar,
-    .question-sidebar.active {
-        background: #2d1454 !important;
-        border-radius: 22px !important;
-        box-shadow:
-            0 -6px 28px rgba(0, 0, 0, 0.5),
-            0 0 0 1px rgba(255, 255, 255, 0.06) inset !important;
-        border: none !important;
-    }
-    .question-sidebar .sidebar-content {
-        gap: 10px !important;
-        padding: 14px 14px 16px !important;
-    }
-    .question-sidebar .letter-indicator,
-    .question-sidebar #currentLetterDisplay {
-        font-size: clamp(1rem, 4vw, 1.15rem) !important;
-        font-weight: 800 !important;
-        color: #fff !important;
-        text-shadow: none !important;
-        border-bottom: none !important;
-        padding: 0 !important;
-        text-align: center !important;
-    }
-
-    /* ── شريط السؤال + المؤقت ── */
-    .clue-bar {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        background: rgba(0, 0, 0, 0.35);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 14px;
-        padding: 10px 12px;
-        min-height: 48px;
-    }
-    .clue-timer {
-        display: none;
-        flex-shrink: 0;
-        align-items: center;
-        gap: 4px;
-        background: rgba(0, 0, 0, 0.45);
-        border-radius: 10px;
-        padding: 5px 8px;
-        font-size: 0.82rem;
-        font-weight: 800;
-        color: #ff9800;
-        white-space: nowrap;
-    }
-    .clue-timer.visible { display: flex; }
-    .clue-text,
-    .question-sidebar #questionText {
-        flex: 1;
-        font-size: clamp(0.82rem, 3.2vw, 0.95rem) !important;
-        line-height: 1.45 !important;
-        color: #f0e8ff !important;
-        margin: 0 !important;
-        text-align: center !important;
-    }
-    .system-msg,
-    .question-sidebar #systemMessageDisplay {
-        font-size: clamp(0.75rem, 2.8vw, 0.85rem) !important;
-        color: #5ae8ff !important;
-        text-align: center !important;
-        margin: 0 !important;
-        min-height: 18px;
-    }
-
-    /* ── صف الأزرار: أنا أعرف + تغيير السؤال ── */
-    .action-row {
-        display: flex;
-        align-items: stretch;
-        gap: 8px;
-        width: 100%;
-    }
-    .buzzer-btn {
-        display: none;
-        flex: 1;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        padding: 14px 12px;
-        border: none;
-        border-radius: 16px;
-        background: linear-gradient(180deg, #f59e31 0%, #e8871a 100%);
-        color: #fff;
-        font-size: clamp(0.95rem, 3.8vw, 1.1rem);
-        font-weight: 800;
-        font-family: inherit;
-        cursor: pointer;
-        box-shadow: 0 4px 16px rgba(245, 158, 49, 0.45);
-        transition: transform 0.12s ease, opacity 0.12s ease;
-    }
-    .buzzer-btn.visible { display: flex; }
-    .buzzer-btn:active:not(:disabled) { transform: scale(0.97); }
-    .buzzer-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    .skip-btn {
-        display: none;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 3px;
-        width: 64px;
-        min-width: 64px;
-        padding: 8px 6px;
-        border: none;
-        border-radius: 16px;
-        background: #3d1560;
-        border: 1px solid rgba(168, 85, 247, 0.4);
-        color: #d8b4fe;
-        font-size: 0.62rem;
-        font-weight: 700;
-        font-family: inherit;
-        cursor: pointer;
-        transition: transform 0.12s ease, background 0.12s ease;
-        line-height: 1.2;
-    }
-    .skip-btn.visible { display: flex; }
-    .skip-btn i { font-size: 1.1rem; color: #c084fc; }
-    .skip-btn:active:not(:disabled) { transform: scale(0.95); }
-    .skip-btn:disabled { opacity: 0.65; cursor: not-allowed; }
-    .skip-btn.state-waiting {
-        background: rgba(76, 175, 80, 0.25) !important;
-        border-color: #4caf50 !important;
-        color: #4caf50 !important;
-        width: auto;
-        min-width: 72px;
-        flex-shrink: 0;
-    }
-    .skip-btn.state-approve {
-        background: rgba(245, 158, 49, 0.25) !important;
-        border-color: #f59e31 !important;
-        color: #f59e31 !important;
-        width: auto;
-        min-width: 72px;
-        flex-shrink: 0;
-        animation: huroofPulse 1s infinite;
-    }
-
-    /* ── قسم الإجابة ── */
-    .answer-section { display: none; width: 100%; }
-    .answer-section.visible { display: block; }
-    .answer-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 8px;
-    }
-    .answer-prompt { color: #4caf50; font-weight: 700; font-size: 0.85rem; }
-    .player-timer { color: #ff5722; font-weight: 800; font-size: 0.95rem; }
-    .answer-input {
-        width: 100%;
-        box-sizing: border-box;
-        padding: 12px;
-        border-radius: 14px;
-        border: 2px solid rgba(0, 210, 255, 0.45);
-        background: rgba(0, 0, 0, 0.4);
-        color: #fff;
-        font-family: inherit;
-        font-size: 16px;
-        text-align: center;
-        margin-bottom: 8px;
-        outline: none;
-    }
-    .answer-input:focus { border-color: #00d2ff; }
-    .submit-answer-btn {
-        width: 100%;
-        padding: 12px;
-        border: none;
-        border-radius: 14px;
-        background: linear-gradient(180deg, #4caf50, #388e3c);
-        color: #fff;
-        font-weight: 800;
-        font-size: 0.95rem;
-        font-family: inherit;
-        cursor: pointer;
-    }
-    .answer-box { display: none; margin-top: 4px; }
-    .answer-box.visible { display: block; }
-
-    /* ── الشريط السفلي ── */
-    .help-slots {
-        bottom: 10px !important;
-        left: 8px !important;
-        right: auto !important;
-        gap: 5px !important;
-    }
-    .help-slot {
-        width: 52px !important;
-        height: 58px !important;
-        border-radius: 14px !important;
-        background: #2d1454 !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    }
-    .help-slot .help-icon { font-size: 20px !important; }
-    .help-slot .help-name {
-        font-size: 6px !important;
-        line-height: 1.15 !important;
-        opacity: 0.9 !important;
-    }
-    .help-slot .help-qty {
-        background: #e91e63 !important;
-        color: #fff !important;
-        bottom: auto !important;
-        top: -5px !important;
-        right: -4px !important;
-        min-width: 15px !important;
-        height: 15px !important;
-        font-size: 9px !important;
-    }
-    .surrender-btn {
-        bottom: 10px !important;
-        right: 8px !important;
-        width: 46px !important;
-        height: 46px !important;
-        background: #e91e63 !important;
-        border: none !important;
-        color: #fff !important;
-        box-shadow: 0 4px 12px rgba(233, 30, 99, 0.4) !important;
-    }
-    .surrender-btn:hover {
-        background: #c2185b !important;
-        color: #fff !important;
-    }
-    .pr-sound-float {
-        bottom: 10px !important;
-        right: 62px !important;
-        left: auto !important;
-        width: 46px !important;
-        height: 46px !important;
-        background: #3d1560 !important;
-        border: 1px solid rgba(168, 85, 247, 0.35) !important;
-        color: #d8b4fe !important;
-    }
-}
-
-@media (max-width: 600px) {
-    .game-layout .main-container { transform: scale(0.88); }
-    .skip-btn { width: 58px; min-width: 58px; }
-    .help-slot { width: 48px !important; height: 54px !important; }
-}
-
-@media (max-width: 380px) {
-    .game-layout .main-container { transform: scale(0.85); }
-    .skip-btn { width: 52px; min-width: 52px; font-size: 0.55rem; }
-    .buzzer-btn { padding: 12px 8px; }
 }

@@ -56,30 +56,6 @@ const playerAnswerInput    = document.getElementById('playerAnswerInput');
 const submitAnswerBtn      = document.getElementById('submitAnswerBtn');
 const voteSkipBtn          = document.getElementById('voteSkipBtn');
 
-function showBuzzer(show) {
-    if (buzzerBtn) buzzerBtn.classList.toggle('visible', show);
-}
-function showSkipBtn(show) {
-    if (voteSkipBtn) voteSkipBtn.classList.toggle('visible', show);
-}
-function resetSkipBtn() {
-    if (!voteSkipBtn) return;
-    voteSkipBtn.classList.remove('state-waiting', 'state-approve');
-    voteSkipBtn.style.animation = 'none';
-    voteSkipBtn.innerHTML = '<i class="fa-solid fa-rotate"></i><span class="skip-label">تغيير السؤال</span>';
-    voteSkipBtn.disabled = false;
-}
-function showGlobalTimer(show) {
-    if (globalTimerDisplay) globalTimerDisplay.classList.toggle('visible', show);
-}
-function showAnswerSection(show) {
-    if (answerSection) answerSection.classList.toggle('visible', show);
-}
-function showAnswerContainer(show) {
-    const el = document.getElementById('answer-container');
-    if (el) el.classList.toggle('visible', show);
-}
-
 
 // ============================================================
 //  حالة اللعبة
@@ -455,17 +431,22 @@ socket.on('huroof_new_question', (data) => {
         showToast('🔄 تم تغيير السؤال');
     }
 
-    showBuzzer(true);
+    buzzerBtn.style.display  = 'block';
     buzzerBtn.disabled       = false;
     buzzerBtn.style.opacity  = '1';
     systemMessageDisplay.textContent = '';
 
-    resetSkipBtn();
-    showSkipBtn(true);
+    if (voteSkipBtn) {
+        voteSkipBtn.style.display    = 'inline-block';
+        voteSkipBtn.disabled         = false;
+        voteSkipBtn.innerHTML        = '<i class="fa-solid fa-rotate"></i> تغيير السؤال';
+        voteSkipBtn.style.background = '#607d8b';
+        voteSkipBtn.style.animation  = 'none';
+    }
 
-    showAnswerContainer(false);
-    showAnswerSection(false);
-    showGlobalTimer(true);
+    document.getElementById('answer-container').style.display = 'none';
+    answerSection.style.display      = 'none';
+    globalTimerDisplay.style.display = 'block';
     startGlobalTimer(data.timer);
 });
 
@@ -493,9 +474,9 @@ function showToast(message) {
 
 socket.on('huroof_buzzed', (data) => {
     clearInterval(globalTimerInterval);
-    showGlobalTimer(false);
-    showBuzzer(false);
-    showSkipBtn(false);
+    globalTimerDisplay.style.display = 'none';
+    buzzerBtn.style.display          = 'none';
+    if (voteSkipBtn) voteSkipBtn.style.display = 'none';
 
     const timeValue = parseInt(data.time || data.timer);
     if (isNaN(timeValue)) return;
@@ -504,7 +485,7 @@ socket.on('huroof_buzzed', (data) => {
         isMyTurnToAnswer = true;
         systemMessageDisplay.textContent = 'أسرع! اكتب إجابتك...';
         systemMessageDisplay.style.color = '#4CAF50';
-        showAnswerSection(true);
+        answerSection.style.display      = 'block';
         submitAnswerBtn.disabled         = false;  // 🆕 نعيد تفعيل الزر للمحاولة الجديدة
         playerAnswerInput.value          = '';
         playerAnswerInput.focus();
@@ -512,7 +493,7 @@ socket.on('huroof_buzzed', (data) => {
         isMyTurnToAnswer = false;
         systemMessageDisplay.textContent = 'الخصم يجيب الآن... استعد في حال أخطأ!';
         systemMessageDisplay.style.color = '#FF9800';
-        showAnswerSection(false);
+        answerSection.style.display      = 'none';
     }
     startPlayerTimer(timeValue);
 });
@@ -523,7 +504,7 @@ socket.on('huroof_chance_transfer', (data) => {
         isMyTurnToAnswer = true;
         systemMessageDisplay.textContent = 'أخطأ الخصم! فرصتك الآن...';
         systemMessageDisplay.style.color = '#4CAF50';
-        showAnswerSection(true);
+        answerSection.style.display      = 'block';
         submitAnswerBtn.disabled         = false;  // 🆕 نعيد تفعيل الزر للمحاولة الجديدة
         playerAnswerInput.value          = '';
         playerAnswerInput.focus();
@@ -531,7 +512,7 @@ socket.on('huroof_chance_transfer', (data) => {
         isMyTurnToAnswer = false;
         systemMessageDisplay.textContent = 'أخطأت! فرصة الخصم الآن...';
         systemMessageDisplay.style.color = '#FF9800';
-        showAnswerSection(false);
+        answerSection.style.display      = 'none';
     }
     startPlayerTimer(data.timer);
 });
@@ -540,12 +521,17 @@ socket.on('huroof_last_chance', (data) => {
     clearInterval(playerTimerInterval);
     systemMessageDisplay.innerHTML   = '🚨 الفرصة الأخيرة! من يضغط أولاً؟';
     systemMessageDisplay.style.color = '#f44336';
-    showAnswerSection(false);
-    showBuzzer(true);
+    answerSection.style.display      = 'none';
+    buzzerBtn.style.display          = 'block';
     buzzerBtn.disabled               = false;
     buzzerBtn.style.opacity          = '1';
-    resetSkipBtn();
-    showSkipBtn(true);
+    if (voteSkipBtn) {
+        voteSkipBtn.style.display    = 'inline-block';
+        voteSkipBtn.disabled         = false;
+        voteSkipBtn.innerHTML        = '<i class="fa-solid fa-rotate"></i> تغيير السؤال';
+        voteSkipBtn.style.background = '#607d8b';
+        voteSkipBtn.style.animation  = 'none';
+    }
     startGlobalTimer(data.timer);
 });
 
@@ -556,9 +542,9 @@ socket.on('huroof_answer_result', (data) => {
         if (cell) { cell.classList.remove('active'); cell.classList.add(data.color); }
         systemMessageDisplay.innerHTML   = `✅ إجابة صحيحة! (${sanitizeHTML(data.answer)})`;
         systemMessageDisplay.style.color = '#4CAF50';
-        showBuzzer(false);
-        showAnswerSection(false);
-        showSkipBtn(false);
+        buzzerBtn.style.display          = 'none';
+        answerSection.style.display      = 'none';
+        if (voteSkipBtn) voteSkipBtn.style.display = 'none';
     } else {
         // 🆕 رسالة ذكية + إظهار الإجابة الصحيحة
         const feedback = data.feedback || 'إجابة خاطئة';
@@ -576,9 +562,9 @@ socket.on('huroof_timeout_info', (data) => {
     clearInterval(playerTimerInterval);
     systemMessageDisplay.textContent = sanitizeHTML(data.msg);
     systemMessageDisplay.style.color = '#ff9800';
-    showBuzzer(false);
-    showAnswerSection(false);
-    showSkipBtn(false);
+    buzzerBtn.style.display          = 'none';
+    answerSection.style.display      = 'none';
+    if (voteSkipBtn) voteSkipBtn.style.display = 'none';
 });
 
 // 🆕 كشف الإجابة الصحيحة للطرفين (عند فشل الاثنين أو الاتفاق على التغيير)
@@ -589,28 +575,27 @@ socket.on('huroof_reveal_answer', (data) => {
         systemMessageDisplay.innerHTML = `الإجابة الصحيحة: <b style="color:#4CAF50;">${sanitizeHTML(data.correct_answer)}</b>`;
         systemMessageDisplay.style.color = '#4CAF50';
     }
-    showBuzzer(false);
-    showAnswerSection(false);
-    showSkipBtn(false);
+    buzzerBtn.style.display     = 'none';
+    answerSection.style.display = 'none';
+    if (voteSkipBtn) voteSkipBtn.style.display = 'none';
 });
 
 socket.on('huroof_skip_voted', (data) => {
     if (data.sid === socket.id) {
         // أنا اللي طلبت التغيير → بانتظار موافقة الخصم
         if (voteSkipBtn) {
-            voteSkipBtn.classList.add('state-waiting');
-            voteSkipBtn.classList.remove('state-approve');
-            voteSkipBtn.innerHTML = '<i class="fa-solid fa-check"></i><span class="skip-label">انتظر...</span>';
-            voteSkipBtn.disabled = true;
+            voteSkipBtn.innerHTML        = '<i class="fa-solid fa-check"></i> ننتظر الخصم...';
+            voteSkipBtn.style.background = '#4CAF50';
+            voteSkipBtn.disabled         = true;
         }
     } else {
         // 🆕 الخصم طلب التغيير → يطلع لي طلب الموافقة
         showToast('🔄 الخصم يطلب تغيير السؤال — اضغط "تغيير السؤال" للموافقة');
         if (voteSkipBtn && !voteSkipBtn.disabled) {
-            voteSkipBtn.classList.add('state-approve');
-            voteSkipBtn.classList.remove('state-waiting');
-            voteSkipBtn.innerHTML = '<i class="fa-solid fa-handshake"></i><span class="skip-label">وافق؟</span>';
+            voteSkipBtn.innerHTML        = '<i class="fa-solid fa-handshake"></i> الخصم يطلب تغييره';
+            voteSkipBtn.style.background  = '#ff9800';
             ensurePulseKeyframe();
+            voteSkipBtn.style.animation   = 'huroofPulse 1s infinite';
         }
     }
 });
@@ -767,7 +752,7 @@ document.getElementById('confirmSurrenderBtn').onclick = () => {
 
 
 // ============================================================
-//  الشريط العلوي والملف الشخصي
+//  الشريط العلوي والالملف الشخصي
 // ============================================================
 
 function updateTopBarUI() {
@@ -820,7 +805,7 @@ let _playerTimerLeft = 0;
 
 function startGlobalTimer(seconds) {
     clearInterval(globalTimerInterval);
-    showGlobalTimer(true);
+    globalTimerDisplay.style.display = 'block';
     globalTimerDisplay.textContent   = `⏳ ${seconds}`;
     _globalTimerLeft = seconds;
     globalTimerInterval = setInterval(() => {
@@ -886,13 +871,13 @@ function resetUIForNewTurn() {
         qText.style.display = 'block';
     }
 
-    showGlobalTimer(false);
-    showBuzzer(false);
+    globalTimerDisplay.style.display = 'none';
+    buzzerBtn.style.display          = 'none';
     buzzerBtn.disabled               = false;
     buzzerBtn.style.opacity          = '1';
-    showAnswerSection(false);
-    showSkipBtn(false);
-    showAnswerContainer(false);
+    answerSection.style.display      = 'none';
+    if (voteSkipBtn) voteSkipBtn.style.display = 'none';
+    document.getElementById('answer-container').style.display = 'none';
     systemMessageDisplay.textContent = '';
     submitAnswerBtn.disabled         = false;
 }

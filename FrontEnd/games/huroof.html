@@ -22,15 +22,24 @@
     <link rel="stylesheet" href="../css/theme_styles.css">
     <script src="../js/ui_dialog.js"></script>
     <script src="../js/brand.js" defer></script>
-  <link rel="stylesheet" href="../css/responsive.css">
-  <link rel="stylesheet" href="../css/games/huroof_mobile.css?v=4">
-  <link rel="stylesheet" href="../css/app_perf.css">
-  <style>
-    /* الوضع الفردي: إخفاء الدردشة تماماً (لا خصم بشري) */
-    body.solo-mode #ingameQuickChatWrap,
-    body.solo-mode #gameQuickChatBtn,
-    body.solo-mode .ingame-quick-chat { display: none !important; }
-  </style>
+    <link rel="stylesheet" href="../css/responsive.css">
+    <link rel="stylesheet" href="../css/games/huroof_mobile.css?v=3">
+    <link rel="stylesheet" href="../css/app_perf.css">
+    <style>
+        /* الوضع الفردي: إخفاء الدردشة تماماً (لا خصم بشري) */
+        body.solo-mode #ingameQuickChatWrap,
+        body.solo-mode #gameQuickChatBtn,
+        body.solo-mode .ingame-quick-chat { display: none !important; }
+        
+        /* حاوية أزرار الإجراءات للكمبيوتر (مكدسة عمودياً) وتترتب أفقياً في الجوال */
+        .action-buttons-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 15px 0;
+            width: 100%;
+        }
+    </style>
 </head>
 <body>
     
@@ -112,34 +121,33 @@
     <div class="question-sidebar" id="questionSidebar">
         <div class="sidebar-content">
             <h3 class="letter-indicator" id="currentLetterDisplay">انتظر دورك...</h3>
+            
+            <div class="question-box">
+                <div id="globalTimer" style="color: #ff5722; font-weight: bold; font-size: 20px; margin-bottom: 10px; display: none;">⏳ 40</div>
+                <p id="questionText">اختر حرفاً من اللوحة للبدء!</p>
+            </div>
+            
+            <div id="systemMessageDisplay" style="color: #00d2ff; font-weight: bold; margin: 15px 0; min-height: 24px; text-align: center;"></div>
 
-            <div class="clue-bar">
-                <div class="clue-timer" id="globalTimer">⏳ 40</div>
-                <p class="clue-text" id="questionText">اختر حرفاً من اللوحة للبدء!</p>
+            <div class="action-buttons-container">
+                <button id="buzzerBtn" class="party-action-btn" style="background: #ff9800; font-size: 24px; padding: 15px; display: none; width: 100%; box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4); border: none; border-radius: 12px; color: white; font-weight: bold; cursor: pointer; transition: transform 0.1s;">
+                    <i class="fa-solid fa-hand-pointer"></i> أنا أعرف!
+                </button>
+                <button id="voteSkipBtn" class="party-action-btn" style="background: #607d8b; display: none; width: 100%; border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; color: #ddd; font-size: 16px; padding: 15px; cursor: pointer; transition: background 0.2s;">
+                    <i class="fa-solid fa-rotate"></i> تغيير السؤال
+                </button>
             </div>
 
-            <div id="systemMessageDisplay" class="system-msg"></div>
-
-            <div class="action-row" id="actionRow">
-                <button id="buzzerBtn" class="buzzer-btn" type="button">
-                    <span>أنا أعرف! ☝️</span>
-                </button>
-                <button id="voteSkipBtn" class="skip-btn" type="button">
-                    <i class="fa-solid fa-rotate"></i>
-                    <span class="skip-label">تغيير السؤال</span>
-                </button>
-            </div>
-
-            <div id="answerSection" class="answer-section">
-                <div class="answer-header">
-                    <span class="answer-prompt">اكتب إجابتك:</span>
-                    <span id="playerTimer" class="player-timer">⏱️ 15</span>
+            <div id="answerSection" style="display: none; width: 100%;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span style="color: #4CAF50; font-weight: bold;">اكتب إجابتك:</span>
+                    <span id="playerTimer" style="color: #ff5722; font-weight: bold; font-size: 18px;">⏱️ 15</span>
                 </div>
-                <input type="text" id="playerAnswerInput" class="answer-input" placeholder="أدخل الإجابة هنا..." autocomplete="off">
-                <button id="submitAnswerBtn" class="submit-answer-btn" type="button">إرسال الإجابة</button>
+                <input type="text" id="playerAnswerInput" placeholder="أدخل الإجابة هنا..." style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #00d2ff; background: #111; color: white; font-family: inherit; font-size: 16px; margin-bottom: 10px; text-align: center;">
+                <button id="submitAnswerBtn" class="party-action-btn" style="background: #4CAF50; width: 100%;">إرسال الإجابة</button>
             </div>
 
-            <div class="answer-box" id="answer-container">
+            <div class="question-box answer-box" id="answer-container" style="display: none; margin-top: 15px;">
                 <p id="answerText"></p>
             </div>
         </div>
