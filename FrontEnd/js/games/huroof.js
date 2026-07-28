@@ -1439,6 +1439,27 @@ socket.on('leaver_penalty', (data) => {
             }
         }
 
+        // 🔍 قياس على الجهاز عند الحاجة: أضف ?kbdebug=1 إلى الرابط
+        if (/[?&]kbdebug=1/.test(location.search)) {
+            const dbg = document.createElement('div');
+            dbg.style.cssText = 'position:fixed;top:70px;right:6px;z-index:2147483647;'
+                + 'background:rgba(0,0,0,.85);color:#0f0;font:11px/1.5 monospace;'
+                + 'padding:6px 8px;border-radius:6px;direction:ltr;text-align:left;';
+            document.body.appendChild(dbg);
+            setInterval(() => {
+                const sb = document.getElementById('questionSidebar');
+                const r = sb ? sb.getBoundingClientRect() : { top: 0, height: 0 };
+                dbg.textContent =
+                    'client ' + document.documentElement.clientHeight
+                    + '\ninner  ' + window.innerHeight
+                    + '\nvv.h   ' + Math.round(vv.height)
+                    + '\nvv.top ' + Math.round(vv.offsetTop)
+                    + '\nkb     ' + Math.round(kbHeight())
+                    + '\nbox.t  ' + Math.round(r.top)
+                    + '\nbox.h  ' + Math.round(r.height);
+            }, 300);
+        }
+
         vv.addEventListener('resize', applyLayout);
         vv.addEventListener('scroll', applyLayout);
         document.addEventListener('focusin', (e) => {
