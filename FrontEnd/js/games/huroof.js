@@ -1404,16 +1404,9 @@ socket.on('leaver_penalty', (data) => {
     //   • نحدّ أقصى ارتفاع بالمساحة المرئية فعلاً فلا يُقصّ شيء
     //   • نُخفي الزخارف غير الضرورية ونُبقي: السؤال + الحقل + الإرسال
     // ============================================================
-    // ⚠️ داخل التطبيق: لا نتدخّل إطلاقاً.
-    // أندرويد يستخدم adjustResize فيُقلّص WebView تلقائياً عند فتح الكيبورد،
-    // فيجلس الصندوق فوقه بلا أي كود — وهذا ما كان يعمل بشكل سليم أصلاً.
-    // كل المنطق أدناه كُتب لعلاج سلوك المتصفح (resizes-visual) وحده، وتطبيقه
-    // داخل التطبيق يضيف قياسات وأصنافاً فوق سلوك صحيح فيُفسده.
-    var PR_IN_APP = window.PR_IS_APP === true
-        || (typeof window.Capacitor !== 'undefined')
-        || /^(capacitor|file|ionic):$/.test(window.location.protocol);
-
-    if (window.visualViewport && !PR_IN_APP) {
+    // التطبيق يعمل بوضع edge-to-edge فلا يُقلّص WebView عند فتح الكيبورد
+    // (الكيبورد يطفو فوق المحتوى) — لذلك يحتاج نفس منطق المتصفح.
+    if (window.visualViewport) {
         const vv = window.visualViewport;
         let isKbOpen = false;
 
@@ -1499,6 +1492,22 @@ socket.on('leaver_penalty', (data) => {
                 const content = sidebar.querySelector('.sidebar-content');
                 if (content) content.scrollTop = 0;
                 fitBoard(sidebar);
+
+                // 🛡️ ضمان: إن لم يكن حقل الإجابة مرئياً فعلاً داخل الشاشة
+                // (صندوق فارغ / مقصوص لأي سبب) نتراجع فوراً عن كل تدخّلاتنا
+                // بدل أن نترك اللاعب أمام صندوق لا ينفع.
+                setTimeout(() => {
+                    if (!sidebar.classList.contains('keyboard-open')) return;
+                    const r = playerAnswerInput.getBoundingClientRect();
+                    const visibleBottom = vv.offsetTop + vv.height;
+                    const ok = r.height > 10 && r.top >= 0 && r.bottom <= visibleBottom + 2;
+                    if (!ok) {
+                        sidebar.classList.remove('keyboard-open');
+                        sidebar.style.removeProperty('max-height');
+                        fitBoard(null);
+                        if (content) content.scrollTop = 0;
+                    }
+                }, 260);
             } else if (isKbOpen) {
                 isKbOpen = false;
                 sidebar.classList.remove('keyboard-open');
@@ -1515,6 +1524,18 @@ socket.on('leaver_penalty', (data) => {
 
         // نتيح لبقية الكود إعادة ضبط التخطيط فوراً (مثلاً عند انتهاء الوقت)
         window.__huroofKbRefresh = applyLayout;
+
+        // داخل التطبيق: أحداث الكيبورد الأصلية أدقّ توقيتاً من visualViewport
+        try {
+            const K = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Keyboard;
+            if (K && K.addListener) {
+                ['keyboardWillShow', 'keyboardDidShow', 'keyboardWillHide', 'keyboardDidHide']
+                    .forEach((ev) => K.addListener(ev, () => {
+                        setTimeout(applyLayout, 30);
+                        setTimeout(applyLayout, 220);
+                    }));
+            }
+        } catch (e) {}
 
         vv.addEventListener('resize', applyLayout);
         vv.addEventListener('scroll', applyLayout);

@@ -1,7 +1,7 @@
 html, body { background: #2a0a3d !important; }
 
 /* قفل تمرير الصفحة المزعج على الجوال */
-html.kb-open:not(.pr-app), html.kb-open:not(.pr-app) body {
+html.kb-open, html.kb-open body {
     overflow: hidden !important;
     overscroll-behavior: none !important;
     touch-action: none !important;
@@ -294,23 +294,23 @@ html.kb-open:not(.pr-app), html.kb-open:not(.pr-app) body {
     /* الارتفاع والموضع يضبطهما JS ديناميكياً حسب ارتفاع الكيبورد الحقيقي.
        هنا نُنظّف المحتوى فقط: نُبقي السؤال + حقل الإجابة + زر الإرسال،
        ونُخفي كل ما عداه حتى يتّسع الصندوق في الشريط المرئي الضيق. */
-    html:not(.pr-app) .question-sidebar.keyboard-open {
+    .question-sidebar.keyboard-open {
         border-radius: 16px 16px 0 0 !important;
         transition: none !important;      /* يواكب ظهور الكيبورد بلا تأخّر */
     }
-    html:not(.pr-app) .question-sidebar.keyboard-open .sidebar-content {
+    .question-sidebar.keyboard-open .sidebar-content {
         padding: 8px 12px 8px 12px !important;
     }
     /* عناصر تُخفى أثناء الكتابة — الشريط السفلي (المساعدات/الانسحاب/الصوت)
        يبقى ظاهراً دائماً؛ إخفاؤه كان خطأً لأنه يقطع أدوات اللاعب فجأة. */
-    html:not(.pr-app) .question-sidebar.keyboard-open #systemMessageDisplay,
-    html:not(.pr-app) .question-sidebar.keyboard-open #answer-container,
-    html:not(.pr-app) .question-sidebar.keyboard-open .mobile-actions-wrapper {
+    .question-sidebar.keyboard-open #systemMessageDisplay,
+    .question-sidebar.keyboard-open #answer-container,
+    .question-sidebar.keyboard-open .mobile-actions-wrapper {
         display: none !important;
     }
     /* الحرف المختار يبقى ظاهراً — إخفاؤه أنسى اللاعب حرفه. سطر نحيف بلا
        فاصل ولا حشوة، يكلّف ~18px فقط. */
-    html:not(.pr-app) .question-sidebar.keyboard-open .letter-indicator {
+    .question-sidebar.keyboard-open .letter-indicator {
         display: block !important;
         font-size: 0.78rem !important;
         margin: 0 0 3px 0 !important;
@@ -319,21 +319,21 @@ html.kb-open:not(.pr-app), html.kb-open:not(.pr-app) body {
         opacity: 0.95;
     }
     /* الشريط السفلي: مضغوط لا مخفي */
-    html:not(.pr-app) .question-sidebar.keyboard-open .mobile-bottom-bar {
+    .question-sidebar.keyboard-open .mobile-bottom-bar {
         padding: 4px 8px !important;
     }
-    html:not(.pr-app) .question-sidebar.keyboard-open .mobile-bottom-bar .help-slot,
-    html:not(.pr-app) .question-sidebar.keyboard-open .mobile-bottom-bar .surrender-btn,
-    html:not(.pr-app) .question-sidebar.keyboard-open .mobile-bottom-bar .pr-sound-float {
+    .question-sidebar.keyboard-open .mobile-bottom-bar .help-slot,
+    .question-sidebar.keyboard-open .mobile-bottom-bar .surrender-btn,
+    .question-sidebar.keyboard-open .mobile-bottom-bar .pr-sound-float {
         width: 36px !important; height: 36px !important;
     }
     /* ── السؤال: سطر واحد أثناء الكتابة، ولمسة عليه تفتحه كاملاً ── */
-    html:not(.pr-app) .question-sidebar.keyboard-open .question-box {
+    .question-sidebar.keyboard-open .question-box {
         padding: 6px 9px !important;
         cursor: pointer;
         position: relative;
     }
-    html:not(.pr-app) .question-sidebar.keyboard-open #questionText {
+    .question-sidebar.keyboard-open #questionText {
         font-size: clamp(0.82rem, 3vw, 0.95rem) !important;
         line-height: 1.35 !important;
         display: -webkit-box !important;
@@ -342,7 +342,7 @@ html.kb-open:not(.pr-app), html.kb-open:not(.pr-app) body {
         overflow: hidden !important;
     }
     /* الحالة المفتوحة بعد اللمس */
-    html:not(.pr-app) .question-sidebar.keyboard-open .question-box.q-open #questionText {
+    .question-sidebar.keyboard-open .question-box.q-open #questionText {
         -webkit-line-clamp: unset;
         max-height: 5em !important;
         overflow-y: auto !important;
@@ -358,25 +358,25 @@ html.kb-open:not(.pr-app), html.kb-open:not(.pr-app) body {
        فيبقى حقل الإجابة ظاهراً بعد انتهاء وقتي وأثناء دور الخصم، ولا يختفي
        إلا حين يُغلق الكيبورد فيسقط الصنف. الآن لا نفرض الظهور إلا حين لا
        يكون العنصر مخفياً أصلاً. */
-    html:not(.pr-app) .question-sidebar.keyboard-open #answerSection:not([style*="none"]) {
+    .question-sidebar.keyboard-open #answerSection:not([style*="none"]) {
         display: flex !important;
         align-items: center !important;
         gap: 8px !important;
         margin-top: 8px !important;
     }
-    html:not(.pr-app) .question-sidebar.keyboard-open #answerSection > div:first-child {
+    .question-sidebar.keyboard-open #answerSection > div:first-child {
         display: contents !important;
     }
-    html:not(.pr-app) .question-sidebar.keyboard-open #answerSection > div:first-child > span:first-child {
+    .question-sidebar.keyboard-open #answerSection > div:first-child > span:first-child {
         display: none !important;   /* «اكتب إجابتك:» — الحقل يشرح نفسه */
     }
-    html:not(.pr-app) .question-sidebar.keyboard-open #playerTimer {
+    .question-sidebar.keyboard-open #playerTimer {
         order: 1;
         font-size: 15px !important;
         white-space: nowrap;
         flex: 0 0 auto;
     }
-    html:not(.pr-app) .question-sidebar.keyboard-open #playerAnswerInput {
+    .question-sidebar.keyboard-open #playerAnswerInput {
         order: 2;
         flex: 1 1 auto !important;
         width: auto !important;
@@ -385,7 +385,7 @@ html.kb-open:not(.pr-app), html.kb-open:not(.pr-app) body {
         margin: 0 !important;
         font-size: 16px !important;   /* أقل من 16px يجعل iOS يُكبّر الصفحة */
     }
-    html:not(.pr-app) .question-sidebar.keyboard-open #submitAnswerBtn {
+    .question-sidebar.keyboard-open #submitAnswerBtn {
         order: 3;
         width: auto !important;
         flex: 0 0 auto !important;
@@ -394,7 +394,7 @@ html.kb-open:not(.pr-app), html.kb-open:not(.pr-app) body {
         white-space: nowrap;
     }
     /* الشريط العائم للدردشة السريعة يزاحم الصندوق أثناء الكتابة */
-    html.kb-open:not(.pr-app) .ingame-quick-chat { display: none !important; }
+    html.kb-open .ingame-quick-chat { display: none !important; }
 
     
     .ingame-quick-chat { top: 70px !important; left: 8px !important; bottom: auto !important; }
