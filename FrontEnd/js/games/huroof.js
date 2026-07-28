@@ -1416,7 +1416,9 @@ socket.on('leaver_penalty', (data) => {
         // بنفسها عند فتح الكيبورد؛ استخدام innerHeight هناك يعطي رقماً مضاعفاً
         // فيقفز الصندوق إلى منتصف الشاشة ويحجب اللوحة. هذه المعادلة تُعيد
         // صفراً في تلك الحالة (لأن الصندوق فوق الكيبورد أصلاً).
-        function kbHeight() {
+        // nativeH: ارتفاع الكيبورد الحقيقي من Capacitor (0 على الويب)
+        function kbHeight(nativeH) {
+            if (nativeH && nativeH > 0) return nativeH;
             const layoutH = document.documentElement.clientHeight || window.innerHeight;
             const overlap = layoutH - (vv.height + vv.offsetTop);
             return Math.max(0, Math.min(overlap, layoutH * 0.6));
@@ -1449,10 +1451,10 @@ socket.on('leaver_penalty', (data) => {
             board.style.marginBottom = '-' + Math.round(natural * (1 - scale)) + 'px';
         }
 
-        function applyLayout() {
+        function applyLayout(nativeKbH) {
             const sidebar = document.getElementById('questionSidebar');
             if (!sidebar) return;
-            const kb = kbHeight();
+            const kb = kbHeight(nativeKbH);
             // الكتابة جارية؟ (بعض المتصفحات تُقلّص الشاشة بنفسها فيكون kb=0
             // رغم أن الكيبورد مفتوح — نعتمد على التركيز لا على القياس وحده)
             const typing = document.activeElement
@@ -1478,8 +1480,12 @@ socket.on('leaver_penalty', (data) => {
                 // فوقه (كان يتمدّد للمساحة كلها فيحجب خلية الحروف).
                 // الوضع المضغوط صار قصيراً فعلاً (سؤال بسطر + صفّ إجابة +
                 // الشريط السفلي) فنُنزل السقف ليعود الباقي للوحة.
+                // المساحة المرئية الحقيقية = ارتفاع الشاشة ناقص الكيبورد
+                // في WebView: vv.height لا يتقلص، فنحسبها يدوياً
+                const screenH = document.documentElement.clientHeight || window.innerHeight;
+                const visibleH = kb > 0 ? (screenH - kb) : vv.height;
                 sidebar.style.setProperty('max-height',
-                    Math.max(130, Math.min(vv.height - 12, 215)) + 'px', 'important');
+                    Math.max(130, Math.min(visibleH - 12, 215)) + 'px', 'important');
 
                 // نمنع قفزة التمرير التلقائية التي يفعلها المتصفح
                 if (window.scrollY !== 0) window.scrollTo(0, 0);
@@ -1526,14 +1532,31 @@ socket.on('leaver_penalty', (data) => {
         window.__huroofKbRefresh = applyLayout;
 
         // داخل التطبيق: أحداث الكيبورد الأصلية أدقّ توقيتاً من visualViewport
+        // ⚠️ WebView لا يُقلّص visualViewport عند فتح الكيبورد، فـkbHeight()
+        // تُعيد 0. نستخدم keyboardHeight الذي يُمرَّر مع الحدث مباشرةً.
         try {
             const K = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Keyboard;
             if (K && K.addListener) {
-                ['keyboardWillShow', 'keyboardDidShow', 'keyboardWillHide', 'keyboardDidHide']
-                    .forEach((ev) => K.addListener(ev, () => {
-                        setTimeout(applyLayout, 30);
-                        setTimeout(applyLayout, 220);
-                    }));
+                // نحفظ ارتفاع الكيبورد الحقيقي من حدث "show" ونُمرره لـapplyLayout
+                let _nativeKbH = 0;
+
+                K.addListener('keyboardWillShow', (info) => {
+                    _nativeKbH = (info && info.keyboardHeight) ? info.keyboardHeight : 0;
+                    setTimeout(() => applyLayout(_nativeKbH), 30);
+                    setTimeout(() => applyLayout(_nativeKbH), 220);
+                });
+                K.addListener('keyboardDidShow', (info) => {
+                    _nativeKbH = (info && info.keyboardHeight) ? info.keyboardHeight : _nativeKbH;
+                    applyLayout(_nativeKbH);
+                });
+                K.addListener('keyboardWillHide', () => {
+                    _nativeKbH = 0;
+                    setTimeout(() => applyLayout(0), 30);
+                });
+                K.addListener('keyboardDidHide', () => {
+                    _nativeKbH = 0;
+                    applyLayout(0);
+                });
             }
         } catch (e) {}
 
