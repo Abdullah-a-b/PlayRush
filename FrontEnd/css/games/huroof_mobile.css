@@ -352,7 +352,13 @@ html.kb-open, html.kb-open body {
     /* ── منطقة الإجابة: صفّ واحد [⏱] [الحقل] [إرسال] ──
        نُحوّل رأس القسم إلى display:contents ليصبح المؤقّت عنصر فليكس
        مباشراً بجانب الحقل، فنكسب صفّاً كاملاً من الارتفاع. */
-    .question-sidebar.keyboard-open #answerSection {
+    /* ⚠️ `:not([style*="none"])` ضرورة لا زخرفة:
+       الكود يُخفي القسم بـ answerSection.style.display='none' (سطر inline).
+       ولأن قاعدتنا كانت display:flex !important فهي تهزم السطر الـinline،
+       فيبقى حقل الإجابة ظاهراً بعد انتهاء وقتي وأثناء دور الخصم، ولا يختفي
+       إلا حين يُغلق الكيبورد فيسقط الصنف. الآن لا نفرض الظهور إلا حين لا
+       يكون العنصر مخفياً أصلاً. */
+    .question-sidebar.keyboard-open #answerSection:not([style*="none"]) {
         display: flex !important;
         align-items: center !important;
         gap: 8px !important;

@@ -734,6 +734,10 @@ function lockAnswerUI() {
     submitAnswerBtn.disabled    = true;
     playerAnswerInput.value     = '';
     try { playerAnswerInput.blur(); } catch (e) {}   // يُغلق الكيبورد ويُعيد التخطيط
+    // نُعيد ضبط التخطيط فوراً بلا انتظار حدث الكيبورد
+    if (typeof window.__huroofKbRefresh === 'function') {
+        setTimeout(window.__huroofKbRefresh, 60);
+    }
 }
 
 function startPlayerTimer(seconds) {
@@ -1487,6 +1491,9 @@ socket.on('leaver_penalty', (data) => {
                 fitBoard(null);   // نُعيد اللوحة لحجمها الطبيعي
             }
         }
+
+        // نتيح لبقية الكود إعادة ضبط التخطيط فوراً (مثلاً عند انتهاء الوقت)
+        window.__huroofKbRefresh = applyLayout;
 
         vv.addEventListener('resize', applyLayout);
         vv.addEventListener('scroll', applyLayout);
