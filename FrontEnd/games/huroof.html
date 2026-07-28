@@ -23,7 +23,7 @@
     <script src="../js/ui_dialog.js"></script>
     <script src="../js/brand.js" defer></script>
   <link rel="stylesheet" href="../css/responsive.css">
-  <link rel="stylesheet" href="../css/games/huroof_mobile.css?v=3">
+  <link rel="stylesheet" href="../css/games/huroof_mobile.css?v=4">
   <link rel="stylesheet" href="../css/app_perf.css">
   <style>
     /* الوضع الفردي: إخفاء الدردشة تماماً (لا خصم بشري) */
@@ -112,35 +112,35 @@
     <div class="question-sidebar" id="questionSidebar">
         <div class="sidebar-content">
             <h3 class="letter-indicator" id="currentLetterDisplay">انتظر دورك...</h3>
-            
-            <div class="question-box">
-                <div id="globalTimer" style="color: #ff5722; font-weight: bold; font-size: 20px; margin-bottom: 10px; display: none;">⏳ 40</div>
-                <p id="questionText">اختر حرفاً من اللوحة للبدء!</p>
-            </div>
-            
-            <div id="systemMessageDisplay" style="color: #00d2ff; font-weight: bold; margin: 15px 0; min-height: 24px; text-align: center;"></div>
 
-            <button id="buzzerBtn" class="party-action-btn" style="background: #ff9800; font-size: 24px; padding: 15px; margin: 15px 0; display: none; width: 100%; box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);">
-                <i class="fa-solid fa-hand-pointer"></i> أنا أعرف!
-            </button>
-
-            <div id="answerSection" style="display: none; width: 100%;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <span style="color: #4CAF50; font-weight: bold;">اكتب إجابتك:</span>
-                    <span id="playerTimer" style="color: #ff5722; font-weight: bold; font-size: 18px;">⏱️ 15</span>
-                </div>
-                <input type="text" id="playerAnswerInput" placeholder="أدخل الإجابة هنا..." style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #00d2ff; background: #111; color: white; font-family: inherit; font-size: 16px; margin-bottom: 10px; text-align: center;">
-                <button id="submitAnswerBtn" class="party-action-btn" style="background: #4CAF50; width: 100%;">إرسال الإجابة</button>
+            <div class="clue-bar">
+                <div class="clue-timer" id="globalTimer">⏳ 40</div>
+                <p class="clue-text" id="questionText">اختر حرفاً من اللوحة للبدء!</p>
             </div>
 
-            <div class="question-box answer-box" id="answer-container" style="display: none; margin-top: 15px;">
-                <p id="answerText"></p>
-            </div>
+            <div id="systemMessageDisplay" class="system-msg"></div>
 
-            <div class="sidebar-actions">
-                <button id="voteSkipBtn" class="party-action-btn" style="background: #607d8b; display: none;">
-                    <i class="fa-solid fa-forward-step"></i> اقتراح تغيير السؤال
+            <div class="action-row" id="actionRow">
+                <button id="buzzerBtn" class="buzzer-btn" type="button">
+                    <span>أنا أعرف! ☝️</span>
                 </button>
+                <button id="voteSkipBtn" class="skip-btn" type="button">
+                    <i class="fa-solid fa-rotate"></i>
+                    <span class="skip-label">تغيير السؤال</span>
+                </button>
+            </div>
+
+            <div id="answerSection" class="answer-section">
+                <div class="answer-header">
+                    <span class="answer-prompt">اكتب إجابتك:</span>
+                    <span id="playerTimer" class="player-timer">⏱️ 15</span>
+                </div>
+                <input type="text" id="playerAnswerInput" class="answer-input" placeholder="أدخل الإجابة هنا..." autocomplete="off">
+                <button id="submitAnswerBtn" class="submit-answer-btn" type="button">إرسال الإجابة</button>
+            </div>
+
+            <div class="answer-box" id="answer-container">
+                <p id="answerText"></p>
             </div>
         </div>
     </div>
