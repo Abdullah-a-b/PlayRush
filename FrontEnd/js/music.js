@@ -82,7 +82,14 @@
     }
 
     function tick() {
-        if (window.PRSound && window.PRSound.isMuted()) return;  // يتبع الكتم العام
+        if (window.PRSound && window.PRSound.isMuted()) {
+            if (!window.__musicDiag1) { window.__musicDiag1 = 1; console.log('[music] صامت: PRSound مكتوم'); }
+            return;  // يتبع الكتم العام
+        }
+        if (_userVol() <= 0.0005) {
+            if (!window.__musicDiag2) { window.__musicDiag2 = 1; console.log('[music] صامت: musicSlider =', localStorage.getItem('musicSlider')); }
+            return;
+        }
         const n = seededNote(step);
         // اللحن (أرپيجيو ناعم)
         note(midi(n), T.step / 1000 * 1.6, T.vol, T.type);
@@ -102,12 +109,13 @@
 
     function start() {
         if (running) return;
-        const a = ac(); if (!a) return;
+        const a = ac(); if (!a) { if(!window.__musicDiag3){window.__musicDiag3=1;console.log('[music] لا AudioContext');} return; }
         if (a.state === 'suspended') {
             // resume غير متزامن — ننتظر نجاحه ثم نبدأ (كان سبب التأخر!)
             a.resume().then(() => { if (a.state === 'running') start(); }).catch(() => {});
             return;
         }
+        console.log('[music] بدأت — THEME:', THEME);
         running = true;
         // استئناف من موضع الجلسة (menu: نفس اللحن يكمل بين categories واللوبي)
         let resumed = false;

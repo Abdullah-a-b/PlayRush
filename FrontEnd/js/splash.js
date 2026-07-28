@@ -14,9 +14,13 @@
 
     const FLAG = mode === 'company' ? 'pr_splash_company' : 'pr_splash_platform';
     try {
-        if (sessionStorage.getItem(FLAG)) return;
+        if (sessionStorage.getItem(FLAG)) {
+            console.log('[splash] تُخطّي', mode, '— العلم مضبوط مسبقاً بالجلسة');
+            return;
+        }
         sessionStorage.setItem(FLAG, '1');
     } catch (e) { return; }
+    console.log('[splash] عرض أنيميشن:', mode);
 
     // 🔉 نغمات الأنيميشن (WebAudio مصغّر — يتجاهل بصمت لو محجوباً)
     function blip(freq, dur, vol, when, type) {

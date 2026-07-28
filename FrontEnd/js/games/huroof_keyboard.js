@@ -18,11 +18,10 @@
     function lift() {
         sidebar = sidebar || el('questionSidebar');
         if (!sidebar) return;
-        // مقدار ما يغطّيه الكيبورد من أسفل الشاشة
         var covered = window.innerHeight - (vv.height + vv.offsetTop);
         if (covered > 80) {
-            // نرفع الصندوق فوق الكيبورد مع هامش صغير
-            sidebar.style.transition = 'transform .2s ease';
+            // رفع فوري (بلا transition بطيء) ليواكب ظهور الكيبورد
+            sidebar.style.transition = 'none';
             sidebar.style.transform = 'translateY(-' + (covered - 4) + 'px)';
             sidebar.classList.add('kb-lifted');
         } else {
@@ -33,6 +32,7 @@
     function reset() {
         sidebar = sidebar || el('questionSidebar');
         if (!sidebar) return;
+        sidebar.style.transition = 'none';
         sidebar.style.transform = '';
         sidebar.classList.remove('kb-lifted');
     }
