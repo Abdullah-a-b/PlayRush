@@ -129,42 +129,86 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // ============================================================
-//  معالج الكيبورد على الجوال (visualViewport)
-//  المشكلة: لما يفتح الكيبورد، الـ viewport يصغر والصندوق
-//  (bottom: 68px) يطلع من الشاشة فيختفي السؤال أو يتقطع.
-//  الحل: نستمع لتغيّر حجم الـ viewport ونرفع الصندوق بمقدار
-//  الفرق بين الـ window الكامل والـ viewport المرئي.
+//  معالج الكيبورد على الجوال (visualViewport) — نسخة محسّنة
+//
+//  المشكلة: لما يفتح الكيبورد في Chrome Android:
+//    1. الـ viewport يصغر → الصندوق يخرج من الشاشة
+//    2. الـ vh يتغير في بعض المتصفحات → max-height يتكسر
+//    3. المحتوى يتراكم لأن الـ overflow لا يعمل مع max-height ثابت
+//
+//  الحل:
+//    - نحسب ارتفاع الكيبورد بدقة من visualViewport
+//    - نضبط bottom + max-height ديناميكياً بـ px (لا vh)
+//    - نضيف كلاس keyboard-open يُخفي العناصر غير الضرورية (CSS)
+//    - نُخفي أزرار المساعدات وزر الاستسلام أثناء الكتابة
 // ============================================================
 (function setupMobileKeyboardHandler() {
-    const sidebar = document.getElementById('questionSidebar');
-    if (!sidebar || !window.visualViewport) return;
+    if (!window.visualViewport) return;
 
-    // المسافة الأصلية من الأسفل (مطابقة CSS)
-    const BASE_BOTTOM = 68;
+    const sidebar    = document.getElementById('questionSidebar');
+    const helpSlots  = document.querySelector('.help-slots');
+    const surrendBtn = document.getElementById('surrenderBtn');
+    const soundBtn   = document.querySelector('.pr-sound-float');
+    const ansInput   = document.getElementById('playerAnswerInput');
+    if (!sidebar) return;
+
+    // قيم افتراضية — تطابق CSS
+    const BASE_BOTTOM   = 68;   // px — المسافة من الأسفل بدون كيبورد
+    const BASE_MAX_VH   = 0.38; // 38vh — max-height بدون كيبورد
+    const KB_THRESHOLD  = 100;  // px — الحد الأدنى لاعتبار الكيبورد مفتوحاً
+
+    let kbOpen = false;
 
     function onViewportChange() {
-        const vv        = window.visualViewport;
-        const winH      = window.innerHeight;
-        // المسافة بين أسفل الـ viewport المرئي وأسفل النافذة
-        const kbHeight  = winH - (vv.offsetTop + vv.height);
-        const newBottom = BASE_BOTTOM + Math.max(0, kbHeight);
-        sidebar.style.setProperty('bottom', newBottom + 'px', 'important');
+        const vv       = window.visualViewport;
+        const winH     = window.innerHeight;
+        const vvBottom = vv.offsetTop + vv.height;
+        const kbHeight = Math.max(0, winH - vvBottom);  // ارتفاع الكيبورد بالـ px
+
+        if (kbHeight > KB_THRESHOLD) {
+            // ─── الكيبورد مفتوح ───
+            if (!kbOpen) {
+                kbOpen = true;
+                sidebar.classList.add('keyboard-open');
+                // نُخفي الأزرار الجانبية حتى لا تتراكم مع الصندوق
+                if (helpSlots)  helpSlots.style.setProperty('display', 'none', 'important');
+                if (surrendBtn) surrendBtn.style.setProperty('display', 'none', 'important');
+                if (soundBtn)   soundBtn.style.setProperty('display', 'none', 'important');
+            }
+
+            // bottom = فوق الكيبورد مباشرة + 6px هامش
+            const newBottom  = kbHeight + 6;
+            // max-height = المساحة المرئية بين top-bar (≈62px) والكيبورد - هامش
+            const available  = vv.height - 62 - 8;
+            const newMaxH    = Math.max(120, Math.min(available, 260)); // بين 120px و260px
+
+            sidebar.style.setProperty('bottom',     newBottom + 'px', 'important');
+            sidebar.style.setProperty('max-height', newMaxH  + 'px', 'important');
+
+        } else {
+            // ─── الكيبورد مغلق ───
+            _resetSidebar();
+        }
     }
 
-    function resetBottom() {
-        sidebar.style.setProperty('bottom', BASE_BOTTOM + 'px', 'important');
+    function _resetSidebar() {
+        if (!kbOpen) return;
+        kbOpen = false;
+        sidebar.classList.remove('keyboard-open');
+        sidebar.style.setProperty('bottom',     BASE_BOTTOM + 'px', 'important');
+        sidebar.style.setProperty('max-height', (window.innerHeight * BASE_MAX_VH) + 'px', 'important');
+        // نُعيد الأزرار
+        if (helpSlots)  helpSlots.style.removeProperty('display');
+        if (surrendBtn) surrendBtn.style.removeProperty('display');
+        if (soundBtn)   soundBtn.style.removeProperty('display');
     }
 
     window.visualViewport.addEventListener('resize', onViewportChange);
     window.visualViewport.addEventListener('scroll', onViewportChange);
 
-    // reset عند إخفاء الكيبورد (blur على حقل الإجابة)
-    const ansInput = document.getElementById('playerAnswerInput');
+    // reset عند blur بتأخير (Chrome يُطلق blur قبل انتهاء أنيمايشن الكيبورد)
     if (ansInput) {
-        ansInput.addEventListener('blur', () => {
-            // تأخير بسيط لأن بعض المتصفحات تُطلق blur قبل انتهاء الأنيمايشن
-            setTimeout(resetBottom, 150);
-        });
+        ansInput.addEventListener('blur', () => setTimeout(_resetSidebar, 200));
     }
 })();
 
