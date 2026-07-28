@@ -196,8 +196,15 @@ window.addEventListener('load', () => {
                 sessionStorage.setItem('playerAvatar', finalAvatar);
                 sessionStorage.setItem('country', playerCountry);
 
-                try { sessionStorage.setItem('pr_splash_ticket', '1'); } catch (e) {}
-                setTimeout(() => window.location.replace("categories.html"), 800);
+                setTimeout(() => {
+                    if (window.PRSplash) {
+                        window.PRSplash.playPlatformThen(function () {
+                            window.location.replace("categories.html");
+                        });
+                    } else {
+                        window.location.replace("categories.html");
+                    }
+                }, 800);
             } else {
                 profileMessage.textContent = data.detail || "حدث خطأ أثناء الحفظ";
                 profileMessage.style.color = "#ff4d4d";

@@ -1,59 +1,20 @@
 /**
- * 🎬 شاشات الانطلاق — مفصولة حسب الصفحة (بلا إزعاج):
+ * 🎬 شاشات الانطلاق — PlayRush
  *   index.html      → أنيميشن الشركة (Isolated Person)
  *   categories.html → أنيميشن اسم المنصة (PlayRush بالخلايا)
- * كلٌّ يظهر مرة واحدة لكل جلسة متصفح، ويُتخطى بأي نقرة.
- * مع مؤثرات صوتية خفيفة (best-effort — تُحجب قبل أول تفاعل بسياسة المتصفح).
+ *
+ * ⚠️ سياسة الصوت في المتصفحات: لا يُسمح بأي صوت في مستند لم يقع فيه
+ * تفاعل. النقرة على «تسجيل الدخول» تحدث في مستند login، وتموت معه؛
+ * فحين تصل categories يكون المستند «بكراً» ← أنيميشن صامت دائماً.
+ *
+ * الحل: نعرض أنيميشن المنصة في *صفحة الدخول نفسها* بعد نجاح الدخول
+ * (حيث التفعيل اللاصق للمستند قائم فيعمل الصوت)، ثم ننتقل. لذلك يصدّر
+ * هذا الملف واجهة:  PRSplash.show(mode, onDone)
+ * وتبقى النسخة التلقائية على categories كشبكة أمان (مثلاً عودة OAuth).
  */
 (function () {
-    // 🩹 السبب الجذري: Cloudflare Pages يقدّم الروابط النظيفة بلا امتداد
-    // (playrush.pages.dev/categories) بينما التطبيق يفتح ملفاً باسم
-    // categories.html — فكانت المقارنة تفشل على الويب فقط، ويخرج السكربت
-    // صامتاً بلا أي أنيميشن. نُطبّع الاسم: نحذف .html ونعالج المسار الفارغ.
-    const page = (location.pathname.split('/').pop() || '')
-        .toLowerCase().replace(/\.html$/, '') || 'index';
-    let mode = null;
-    if (page === 'index') mode = 'company';
-    else if (page === 'categories') mode = 'platform';
-    if (!mode) return;
-
-    const FLAG = mode === 'company' ? 'pr_splash_company' : 'pr_splash_platform';
-
     // ============================================================
-    // 🩹 السبب الحقيقي لاختفاء أنيميشن المنصة:
-    // كان الشرط الوحيد هو علم في sessionStorage «مرة لكل جلسة».
-    // لكن sessionStorage لا يموت كما نظن:
-    //   • يبقى عبر كل التنقلات في نفس التبويب (categories → لوبي → رجوع)
-    //   • ويعيده كروم كما هو عند «استعادة التبويبات» بعد إغلاق المتصفح
-    // فمن أول زيارة واحدة لصفحة categories يُدفن الأنيميشن للأبد.
-    //
-    // الحل: «تذكرة» تُصدر عند كل دخول حقيقي (login / تسجيل / استئناف
-    // جلسة / OAuth). وجود التذكرة يفرض العرض متجاوزاً العلم.
-    // ============================================================
-    let ticket = false;
-    if (mode === 'platform') {
-        try { ticket = sessionStorage.getItem('pr_splash_ticket') === '1'; } catch (e) {}
-        // عودة جوجل: ?token=... في الرابط = دخول جديد بالتأكيد
-        if (!ticket && /[?&]token=/.test(location.search)) ticket = true;
-        if (ticket) { try { sessionStorage.removeItem('pr_splash_ticket'); } catch (e) {} }
-    }
-    if (!ticket) {
-        try {
-            if (sessionStorage.getItem(FLAG)) return;
-        } catch (e) { return; }
-    }
-    // حارس ضد تركيب مزدوج داخل نفس الصفحة
-    if (window.__prSplashMounted) return;
-    window.__prSplashMounted = true;
-
-    // ============================================================
-    // 🔉 نغمات الأنيميشن
-    // كانت تُلغى بصمت: `if (a.state === 'suspended') return;` — وعند الوصول
-    // إلى categories بعد تنقّل، المستند جديد ولم يقع فيه أي تفاعل بعد،
-    // فالسياق مُعلّق دائماً ← أنيميشن بلا صوت. الآن:
-    //   ١) نستخدم السياق المشترك مع sound.js/music.js
-    //   ٢) نحاول إيقاظه (resume) فوراً وبمحاولات متكرّرة قصيرة
-    //   ٣) لو ظلّ محجوباً، نصفّ النغمات في طابور يُفرَّغ عند أول لمسة
+    // 🔉 الصوت — سياق مشترك مع sound.js/music.js + طابور عند الحجب
     // ============================================================
     function actx() {
         try {
@@ -65,7 +26,6 @@
     let _queue = [], _flushed = false;
 
     function _emit(freq, dur, vol, when, type) {
-        // يحترم زر الكتم العام لو كان sound.js قد حُمّل
         if (window.PRSound && window.PRSound.isMuted && window.PRSound.isMuted()) return;
         const a = actx(); if (!a || a.state !== 'running') return;
         try {
@@ -84,37 +44,37 @@
         if (_flushed) return;
         const a = actx(); if (!a || a.state !== 'running') return;
         _flushed = true;
-        _queue.forEach((t) => _emit(t[0], t[1], t[2], t[3], t[4]));
-        _queue = [];
+        const q = _queue; _queue = [];
+        q.forEach((t) => _emit(t[0], t[1], t[2], t[3], t[4]));
+    }
+
+    function _wake() {
+        const a = actx(); if (!a) return;
+        if (a.state === 'running') _flush();
+        else { try { a.resume().then(_flush).catch(() => {}); } catch (e) {} }
     }
 
     function blip(freq, dur, vol, when, type) {
         const a = actx(); if (!a) return;
-        if (a.state === 'running') { _flushed = true; _emit(freq, dur, vol, when, type); return; }
+        if (a.state === 'running' && _queue.length === 0) { _flushed = true; _emit(freq, dur, vol, when, type); return; }
         _queue.push([freq, dur, vol, when, type]);
-        try { a.resume().then(_flush).catch(() => {}); } catch (e) {}
+        _wake();
     }
 
-    // محاولات إيقاظ متكرّرة أثناء عرض الأنيميشن (كروم قد يمنح السماح متأخراً)
+    // محاولات إيقاظ متكرّرة + أول لمسة كشبكة أمان
     let _tries = 0;
-    const _wake = setInterval(() => {
-        const a = window.__prAudioCtx;
-        if (_flushed || ++_tries > 14) { clearInterval(_wake); return; }
-        if (!a) return;
-        if (a.state === 'running') _flush();
-        else { try { a.resume().then(_flush).catch(() => {}); } catch (e) {} }
-    }, 150);
-
-    // شبكة أمان: أول لمسة/ضغطة في الصفحة تفتح الصوت وتُفرّغ الطابور
+    const _iv = setInterval(() => { if (_flushed || ++_tries > 14) return clearInterval(_iv); _wake(); }, 150);
     ['pointerdown', 'touchstart', 'keydown'].forEach((ev) =>
-        document.addEventListener(ev, () => {
-            const a = actx(); if (!a) return;
-            if (a.state === 'running') _flush();
-            else { try { a.resume().then(_flush).catch(() => {}); } catch (e) {} }
-        }, { capture: true, once: false }));
+        document.addEventListener(ev, _wake, true));
 
-    const style = document.createElement('style');
-    style.textContent = `
+    // ============================================================
+    // 🎨 التنسيق (يُحقن مرة واحدة)
+    // ============================================================
+    function injectStyle() {
+        if (document.getElementById('prSplashStyle')) return;
+        const style = document.createElement('style');
+        style.id = 'prSplashStyle';
+        style.textContent = `
 #prSplash{position:fixed;inset:0;background:#0b0e14;z-index:99999;display:flex;
   flex-direction:column;align-items:center;justify-content:center;gap:26px;
   transition:opacity .5s ease;cursor:pointer}
@@ -141,17 +101,33 @@
 @keyframes prHexIn{to{opacity:1;transform:translateY(0) scale(1) rotate(0)}}
 @keyframes prFadeUp{from{opacity:0;transform:translateY(14px)}
   to{opacity:1;transform:translateY(0)}}`;
-    document.head.appendChild(style);
+        document.head.appendChild(style);
+    }
 
-    const el = document.createElement('div');
-    el.id = 'prSplash';
-    if (mode === 'company') {
-        el.innerHTML = `
+    // ============================================================
+    // 🎬 العرض — قابل للاستدعاء من أي صفحة
+    //    PRSplash.show('platform', () => { ... })
+    // ============================================================
+    let _chain = Promise.resolve();
+    function show(mode, onDone) {
+        // لو كان أنيميشن آخر يُعرض (الشركة على index) ننتظره ثم نعرض — لا نُلغي
+        _chain = _chain.then(() => new Promise((resolve) => {
+            _show(mode, () => { try { onDone && onDone(); } catch (e) {} resolve(); });
+        }));
+    }
+
+    function _show(mode, done) {
+        injectStyle();
+        const el = document.createElement('div');
+        el.id = 'prSplash';
+
+        if (mode === 'company') {
+            el.innerHTML = `
       <div class="pr-sp-company">Isolated Person</div>
       <div class="pr-sp-sub">G A M E &nbsp; S T U D I O</div>
       <div class="pr-sp-skip">اضغط للتخطي</div>`;
-    } else {
-        el.innerHTML = `
+        } else {
+            el.innerHTML = `
       <div class="pr-sp-hexes">
         <div class="pr-sp-hex"></div><div class="pr-sp-hex"></div>
         <div class="pr-sp-hex"></div><div class="pr-sp-hex"></div>
@@ -159,37 +135,50 @@
       </div>
       <div class="pr-sp-name">Play<span>Rush</span></div>
       <div class="pr-sp-skip">اضغط للتخطي</div>`;
-        // 🔉 نغمة لكل خلية تقفز + وميض الاسم
-        [523, 587, 659, 784, 880].forEach((f, i) => blip(f, 0.12, 0.08, 0.4 + i * 0.15, 'triangle'));
-        blip(1047, 0.4, 0.1, 1.2, 'triangle');
-    }
-    const mount = () => {
-        document.body.appendChild(el);
-        // نعلن أن الأنيميشن نشط — ليؤجّل session_resume إعادة التوجيه
-        window.__prSplashActive = true;
-        const close = () => {
-            try { sessionStorage.setItem(FLAG, '1'); } catch (e) {}   // 🩹 الآن فقط
-            el.classList.add('hide');
-            setTimeout(() => el.remove(), 550);
-            window.__prSplashActive = false;
-            // نُشعر من ينتظر (إعادة التوجيه) بأن الأنيميشن انتهى
-            try { window.dispatchEvent(new Event('pr-splash-done')); } catch (e) {}
-        };
-        // 📱 داخل التطبيق: قيد التشغيل التلقائي للصوت غير موجود، وشاشة
-        // «المس للبدء» تبدو تعليقاً. لذلك نبدأ فوراً وبمدة أقصر.
-        var IS_APP = window.PR_IS_APP === true || (typeof window.Capacitor !== 'undefined');
+        }
 
-        if (mode === 'company' && IS_APP) {
-            try {
-                const _a = actx(); if (_a) _a.resume().then(_flush).catch(() => {});
-            } catch (e) {}
-            blip(392, 0.5, 0.07, 0.25, 'sine');
-            blip(587, 0.7, 0.07, 0.7, 'sine');
-            el.addEventListener('click', close);   // نقرة = تخطٍّ فوري
-            setTimeout(close, 1400);
-        } else if (mode === 'company') {
-            // 🔓 حل autoplay الجذري: شاشة «المس للبدء» — النقرة الأولى
-            // تفتح الصوت شرعاً (سياسة المتصفح) ثم يبدأ الأنيميشن بصوته كاملاً.
+        const mount = () => {
+            document.body.appendChild(el);
+            _wake();   // نطلب الإذن فوراً — على صفحة الدخول يكون ممنوحاً
+            if (mode === 'platform') {
+                // عُرض فعلاً → لا يتكرّر في categories
+                try {
+                    sessionStorage.setItem('pr_splash_platform', '1');
+                    sessionStorage.removeItem('pr_splash_ticket');
+                } catch (e) {}
+            }
+
+            let closed = false;
+            const close = () => {
+                if (closed) return; closed = true;
+                el.classList.add('hide');
+                setTimeout(() => el.remove(), 550);
+                setTimeout(done, 350);   // ننتقل أثناء التلاشي = انتقال ناعم
+            };
+
+            const IS_APP = window.PR_IS_APP === true || (typeof window.Capacitor !== 'undefined');
+
+            if (mode === 'platform') {
+                blip(523, 0.12, 0.08, 0.40, 'triangle');
+                blip(587, 0.12, 0.08, 0.55, 'triangle');
+                blip(659, 0.12, 0.08, 0.70, 'triangle');
+                blip(784, 0.12, 0.08, 0.85, 'triangle');
+                blip(880, 0.12, 0.08, 1.00, 'triangle');
+                blip(1047, 0.40, 0.10, 1.20, 'triangle');
+                el.addEventListener('click', close);
+                setTimeout(close, 2400);
+                return;
+            }
+
+            // ---- mode === 'company' ----
+            if (IS_APP) {
+                blip(392, 0.5, 0.07, 0.25, 'sine');
+                blip(587, 0.7, 0.07, 0.70, 'sine');
+                el.addEventListener('click', close);
+                setTimeout(close, 1400);
+                return;
+            }
+            // على الويب: index مستند بكر أيضاً → شاشة «المس للبدء» تمنح الإذن
             const anims = el.querySelectorAll('.pr-sp-company, .pr-sp-sub, .pr-sp-skip');
             anims.forEach((a) => { a.style.animationPlayState = 'paused'; });
             const tap = document.createElement('div');
@@ -201,27 +190,56 @@
             el.appendChild(tap);
             let started = false;
             el.addEventListener('click', () => {
-                if (!started) {
-                    started = true;
-                    // النقرة فتحت الصوت — نوقظ السياق ونشغّل الأنيميشن والنغمات
-                    try {
-                        const _a = actx(); if (_a) _a.resume().then(_flush).catch(() => {});
-                    } catch (e) {}
-                    tap.remove();
-                    anims.forEach((a) => { a.style.animationPlayState = 'running'; });
-                    blip(392, 0.5, 0.07, 0.35, 'sine');
-                    blip(587, 0.7, 0.07, 0.9, 'sine');
-                    setTimeout(close, 2400);
-                } else {
-                    close();  // نقرة ثانية = تخطٍّ
-                }
+                if (started) { close(); return; }
+                started = true;
+                _wake();
+                tap.remove();
+                anims.forEach((a) => { a.style.animationPlayState = 'running'; });
+                blip(392, 0.5, 0.07, 0.35, 'sine');
+                blip(587, 0.7, 0.07, 0.90, 'sine');
+                setTimeout(close, 2400);
             });
-        } else {
-            // categories: وصل بعد نقرات (الصوت مسموح غالباً) — تلقائي كما هو
-            el.addEventListener('click', close);
-            setTimeout(close, 2400);
+        };
+
+        if (document.body) mount();
+        else document.addEventListener('DOMContentLoaded', mount);
+    }
+
+    window.PRSplash = {
+        show: show,
+        // يُستدعى من login/profile-setup/session_resume قبل الانتقال
+        playPlatformThen: function (redirect) {
+            // التذكرة تُستهلك عند العرض الفعلي فقط؛ لو تعذّر العرض هنا
+            // (مهلة الأمان) تبقى فيظهر الأنيميشن في categories بدل ضياعه.
+            try { sessionStorage.setItem('pr_splash_ticket', '1'); } catch (e) {}
+            let went = false;
+            const go = () => { if (went) return; went = true; redirect(); };
+            setTimeout(go, 4000);        // أمان: لا نعلّق المستخدم أبداً
+            show('platform', go);
         }
     };
-    if (document.body) mount();
-    else document.addEventListener('DOMContentLoaded', mount);
+
+    // ============================================================
+    // التشغيل التلقائي حسب الصفحة (شبكة أمان: OAuth، فتح مباشر…)
+    // ============================================================
+    const page = (location.pathname.split('/').pop() || '')
+        .toLowerCase().replace(/\.html$/, '') || 'index';
+    let mode = null;
+    if (page === 'index') mode = 'company';
+    else if (page === 'categories') mode = 'platform';
+    if (!mode) return;
+
+    const FLAG = mode === 'company' ? 'pr_splash_company' : 'pr_splash_platform';
+    let ticket = false;
+    if (mode === 'platform') {
+        try { ticket = sessionStorage.getItem('pr_splash_ticket') === '1'; } catch (e) {}
+        if (!ticket && /[?&]token=/.test(location.search)) ticket = true;   // عودة جوجل
+        if (ticket) { try { sessionStorage.removeItem('pr_splash_ticket'); } catch (e) {} }
+    }
+    if (!ticket) {
+        try { if (sessionStorage.getItem(FLAG)) return; } catch (e) { return; }
+    }
+    show(mode, function () {
+        if (mode === 'company') { try { sessionStorage.setItem(FLAG, '1'); } catch (e) {} }
+    });
 })();

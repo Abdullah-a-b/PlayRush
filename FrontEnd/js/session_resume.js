@@ -66,19 +66,17 @@
             try { sessionStorage.setItem('token', t); } catch (e) {}
 
             var dest = (me && me.player_name) ? 'categories.html' : 'profile-setup.html';
-            // 🎬 استئناف جلسة = دخول جديد → تذكرة أنيميشن المنصة
-            try { sessionStorage.setItem('pr_splash_ticket', '1'); } catch (e) {}
 
-            // لا نقطع أنيميشن الشركة: لو كان يعمل، ننتظر انتهاءه ثم ننتقل.
-            if (window.__prSplashActive) {
+            // 🎬 استئناف جلسة: نعرض أنيميشن المنصة هنا (بعد أنيميشن الشركة —
+            // PRSplash يصفّهما بالترتيب) لأن الصوت مسموح في هذا المستند.
+            if (dest === 'categories.html' && window.PRSplash) {
                 hint.remove();
-                window.addEventListener('pr-splash-done', function () {
+                window.PRSplash.playPlatformThen(function () {
                     window.location.replace(dest);
-                }, { once: true });
-                // أمان: لو لم يصل الحدث خلال 6ث، ننتقل رغم ذلك
-                setTimeout(function () { window.location.replace(dest); }, 6000);
+                });
                 return;
             }
+
             window.location.replace(dest);
         } catch (e) {
             hint.remove();                          // بلا إنترنت — تبقى الصفحة كما هي

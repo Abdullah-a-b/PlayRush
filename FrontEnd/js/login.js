@@ -97,14 +97,20 @@ window.addEventListener('load', () => {
 
                     // 🎬 دخول جديد = أنيميشن المنصة يُعرض من جديد (حتى لو
                     // كان logout ثم login داخل نفس جلسة المتصفح)
-                    try {
-                        sessionStorage.removeItem('pr_splash_platform');
-                        sessionStorage.setItem('pr_splash_ticket', '1');   // 🎬 تذكرة عرض
-                    } catch (e) {}
+                    try { sessionStorage.removeItem('pr_splash_platform'); } catch (e) {}
 
                     //  التوجيه الذكي والفوري! (بدون انتظار لتخطي مشكلة التحديث)
                     if (data.has_profile) {
-                        window.location.replace('categories.html');
+                        // 🎬 نعرض أنيميشن المنصة *هنا* لا في categories:
+                        // نقرة الدخول منحت هذا المستند إذن الصوت، أما
+                        // categories فمستند جديد بكر يمنعه المتصفح من الصوت.
+                        if (window.PRSplash) {
+                            window.PRSplash.playPlatformThen(function () {
+                                window.location.replace('categories.html');
+                            });
+                        } else {
+                            window.location.replace('categories.html');
+                        }
                     } else {
                         window.location.replace('profile-setup.html');
                     }
