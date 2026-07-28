@@ -129,6 +129,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // ============================================================
+//  معالج الكيبورد على الجوال (visualViewport)
+//  المشكلة: لما يفتح الكيبورد، الـ viewport يصغر والصندوق
+//  (bottom: 68px) يطلع من الشاشة فيختفي السؤال أو يتقطع.
+//  الحل: نستمع لتغيّر حجم الـ viewport ونرفع الصندوق بمقدار
+//  الفرق بين الـ window الكامل والـ viewport المرئي.
+// ============================================================
+(function setupMobileKeyboardHandler() {
+    const sidebar = document.getElementById('questionSidebar');
+    if (!sidebar || !window.visualViewport) return;
+
+    // المسافة الأصلية من الأسفل (مطابقة CSS)
+    const BASE_BOTTOM = 68;
+
+    function onViewportChange() {
+        const vv        = window.visualViewport;
+        const winH      = window.innerHeight;
+        // المسافة بين أسفل الـ viewport المرئي وأسفل النافذة
+        const kbHeight  = winH - (vv.offsetTop + vv.height);
+        const newBottom = BASE_BOTTOM + Math.max(0, kbHeight);
+        sidebar.style.setProperty('bottom', newBottom + 'px', 'important');
+    }
+
+    function resetBottom() {
+        sidebar.style.setProperty('bottom', BASE_BOTTOM + 'px', 'important');
+    }
+
+    window.visualViewport.addEventListener('resize', onViewportChange);
+    window.visualViewport.addEventListener('scroll', onViewportChange);
+
+    // reset عند إخفاء الكيبورد (blur على حقل الإجابة)
+    const ansInput = document.getElementById('playerAnswerInput');
+    if (ansInput) {
+        ansInput.addEventListener('blur', () => {
+            // تأخير بسيط لأن بعض المتصفحات تُطلق blur قبل انتهاء الأنيمايشن
+            setTimeout(resetBottom, 150);
+        });
+    }
+})();
+
+// ============================================================
 //  الاتصال والانضمام للغرفة
 // ============================================================
 socket.on('connect', () => {
