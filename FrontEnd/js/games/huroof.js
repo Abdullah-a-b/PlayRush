@@ -733,7 +733,12 @@ function lockAnswerUI() {
     answerSection.style.display = 'none';
     submitAnswerBtn.disabled    = true;
     playerAnswerInput.value     = '';
-    try { playerAnswerInput.blur(); } catch (e) {}   // يُغلق الكيبورد ويُعيد التخطيط
+    try { playerAnswerInput.blur(); } catch (e) {}
+    // داخل التطبيق: blur لا يُغلق كيبورد أندرويد دائماً — نُغلقه صراحةً
+    try {
+        const K = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Keyboard;
+        if (K && K.hide) K.hide();
+    } catch (e) {}
     // نُعيد ضبط التخطيط فوراً بلا انتظار حدث الكيبورد
     if (typeof window.__huroofKbRefresh === 'function') {
         setTimeout(window.__huroofKbRefresh, 60);
@@ -1399,7 +1404,16 @@ socket.on('leaver_penalty', (data) => {
     //   • نحدّ أقصى ارتفاع بالمساحة المرئية فعلاً فلا يُقصّ شيء
     //   • نُخفي الزخارف غير الضرورية ونُبقي: السؤال + الحقل + الإرسال
     // ============================================================
-    if (window.visualViewport) {
+    // ⚠️ داخل التطبيق: لا نتدخّل إطلاقاً.
+    // أندرويد يستخدم adjustResize فيُقلّص WebView تلقائياً عند فتح الكيبورد،
+    // فيجلس الصندوق فوقه بلا أي كود — وهذا ما كان يعمل بشكل سليم أصلاً.
+    // كل المنطق أدناه كُتب لعلاج سلوك المتصفح (resizes-visual) وحده، وتطبيقه
+    // داخل التطبيق يضيف قياسات وأصنافاً فوق سلوك صحيح فيُفسده.
+    var PR_IN_APP = window.PR_IS_APP === true
+        || (typeof window.Capacitor !== 'undefined')
+        || /^(capacitor|file|ionic):$/.test(window.location.protocol);
+
+    if (window.visualViewport && !PR_IN_APP) {
         const vv = window.visualViewport;
         let isKbOpen = false;
 
@@ -1451,7 +1465,14 @@ socket.on('leaver_penalty', (data) => {
             const typing = document.activeElement
                 && document.activeElement.id === 'playerAnswerInput';
 
-            if (typing || kb > 100) {
+            // ⚠️ الشرط الحاسم: الوضع المضغوط مرتبط بالكتابة في حقل الإجابة
+            // **فقط**. كان يكفي أن يكون الكيبورد مفتوحاً لأي سبب (أو أن يبقى
+            // مفتوحاً في تطبيق أندرويد بعد انتهاء وقتي) ليُفرَغ الصندوق ويبقى
+            // فارغاً أثناء دور الخصم. الآن: لا كتابة = لا وضع مضغوط إطلاقاً.
+            const answerVisible = answerSection
+                && getComputedStyle(answerSection).display !== 'none';
+
+            if (typing && answerVisible) {
                 if (!isKbOpen) {
                     isKbOpen = true;
                     sidebar.classList.add('keyboard-open');   // الوضع المضغوط
@@ -1470,13 +1491,13 @@ socket.on('leaver_penalty', (data) => {
                 // نمنع قفزة التمرير التلقائية التي يفعلها المتصفح
                 if (window.scrollY !== 0) window.scrollTo(0, 0);
 
-                // نُظهر حقل الإجابة داخل المحتوى القابل للتمرير (بلا scrollIntoView
-                // الذي كان يُمرّر الصفحة كلها ويكسر الموضع)
+                // ⚠️ لا نُمرّر المحتوى إطلاقاً. كنّا نضبط scrollTop على موضع حقل
+                // الإجابة المحسوب في التخطيط *الطبيعي*، ثم يُطبَّق الوضع المضغوط
+                // فيتقلّص المحتوى — فيبقى التمرير عند موضع تجاوز كل المحتوى،
+                // فيظهر الصندوق فارغاً تماماً. الوضع المضغوط يُظهر كل شيء دفعة
+                // واحدة (حرف + سؤال بسطر + صفّ الإجابة) فلا حاجة لأي تمرير.
                 const content = sidebar.querySelector('.sidebar-content');
-                const ans = document.getElementById('answerSection');
-                if (content && ans && ans.offsetParent !== null) {
-                    content.scrollTop = Math.max(0, ans.offsetTop - 6);
-                }
+                if (content) content.scrollTop = 0;
                 fitBoard(sidebar);
             } else if (isKbOpen) {
                 isKbOpen = false;
