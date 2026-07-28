@@ -42,15 +42,11 @@ def _load_huroof_questions_cached():
                 extra = {}
             ans = (q.correct_answer or '').strip()
             core = ans[2:] if ans.startswith("ال") else ans
-            # حرفان صالحان فقط (تحفّظاً): الحرف الأول كما هو، والحرف بعد ال.
-            # لا نوزّع على كلمات الإجابة كلها — يربك اللاعب ويُظهر السؤال
-            # تحت حرف لا يفكّر فيه. تصنيف السؤال الأدقّ مسؤولية القاعدة.
-            valid_letters = set()
-            if ans:
-                valid_letters.add(normalize_letter(ans[0]))
-            if core:
-                valid_letters.add(normalize_letter(core[0]))
-            valid_letters.discard('')
+            # الحرف المميّز = الحرف الأول بعد إزالة "ال" التعريف.
+            # "البحرين" → ب (لا ا)، "السعودية" → س، "الكويت" → ك.
+            # لا نضيف حرف "ال" نفسه — يُصنّف السؤال خطأ تحت الألف.
+            main_letter = normalize_letter(core[0]) if core else ''
+            valid_letters = {main_letter} if main_letter else set()
             rows.append({
                 'id': q.id,
                 'question_text': q.question_text,
@@ -59,7 +55,7 @@ def _load_huroof_questions_cached():
                 'difficulty': (extra.get('difficulty') if extra.get('difficulty') in ('easy','medium','hard') else 'medium'),
                 'accepted_answers': extra.get('accepted_answers', []),
                 'letter_extra': normalize_letter(extra.get('letter', '') or ''),
-                'letter_ans': normalize_letter(core[0]) if core else '',
+                'letter_ans': main_letter,
                 'valid_letters': valid_letters,
             })
         _HUROOF_QCACHE['rows'] = rows
@@ -401,10 +397,11 @@ def register_huroof_events(sio):
         # قائمة الحرف كاملةً (كل أسئلة هذا الحرف بغضّ النظر عن الرؤية)
         letter_qs = [
             q for q in all_qs
-            if (norm_letter in q.get('valid_letters', set())
-                or q['letter_extra'] == norm_letter or q['letter_ans'] == norm_letter)
+            if norm_letter in q.get('valid_letters', set())
         ]
-        # المفضّل: جديد تماماً (لم يُستخدم في المباراة ولم يره اللاعبان)
+        # ملاحظة: نعتمد على الحرف المحسوب من الإجابة (بعد إزالة ال)،
+        # لا على extra.letter اليدوي في القاعدة — فقد يكون مصنّفاً خطأ
+        # (مثل "البحرين" تحت الألف بدل الباء).
         valid_qs = [q for q in letter_qs
                     if q['id'] not in used and q['id'] not in combined_seen]
 
