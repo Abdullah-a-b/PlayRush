@@ -186,7 +186,12 @@ html, body { background: #2a0a3d !important; }
             0 0 0 1.5px rgba(255, 235, 59, 0.28) inset !important;
         z-index: 5 !important;
         flex-shrink: 0 !important;
+        display: flex !important; flex-direction: column !important; gap: 8px !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
     }
+
     .question-sidebar .sidebar-content {
         padding: 12px 14px 14px !important;
         max-height: none !important;
