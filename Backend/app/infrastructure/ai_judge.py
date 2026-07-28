@@ -18,6 +18,7 @@
 import os
 import asyncio
 import json
+import re
 
 
 # نتيجة افتراضية متساهلة (نعطي اللاعب الفائدة عند أي شك/فشل)
@@ -42,28 +43,53 @@ def _get_model():
     except Exception:
         return None
 
-    # Fallback مباشر (نفس ترتيب _PREFERRED في gemini_model.py)
+    # Fallback مباشر: نستخدم list_models بدل ping لكل نموذج (أسرع وأوفر)
     api_key = os.environ.get("GEMINI_API_KEY", "").strip()
     if not api_key:
         return None
     try:
         import google.generativeai as genai
         genai.configure(api_key=api_key)
-        for name in (
+
+        _PREFERRED = [
+            "gemini-flash-latest",
             "gemini-2.5-flash-lite",
             "gemini-2.5-flash",
-            "gemini-flash-latest",
             "gemini-2.0-flash",
             "gemini-2.0-flash-lite",
+            "gemini-2.0-flash-001",
             "gemini-1.5-flash-latest",
             "gemini-1.5-flash",
-        ):
+        ]
+
+        # نحاول list_models أولاً (لا يكلّف quota)
+        try:
+            available = set()
+            for m in genai.list_models():
+                methods = getattr(m, "supported_generation_methods", []) or []
+                if "generateContent" in methods:
+                    available.add(m.name.split("/")[-1])
+            for name in _PREFERRED:
+                if name in available:
+                    return genai.GenerativeModel(name)
+            # أي flash متاح كملاذ أخير
+            flash = sorted(n for n in available if "flash" in n)
+            if flash:
+                return genai.GenerativeModel(flash[0])
+            if available:
+                return genai.GenerativeModel(sorted(available)[0])
+        except Exception:
+            pass
+
+        # fallback نهائي: جرّب كل اسم مفضّل بطلب ping واحد
+        for name in _PREFERRED:
             try:
                 m = genai.GenerativeModel(name)
                 if m.generate_content("ping"):
                     return m
             except Exception:
                 continue
+
     except Exception:
         pass
     return None
@@ -125,8 +151,6 @@ def should_use_judge(verdict):
 #  إجابته تبدأ بذلك الحرف. يعيد None بأمان عند أي فشل (فيتراجع
 #  النظام للسلوك الاحتياطي).
 # ============================================================
-import json as _json
-import re as _re2
 
 _GEN_PROMPT = """أنت مولّد أسئلة للعبة معرفية عربية اسمها "خلية الحروف".
 المطلوب: سؤال معلومات عامة إجابته كلمة أو كلمتان تبدأ بحرف "{letter}".
@@ -148,11 +172,11 @@ def _extract_json(text):
         return None
     # نزيل أسوار الكود إن وُجدت
     text = text.replace("```json", "").replace("```", "").strip()
-    m = _re2.search(r'\{.*\}', text, _re2.DOTALL)
+    m = re.search(r'\{.*\}', text, re.DOTALL)
     if not m:
         return None
     try:
-        return _json.loads(m.group(0))
+        return json.loads(m.group(0))
     except Exception:
         return None
 
@@ -193,7 +217,8 @@ async def generate_huroof_question(letter, timeout=8.0):
     # تحقّق أن الإجابة تبدأ بالحرف المطلوب (بعد إزالة "ال" التعريف).
     # نطبّع الحروف المتشابهة (أ/إ/آ→ا، ة→ه، ى→ي) قبل المقارنة.
     def _norm(ch):
-        return {'أ':'ا','إ':'ا','آ':'ا','ٱ':'ا','ة':'ه','ى':'ي','ی':'ي'}.get(ch, ch)
+        return {'أ': 'ا', 'إ': 'ا', 'آ': 'ا', 'ٱ': 'ا', 'ة': 'ه', 'ى': 'ي', 'ی': 'ي'}.get(ch, ch)
+
     bare = answer[2:] if answer.startswith("ال") else answer
     if not bare or _norm(bare[0]) != _norm(letter):
         return None
