@@ -46,13 +46,29 @@
     if (window.__prSplashMounted) return;
     window.__prSplashMounted = true;
 
-    // 🔉 نغمات الأنيميشن (WebAudio مصغّر — يتجاهل بصمت لو محجوباً)
-    function blip(freq, dur, vol, when, type) {
+    // ============================================================
+    // 🔉 نغمات الأنيميشن
+    // كانت تُلغى بصمت: `if (a.state === 'suspended') return;` — وعند الوصول
+    // إلى categories بعد تنقّل، المستند جديد ولم يقع فيه أي تفاعل بعد،
+    // فالسياق مُعلّق دائماً ← أنيميشن بلا صوت. الآن:
+    //   ١) نستخدم السياق المشترك مع sound.js/music.js
+    //   ٢) نحاول إيقاظه (resume) فوراً وبمحاولات متكرّرة قصيرة
+    //   ٣) لو ظلّ محجوباً، نصفّ النغمات في طابور يُفرَّغ عند أول لمسة
+    // ============================================================
+    function actx() {
         try {
-            window.__prSplashCtx = window.__prSplashCtx
-                || new (window.AudioContext || window.webkitAudioContext)();
-            const a = window.__prSplashCtx;
-            if (a.state === 'suspended') return;  // قبل أول تفاعل — صمت
+            return window.__prAudioCtx
+                || (window.__prAudioCtx = new (window.AudioContext || window.webkitAudioContext)());
+        } catch (e) { return null; }
+    }
+
+    let _queue = [], _flushed = false;
+
+    function _emit(freq, dur, vol, when, type) {
+        // يحترم زر الكتم العام لو كان sound.js قد حُمّل
+        if (window.PRSound && window.PRSound.isMuted && window.PRSound.isMuted()) return;
+        const a = actx(); if (!a || a.state !== 'running') return;
+        try {
             const t0 = a.currentTime + (when || 0);
             const o = a.createOscillator(); const g = a.createGain();
             o.type = type || 'sine'; o.frequency.value = freq;
@@ -63,6 +79,39 @@
             o.start(t0); o.stop(t0 + dur + 0.05);
         } catch (e) {}
     }
+
+    function _flush() {
+        if (_flushed) return;
+        const a = actx(); if (!a || a.state !== 'running') return;
+        _flushed = true;
+        _queue.forEach((t) => _emit(t[0], t[1], t[2], t[3], t[4]));
+        _queue = [];
+    }
+
+    function blip(freq, dur, vol, when, type) {
+        const a = actx(); if (!a) return;
+        if (a.state === 'running') { _flushed = true; _emit(freq, dur, vol, when, type); return; }
+        _queue.push([freq, dur, vol, when, type]);
+        try { a.resume().then(_flush).catch(() => {}); } catch (e) {}
+    }
+
+    // محاولات إيقاظ متكرّرة أثناء عرض الأنيميشن (كروم قد يمنح السماح متأخراً)
+    let _tries = 0;
+    const _wake = setInterval(() => {
+        const a = window.__prAudioCtx;
+        if (_flushed || ++_tries > 14) { clearInterval(_wake); return; }
+        if (!a) return;
+        if (a.state === 'running') _flush();
+        else { try { a.resume().then(_flush).catch(() => {}); } catch (e) {} }
+    }, 150);
+
+    // شبكة أمان: أول لمسة/ضغطة في الصفحة تفتح الصوت وتُفرّغ الطابور
+    ['pointerdown', 'touchstart', 'keydown'].forEach((ev) =>
+        document.addEventListener(ev, () => {
+            const a = actx(); if (!a) return;
+            if (a.state === 'running') _flush();
+            else { try { a.resume().then(_flush).catch(() => {}); } catch (e) {} }
+        }, { capture: true, once: false }));
 
     const style = document.createElement('style');
     style.textContent = `
@@ -132,9 +181,7 @@
 
         if (mode === 'company' && IS_APP) {
             try {
-                window.__prSplashCtx = window.__prSplashCtx
-                    || new (window.AudioContext || window.webkitAudioContext)();
-                window.__prSplashCtx.resume();
+                const _a = actx(); if (_a) _a.resume().then(_flush).catch(() => {});
             } catch (e) {}
             blip(392, 0.5, 0.07, 0.25, 'sine');
             blip(587, 0.7, 0.07, 0.7, 'sine');
@@ -158,9 +205,7 @@
                     started = true;
                     // النقرة فتحت الصوت — نوقظ السياق ونشغّل الأنيميشن والنغمات
                     try {
-                        window.__prSplashCtx = window.__prSplashCtx
-                            || new (window.AudioContext || window.webkitAudioContext)();
-                        window.__prSplashCtx.resume();
+                        const _a = actx(); if (_a) _a.resume().then(_flush).catch(() => {});
                     } catch (e) {}
                     tap.remove();
                     anims.forEach((a) => { a.style.animationPlayState = 'running'; });
