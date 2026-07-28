@@ -9,6 +9,24 @@ html.kb-open, html.kb-open body {
     position: relative !important;
 }
 
+/* ── زر كتم الصوت العائم الافتراضي ── */
+.pr-sound-float {
+    position: fixed;
+    bottom: 84px !important; left: 22px !important;
+    z-index: 99999;
+    width: 44px; height: 44px; border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(22, 27, 34, 0.92);
+    color: #fff; font-size: 1.15rem; line-height: 1;
+    cursor: pointer; opacity: 0.85;
+    display: flex; align-items: center; justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.pr-sound-float:hover { opacity: 1; transform: scale(1.08); }
+.pr-sound-float:active { transform: scale(0.94); }
+
 /* ============================================================================
    ≤ 900px — أجهزة لوحية وجوالات (تعديلات الجوال فقط)
    ============================================================================ */
@@ -114,96 +132,148 @@ html.kb-open, html.kb-open body {
     .hex-row:nth-child(5) { transform: none !important; }
 
     /* ═══════════════════════════════════════════════════════════════
-       تصميم الأزرار والمساعدات المستقلة عن الصندوق
-       ═══════════════════════════════════════════════════════════════ */
-    .help-slots {
-        position: fixed !important; bottom: 12px !important; left: 8px !important;
-        flex-direction: row !important; gap: 6px !important; z-index: 500 !important;
-    }
-    .help-slot {
-        width: 44px !important; height: 44px !important; border-radius: 10px !important;
-    }
-    .surrender-btn {
-        position: fixed !important; bottom: 12px !important; right: 8px !important; top: auto !important;
-        width: 44px !important; height: 44px !important; font-size: 18px !important; z-index: 500 !important;
-    }
-    .pr-sound-float {
-        position: fixed !important; bottom: 12px !important; left: auto !important; right: 60px !important;
-        width: 44px !important; height: 44px !important; z-index: 500 !important;
-    }
-
-    /* ═══════════════════════════════════════════════════════════════
-       تصميم الصندوق السفلي للجوال (Sidebar) + دمج الأزرار بمرونة
+       تصميم الصندوق السفلي للجوال (Sidebar)
        ═══════════════════════════════════════════════════════════════ */
     .question-sidebar,
     .question-sidebar.active {
         position: fixed !important;
         top: auto !important;
-        bottom: 68px !important; /* مثبت فوق شريط المساعدات */
-        left: 8px !important; right: 8px !important;
-        width: auto !important; max-width: none !important;
-        max-height: 40vh !important; 
+        bottom: 0 !important;
+        left: 0 !important; right: 0 !important;
+        width: 100% !important; max-width: 100% !important;
+        max-height: 42vh !important; 
         transform: none !important;
-        margin: 0 !important; padding: 12px 14px !important;
-        border: none !important; border-top: 4px solid #ffeb3b !important;
-        border-radius: 20px !important;
-        overflow: hidden !important;
-        overscroll-behavior: contain !important;
+        margin: 0 !important; padding: 0 !important;
+        border: none !important; border-top: 3px solid #ffeb3b !important;
+        border-radius: 20px 20px 0 0 !important;
         background: linear-gradient(160deg, #3d1560 0%, #200a38 100%) !important;
         box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.55) !important;
+        transition: top 0.2s ease, max-height 0.2s ease !important;
         z-index: 300 !important;
+        display: flex !important;
+        flex-direction: column !important;
     }
 
-    /* ترتيب العناصر داخلياً بنظام الشبكة (Flex) لدمج الأزرار دون تعديل الـ HTML */
     .question-sidebar .sidebar-content {
-        display: flex !important;
-        flex-wrap: wrap !important;
-        justify-content: space-between !important;
-        align-items: center !important;
-        gap: 8px 0 !important; /* مسافة عمودية فقط */
-        overflow-y: auto !important;
-        max-height: inherit !important;
+        flex: 1;
+        padding: 16px 16px 10px 16px !important;
+        overflow-y: auto !important; 
         -webkit-overflow-scrolling: touch !important;
     }
 
-    .question-sidebar .letter-indicator { width: 100% !important; order: 1; }
-    .question-sidebar .sidebar-content > .question-box:not(.answer-box) { width: 100% !important; order: 2; }
-    .question-sidebar #systemMessageDisplay { width: 100% !important; order: 3; }
+    /* ── الأزرار الجانبية (أنا أعرف + تغيير السؤال) ── */
+    .mobile-actions-wrapper {
+        display: flex;
+        gap: 10px;
+        width: 100%;
+        margin: 12px 0;
+    }
+    .mobile-actions-wrapper .sidebar-actions {
+        display: contents; /* يسمح للزر بالتعامل كعنصر فليكس مباشر */
+    }
+    .mobile-actions-wrapper #buzzerBtn {
+        flex: 1.5;
+        margin: 0 !important;
+        font-size: 1.1rem !important;
+        padding: 12px !important;
+        border-radius: 12px !important;
+    }
     
-    /* دمج أزرار "أنا أعرف" و "تغيير السؤال" جنباً إلى جنب */
-    .question-sidebar #buzzerBtn {
-        flex: 1 1 auto !important; /* يتمدد ليأخذ كامل المساحة إذا اختفى زر التغيير */
-        min-width: 50% !important;
-        order: 4;
-        margin: 0 !important;
-        font-size: 1.05rem !important;
-        padding: 12px 8px !important;
-        border-radius: 12px !important;
+    /* ضمان إخفاء الأزرار إذا حدد الـ JS ذلك */
+    .mobile-actions-wrapper #buzzerBtn[style*="display: none"],
+    .mobile-actions-wrapper #voteSkipBtn[style*="display: none"] {
+        display: none !important;
     }
-    .question-sidebar .sidebar-actions {
-        flex: 0 0 38% !important; /* عرض ثابت لزر التغيير عند ظهوره */
-        order: 5;
-        margin: 0 6px 0 0 !important;
+    
+    .mobile-actions-wrapper #voteSkipBtn[style*="display: inline-block"],
+    .mobile-actions-wrapper #voteSkipBtn[style*="display: block"] {
+        display: flex !important;
     }
-    .question-sidebar #voteSkipBtn {
-        width: 100% !important;
+    .mobile-actions-wrapper #voteSkipBtn {
+        flex: 1;
         margin: 0 !important;
-        padding: 12px 6px !important;
         font-size: 0.85rem !important;
+        padding: 10px !important;
         border-radius: 12px !important;
-        display: flex !important; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-        line-height: 1.2; text-align: center;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 4px;
+        text-align: center;
+        line-height: 1.2;
     }
 
-    .question-sidebar #answerSection { width: 100% !important; order: 6; }
-    .question-sidebar #answer-container { width: 100% !important; order: 7; }
+    /* ── تعديل تصميم صندوق الإجابة ── */
+    #answerSection {
+        background: rgba(0,0,0,0.25);
+        padding: 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(0, 210, 255, 0.3);
+        margin-top: 10px;
+    }
+    #answerSection > div span {
+        font-size: 0.95rem !important;
+    }
+    #playerAnswerInput {
+        padding: 14px !important;
+        font-size: 16px !important; /* يمنع الزوم التلقائي في iOS */
+        border-radius: 10px !important;
+        border: 2px solid #00d2ff !important;
+        background: #111 !important;
+        color: #fff !important;
+        margin-bottom: 12px !important;
+        box-shadow: inset 0 2px 5px rgba(0,0,0,0.5) !important;
+    }
+    #submitAnswerBtn {
+        padding: 12px !important;
+        font-size: 1.05rem !important;
+        border-radius: 10px !important;
+        background: linear-gradient(135deg, #2ecc71, #27ae60) !important;
+        box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4) !important;
+    }
+
+    /* ── الشريط السفلي للمساعدات (مدمج بطريقة منظمة) ── */
+    .mobile-bottom-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 14px;
+        background: rgba(10, 5, 20, 0.5);
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        width: 100%;
+        box-sizing: border-box;
+        flex-shrink: 0;
+    }
+    .mobile-bottom-bar .left-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+    .mobile-bottom-bar .surrender-btn,
+    .mobile-bottom-bar .pr-sound-float {
+        position: relative !important;
+        bottom: auto !important; left: auto !important; right: auto !important; top: auto !important;
+        width: 44px !important; height: 44px !important;
+        border-radius: 12px !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+    }
+    .mobile-bottom-bar .help-slots {
+        position: relative !important;
+        bottom: auto !important; left: auto !important; right: auto !important;
+        gap: 8px !important;
+    }
+    .mobile-bottom-bar .help-slot {
+        width: 44px !important; height: 44px !important;
+        border-radius: 10px !important;
+    }
 
     /* ── نصوص الصندوق ── */
     .question-sidebar .letter-indicator {
         font-size: clamp(0.95rem, 3.5vw, 1.1rem) !important;
         font-weight: 800 !important; color: #ffe14d !important;
-        text-align: center !important; margin: 0 !important;
-        padding: 0 0 6px 0 !important;
+        text-align: center !important; margin: 0 0 6px 0 !important;
+        padding-bottom: 6px !important;
         border-bottom: 1px solid rgba(255, 235, 59, 0.2) !important;
     }
     .question-sidebar .question-box {
@@ -218,52 +288,13 @@ html.kb-open, html.kb-open body {
         line-height: 1.4 !important; color: #f0e8ff !important; margin: 0 !important;
     }
 
-    /* ── تعديل تصميم صندوق الإجابة ── */
-    .question-sidebar #answerSection {
-        background: rgba(0,0,0,0.3) !important;
-        padding: 12px !important;
-        border-radius: 12px !important;
-        border: 1px solid rgba(0, 210, 255, 0.3) !important;
-        margin-top: 4px !important;
-    }
-    .question-sidebar #playerAnswerInput {
-        padding: 12px !important;
-        font-size: 16px !important; /* يمنع الزوم التلقائي في iOS */
-        border-radius: 8px !important;
-        border: 2px solid #00d2ff !important;
-        background: #111 !important;
-        color: #fff !important;
-        margin-bottom: 8px !important;
-        box-shadow: inset 0 2px 5px rgba(0,0,0,0.5) !important;
-        height: 44px !important;
-    }
-    .question-sidebar #submitAnswerBtn {
-        padding: 10px !important;
-        font-size: 1rem !important;
-        height: 44px !important;
-        border-radius: 8px !important;
-        background: linear-gradient(135deg, #2ecc71, #27ae60) !important;
-        box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4) !important;
-    }
-
     /* ═══════════════════════════════════════════════════════════════
-       حل مشكلة الكيبورد نهائياً عبر CSS ذكي
-       عندما يبدأ اللاعب بالكتابة، يرفع المتصفح الصفحة.
-       نحن نزيد مساحة الصندوق لملء الشاشة مع إخفاء العناصر غير الهامة.
-       هذا يلغي الحاجة للجافاسكربت المعقد الذي كان يسبب "القلتش".
+       حالة الكيبورد النشط
        ═══════════════════════════════════════════════════════════════ */
-    .question-sidebar:focus-within {
-        max-height: calc(100dvh - 160px) !important; /* أقصى مساحة ممكنة مع بقاء الهوامش آمنة */
-        border-radius: 16px !important;
-        border-top: 4px solid #4CAF50 !important;
-        z-index: 1000 !important;
-        padding-bottom: 10px !important;
+    .question-sidebar.keyboard-open {
+        max-height: 250px !important; /* تقليص الطول لإبقاء الصندوق مناسباً */
     }
-    /* إخفاء الحرف لتوفير مساحة للكتابة */
-    .question-sidebar:focus-within .letter-indicator {
-        display: none !important;
-    }
-
+    
     .ingame-quick-chat { top: 70px !important; left: 8px !important; bottom: auto !important; }
 }
 
@@ -286,7 +317,6 @@ html.kb-open, html.kb-open body {
     .main-container { width: 98vmin !important; height: 98vmin !important; }
     .grid { --hex-size: 13vmin; }
     .hex { --hex-size: 13vmin !important; font-size: 5vmin !important; }
-    .surrender-btn, .pr-sound-float { width: 38px !important; height: 38px !important; }
-    .help-slot { width: 38px !important; height: 38px !important; }
-    .pr-sound-float { right: 54px !important; }
+    .mobile-bottom-bar .surrender-btn, .mobile-bottom-bar .pr-sound-float { width: 38px !important; height: 38px !important; }
+    .mobile-bottom-bar .help-slot { width: 38px !important; height: 38px !important; }
 }
