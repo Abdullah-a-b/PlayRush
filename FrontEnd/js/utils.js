@@ -8,14 +8,15 @@
 //  إعداد الاتصال بالسيرفر
 // ============================================================
 
-/** رابط الـ API — مصدر واحد للحقيقة.
- *  config.js يتكفّل بالفعل بكل الحالات (محلي / شبكة محلية / تطبيق / إنتاج)،
- *  فنستعمله مباشرة. سابقاً كان هنا نطاق قالبي وهمي على الإنتاج
- *  (api.your-real-domain.com) يجعل كل نداء يفشل بـ "Failed to fetch".
- */
-const API_URL = (typeof CONFIG !== 'undefined' && CONFIG.API_URL)
-    ? CONFIG.API_URL
-    : window.location.origin;
+/** رابط الـ API حسب البيئة (محلي / شبكة محلية / إنتاج) */
+const _h = window.location.hostname;
+const isLocal = _h === '127.0.0.1' || _h === 'localhost';
+// عنوان شبكة محلية (هاتف عبر WiFi): 192.168.x.x أو 10.x.x.x أو 172.16-31.x.x
+const isLAN = /^192\.168\.\d+\.\d+$/.test(_h)
+           || /^10\.\d+\.\d+\.\d+$/.test(_h)
+           || /^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+$/.test(_h);
+// محلي أو شبكة محلية → نستخدم CONFIG (نفس العنوان+المنفذ). غير ذلك (دومين عام) → الإنتاج.
+const API_URL = (isLocal || isLAN) ? CONFIG.API_URL : 'https://api.your-real-domain.com';
 
 
 // ============================================================
@@ -261,15 +262,32 @@ function addGlobalChatMessage(sender, text, isSystem = false, senderId = null, e
             holder.style.verticalAlign = 'middle';
             holder.style.fontSize = '26px';
             msgDiv.appendChild(holder);
-            // عبر المحرّك المشترك: ملف واحد محفوظ بالذاكرة + canvas على الجوال.
-            // تكرار أقل على الجوال حفاظاً على سلاسة اللعب.
-            if (window.PREmoji) {
-                const _replays = window.PREmoji.isTouch ? 2 : 6;
-                window.PREmoji.render(holder, emojiId, sanitizeText(text),
-                                      { animate: true, replays: _replays });
-            } else {
-                holder.textContent = sanitizeText(text);
-            }
+            const inGames = window.location.pathname.includes('/games/');
+            const path = `${inGames ? '../' : ''}assets/emojis/${emojiId}.json`;
+            (function tryLoad(tries) {
+                if (typeof window.lottie !== 'undefined' && window.lottie.loadAnimation) {
+                    try {
+                        const anim = window.lottie.loadAnimation({
+                            container: holder, renderer: 'svg', loop: false, autoplay: true, path,
+                        });
+                        // تكرار ديناميكي خفيف: يعيد التشغيل بعد فترات عشوائية (لا يلفت النظر)
+                        let _plays = 0;
+                        anim.addEventListener('complete', function _onDone() {
+                            _plays++;
+                            if (_plays >= 6) return; // يتوقف بعد عدة مرات
+                            // انتظار عشوائي ثم إعادة (إيقاع غير منتظم = طبيعي)
+                            const wait = 2500 + Math.random() * 4000;
+                            setTimeout(() => {
+                                try { anim.goToAndPlay(0, true); } catch (_) {}
+                            }, wait);
+                        });
+                    } catch (_) { holder.textContent = sanitizeText(text); }
+                } else if (tries < 20) {
+                    setTimeout(() => tryLoad(tries + 1), 250);
+                } else {
+                    holder.textContent = sanitizeText(text);
+                }
+            })(0);
         } else {
             const textSpan = document.createElement('span');
             textSpan.style.color = '#ddd';
@@ -369,23 +387,12 @@ function deleteAccount() {
                         window.location.replace('./index.html');
                     }, 2000);
                 } else {
-                    // نقرأ الرد بأمان: قد لا يكون JSON (خطأ 500 أو صفحة من المنصة)
-                    let data = {};
-                    try { data = await res.json(); } catch (e) { data = {}; }
-
-                    let msg;
-                    if (res.status === 429) {
-                        msg = 'حاولت الحذف مراراً. انتظر قليلاً ثم أعد المحاولة.';
-                    } else if (res.status === 401) {
-                        msg = 'انتهت جلستك. سجّل الدخول مجدداً ثم أعد المحاولة.';
-                    } else {
-                        msg = data.detail || `تعذّر الحذف (رمز ${res.status})`;
-                    }
-                    showToast(`❌ ${msg}`, 'error');
+                    const data = await res.json();
+                    showToast(`❌ حدث خطأ: ${data.detail || 'لم نتمكن من الحذف'}`, 'error');
                 }
             } catch (err) {
                 console.error('deleteAccount error:', err);
-                showToast('❌ تعذّر الوصول للخادم. تحقّق من اتصالك بالإنترنت.', 'error');
+                showToast('❌ حدث خطأ في الاتصال بالخادم.', 'error');
             }
         }
     );

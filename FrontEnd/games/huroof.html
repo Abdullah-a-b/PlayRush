@@ -23,14 +23,7 @@
     <script src="../js/ui_dialog.js"></script>
     <script src="../js/brand.js" defer></script>
   <link rel="stylesheet" href="../css/responsive.css">
-  <link rel="stylesheet" href="../css/games/huroof_mobile.css?v=4">
-  <link rel="stylesheet" href="../css/app_perf.css">
-  <style>
-    /* الوضع الفردي: إخفاء الدردشة تماماً (لا خصم بشري) */
-    body.solo-mode #ingameQuickChatWrap,
-    body.solo-mode #gameQuickChatBtn,
-    body.solo-mode .ingame-quick-chat { display: none !important; }
-  </style>
+  <link rel="stylesheet" href="../css/games/huroof_mobile.css?v=3">
 </head>
 <body>
     
@@ -107,46 +100,40 @@
                 <div class="triangle-filler right"></div>
             </div>
         </div>
+    </div>
 
-        <div class="question-sidebar" id="questionSidebar">
-            <div class="sidebar-content">
-                <h3 class="letter-indicator" id="currentLetterDisplay">انتظر دورك...</h3>
+    <div class="question-sidebar" id="questionSidebar">
+        <div class="sidebar-content">
+            <h3 class="letter-indicator" id="currentLetterDisplay">انتظر دورك...</h3>
+            
+            <div class="question-box">
+                <div id="globalTimer" style="color: #ff5722; font-weight: bold; font-size: 20px; margin-bottom: 10px; display: none;">⏳ 40</div>
+                <p id="questionText">اختر حرفاً من اللوحة للبدء!</p>
+            </div>
+            
+            <div id="systemMessageDisplay" style="color: #00d2ff; font-weight: bold; margin: 15px 0; min-height: 24px; text-align: center;"></div>
 
-                <div class="question-box">
-                    <div id="globalTimer" class="question-timer" aria-hidden="true">⏳ 40</div>
-                    <p id="questionText">اختر حرفاً من اللوحة للبدء!</p>
+            <button id="buzzerBtn" class="party-action-btn" style="background: #ff9800; font-size: 24px; padding: 15px; margin: 15px 0; display: none; width: 100%; box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);">
+                <i class="fa-solid fa-hand-pointer"></i> أنا أعرف!
+            </button>
+
+            <div id="answerSection" style="display: none; width: 100%;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span style="color: #4CAF50; font-weight: bold;">اكتب إجابتك:</span>
+                    <span id="playerTimer" style="color: #ff5722; font-weight: bold; font-size: 18px;">⏱️ 15</span>
                 </div>
+                <input type="text" id="playerAnswerInput" placeholder="أدخل الإجابة هنا..." style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #00d2ff; background: #111; color: white; font-family: inherit; font-size: 16px; margin-bottom: 10px; text-align: center;">
+                <button id="submitAnswerBtn" class="party-action-btn" style="background: #4CAF50; width: 100%;">إرسال الإجابة</button>
+            </div>
 
-                <div id="systemMessageDisplay" class="system-message"></div>
+            <div class="question-box answer-box" id="answer-container" style="display: none; margin-top: 15px;">
+                <p id="answerText"></p>
+            </div>
 
-                <!-- الزر الحقيقي مخفي (يتحكم به JS) -->
-                <button id="buzzerBtn" class="party-action-btn buzzer-hidden" type="button">
-                    <i class="fa-solid fa-hand-pointer"></i> أنا أعرف!
+            <div class="sidebar-actions">
+                <button id="voteSkipBtn" class="party-action-btn" style="background: #607d8b; display: none;">
+                    <i class="fa-solid fa-forward-step"></i> اقتراح تغيير السؤال
                 </button>
-
-                <!-- صف الأزرار: أنا أعرف + تغيير السؤال -->
-                <div id="buzzerRow" class="action-row" style="display: none;">
-                    <button id="buzzerProxy" class="btn-buzzer" type="button">
-                        <i class="fa-solid fa-hand-pointer"></i> أنا أعرف! ☝️
-                    </button>
-                    <button id="voteSkipBtn" class="btn-change-question" type="button">
-                        <i class="fa-solid fa-shuffle"></i>
-                        <span class="btn-change-label">تغيير السؤال</span>
-                    </button>
-                </div>
-
-                <div id="answerSection" class="answer-section" style="display: none;">
-                    <div class="answer-section-header">
-                        <span class="answer-prompt">اكتب إجابتك:</span>
-                        <span id="playerTimer" class="player-timer">⏱️ 15</span>
-                    </div>
-                    <input type="text" id="playerAnswerInput" class="answer-input" placeholder="أدخل الإجابة هنا...">
-                    <button id="submitAnswerBtn" class="party-action-btn btn-submit-answer" type="button">إرسال الإجابة</button>
-                </div>
-
-                <div class="question-box answer-box" id="answer-container" style="display: none;">
-                    <p id="answerText"></p>
-                </div>
             </div>
         </div>
     </div>
@@ -263,43 +250,8 @@
     </div>
 </div>
 
-<script>
-// ربط البروكسي مع الزر الأصلي المخفي
-document.addEventListener('DOMContentLoaded', () => {
-    const buzzerBtn   = document.getElementById('buzzerBtn');
-    const buzzerProxy = document.getElementById('buzzerProxy');
-    const buzzerRow   = document.getElementById('buzzerRow');
-    if (!buzzerBtn || !buzzerProxy || !buzzerRow) return;
-
-    // عند الضغط على البروكسي → شغّل الزر الأصلي
-    buzzerProxy.addEventListener('click', () => {
-        if (!buzzerBtn.disabled) buzzerBtn.click();
-    });
-
-    // مزامنة حالة disabled بين الزرين
-    const syncProxy = () => {
-        buzzerProxy.disabled      = buzzerBtn.disabled;
-        buzzerProxy.style.opacity = buzzerBtn.style.opacity || '1';
-    };
-
-    // راقب التغييرات على style وdisabled للزر الأصلي
-    const observer = new MutationObserver(() => {
-        const d = buzzerBtn.style.display;
-        // إذا JS يُظهر buzzerBtn → أظهر الـ Row بدله
-        if (d && d !== 'none') {
-            buzzerBtn.style.display = 'none';
-            buzzerRow.style.display = 'flex';
-        } else {
-            buzzerRow.style.display = 'none';
-        }
-        syncProxy();
-    });
-    observer.observe(buzzerBtn, { attributes: true, attributeFilter: ['style', 'disabled'] });
-});
-</script>
 <script src="../js/config.js" defer></script>
     <script src="../js/social_bar.js" defer></script>
-    <script src="../js/emoji_engine.js" defer></script>
     <script src="../js/utils.js" defer></script>
     <script src="../js/socket.io.min.js" defer></script>
     <script src="../js/purify.min.js" defer></script>

@@ -2,8 +2,7 @@
 const urlParams = new URLSearchParams(window.location.search);
 const tokenFromUrl = urlParams.get('token');
 if (tokenFromUrl) {
-    if (window.prSaveToken) window.prSaveToken(tokenFromUrl);
-    else sessionStorage.setItem('token', tokenFromUrl);
+    sessionStorage.setItem('token', tokenFromUrl);
     window.history.replaceState({}, document.title, window.location.pathname);
 }
 
@@ -172,19 +171,7 @@ window.addEventListener('load', () => {
                 method: "POST",
                 body: formData
             });
-
-            // نقرأ الرد بأمان: قد لا يكون JSON (مثل ردّ 429 أو صفحة خطأ من المنصة)
-            let data = {};
-            try { data = await response.json(); } catch (e) { data = {}; }
-
-            // 429 = تجاوز حدّ المحاولات — رسالة واضحة بدل "خطأ بالسيرفر" المضلّلة
-            if (response.status === 429) {
-                profileMessage.textContent = "حاولت كثيراً خلال وقت قصير. انتظر قليلاً ثم أعد المحاولة.";
-                profileMessage.style.color = "#ffb020";
-                submitBtn.disabled = false;
-                submitBtn.textContent = "دخول للوبي 🚀";
-                return;
-            }
+            const data = await response.json();
 
             if (response.ok) {
                 profileMessage.textContent = "تم الحفظ! جاري توجيهك للوبي...";
@@ -204,7 +191,7 @@ window.addEventListener('load', () => {
                 submitBtn.textContent = "دخول للوبي 🚀";
             }
         } catch (error) {
-            profileMessage.textContent = "تعذّر الوصول للسيرفر. تحقّق من اتصالك بالإنترنت وأعد المحاولة.";
+            profileMessage.textContent = "خطأ في الاتصال بالسيرفر";
             profileMessage.style.color = "#ff4d4d";
             submitBtn.disabled = false;
             submitBtn.textContent = "دخول للوبي 🚀";

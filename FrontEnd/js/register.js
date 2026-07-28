@@ -110,13 +110,7 @@ window.addEventListener('load', () => {
                     body: formData
                 });
                 
-                let data = {};
-                try { data = await response.json(); } catch (e) { data = {}; }
-
-                // 429 = تجاوز حدّ المحاولات — نوضّح السبب بدل رسالة عامة
-                if (response.status === 429) {
-                    throw new Error("__RATE_LIMIT__");
-                }
+                const data = await response.json();
 
                 if (response.ok) {
                     const userEmail = document.getElementById("email").value;
@@ -142,9 +136,7 @@ window.addEventListener('load', () => {
                 }
             } catch (err) {
                 console.error("Error:", err);
-                msgDiv.textContent = (err && err.message === "__RATE_LIMIT__")
-                    ? "محاولات كثيرة خلال وقت قصير. انتظر قليلاً ثم أعد المحاولة."
-                    : (err.message || "تعذّر الوصول للسيرفر");
+                msgDiv.textContent = err.message;
                 msgDiv.style.backgroundColor = "#f8d7da";
                 msgDiv.style.color = "#721c24";
                 

@@ -11,8 +11,7 @@
     const params = new URLSearchParams(window.location.search);
     const t = params.get('token');
     if (t) {
-        if (window.prSaveToken) window.prSaveToken(t);
-        else sessionStorage.setItem('token', t);
+        sessionStorage.setItem('token', t);
         window.history.replaceState({}, document.title, window.location.pathname);
     }
 })();
@@ -269,19 +268,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     try {
         const res= await fetch(`${API_URL}/auth/me`, { headers: { 'Authorization': `Bearer ${token}` } });
         if (!res.ok) {
-            // 401/403 = التوكن فعلاً غير صالح → نمسح الجلسة ونعيد لتسجيل الدخول.
-            // أي شيء آخر (429 تجاوز حدّ، 5xx ازدحام، تعثّر لحظي) = عطل مؤقت،
-            // فلا نمسح "تذكّرني" — وإلا خرج المستخدم من حسابه بلا سبب حقيقي.
-            if (res.status === 401 || res.status === 403) {
-                sessionStorage.removeItem('token');
-                try { localStorage.removeItem('token'); } catch (e) {}
-                return window.location.replace('login.html');
-            }
-
-            if (typeof showToast === 'function') {
-                showToast('تعذّر تحميل بياناتك مؤقتاً. أعد تحميل الصفحة بعد قليل.', 'error');
-            }
-            return;
+            sessionStorage.removeItem('token');
+            try { localStorage.removeItem('token'); } catch (e) {}
+            return window.location.replace('login.html');
         }
 
         userDataCache = await res.json();
@@ -427,14 +416,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('logoutSettingsBtn')?.addEventListener('click', () => {
         showConfirm('تسجيل الخروج', 'هل أنت متأكد أنك تريد الخروج؟', () => {
-            // خروج حقيقي: نمسح المخزنين معاً.
-            // مسح sessionStorage وحده كان يُبقي توكن "تذكرني" في
-            // localStorage فيُعاد تسجيل الدخول تلقائياً عند فتح الصفحة.
-            try {
-                sessionStorage.removeItem('token');
-                localStorage.removeItem('token');
-                sessionStorage.setItem('pr_logged_out', '1');
-            } catch (e) {}
+            sessionStorage.removeItem('token');
             window.location.replace('login.html');
         });
     });
@@ -495,8 +477,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             const res  = await fetch(`${API_URL}/auth/settings/update-security`, {});
             const data = res.ok ? await res.json() : {};
             if (data.new_token) {
-                if (window.prSaveToken) window.prSaveToken(data.new_token);
-                else sessionStorage.setItem('token', data.new_token);
+                sessionStorage.setItem('token', data.new_token);
                 setTimeout(() => window.location.reload(), 1500);
             }
         });

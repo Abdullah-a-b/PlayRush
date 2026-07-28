@@ -18,17 +18,6 @@ const PR_IS_APP = window.PR_IS_APP === true
 
 window.PR_IS_APP = PR_IS_APP;  // متاح لكل المنصة (الجلسات/الواجهات)
 
-// صنف على <html> تستهدفه css/app_perf.css لتخفيف المؤثرات داخل التطبيق
-// (الموقع على المتصفح يبقى بكامل مؤثراته).
-try {
-    if (PR_IS_APP) document.documentElement.classList.add('pr-app');
-    var _coarse = (typeof window.matchMedia === 'function'
-                    && window.matchMedia('(pointer: coarse)').matches)
-                  || ('ontouchstart' in window)
-                  || (navigator.maxTouchPoints > 0);
-    if (_coarse) document.documentElement.classList.add('pr-touch');
-} catch (e) {}
-
 const _host = window.location.hostname;
 const _isLocalHost = (_host === '127.0.0.1' || _host === 'localhost' || _host === '');
 const _isLanIp = /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(_host);
@@ -72,17 +61,6 @@ document.addEventListener('click', function(e) {
         e.target.value = '';
     }
 });
-
-// ===== حفظ التوكن في المخزنين معاً =====
-// كان بعض المسارات (جوجل/إكمال الملف/تجديد التوكن) يحفظ في
-// sessionStorage فقط، فتضيع الجلسة بإغلاق المتصفح رغم "تذكرني".
-window.prSaveToken = function (t) {
-    if (!t) return;
-    try {
-        sessionStorage.setItem('token', t);
-        localStorage.setItem('token', t);   // يعيش أسبوعاً = صلاحية التوكن
-    } catch (e) {}
-};
 
 // ===== PR_SESSION_BRIDGE: تذكُّر الدخول (زي المواقع العالمية) =====
 // من فعّل "تذكرني": توكنه في localStorage (يعيش 7 أيام = صلاحية التوكن
