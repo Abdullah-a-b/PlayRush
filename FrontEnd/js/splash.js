@@ -88,9 +88,14 @@
     }
     const mount = () => {
         document.body.appendChild(el);
+        // نعلن أن الأنيميشن نشط — ليؤجّل session_resume إعادة التوجيه
+        window.__prSplashActive = true;
         const close = () => {
             el.classList.add('hide');
             setTimeout(() => el.remove(), 550);
+            window.__prSplashActive = false;
+            // نُشعر من ينتظر (إعادة التوجيه) بأن الأنيميشن انتهى
+            try { window.dispatchEvent(new Event('pr-splash-done')); } catch (e) {}
         };
         // 📱 داخل التطبيق: قيد التشغيل التلقائي للصوت غير موجود، وشاشة
         // «المس للبدء» تبدو تعليقاً. لذلك نبدأ فوراً وبمدة أقصر.

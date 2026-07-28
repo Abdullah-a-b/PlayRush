@@ -65,9 +65,19 @@
             // نضمن وجود التوكن في الجلسة الحالية لبقية الصفحات
             try { sessionStorage.setItem('token', t); } catch (e) {}
 
-            window.location.replace(me && me.player_name
-                ? 'categories.html'
-                : 'profile-setup.html');
+            var dest = (me && me.player_name) ? 'categories.html' : 'profile-setup.html';
+
+            // لا نقطع أنيميشن الشركة: لو كان يعمل، ننتظر انتهاءه ثم ننتقل.
+            if (window.__prSplashActive) {
+                hint.remove();
+                window.addEventListener('pr-splash-done', function () {
+                    window.location.replace(dest);
+                }, { once: true });
+                // أمان: لو لم يصل الحدث خلال 6ث، ننتقل رغم ذلك
+                setTimeout(function () { window.location.replace(dest); }, 6000);
+                return;
+            }
+            window.location.replace(dest);
         } catch (e) {
             hint.remove();                          // بلا إنترنت — تبقى الصفحة كما هي
         }
