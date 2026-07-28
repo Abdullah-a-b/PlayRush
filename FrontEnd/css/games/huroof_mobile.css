@@ -318,28 +318,65 @@ html.kb-open, html.kb-open body {
     .question-sidebar.keyboard-open .mobile-bottom-bar .pr-sound-float {
         width: 36px !important; height: 36px !important;
     }
-    /* السؤال: يبقى مرئياً لكن محدود الارتفاع وقابلاً للتمرير */
+    /* ── السؤال: سطر واحد أثناء الكتابة، ولمسة عليه تفتحه كاملاً ── */
     .question-sidebar.keyboard-open .question-box {
-        padding: 8px !important;
-        max-height: 4.6em !important;
+        padding: 6px 9px !important;
+        cursor: pointer;
+        position: relative;
+    }
+    .question-sidebar.keyboard-open #questionText {
+        font-size: clamp(0.82rem, 3vw, 0.95rem) !important;
+        line-height: 1.35 !important;
+        display: -webkit-box !important;
+        -webkit-line-clamp: 1;
+        -webkit-box-orient: vertical;
+        overflow: hidden !important;
+    }
+    /* الحالة المفتوحة بعد اللمس */
+    .question-sidebar.keyboard-open .question-box.q-open #questionText {
+        -webkit-line-clamp: unset;
+        max-height: 5em !important;
         overflow-y: auto !important;
         -webkit-overflow-scrolling: touch !important;
     }
-    .question-sidebar.keyboard-open #questionText {
-        font-size: clamp(0.8rem, 3vw, 0.95rem) !important;
-        line-height: 1.35 !important;
-    }
-    /* منطقة الإجابة: مضغوطة وواضحة */
+
+    /* ── منطقة الإجابة: صفّ واحد [⏱] [الحقل] [إرسال] ──
+       نُحوّل رأس القسم إلى display:contents ليصبح المؤقّت عنصر فليكس
+       مباشراً بجانب الحقل، فنكسب صفّاً كاملاً من الارتفاع. */
     .question-sidebar.keyboard-open #answerSection {
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
         margin-top: 8px !important;
     }
+    .question-sidebar.keyboard-open #answerSection > div:first-child {
+        display: contents !important;
+    }
+    .question-sidebar.keyboard-open #answerSection > div:first-child > span:first-child {
+        display: none !important;   /* «اكتب إجابتك:» — الحقل يشرح نفسه */
+    }
+    .question-sidebar.keyboard-open #playerTimer {
+        order: 1;
+        font-size: 15px !important;
+        white-space: nowrap;
+        flex: 0 0 auto;
+    }
     .question-sidebar.keyboard-open #playerAnswerInput {
+        order: 2;
+        flex: 1 1 auto !important;
+        width: auto !important;
+        min-width: 0 !important;
         padding: 10px !important;
-        margin-bottom: 8px !important;
+        margin: 0 !important;
         font-size: 16px !important;   /* أقل من 16px يجعل iOS يُكبّر الصفحة */
     }
     .question-sidebar.keyboard-open #submitAnswerBtn {
-        padding: 10px !important;
+        order: 3;
+        width: auto !important;
+        flex: 0 0 auto !important;
+        padding: 11px 14px !important;
+        font-size: 0.9rem !important;
+        white-space: nowrap;
     }
     /* الشريط العائم للدردشة السريعة يزاحم الصندوق أثناء الكتابة */
     html.kb-open .ingame-quick-chat { display: none !important; }

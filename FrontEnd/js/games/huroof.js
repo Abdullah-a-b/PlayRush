@@ -1413,8 +1413,10 @@ socket.on('leaver_penalty', (data) => {
                 sidebar.style.setProperty('bottom', (kb > 100 ? kb : 0) + 'px', 'important');
                 // ارتفاع مضغوط: يكفي للسؤال والحقل والزر، ويُبقي اللوحة ظاهرة
                 // فوقه (كان يتمدّد للمساحة كلها فيحجب خلية الحروف).
+                // الوضع المضغوط صار قصيراً فعلاً (سؤال بسطر + صفّ إجابة +
+                // الشريط السفلي) فنُنزل السقف ليعود الباقي للوحة.
                 sidebar.style.setProperty('max-height',
-                    Math.max(150, Math.min(vv.height - 12, 300)) + 'px', 'important');
+                    Math.max(130, Math.min(vv.height - 12, 200)) + 'px', 'important');
 
                 // نمنع قفزة التمرير التلقائية التي يفعلها المتصفح
                 if (window.scrollY !== 0) window.scrollTo(0, 0);
@@ -1439,27 +1441,6 @@ socket.on('leaver_penalty', (data) => {
             }
         }
 
-        // 🔍 قياس على الجهاز عند الحاجة: أضف ?kbdebug=1 إلى الرابط
-        if (/[?&]kbdebug=1/.test(location.search)) {
-            const dbg = document.createElement('div');
-            dbg.style.cssText = 'position:fixed;top:70px;right:6px;z-index:2147483647;'
-                + 'background:rgba(0,0,0,.85);color:#0f0;font:11px/1.5 monospace;'
-                + 'padding:6px 8px;border-radius:6px;direction:ltr;text-align:left;';
-            document.body.appendChild(dbg);
-            setInterval(() => {
-                const sb = document.getElementById('questionSidebar');
-                const r = sb ? sb.getBoundingClientRect() : { top: 0, height: 0 };
-                dbg.textContent =
-                    'client ' + document.documentElement.clientHeight
-                    + '\ninner  ' + window.innerHeight
-                    + '\nvv.h   ' + Math.round(vv.height)
-                    + '\nvv.top ' + Math.round(vv.offsetTop)
-                    + '\nkb     ' + Math.round(kbHeight())
-                    + '\nbox.t  ' + Math.round(r.top)
-                    + '\nbox.h  ' + Math.round(r.height);
-            }, 300);
-        }
-
         vv.addEventListener('resize', applyLayout);
         vv.addEventListener('scroll', applyLayout);
         document.addEventListener('focusin', (e) => {
@@ -1470,6 +1451,15 @@ socket.on('leaver_penalty', (data) => {
         });
         document.addEventListener('focusout', (e) => {
             if (e.target.id === 'playerAnswerInput') setTimeout(applyLayout, 150);
+        });
+
+        // أثناء الكتابة يُعرض السؤال في سطر واحد؛ لمسة عليه تفتحه كاملاً
+        document.addEventListener('click', (e) => {
+            const box = e.target.closest && e.target.closest('.question-box');
+            if (!box || box.id === 'answer-container') return;
+            const sidebar = document.getElementById('questionSidebar');
+            if (!sidebar || !sidebar.classList.contains('keyboard-open')) return;
+            box.classList.toggle('q-open');
         });
     }
 })();
