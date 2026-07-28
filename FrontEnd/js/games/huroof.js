@@ -1414,7 +1414,7 @@ socket.on('leaver_penalty', (data) => {
                 // ارتفاع مضغوط: يكفي للسؤال والحقل والزر، ويُبقي اللوحة ظاهرة
                 // فوقه (كان يتمدّد للمساحة كلها فيحجب خلية الحروف).
                 sidebar.style.setProperty('max-height',
-                    Math.max(140, Math.min(vv.height - 12, 260)) + 'px', 'important');
+                    Math.max(150, Math.min(vv.height - 12, 300)) + 'px', 'important');
 
                 // نمنع قفزة التمرير التلقائية التي يفعلها المتصفح
                 if (window.scrollY !== 0) window.scrollTo(0, 0);
@@ -1433,6 +1433,9 @@ socket.on('leaver_penalty', (data) => {
                 sidebar.style.removeProperty('top');
                 sidebar.style.removeProperty('max-height');
                 sidebar.style.setProperty('bottom', '0', 'important');
+                // نُعيد المحتوى لأعلاه، وإلا عاد الصندوق مُمرَّراً فيبدو مقصوصاً
+                const content = sidebar.querySelector('.sidebar-content');
+                if (content) content.scrollTop = 0;
             }
         }
 

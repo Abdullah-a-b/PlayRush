@@ -301,14 +301,22 @@ html.kb-open, html.kb-open body {
     .question-sidebar.keyboard-open .sidebar-content {
         padding: 8px 12px 8px 12px !important;
     }
-    /* عناصر تُخفى أثناء الكتابة */
+    /* عناصر تُخفى أثناء الكتابة — الشريط السفلي (المساعدات/الانسحاب/الصوت)
+       يبقى ظاهراً دائماً؛ إخفاؤه كان خطأً لأنه يقطع أدوات اللاعب فجأة. */
     .question-sidebar.keyboard-open .letter-indicator,
     .question-sidebar.keyboard-open #systemMessageDisplay,
     .question-sidebar.keyboard-open #answer-container,
-    .question-sidebar.keyboard-open .mobile-actions-wrapper,
-    .question-sidebar.keyboard-open .sidebar-actions,
-    .question-sidebar.keyboard-open .mobile-bottom-bar {
+    .question-sidebar.keyboard-open .mobile-actions-wrapper {
         display: none !important;
+    }
+    /* الشريط السفلي: مضغوط لا مخفي */
+    .question-sidebar.keyboard-open .mobile-bottom-bar {
+        padding: 4px 8px !important;
+    }
+    .question-sidebar.keyboard-open .mobile-bottom-bar .help-slot,
+    .question-sidebar.keyboard-open .mobile-bottom-bar .surrender-btn,
+    .question-sidebar.keyboard-open .mobile-bottom-bar .pr-sound-float {
+        width: 36px !important; height: 36px !important;
     }
     /* السؤال: يبقى مرئياً لكن محدود الارتفاع وقابلاً للتمرير */
     .question-sidebar.keyboard-open .question-box {
