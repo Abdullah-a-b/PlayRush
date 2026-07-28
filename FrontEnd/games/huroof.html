@@ -114,26 +114,26 @@
             <h3 class="letter-indicator" id="currentLetterDisplay">انتظر دورك...</h3>
             
             <div class="question-box">
-                <div id="globalTimer" style="display: none;">⏳ 40</div>
+                <div id="globalTimer" style="color: #ff5722; font-weight: bold; font-size: 20px; margin-bottom: 10px; display: none;">⏳ 40</div>
                 <p id="questionText">اختر حرفاً من اللوحة للبدء!</p>
             </div>
             
-            <div id="systemMessageDisplay"></div>
+            <div id="systemMessageDisplay" style="color: #00d2ff; font-weight: bold; margin: 15px 0; min-height: 24px; text-align: center;"></div>
 
-            <button id="buzzerBtn" class="party-action-btn" style="display: none;">
+            <button id="buzzerBtn" class="party-action-btn" style="background: #ff9800; font-size: 24px; padding: 15px; margin: 15px 0; display: none; width: 100%; box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);">
                 <i class="fa-solid fa-hand-pointer"></i> أنا أعرف!
             </button>
 
             <div id="answerSection" style="display: none; width: 100%;">
-                <div class="answer-header">
-                    <span class="answer-label">اكتب إجابتك:</span>
-                    <span id="playerTimer">⏱️ 15</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span style="color: #4CAF50; font-weight: bold;">اكتب إجابتك:</span>
+                    <span id="playerTimer" style="color: #ff5722; font-weight: bold; font-size: 18px;">⏱️ 15</span>
                 </div>
-                <input type="text" id="playerAnswerInput" placeholder="أدخل الإجابة هنا...">
-                <button id="submitAnswerBtn" class="party-action-btn">إرسال الإجابة</button>
+                <input type="text" id="playerAnswerInput" placeholder="أدخل الإجابة هنا..." style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #00d2ff; background: #111; color: white; font-family: inherit; font-size: 16px; margin-bottom: 10px; text-align: center;">
+                <button id="submitAnswerBtn" class="party-action-btn" style="background: #4CAF50; width: 100%;">إرسال الإجابة</button>
             </div>
 
-            <div class="question-box answer-box" id="answer-container" style="display: none;">
+            <div class="question-box answer-box" id="answer-container" style="display: none; margin-top: 15px;">
                 <p id="answerText"></p>
             </div>
 

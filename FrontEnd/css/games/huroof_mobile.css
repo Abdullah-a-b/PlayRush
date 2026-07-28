@@ -266,7 +266,7 @@ html, body {
         padding: 12px 14px 14px !important;
         max-height: none !important;
         overflow: visible !important;
-        display: flex !important; flex-direction: column !important; gap: 12px !important;
+        display: flex !important; flex-direction: column !important; gap: 8px !important;
     }
 
 
@@ -287,15 +287,7 @@ html, body {
         border-radius: 14px !important;
         padding: clamp(8px, 2.5vw, 14px) !important;
         margin: 0 !important; min-height: 36px !important;
-        display: flex !important; flex-direction: column !important;
-        align-items: stretch !important; justify-content: center !important;
-        gap: 8px !important;
-    }
-    .question-sidebar .question-box #globalTimer {
-        align-self: center !important;
-        margin: 0 auto !important;
-        font-size: clamp(0.78rem, 2.9vw, 0.92rem) !important;
-        padding: 4px 12px !important;
+        display: flex !important; align-items: center !important; justify-content: center !important;
     }
     .question-sidebar .question-box #questionText,
     .question-sidebar #questionText {
@@ -306,53 +298,12 @@ html, body {
     .question-sidebar #systemMessageDisplay {
         font-size: clamp(0.78rem, 2.8vw, 0.88rem) !important;
         margin: 0 !important; text-align: center !important; color: #5ae8ff !important;
-        padding: 8px 12px !important;
-        background: rgba(0, 210, 255, 0.08) !important;
-        border: 1px solid rgba(0, 210, 255, 0.22) !important;
-        border-radius: 10px !important;
-    }
-    .question-sidebar #systemMessageDisplay:empty {
-        display: none !important;
-    }
-
-    /* قسم الإجابة كوحدة عمودية متجانسة */
-    .question-sidebar #answerSection {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 10px !important;
-        width: 100% !important;
-    }
-    .question-sidebar .answer-header {
-        display: flex !important;
-        align-items: center !important;
-        justify-content: space-between !important;
-        gap: 10px !important;
-        margin: 0 !important;
-    }
-    .question-sidebar .answer-label {
-        color: #4CAF50 !important;
-        font-weight: 700 !important;
-        font-size: clamp(0.85rem, 3vw, 0.95rem) !important;
-    }
-    .question-sidebar #playerTimer {
-        color: #ff8a3d !important;
-        font-weight: 800 !important;
-        font-size: clamp(0.8rem, 2.9vw, 0.9rem) !important;
-        padding: 3px 10px !important;
-        background: rgba(255, 138, 61, 0.14) !important;
-        border: 1px solid rgba(255, 138, 61, 0.38) !important;
-        border-radius: 999px !important;
-        line-height: 1 !important;
-        white-space: nowrap !important;
     }
     .question-sidebar #buzzerBtn {
         width: 100% !important;
         font-size: clamp(0.95rem, 3.5vw, 1.05rem) !important;
         padding: clamp(11px, 3.5vw, 14px) !important;
         border-radius: 14px !important; margin: 0 !important; letter-spacing: 0.5px !important;
-        background: linear-gradient(135deg, #ff9800, #ff5722) !important;
-        border: none !important; color: #fff !important; font-weight: 800 !important;
-        box-shadow: 0 4px 14px rgba(255,152,0,0.35) !important;
     }
     .question-sidebar #submitAnswerBtn,
     .question-sidebar #voteSkipBtn {
@@ -361,19 +312,11 @@ html, body {
         padding: clamp(10px, 3vw, 13px) !important;
         border-radius: 13px !important; margin: 0 !important;
     }
-    .question-sidebar #submitAnswerBtn {
-        background: linear-gradient(135deg, #2ecc71, #27ae60) !important;
-        border: none !important; color: #fff !important; font-weight: 800 !important;
-    }
     .question-sidebar #playerAnswerInput {
         width: 100% !important; box-sizing: border-box !important;
         padding: clamp(10px, 3vw, 13px) !important;
         font-size: 16px !important;   /* 16px يمنع zoom تلقائي على iOS */
         border-radius: 13px !important; margin: 0 !important;
-        background: rgba(0,0,0,0.4) !important;
-        border: 2px solid rgba(0, 210, 255, 0.45) !important;
-        color: #fff !important; text-align: center !important;
-        font-family: inherit !important;
     }
 
     /* ─── شريط التحكم السفلي ─── */
