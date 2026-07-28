@@ -394,19 +394,9 @@ socket.on('huroof_buzzed', (data) => {
         answerSection.style.display      = 'block';
         submitAnswerBtn.disabled         = false;  // 🆕 نعيد تفعيل الزر للمحاولة الجديدة
         playerAnswerInput.value          = '';
-        // نُضيف kb-open *قبل* focus لأن CSS يُثبّت الصفحة (position:fixed)
-        // وهذا يمنع WebView من تمرير الصفحة تلقائياً عند التركيز.
-        // preventScroll:true طبقة حماية إضافية للمتصفحات التي تدعمها.
-        if (window.innerWidth <= 900) {
-            document.documentElement.classList.add('kb-open');
-        }
+        // preventScroll: true يمنع التمرير التلقائي في المتصفح عند التركيز
         playerAnswerInput.focus({ preventScroll: true });
         if (window.scrollY !== 0) window.scrollTo(0, 0);
-        // نُشغّل applyLayout بعد لحظة لضبط موضع الصندوق فوق الكيبورد
-        if (window.__huroofKbRefresh) {
-            setTimeout(() => window.__huroofKbRefresh(0), 80);
-            setTimeout(() => window.__huroofKbRefresh(0), 300);
-        }
     } else {
         isMyTurnToAnswer = false;
         systemMessageDisplay.textContent = 'الخصم يجيب الآن... استعد في حال أخطأ!';
@@ -425,15 +415,8 @@ socket.on('huroof_chance_transfer', (data) => {
         answerSection.style.display      = 'block';
         submitAnswerBtn.disabled         = false;  // 🆕 نعيد تفعيل الزر للمحاولة الجديدة
         playerAnswerInput.value          = '';
-        if (window.innerWidth <= 900) {
-            document.documentElement.classList.add('kb-open');
-        }
         playerAnswerInput.focus({ preventScroll: true });
         if (window.scrollY !== 0) window.scrollTo(0, 0);
-        if (window.__huroofKbRefresh) {
-            setTimeout(() => window.__huroofKbRefresh(0), 80);
-            setTimeout(() => window.__huroofKbRefresh(0), 300);
-        }
     } else {
         isMyTurnToAnswer = false;
         systemMessageDisplay.textContent = 'أخطأت! فرصة الخصم الآن...';
