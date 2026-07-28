@@ -394,7 +394,19 @@ socket.on('huroof_buzzed', (data) => {
         answerSection.style.display      = 'block';
         submitAnswerBtn.disabled         = false;  // 🆕 نعيد تفعيل الزر للمحاولة الجديدة
         playerAnswerInput.value          = '';
-        playerAnswerInput.focus();
+        // نُضيف kb-open *قبل* focus لأن CSS يُثبّت الصفحة (position:fixed)
+        // وهذا يمنع WebView من تمرير الصفحة تلقائياً عند التركيز.
+        // preventScroll:true طبقة حماية إضافية للمتصفحات التي تدعمها.
+        if (window.innerWidth <= 900) {
+            document.documentElement.classList.add('kb-open');
+        }
+        playerAnswerInput.focus({ preventScroll: true });
+        if (window.scrollY !== 0) window.scrollTo(0, 0);
+        // نُشغّل applyLayout بعد لحظة لضبط موضع الصندوق فوق الكيبورد
+        if (window.__huroofKbRefresh) {
+            setTimeout(() => window.__huroofKbRefresh(0), 80);
+            setTimeout(() => window.__huroofKbRefresh(0), 300);
+        }
     } else {
         isMyTurnToAnswer = false;
         systemMessageDisplay.textContent = 'الخصم يجيب الآن... استعد في حال أخطأ!';
@@ -413,7 +425,15 @@ socket.on('huroof_chance_transfer', (data) => {
         answerSection.style.display      = 'block';
         submitAnswerBtn.disabled         = false;  // 🆕 نعيد تفعيل الزر للمحاولة الجديدة
         playerAnswerInput.value          = '';
-        playerAnswerInput.focus();
+        if (window.innerWidth <= 900) {
+            document.documentElement.classList.add('kb-open');
+        }
+        playerAnswerInput.focus({ preventScroll: true });
+        if (window.scrollY !== 0) window.scrollTo(0, 0);
+        if (window.__huroofKbRefresh) {
+            setTimeout(() => window.__huroofKbRefresh(0), 80);
+            setTimeout(() => window.__huroofKbRefresh(0), 300);
+        }
     } else {
         isMyTurnToAnswer = false;
         systemMessageDisplay.textContent = 'أخطأت! فرصة الخصم الآن...';
@@ -1417,10 +1437,20 @@ socket.on('leaver_penalty', (data) => {
         // فيقفز الصندوق إلى منتصف الشاشة ويحجب اللوحة. هذه المعادلة تُعيد
         // صفراً في تلك الحالة (لأن الصندوق فوق الكيبورد أصلاً).
         // nativeH: ارتفاع الكيبورد الحقيقي من Capacitor (0 على الويب)
+        // _lastNativeKbH: نحتفظ بآخر قيمة حقيقية من Capacitor لنستخدمها كـfallback
+        let _lastNativeKbH = 0;
         function kbHeight(nativeH) {
-            if (nativeH && nativeH > 0) return nativeH;
+            if (nativeH && nativeH > 0) { _lastNativeKbH = nativeH; return nativeH; }
+            // في WebView: visualViewport لا يتقلّص — نستخدم آخر قيمة حقيقية إن وُجدت
+            if (_lastNativeKbH > 0) return _lastNativeKbH;
             const layoutH = document.documentElement.clientHeight || window.innerHeight;
             const overlap = layoutH - (vv.height + vv.offsetTop);
+            // إن كانت المساحة المرئية (vv.height) أصغر بكثير من ارتفاع الشاشة،
+            // فالكيبورد يطفو فوق المحتوى (WebView edge-to-edge) — نقدّر ارتفاعه
+            if (overlap < 30 && vv.height < layoutH * 0.65) {
+                // تقدير افتراضي: 40% من ارتفاع الشاشة (متوسط لوحة المفاتيح العربية)
+                return Math.round(layoutH * 0.40);
+            }
             return Math.max(0, Math.min(overlap, layoutH * 0.6));
         }
 
