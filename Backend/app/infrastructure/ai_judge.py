@@ -190,9 +190,12 @@ async def generate_huroof_question(letter, timeout=8.0):
 
     answer = str(data["answer"]).strip()
 
-    # تحقّق أن الإجابة تبدأ بالحرف المطلوب (بعد إزالة "ال" التعريف)
+    # تحقّق أن الإجابة تبدأ بالحرف المطلوب (بعد إزالة "ال" التعريف).
+    # نطبّع الحروف المتشابهة (أ/إ/آ→ا، ة→ه، ى→ي) قبل المقارنة.
+    def _norm(ch):
+        return {'أ':'ا','إ':'ا','آ':'ا','ٱ':'ا','ة':'ه','ى':'ي','ی':'ي'}.get(ch, ch)
     bare = answer[2:] if answer.startswith("ال") else answer
-    if not bare or bare[0] != letter:
+    if not bare or _norm(bare[0]) != _norm(letter):
         return None
 
     return {
