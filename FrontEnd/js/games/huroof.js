@@ -55,7 +55,6 @@ const answerSection        = document.getElementById('answerSection');
 const playerAnswerInput    = document.getElementById('playerAnswerInput');
 const submitAnswerBtn      = document.getElementById('submitAnswerBtn');
 const voteSkipBtn          = document.getElementById('voteSkipBtn');
-const buzzRow              = document.getElementById('buzzRow');
 
 
 // ============================================================
@@ -127,6 +126,30 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     } catch (e) {}
 });
+
+
+// ============================================================
+//  الجوال: نضمن أنّ حقل الإجابة يظهر فوق الكيبورد عند التركيز
+//  (الصندوق نفسه inline داخل تدفّق الصفحة عبر CSS — بلا position:fixed)
+// ============================================================
+(function setupMobileAnswerScroll() {
+    const input = document.getElementById('playerAnswerInput');
+    if (!input) return;
+    const scrollIntoView = () => {
+        try {
+            input.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        } catch (e) {
+            input.scrollIntoView();
+        }
+    };
+    input.addEventListener('focus', () => setTimeout(scrollIntoView, 250));
+    // بعض المتصفحات على أندرويد تغيّر الـ viewport بعد الفتح بلحظات
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', () => {
+            if (document.activeElement === input) setTimeout(scrollIntoView, 100);
+        });
+    }
+})();
 
 
 // ============================================================
@@ -338,21 +361,16 @@ socket.on('huroof_new_question', (data) => {
         showToast('🔄 تم تغيير السؤال');
     }
 
-    if (buzzRow) buzzRow.style.display = 'flex';
     buzzerBtn.style.display  = 'block';
     buzzerBtn.disabled       = false;
     buzzerBtn.style.opacity  = '1';
     systemMessageDisplay.textContent = '';
 
     if (voteSkipBtn) {
-        voteSkipBtn.style.display    = 'flex';
+        voteSkipBtn.style.display    = 'inline-block';
         voteSkipBtn.disabled         = false;
-        voteSkipBtn.innerHTML        = '<i class="fa-solid fa-rotate"></i>';
+        voteSkipBtn.innerHTML        = '<i class="fa-solid fa-forward-step"></i> اقتراح تغيير السؤال';
         voteSkipBtn.style.background = '#607d8b';
-        voteSkipBtn.style.width      = '54px';
-        voteSkipBtn.style.height     = '54px';
-        voteSkipBtn.style.borderRadius = '50%';
-        voteSkipBtn.style.padding    = '0';
         voteSkipBtn.style.animation  = 'none';
     }
 
@@ -387,9 +405,8 @@ function showToast(message) {
 socket.on('huroof_buzzed', (data) => {
     clearInterval(globalTimerInterval);
     globalTimerDisplay.style.display = 'none';
-    if (buzzRow) buzzRow.style.display = 'none';
     buzzerBtn.style.display          = 'none';
-    /* voteSkip يُخفى مع buzzRow */
+    if (voteSkipBtn) voteSkipBtn.style.display = 'none';
 
     const timeValue = parseInt(data.time || data.timer);
     if (isNaN(timeValue)) return;
@@ -435,19 +452,14 @@ socket.on('huroof_last_chance', (data) => {
     systemMessageDisplay.innerHTML   = '🚨 الفرصة الأخيرة! من يضغط أولاً؟';
     systemMessageDisplay.style.color = '#f44336';
     answerSection.style.display      = 'none';
-    if (buzzRow) buzzRow.style.display = 'flex';
     buzzerBtn.style.display          = 'block';
     buzzerBtn.disabled               = false;
     buzzerBtn.style.opacity          = '1';
     if (voteSkipBtn) {
-        voteSkipBtn.style.display    = 'flex';
+        voteSkipBtn.style.display    = 'inline-block';
         voteSkipBtn.disabled         = false;
-        voteSkipBtn.innerHTML        = '<i class="fa-solid fa-rotate"></i>';
+        voteSkipBtn.innerHTML        = '<i class="fa-solid fa-forward-step"></i> اقتراح تغيير السؤال';
         voteSkipBtn.style.background = '#607d8b';
-        voteSkipBtn.style.width      = '54px';
-        voteSkipBtn.style.height     = '54px';
-        voteSkipBtn.style.borderRadius = '50%';
-        voteSkipBtn.style.padding    = '0';
         voteSkipBtn.style.animation  = 'none';
     }
     startGlobalTimer(data.timer);
@@ -460,10 +472,9 @@ socket.on('huroof_answer_result', (data) => {
         if (cell) { cell.classList.remove('active'); cell.classList.add(data.color); }
         systemMessageDisplay.innerHTML   = `✅ إجابة صحيحة! (${sanitizeHTML(data.answer)})`;
         systemMessageDisplay.style.color = '#4CAF50';
-        if (buzzRow) buzzRow.style.display = 'none';
-    buzzerBtn.style.display          = 'none';
+        buzzerBtn.style.display          = 'none';
         answerSection.style.display      = 'none';
-        /* voteSkip يُخفى مع buzzRow */
+        if (voteSkipBtn) voteSkipBtn.style.display = 'none';
     } else {
         // 🆕 رسالة ذكية + إظهار الإجابة الصحيحة
         const feedback = data.feedback || 'إجابة خاطئة';
@@ -481,10 +492,9 @@ socket.on('huroof_timeout_info', (data) => {
     clearInterval(playerTimerInterval);
     systemMessageDisplay.textContent = sanitizeHTML(data.msg);
     systemMessageDisplay.style.color = '#ff9800';
-    if (buzzRow) buzzRow.style.display = 'none';
     buzzerBtn.style.display          = 'none';
     answerSection.style.display      = 'none';
-    /* voteSkip يُخفى مع buzzRow */
+    if (voteSkipBtn) voteSkipBtn.style.display = 'none';
 });
 
 // 🆕 كشف الإجابة الصحيحة للطرفين (عند فشل الاثنين أو الاتفاق على التغيير)
@@ -495,32 +505,25 @@ socket.on('huroof_reveal_answer', (data) => {
         systemMessageDisplay.innerHTML = `الإجابة الصحيحة: <b style="color:#4CAF50;">${sanitizeHTML(data.correct_answer)}</b>`;
         systemMessageDisplay.style.color = '#4CAF50';
     }
-    if (buzzRow) buzzRow.style.display = 'none';
     buzzerBtn.style.display     = 'none';
     answerSection.style.display = 'none';
-    /* voteSkip يُخفى مع buzzRow */
+    if (voteSkipBtn) voteSkipBtn.style.display = 'none';
 });
 
 socket.on('huroof_skip_voted', (data) => {
     if (data.sid === socket.id) {
-        // أنا اللي طلبت التغيير → بانتظار موافقة الخصم (أونلاين فقط)
+        // أنا اللي طلبت التغيير → بانتظار موافقة الخصم
         if (voteSkipBtn) {
-            voteSkipBtn.innerHTML        = '<i class="fa-solid fa-check"></i> بانتظار الموافقة...';
+            voteSkipBtn.innerHTML        = '<i class="fa-solid fa-check"></i> بانتظار موافقة الخصم...';
             voteSkipBtn.style.background = '#4CAF50';
-            voteSkipBtn.style.width      = 'auto';        // يتّسع للنصّ
-            voteSkipBtn.style.borderRadius = '14px';
-            voteSkipBtn.style.padding    = '0 14px';
             voteSkipBtn.disabled         = true;
         }
     } else {
-        // الخصم طلب التغيير → يطلع لي طلب الموافقة (أونلاين فقط)
-        showToast('🔄 الخصم يطلب تغيير السؤال — اضغط زر التغيير للموافقة');
+        // 🆕 الخصم طلب التغيير → يطلع لي طلب الموافقة
+        showToast('🔄 الخصم يطلب تغيير السؤال — اضغط "اقتراح تغيير السؤال" للموافقة');
         if (voteSkipBtn && !voteSkipBtn.disabled) {
-            voteSkipBtn.innerHTML        = '<i class="fa-solid fa-handshake"></i> وافق على التغيير؟';
+            voteSkipBtn.innerHTML        = '<i class="fa-solid fa-handshake"></i> الخصم يريد التغيير — وافق؟';
             voteSkipBtn.style.background  = '#ff9800';
-            voteSkipBtn.style.width      = 'auto';
-            voteSkipBtn.style.borderRadius = '14px';
-            voteSkipBtn.style.padding    = '0 14px';
             ensurePulseKeyframe();
             voteSkipBtn.style.animation   = 'huroofPulse 1s infinite';
         }
@@ -799,12 +802,11 @@ function resetUIForNewTurn() {
     }
 
     globalTimerDisplay.style.display = 'none';
-    if (buzzRow) buzzRow.style.display = 'none';
     buzzerBtn.style.display          = 'none';
     buzzerBtn.disabled               = false;
     buzzerBtn.style.opacity          = '1';
     answerSection.style.display      = 'none';
-    /* voteSkip يُخفى مع buzzRow */
+    if (voteSkipBtn) voteSkipBtn.style.display = 'none';
     document.getElementById('answer-container').style.display = 'none';
     systemMessageDisplay.textContent = '';
     submitAnswerBtn.disabled         = false;
