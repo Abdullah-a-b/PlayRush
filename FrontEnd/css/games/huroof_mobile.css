@@ -1,33 +1,15 @@
-/* ============================================================================
-   huroof_mobile.css — v11 (مصدر واحد للحقيقة على الجوال)
-   ----------------------------------------------------------------------------
-   المنطق الأساسي:
-   ┌─────────────────────────────────────────────────┐
-   │  top-bar  (62px ثابت)                           │
-   ├─────────────────────────────────────────────────┤
-   │                                                 │
-   │   اللوحة السداسية (flex: auto, max 60vmin)      │
-   │                                                 │
-   ├─────────────────────────────────────────────────┤
-   │  الشريط السفلي: مساعدات + انسحاب + صوت (56px) │
-   ├─────────────────────────────────────────────────┤
-   │  صندوق السؤال (bottom: 56px, max-h: 38vh)      │
-   │  يُدفع فوق الكيبورد حين تكتب (JS)              │
-   └─────────────────────────────────────────────────┘
-   ============================================================================ */
-
-/* ── خلفية body لا تتأثر بالثيم على الجوال ── */
 html, body { background: #2a0a3d !important; }
 
-/* ── حالة الكيبورد المفتوح ── */
+/* قفل تمرير الصفحة المزعج على الجوال */
 html.kb-open, html.kb-open body {
     overflow: hidden !important;
     overscroll-behavior: none !important;
     touch-action: none !important;
     height: 100% !important;
+    position: relative !important;
 }
 
-/* ── زر الصوت العائم (خارج الشريط السفلي — على الديسكتوب) ── */
+/* ── زر كتم الصوت العائم الافتراضي ── */
 .pr-sound-float {
     position: fixed;
     bottom: 84px !important; left: 22px !important;
@@ -35,31 +17,27 @@ html.kb-open, html.kb-open body {
     width: 44px; height: 44px; border-radius: 50%;
     border: 1px solid rgba(255, 255, 255, 0.18);
     background: rgba(22, 27, 34, 0.92);
-    color: #fff; font-size: 1.15rem;
+    color: #fff; font-size: 1.15rem; line-height: 1;
     cursor: pointer; opacity: 0.85;
     display: flex; align-items: center; justify-content: center;
     -webkit-tap-highlight-color: transparent;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
-    transition: transform .15s ease, opacity .15s ease;
+    transition: transform 0.15s ease, opacity 0.15s ease;
 }
 .pr-sound-float:hover { opacity: 1; transform: scale(1.08); }
 .pr-sound-float:active { transform: scale(0.94); }
 
-
 /* ============================================================================
-   ≤ 900px — أجهزة لوحية وجوالات
+   ≤ 900px — أجهزة لوحية وجوالات (تعديلات الجوال فقط)
    ============================================================================ */
 @media (max-width: 900px) {
 
-    /* ─── تأكيد grid mode للشبكة ─── */
     .cells-container .grid {
         display: flex !important;
         grid-template-columns: none !important;
     }
 
-    /* ─────────────────────────────────────────
-       الشريط العلوي — 62px ثابت
-       ───────────────────────────────────────── */
+    /* ─── الشريط العلوي ─── */
     .top-bar,
     html[data-theme] .top-bar {
         position: fixed !important;
@@ -113,194 +91,170 @@ html.kb-open, html.kb-open body {
         min-width: 0 !important; border-radius: 14px !important;
     }
 
-    /* ─────────────────────────────────────────
-       تخطيط اللعبة — اللوحة في الأعلى
-       ───────────────────────────────────────── */
+    /* ─── منطقة اللعب واللوحة ─── */
     .game-layout {
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: flex-start !important;
-        padding-top: 68px !important;   /* 62px top-bar + 6px هامش */
-        height: 100vh !important;
-        overflow: hidden !important;
+        display: flex !important; flex-direction: column !important;
+        align-items: center !important; justify-content: flex-start !important;
+        padding-top: 68px !important; height: 100vh !important; overflow: hidden !important;
     }
-
-    /* ─────────────────────────────────────────
-       اللوحة السداسية
-       المعادلة: 100vh - 62topbar - 56bottombar - 38vh-sidebar ≈ 60vmin
-       نستخدم vmin لأن الشبكة مبنية بـvmin فتبقى مربّعة دائماً
-       ───────────────────────────────────────── */
     .main-container {
-        width: 60vmin !important;
-        height: 60vmin !important;
-        max-width: 400px !important;
-        max-height: 400px !important;
-        margin: 0 auto !important;
-        flex-shrink: 0 !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
+        width: 94vmin !important; height: 94vmin !important;
+        max-width: 460px !important; max-height: 460px !important;
+        margin: 4px auto 0 !important; flex-shrink: 0 !important;
+        display: flex !important; align-items: center !important; justify-content: center !important;
     }
 
-    /* ─── الشبكة الداخلية ─── */
     .grid {
-        --hex-size: 11vmin;
+        --hex-size: 11.9vmin;
         position: absolute !important;
         top: 50% !important; left: 50% !important;
         transform: translate(-50%, -50%) !important;
         width: 100% !important; height: 100% !important;
         z-index: 3 !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
+        display: flex !important; flex-direction: column !important;
+        align-items: center !important; justify-content: center !important;
     }
     .hex {
-        --hex-size: 11vmin !important;
-        font-size: 4.1vmin !important;
+        --hex-size: 11.9vmin !important;
+        font-size: 4.4vmin !important;
         margin: 0 -0.2vmin !important;
     }
     .hex-row {
-        display: flex !important;
-        justify-content: center !important;
+        display: flex !important; justify-content: center !important;
         margin-top: calc(var(--hex-size) * -0.295) !important;
-        margin-bottom: 0 !important;
-        width: 100% !important;
+        margin-bottom: 0 !important; width: 100% !important;
     }
     .hex-row:first-child { margin-top: 0 !important; }
-
-    /* إزاحة الصفوف الفردية بوحدة نسبية */
     .hex-row:nth-child(1) { transform: none !important; }
     .hex-row:nth-child(2) { transform: translateX(calc(var(--hex-size) * 0.5)) !important; }
     .hex-row:nth-child(3) { transform: none !important; }
     .hex-row:nth-child(4) { transform: translateX(calc(var(--hex-size) * 0.5)) !important; }
     .hex-row:nth-child(5) { transform: none !important; }
 
-    /* ─────────────────────────────────────────
-       صندوق السؤال — يجلس فوق الشريط السفلي
-       ───────────────────────────────────────── */
+    /* ═══════════════════════════════════════════════════════════════
+       تصميم الصندوق السفلي للجوال (Sidebar)
+       ═══════════════════════════════════════════════════════════════ */
     .question-sidebar,
     .question-sidebar.active {
         position: fixed !important;
-        /* إلغاء أي transform موروث من الديسكتوب */
-        transform: none !important;
         top: auto !important;
-        bottom: 56px !important;  /* فوق الشريط السفلي مباشرة */
-        left: 0 !important;
-        right: 0 !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        max-height: 38vh !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        border: none !important;
-        border-top: 3px solid #ffeb3b !important;
+        bottom: 0 !important;
+        left: 0 !important; right: 0 !important;
+        width: 100% !important; max-width: 100% !important;
+        max-height: 42vh !important; 
+        transform: none !important;
+        margin: 0 !important; padding: 0 !important;
+        border: none !important; border-top: 3px solid #ffeb3b !important;
         border-radius: 20px 20px 0 0 !important;
         background: linear-gradient(160deg, #3d1560 0%, #200a38 100%) !important;
         box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.55) !important;
+        transition: top 0.2s ease, max-height 0.2s ease !important;
         z-index: 300 !important;
         display: flex !important;
         flex-direction: column !important;
-        /* الـopacity والـpointer-events: يتحكم بهما JS عبر صنف .active */
-        opacity: 0;
-        pointer-events: none;
-    }
-    .question-sidebar.active {
-        opacity: 1 !important;
-        pointer-events: all !important;
     }
 
     .question-sidebar .sidebar-content {
         flex: 1;
-        padding: 14px 16px 10px 16px !important;
-        overflow-y: auto !important;
+        padding: 16px 16px 10px 16px !important;
+        overflow-y: auto !important; 
         -webkit-overflow-scrolling: touch !important;
     }
 
-    /* ── حاوية أزرار (أنا أعرف + تغيير السؤال) ── */
+    /* ── الأزرار الجانبية (أنا أعرف + تغيير السؤال) ── */
     .mobile-actions-wrapper {
         display: flex;
         gap: 10px;
         width: 100%;
-        margin: 10px 0;
+        margin: 12px 0;
     }
-    .mobile-actions-wrapper .sidebar-actions { display: contents; }
+    .mobile-actions-wrapper .sidebar-actions {
+        display: contents; /* يسمح للزر بالتعامل كعنصر فليكس مباشر */
+    }
     .mobile-actions-wrapper #buzzerBtn {
         flex: 1.5;
         margin: 0 !important;
-        font-size: 1.05rem !important;
-        padding: 11px !important;
+        font-size: 1.1rem !important;
+        padding: 12px !important;
         border-radius: 12px !important;
     }
+    
+    /* ضمان إخفاء الأزرار إذا حدد الـ JS ذلك */
     .mobile-actions-wrapper #buzzerBtn[style*="display: none"],
-    .mobile-actions-wrapper #voteSkipBtn[style*="display: none"] { display: none !important; }
+    .mobile-actions-wrapper #voteSkipBtn[style*="display: none"] {
+        display: none !important;
+    }
+    
+    .mobile-actions-wrapper #voteSkipBtn[style*="display: inline-block"],
+    .mobile-actions-wrapper #voteSkipBtn[style*="display: block"] {
+        display: flex !important;
+    }
     .mobile-actions-wrapper #voteSkipBtn {
         flex: 1;
         margin: 0 !important;
-        font-size: 0.82rem !important;
-        padding: 9px !important;
+        font-size: 0.85rem !important;
+        padding: 10px !important;
         border-radius: 12px !important;
-        display: flex !important;
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        gap: 3px;
+        gap: 4px;
         text-align: center;
         line-height: 1.2;
     }
 
-    /* ── صندوق الإجابة ── */
+    /* ── تعديل تصميم صندوق الإجابة ── */
     #answerSection {
         background: rgba(0,0,0,0.25);
-        padding: 12px;
-        border-radius: 12px;
+        padding: 14px;
+        border-radius: 14px;
         border: 1px solid rgba(0, 210, 255, 0.3);
-        margin-top: 8px;
+        margin-top: 10px;
     }
-    #answerSection > div span { font-size: 0.92rem !important; }
+    #answerSection > div span {
+        font-size: 0.95rem !important;
+    }
     #playerAnswerInput {
-        padding: 13px !important;
-        font-size: 16px !important;  /* منع iOS zoom */
+        padding: 14px !important;
+        font-size: 16px !important; /* يمنع الزوم التلقائي في iOS */
         border-radius: 10px !important;
         border: 2px solid #00d2ff !important;
         background: #111 !important;
         color: #fff !important;
-        margin-bottom: 10px !important;
+        margin-bottom: 12px !important;
         box-shadow: inset 0 2px 5px rgba(0,0,0,0.5) !important;
     }
     #submitAnswerBtn {
-        padding: 11px !important;
-        font-size: 1rem !important;
+        padding: 12px !important;
+        font-size: 1.05rem !important;
         border-radius: 10px !important;
         background: linear-gradient(135deg, #2ecc71, #27ae60) !important;
         box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4) !important;
     }
 
-    /* ── الشريط السفلي للمساعدات والأدوات ── */
+    /* ── الشريط السفلي للمساعدات (مدمج بطريقة منظمة) ── */
     .mobile-bottom-bar {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 8px 14px;
-        background: rgba(10, 5, 20, 0.55);
+        padding: 10px 14px;
+        background: rgba(10, 5, 20, 0.5);
         border-top: 1px solid rgba(255, 255, 255, 0.08);
         width: 100%;
-        height: 56px;
         box-sizing: border-box;
         flex-shrink: 0;
     }
     .mobile-bottom-bar .left-actions {
         display: flex;
-        gap: 8px;
+        gap: 10px;
         align-items: center;
     }
     .mobile-bottom-bar .surrender-btn,
     .mobile-bottom-bar .pr-sound-float {
         position: relative !important;
         bottom: auto !important; left: auto !important; right: auto !important; top: auto !important;
-        width: 40px !important; height: 40px !important;
-        border-radius: 10px !important;
+        width: 44px !important; height: 44px !important;
+        border-radius: 12px !important;
         margin: 0 !important;
         box-shadow: none !important;
     }
@@ -308,141 +262,143 @@ html.kb-open, html.kb-open body {
         position: relative !important;
         bottom: auto !important; left: auto !important; right: auto !important;
         gap: 8px !important;
-        flex-direction: row !important;
     }
     .mobile-bottom-bar .help-slot {
-        width: 40px !important; height: 40px !important;
+        width: 44px !important; height: 44px !important;
         border-radius: 10px !important;
     }
 
     /* ── نصوص الصندوق ── */
     .question-sidebar .letter-indicator {
-        font-size: clamp(0.9rem, 3.5vw, 1.1rem) !important;
+        font-size: clamp(0.95rem, 3.5vw, 1.1rem) !important;
         font-weight: 800 !important; color: #ffe14d !important;
-        text-align: center !important; margin: 0 0 5px 0 !important;
-        padding-bottom: 5px !important;
+        text-align: center !important; margin: 0 0 6px 0 !important;
+        padding-bottom: 6px !important;
         border-bottom: 1px solid rgba(255, 235, 59, 0.2) !important;
     }
     .question-sidebar .question-box {
         background: rgba(0, 0, 0, 0.3) !important;
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
         border-radius: 12px !important;
-        padding: 9px !important;
-        margin: 0 !important;
-        min-height: 36px !important;
+        padding: 10px !important;
+        margin: 0 !important; min-height: 40px !important;
     }
     .question-sidebar #questionText {
-        font-size: clamp(0.82rem, 3.2vw, 0.97rem) !important;
+        font-size: clamp(0.85rem, 3.2vw, 1rem) !important;
         line-height: 1.4 !important; color: #f0e8ff !important; margin: 0 !important;
     }
 
-    /* ─────────────────────────────────────────
-       حالة الكيبورد المفتوح (keyboard-open class)
-       تُضاف/تُزال برمجياً في huroof.js
-       ───────────────────────────────────────── */
+    /* ═══════════════════════════════════════════════════════════════
+       حالة الكيبورد النشط
+       ═══════════════════════════════════════════════════════════════ */
+    /* الارتفاع والموضع يضبطهما JS ديناميكياً حسب ارتفاع الكيبورد الحقيقي.
+       هنا نُنظّف المحتوى فقط: نُبقي السؤال + حقل الإجابة + زر الإرسال،
+       ونُخفي كل ما عداه حتى يتّسع الصندوق في الشريط المرئي الضيق. */
     .question-sidebar.keyboard-open {
         border-radius: 16px 16px 0 0 !important;
-        transition: none !important;
+        transition: none !important;      /* يواكب ظهور الكيبورد بلا تأخّر */
     }
     .question-sidebar.keyboard-open .sidebar-content {
-        padding: 6px 12px 6px 12px !important;
+        padding: 8px 12px 8px 12px !important;
     }
-    /* إخفاء ما لا يلزم أثناء الكتابة */
+    /* عناصر تُخفى أثناء الكتابة — الشريط السفلي (المساعدات/الانسحاب/الصوت)
+       يبقى ظاهراً دائماً؛ إخفاؤه كان خطأً لأنه يقطع أدوات اللاعب فجأة. */
     .question-sidebar.keyboard-open #systemMessageDisplay,
     .question-sidebar.keyboard-open #answer-container,
     .question-sidebar.keyboard-open .mobile-actions-wrapper {
         display: none !important;
     }
-    /* الحرف: سطر نحيف */
+    /* الحرف المختار يبقى ظاهراً — إخفاؤه أنسى اللاعب حرفه. سطر نحيف بلا
+       فاصل ولا حشوة، يكلّف ~18px فقط. */
     .question-sidebar.keyboard-open .letter-indicator {
         display: block !important;
-        font-size: 0.76rem !important;
-        margin: 0 0 2px 0 !important;
+        font-size: 0.78rem !important;
+        margin: 0 0 3px 0 !important;
         padding: 0 !important;
         border-bottom: none !important;
-        opacity: 0.9;
+        opacity: 0.95;
     }
-    /* الشريط السفلي: مضغوط */
+    /* الشريط السفلي: مضغوط لا مخفي */
     .question-sidebar.keyboard-open .mobile-bottom-bar {
         padding: 4px 8px !important;
-        height: 44px !important;
     }
     .question-sidebar.keyboard-open .mobile-bottom-bar .help-slot,
     .question-sidebar.keyboard-open .mobile-bottom-bar .surrender-btn,
     .question-sidebar.keyboard-open .mobile-bottom-bar .pr-sound-float {
-        width: 34px !important; height: 34px !important;
+        width: 36px !important; height: 36px !important;
     }
-    /* السؤال: سطر واحد قابل للفتح */
+    /* ── السؤال: سطر واحد أثناء الكتابة، ولمسة عليه تفتحه كاملاً ── */
     .question-sidebar.keyboard-open .question-box {
-        padding: 5px 9px !important;
+        padding: 6px 9px !important;
         cursor: pointer;
+        position: relative;
     }
     .question-sidebar.keyboard-open #questionText {
-        font-size: clamp(0.8rem, 3vw, 0.92rem) !important;
-        line-height: 1.3 !important;
+        font-size: clamp(0.82rem, 3vw, 0.95rem) !important;
+        line-height: 1.35 !important;
         display: -webkit-box !important;
         -webkit-line-clamp: 1;
         -webkit-box-orient: vertical;
         overflow: hidden !important;
     }
+    /* الحالة المفتوحة بعد اللمس */
     .question-sidebar.keyboard-open .question-box.q-open #questionText {
         -webkit-line-clamp: unset;
         max-height: 5em !important;
         overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
     }
-    /* صفّ الإجابة: [⏱] [input] [إرسال] في سطر واحد */
+
+    /* ── منطقة الإجابة: صفّ واحد [⏱] [الحقل] [إرسال] ──
+       نُحوّل رأس القسم إلى display:contents ليصبح المؤقّت عنصر فليكس
+       مباشراً بجانب الحقل، فنكسب صفّاً كاملاً من الارتفاع. */
+    /* ⚠️ `:not([style*="none"])` ضرورة لا زخرفة:
+       الكود يُخفي القسم بـ answerSection.style.display='none' (سطر inline).
+       ولأن قاعدتنا كانت display:flex !important فهي تهزم السطر الـinline،
+       فيبقى حقل الإجابة ظاهراً بعد انتهاء وقتي وأثناء دور الخصم، ولا يختفي
+       إلا حين يُغلق الكيبورد فيسقط الصنف. الآن لا نفرض الظهور إلا حين لا
+       يكون العنصر مخفياً أصلاً. */
     .question-sidebar.keyboard-open #answerSection:not([style*="none"]) {
         display: flex !important;
         align-items: center !important;
-        gap: 7px !important;
-        margin-top: 7px !important;
+        gap: 8px !important;
+        margin-top: 8px !important;
     }
-    .question-sidebar.keyboard-open #answerSection > div:first-child { display: contents !important; }
-    .question-sidebar.keyboard-open #answerSection > div:first-child > span:first-child { display: none !important; }
+    .question-sidebar.keyboard-open #answerSection > div:first-child {
+        display: contents !important;
+    }
+    .question-sidebar.keyboard-open #answerSection > div:first-child > span:first-child {
+        display: none !important;   /* «اكتب إجابتك:» — الحقل يشرح نفسه */
+    }
     .question-sidebar.keyboard-open #playerTimer {
-        order: 1; font-size: 14px !important; white-space: nowrap; flex: 0 0 auto;
+        order: 1;
+        font-size: 15px !important;
+        white-space: nowrap;
+        flex: 0 0 auto;
     }
     .question-sidebar.keyboard-open #playerAnswerInput {
-        order: 2; flex: 1 1 auto !important; width: auto !important;
-        min-width: 0 !important; padding: 9px !important;
-        margin: 0 !important; font-size: 16px !important;
+        order: 2;
+        flex: 1 1 auto !important;
+        width: auto !important;
+        min-width: 0 !important;
+        padding: 10px !important;
+        margin: 0 !important;
+        font-size: 16px !important;   /* أقل من 16px يجعل iOS يُكبّر الصفحة */
     }
     .question-sidebar.keyboard-open #submitAnswerBtn {
-        order: 3; width: auto !important; flex: 0 0 auto !important;
-        padding: 10px 12px !important; font-size: 0.85rem !important;
+        order: 3;
+        width: auto !important;
+        flex: 0 0 auto !important;
+        padding: 11px 14px !important;
+        font-size: 0.9rem !important;
         white-space: nowrap;
     }
-    /* إخفاء الدردشة السريعة أثناء الكتابة */
+    /* الشريط العائم للدردشة السريعة يزاحم الصندوق أثناء الكتابة */
     html.kb-open .ingame-quick-chat { display: none !important; }
 
-    /* ── موضع الدردشة السريعة ── */
-    .ingame-quick-chat {
-        top: 70px !important;
-        left: 8px !important;
-        bottom: auto !important;
-    }
+    
+    .ingame-quick-chat { top: 70px !important; left: 8px !important; bottom: auto !important; }
 }
-
-
-/* ============================================================================
-   ≤ 700px — الجوالات (شاشة ضيقة نسبياً)
-   ============================================================================ */
-@media (max-width: 700px) {
-    .main-container {
-        width: 58vmin !important;
-        height: 58vmin !important;
-        max-width: 380px !important;
-        max-height: 380px !important;
-    }
-    .grid    { --hex-size: 10.5vmin; }
-    .hex     { --hex-size: 10.5vmin !important; font-size: 3.9vmin !important; }
-
-    .hex-row:nth-child(2) { transform: translateX(5.25vmin) !important; }
-    .hex-row:nth-child(3) { transform: none !important; }
-    .hex-row:nth-child(4) { transform: translateX(5.25vmin) !important; }
-    .hex-row:nth-child(5) { transform: none !important; }
-}
-
 
 /* ============================================================================
    ≤ 600px — جوالات صغيرة
@@ -450,72 +406,19 @@ html.kb-open, html.kb-open body {
 @media (max-width: 600px) {
     .top-bar { height: 58px !important; min-height: 58px !important; }
     .game-layout { padding-top: 64px !important; }
-
-    .main-container {
-        width: 62vmin !important;
-        height: 62vmin !important;
-        max-width: 360px !important;
-        max-height: 360px !important;
-    }
-    .grid { --hex-size: 11.5vmin; }
-    .hex  { --hex-size: 11.5vmin !important; font-size: 4.3vmin !important; }
-
-    .hex-row:nth-child(2) { transform: translateX(5.75vmin) !important; }
-    .hex-row:nth-child(3) { transform: none !important; }
-    .hex-row:nth-child(4) { transform: translateX(5.75vmin) !important; }
-    .hex-row:nth-child(5) { transform: none !important; }
-
-    .question-sidebar,
-    .question-sidebar.active {
-        max-height: 36vh !important;
-    }
-    .mobile-bottom-bar { padding: 6px 10px !important; }
-    .mobile-bottom-bar .surrender-btn,
-    .mobile-bottom-bar .pr-sound-float { width: 38px !important; height: 38px !important; }
-    .mobile-bottom-bar .help-slot { width: 38px !important; height: 38px !important; }
-
-    .ingame-quick-chat { top: 64px !important; }
-    .quick-chat-trigger.ingame { width: 36px !important; height: 36px !important; font-size: 0.9rem !important; }
-}
-
-
-/* ============================================================================
-   ≤ 430px — جوالات صغيرة جداً (iPhone SE, Galaxy A series...)
-   ============================================================================ */
-@media (max-width: 430px) {
-    .main-container {
-        width: 63vmin !important;
-        height: 63vmin !important;
-    }
-    .grid { --hex-size: 11.8vmin; }
-    .hex  { --hex-size: 11.8vmin !important; font-size: 4.4vmin !important; }
-
-    .hex-row:nth-child(2) { transform: translateX(5.9vmin) !important; }
-    .hex-row:nth-child(4) { transform: translateX(5.9vmin) !important; }
-}
-
-
-/* ============================================================================
-   ≤ 380px — جوالات ضيقة جداً
-   ============================================================================ */
-@media (max-width: 380px) {
-    .main-container {
-        width: 65vmin !important;
-        height: 65vmin !important;
-    }
+    .main-container { width: 96vmin !important; height: 96vmin !important; }
     .grid { --hex-size: 12vmin; }
-    .hex  { --hex-size: 12vmin !important; font-size: 4.5vmin !important; }
-
-    .hex-row:nth-child(2) { transform: translateX(6vmin) !important; }
-    .hex-row:nth-child(4) { transform: translateX(6vmin) !important; }
-
-    .mobile-bottom-bar .surrender-btn,
-    .mobile-bottom-bar .pr-sound-float,
-    .mobile-bottom-bar .help-slot {
-        width: 34px !important; height: 34px !important;
-    }
-    .question-sidebar, .question-sidebar.active {
-        max-height: 34vh !important;
-    }
-    .player-profile .info span { font-size: 10px !important; }
+    .hex { --hex-size: 12vmin !important; font-size: 4.5vmin !important; }
+}
+@media (max-width: 430px) {
+    .main-container { width: 97vmin !important; height: 97vmin !important; }
+    .grid { --hex-size: 12.5vmin; }
+    .hex { --hex-size: 12.5vmin !important; font-size: 4.8vmin !important; }
+}
+@media (max-width: 380px) {
+    .main-container { width: 98vmin !important; height: 98vmin !important; }
+    .grid { --hex-size: 13vmin; }
+    .hex { --hex-size: 13vmin !important; font-size: 5vmin !important; }
+    .mobile-bottom-bar .surrender-btn, .mobile-bottom-bar .pr-sound-float { width: 38px !important; height: 38px !important; }
+    .mobile-bottom-bar .help-slot { width: 38px !important; height: 38px !important; }
 }
