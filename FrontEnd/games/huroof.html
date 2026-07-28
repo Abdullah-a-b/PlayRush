@@ -22,15 +22,24 @@
     <link rel="stylesheet" href="../css/theme_styles.css">
     <script src="../js/ui_dialog.js"></script>
     <script src="../js/brand.js" defer></script>
-  <link rel="stylesheet" href="../css/responsive.css">
-  <link rel="stylesheet" href="../css/games/huroof_mobile.css?v=4">
-  <link rel="stylesheet" href="../css/app_perf.css">
-  <style>
-    /* الوضع الفردي: إخفاء الدردشة تماماً (لا خصم بشري) */
-    body.solo-mode #ingameQuickChatWrap,
-    body.solo-mode #gameQuickChatBtn,
-    body.solo-mode .ingame-quick-chat { display: none !important; }
-  </style>
+    <link rel="stylesheet" href="../css/responsive.css">
+    <link rel="stylesheet" href="../css/games/huroof_mobile.css?v=5">
+    <link rel="stylesheet" href="../css/app_perf.css">
+    <style>
+        /* الوضع الفردي: إخفاء الدردشة تماماً (لا خصم بشري) */
+        body.solo-mode #ingameQuickChatWrap,
+        body.solo-mode #gameQuickChatBtn,
+        body.solo-mode .ingame-quick-chat { display: none !important; }
+        
+        /* حاوية أزرار الإجراءات للكمبيوتر (مكدسة عمودياً) وتترتب أفقياً في الجوال */
+        .action-buttons-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 15px 0;
+            width: 100%;
+        }
+    </style>
 </head>
 <body>
     
@@ -120,41 +129,45 @@
             
             <div id="systemMessageDisplay" style="color: #00d2ff; font-weight: bold; margin: 15px 0; min-height: 24px; text-align: center;"></div>
 
-            <button id="buzzerBtn" class="party-action-btn" style="background: #ff9800; font-size: 24px; padding: 15px; margin: 15px 0; display: none; width: 100%; box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);">
-                <i class="fa-solid fa-hand-pointer"></i> أنا أعرف!
-            </button>
+            <!-- حاوية الأزرار المدمجة -->
+            <div class="action-buttons-container" id="actionButtonsContainer" style="display: none;">
+                <button id="buzzerBtn" class="party-action-btn">
+                    <i class="fa-solid fa-hand-pointer"></i> أنا أعرف!
+                </button>
+                <button id="voteSkipBtn" class="party-action-btn">
+                    <i class="fa-solid fa-rotate"></i> تغيير السؤال
+                </button>
+            </div>
 
             <div id="answerSection" style="display: none; width: 100%;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                     <span style="color: #4CAF50; font-weight: bold;">اكتب إجابتك:</span>
                     <span id="playerTimer" style="color: #ff5722; font-weight: bold; font-size: 18px;">⏱️ 15</span>
                 </div>
-                <input type="text" id="playerAnswerInput" placeholder="أدخل الإجابة هنا..." style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #00d2ff; background: #111; color: white; font-family: inherit; font-size: 16px; margin-bottom: 10px; text-align: center;">
+                <input type="text" id="playerAnswerInput" placeholder="أدخل الإجابة هنا..." autocomplete="off">
                 <button id="submitAnswerBtn" class="party-action-btn" style="background: #4CAF50; width: 100%;">إرسال الإجابة</button>
             </div>
 
             <div class="question-box answer-box" id="answer-container" style="display: none; margin-top: 15px;">
                 <p id="answerText"></p>
             </div>
+        </div>
 
-            <div class="sidebar-actions">
-                <button id="voteSkipBtn" class="party-action-btn" style="background: #607d8b; display: none;">
-                    <i class="fa-solid fa-forward-step"></i> اقتراح تغيير السؤال
+        <!-- الشريط السفلي المدمج في الصندوق (لنسخة الجوال فقط) -->
+        <div class="sidebar-bottom-bar" id="sidebarBottomBar">
+            <div class="left-actions">
+                <button id="surrenderBtn" class="surrender-btn" title="انسحاب">
+                    <i class="fa-solid fa-flag"></i>
                 </button>
+                <div id="mobileSoundWrapper"></div>
+            </div>
+            <div id="helpSlots" class="help-slots">
+                <!-- تُملأ ديناميكياً من JS -->
             </div>
         </div>
     </div>
 
-    <button id="surrenderBtn" class="surrender-btn" title="انسحاب">
-        <i class="fa-solid fa-flag"></i>
-    </button>
-
-    <!--  خانات المساعدات (3 خانات) -->
-    <div id="helpSlots" class="help-slots">
-        <!-- تُملأ ديناميكياً من JS -->
-    </div>
-
-    <!--  نافذة اختيار سبب الإبلاغ (يفتحها زر "إبلاغ" في بروفايل الخصم) -->
+    <!-- المودالات المتبقية (دون تغيير) -->
     <div id="reportModal" class="win-message-overlay">
         <div class="win-message-box">
             <h2 style="color: #ff9800;">الإبلاغ عن الخصم</h2>
@@ -249,15 +262,15 @@
         </button>
     </div>
 
-    <!-- أنيميشن استعد 3-2-1 (موحّد مع بقية الألعاب) -->
-<div class="ready-overlay" id="readyOverlay" style="display:none;">
-    <div class="ready-content">
-        <div class="ready-title" id="readyTitle">استعد!</div>
-        <div class="ready-count" id="readyCount">3</div>
+    <!-- أنيميشن استعد 3-2-1 -->
+    <div class="ready-overlay" id="readyOverlay" style="display:none;">
+        <div class="ready-content">
+            <div class="ready-title" id="readyTitle">استعد!</div>
+            <div class="ready-count" id="readyCount">3</div>
+        </div>
     </div>
-</div>
 
-<script src="../js/config.js" defer></script>
+    <script src="../js/config.js" defer></script>
     <script src="../js/social_bar.js" defer></script>
     <script src="../js/emoji_engine.js" defer></script>
     <script src="../js/utils.js" defer></script>
@@ -271,25 +284,26 @@
     <script src="../js/themes.js" defer></script>
     <script src="../js/games/game_emojis.js" defer></script>
     <script src="../js/anti_cheat.js" defer></script>
-  <script src="../js/sound.js" defer></script>
-  <script src="../js/music.js" defer></script>
-<!-- 🎮 كشف التطابق بين اللاعبين -->
-<div id="matchRevealOverlay">
-  <div class="mr-title">🎮 وجدنا لك خصماً!</div>
-  <div class="mr-vs-row">
-    <div class="mr-player">
-      <img id="mrMyAvatar" class="mr-avatar" src="../assets/avatars/avatar_1.svg" alt="">
-      <div class="mr-role-label">أنت</div>
-      <div id="mrMyName" class="mr-name">—</div>
+    <script src="../js/sound.js" defer></script>
+    <script src="../js/music.js" defer></script>
+
+    <!-- 🎮 كشف التطابق بين اللاعبين -->
+    <div id="matchRevealOverlay">
+      <div class="mr-title">🎮 وجدنا لك خصماً!</div>
+      <div class="mr-vs-row">
+        <div class="mr-player">
+          <img id="mrMyAvatar" class="mr-avatar" src="../assets/avatars/avatar_1.svg" alt="">
+          <div class="mr-role-label">أنت</div>
+          <div id="mrMyName" class="mr-name">—</div>
+        </div>
+        <div class="mr-vs">VS</div>
+        <div class="mr-player right">
+          <img id="mrOppAvatar" class="mr-avatar" src="../assets/avatars/avatar_2.svg" alt="">
+          <div class="mr-role-label">الخصم</div>
+          <div id="mrOppName" class="mr-name">—</div>
+        </div>
+      </div>
+      <div class="mr-ready-bar"><div id="mrReadyFill" class="mr-ready-fill"></div></div>
     </div>
-    <div class="mr-vs">VS</div>
-    <div class="mr-player right">
-      <img id="mrOppAvatar" class="mr-avatar" src="../assets/avatars/avatar_2.svg" alt="">
-      <div class="mr-role-label">الخصم</div>
-      <div id="mrOppName" class="mr-name">—</div>
-    </div>
-  </div>
-  <div class="mr-ready-bar"><div id="mrReadyFill" class="mr-ready-fill"></div></div>
-</div>
 </body>
 </html>

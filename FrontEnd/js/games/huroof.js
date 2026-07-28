@@ -55,6 +55,7 @@ const answerSection        = document.getElementById('answerSection');
 const playerAnswerInput    = document.getElementById('playerAnswerInput');
 const submitAnswerBtn      = document.getElementById('submitAnswerBtn');
 const voteSkipBtn          = document.getElementById('voteSkipBtn');
+const actionButtonsContainer = document.getElementById('actionButtonsContainer');
 
 
 // ============================================================
@@ -92,31 +93,25 @@ let playersStatsData = {
 // ============================================================
 function getValidAvatarSrc(avatarValue) {
     if (!avatarValue || avatarValue.trim() === '') return '../assets/avatars/avatar_1.svg';
-    //  نعالج روابط قديمة ثابتة (127.0.0.1/localhost) محفوظة من قبل التحديث:
-    // نحوّلها لمسار يعمل على العنوان الحالي (لابتوب/جوال).
     let v = avatarValue.trim();
     const staleMatch = v.match(/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/.*)$/i);
     if (staleMatch) {
-        const path = staleMatch[3];  // الجزء بعد الدومين
+        const path = staleMatch[3];
         if (path.startsWith('/uploads')) return `${API_URL}${path}`;
-        // كان أصلاً assets — نحوّله لمسار نسبي
         const fname = path.split('/').pop();
         return `../assets/avatars/${fname}`;
     }
     if (v.startsWith('http') || v.startsWith('data:')) return v;
     if (v.startsWith('/uploads')) return `${API_URL}${v}`;
-    //  مسارات نسبية أو مطلقة محلية → نأخذ اسم الملف فقط
     const name = v.split('/').pop();
     if (!name) return '../assets/avatars/avatar_1.svg';
     return `../assets/avatars/${name.includes('.') ? name : name + '.svg'}`;
 }
 
-//  رسم أفاتار اللاعب مبكراً من الجلسة (قبل وصول بيانات الخادم) حتى لا تظهر صورة فارغة
 document.addEventListener('DOMContentLoaded', () => {
     try {
         const myImg = document.getElementById('myAvatarImg');
         if (myImg && playerAvatar) myImg.src = getValidAvatarSrc(playerAvatar);
-        // احتياطي: أي أفاتار يفشل تحميله يرجع للصورة الافتراضية
         ['myAvatarImg', 'opponentAvatarImg', 'mrMyAvatar', 'mrOppAvatar', 'modalAvatar'].forEach((id, i) => {
             const el = document.getElementById(id);
             if (el) el.onerror = function () {
@@ -129,12 +124,54 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // ============================================================
+//  حل مشكلة الكيبورد في الجوال بطريقة سلسة
+// ============================================================
+(function setupMobileKeyboardHandler() {
+    const ansInput = document.getElementById('playerAnswerInput');
+    const sidebar = document.getElementById('questionSidebar');
+    if (!ansInput || !sidebar) return;
+
+    ansInput.addEventListener('focus', () => {
+        if (window.innerWidth <= 900) {
+            sidebar.classList.add('keyboard-active');
+            // تأكد من ظهور صندوق الإجابة عند التركيز
+            setTimeout(() => {
+                ansInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+        }
+    });
+
+    ansInput.addEventListener('blur', () => {
+        sidebar.classList.remove('keyboard-active');
+    });
+})();
+
+// ============================================================
+//  نقل زر الصوت لداخل الصندوق في الجوال فقط
+// ============================================================
+function integrateSoundButton() {
+    const soundBtn = document.getElementById('prSoundBtn');
+    const wrapper = document.getElementById('mobileSoundWrapper');
+    if (!soundBtn || !wrapper) return;
+
+    if (window.innerWidth <= 900) {
+        if (soundBtn.parentElement !== wrapper) {
+            wrapper.appendChild(soundBtn);
+        }
+    } else {
+        if (soundBtn.parentElement !== document.body) {
+            document.body.appendChild(soundBtn);
+        }
+    }
+}
+setInterval(integrateSoundButton, 500);
+
+
+// ============================================================
 //  الاتصال والانضمام للغرفة
 // ============================================================
 socket.on('connect', () => {
     if (IS_SOLO) {
-        // الوضع الفردي: نطلب من الخادم إنشاء مباراة ضد البوت
-        // نرسل التوكن والبيانات لأن الصفحة قد تُفتح مباشرة دون لوبي
         socket.emit('huroof_start_solo', {
             difficulty: SOLO_DIFF, token: token,
             name: playerName, avatar: playerAvatar
@@ -144,10 +181,8 @@ socket.on('connect', () => {
     }
 });
 
-// 🤖 بدء المباراة الفردية: نخزّن رمز الغرفة ونعرض الخصم "الكمبيوتر"
 socket.on('solo_started', (data) => {
     soloRoomCode = data.room_code;
-    // نضبط لوني مباشرة من الخادم (مصدر موثوق) قبل أي حدث آخر
     if (data.your_color) {
         myColor = data.your_color;
         var gt = document.querySelector('.game-title');
@@ -161,14 +196,9 @@ socket.on('solo_started', (data) => {
                         'الكمبيوتر (' + (data.difficulty_label || '') + ')',
                         '../assets/avatars/avatar_1.svg');
     } catch (e) {}
-    // نطلب كتالوج المساعدات الآن بعد أن صار لدينا رمز الغرفة
     setTimeout(() => socket.emit('huroof_get_helps_catalog', { roomCode: activeRoom() }), 300);
 
-    // تحسينات الوضع الفردي في الواجهة:
-    // 1) نخفي الدردشة (لا فائدة منها ضد بوت) — عبر صنف على body
-    //    ليصمد أمام إعادة بناء quick_chat.js للأزرار.
     document.body.classList.add('solo-mode');
-    // 2) علم الكمبيوتر = كوكب الأرض
     setTimeout(function () {
         var f = document.getElementById('opponentFlagImg');
         if (f) f.src = '../assets/flags/EARTH.svg';
@@ -180,10 +210,6 @@ socket.on('solo_error', (data) => {
     setTimeout(() => window.location.href = '../lobby.html', 1500);
 });
 
-
-/* ================================================================
-   🎮 showMatchReveal — كشف التطابق عند بدء المباراة
-   ================================================================ */
 function showMatchReveal(myName, myAvatarSrc, oppName, oppAvatarSrc) {
   var overlay = document.getElementById('matchRevealOverlay');
   if (!overlay) return;
@@ -217,7 +243,6 @@ socket.on('room_joined', (data) => {
         playersStatsData.opponent = { ...opponent.stats, color: opponent.color, avatar: getValidAvatarSrc(opponent.stats.avatar) };
     }
 
-    //  نضبط حالة أزرار الصداقة/الحظر حسب العلاقة الحقيقية من الخادم
     if (typeof data.opponent_user_id !== 'undefined') {
         _opponentUserId = data.opponent_user_id;
     }
@@ -226,7 +251,6 @@ socket.on('room_joined', (data) => {
     }
 
     updateTopBarUI();
-    // 🎮 كشف التطابق بين اللاعبين
     if (playersStatsData.opponent && playersStatsData.opponent.name) {
       showMatchReveal(
         playersStatsData.me.name, playersStatsData.me.avatar,
@@ -248,8 +272,6 @@ socket.on('update_players_stats', (players) => {
 //  أحداث السيرفر — سير اللعبة
 // ============================================================
 
-
-// ===== أنيميشن استعد 3-2-1 (موحّد مع بقية الألعاب) =====
 let _readyShown = false;
 function playReadyAnimation(cb) {
     const overlay = document.getElementById('readyOverlay');
@@ -283,7 +305,6 @@ socket.on('huroof_board_init', (data) => {
     systemMessageDisplay.textContent = 'اكتمل الاتصال! المعركة تبدأ الآن ⚔️';
     systemMessageDisplay.style.color = '#00ff88';
 
-    //  نبضة تعريفية على بروفايل الخصم (مرة واحدة) — تلمّح أنه قابل للضغط
     const oppBtn = document.getElementById('opponentProfileBtn');
     if (oppBtn && !oppBtn.dataset.hinted) {
         oppBtn.dataset.hinted = '1';
@@ -301,7 +322,6 @@ socket.on('huroof_board_init', (data) => {
 
 socket.on('huroof_turn_changed', (data) => {
     currentTurnSid = data.turn_sid;
-    // اللون أكثر استقراراً من sid عبر إعادة الاتصال/الانتقال
     currentTurnColor = data.turn_color || null;
     resetUIForNewTurn();
     applyTurnUI();
@@ -324,7 +344,6 @@ socket.on('huroof_new_question', (data) => {
     const qText = document.getElementById('questionText');
     if (qText) {
         qText.innerHTML = sanitizeHTML(data.questionData.question);
-        // 🆕 منع نسخ السؤال (يقلل الغش بالبحث عنه)
         qText.style.userSelect = 'none';
         qText.style.webkitUserSelect = 'none';
         qText.style.MozUserSelect = 'none';
@@ -332,21 +351,23 @@ socket.on('huroof_new_question', (data) => {
         qText.oncontextmenu = (e) => { e.preventDefault(); return false; };
     }
 
-    // 🆕 توست عند تغيير السؤال
     if (data.changed) {
         showToast('🔄 تم تغيير السؤال');
     }
 
+    // إظهار حاوية الأزرار (أنا أعرف / تغيير السؤال)
+    if (actionButtonsContainer) actionButtonsContainer.style.display = window.innerWidth <= 900 ? 'flex' : 'block';
+    
     buzzerBtn.style.display  = 'block';
     buzzerBtn.disabled       = false;
     buzzerBtn.style.opacity  = '1';
     systemMessageDisplay.textContent = '';
 
     if (voteSkipBtn) {
-        voteSkipBtn.style.display    = 'inline-block';
+        voteSkipBtn.style.display    = window.innerWidth <= 900 ? 'flex' : 'inline-block';
         voteSkipBtn.disabled         = false;
-        voteSkipBtn.innerHTML        = '<i class="fa-solid fa-forward-step"></i> اقتراح تغيير السؤال';
-        voteSkipBtn.style.background = '#607d8b';
+        voteSkipBtn.innerHTML        = '<i class="fa-solid fa-rotate"></i> تغيير السؤال';
+        voteSkipBtn.style.background = 'rgba(96,125,139,0.8)';
         voteSkipBtn.style.animation  = 'none';
     }
 
@@ -356,7 +377,6 @@ socket.on('huroof_new_question', (data) => {
     startGlobalTimer(data.timer);
 });
 
-// 🆕 دالة توست بسيطة (لو ما كانت موجودة)
 function showToast(message) {
     let toast = document.getElementById('huroof-toast');
     if (!toast) {
@@ -381,6 +401,9 @@ function showToast(message) {
 socket.on('huroof_buzzed', (data) => {
     clearInterval(globalTimerInterval);
     globalTimerDisplay.style.display = 'none';
+    
+    // إخفاء الأزرار المجمعة فوراً
+    if (actionButtonsContainer) actionButtonsContainer.style.display = 'none';
     buzzerBtn.style.display          = 'none';
     if (voteSkipBtn) voteSkipBtn.style.display = 'none';
 
@@ -392,7 +415,7 @@ socket.on('huroof_buzzed', (data) => {
         systemMessageDisplay.textContent = 'أسرع! اكتب إجابتك...';
         systemMessageDisplay.style.color = '#4CAF50';
         answerSection.style.display      = 'block';
-        submitAnswerBtn.disabled         = false;  // 🆕 نعيد تفعيل الزر للمحاولة الجديدة
+        submitAnswerBtn.disabled         = false;
         playerAnswerInput.value          = '';
         playerAnswerInput.focus();
     } else {
@@ -411,7 +434,7 @@ socket.on('huroof_chance_transfer', (data) => {
         systemMessageDisplay.textContent = 'أخطأ الخصم! فرصتك الآن...';
         systemMessageDisplay.style.color = '#4CAF50';
         answerSection.style.display      = 'block';
-        submitAnswerBtn.disabled         = false;  // 🆕 نعيد تفعيل الزر للمحاولة الجديدة
+        submitAnswerBtn.disabled         = false; 
         playerAnswerInput.value          = '';
         playerAnswerInput.focus();
     } else {
@@ -428,14 +451,17 @@ socket.on('huroof_last_chance', (data) => {
     systemMessageDisplay.innerHTML   = '🚨 الفرصة الأخيرة! من يضغط أولاً؟';
     systemMessageDisplay.style.color = '#f44336';
     answerSection.style.display      = 'none';
+    
+    // إظهار الأزرار المجمعة
+    if (actionButtonsContainer) actionButtonsContainer.style.display = window.innerWidth <= 900 ? 'flex' : 'block';
     buzzerBtn.style.display          = 'block';
     buzzerBtn.disabled               = false;
     buzzerBtn.style.opacity          = '1';
     if (voteSkipBtn) {
-        voteSkipBtn.style.display    = 'inline-block';
+        voteSkipBtn.style.display    = window.innerWidth <= 900 ? 'flex' : 'inline-block';
         voteSkipBtn.disabled         = false;
-        voteSkipBtn.innerHTML        = '<i class="fa-solid fa-forward-step"></i> اقتراح تغيير السؤال';
-        voteSkipBtn.style.background = '#607d8b';
+        voteSkipBtn.innerHTML        = '<i class="fa-solid fa-rotate"></i> تغيير السؤال';
+        voteSkipBtn.style.background = 'rgba(96,125,139,0.8)';
         voteSkipBtn.style.animation  = 'none';
     }
     startGlobalTimer(data.timer);
@@ -448,11 +474,12 @@ socket.on('huroof_answer_result', (data) => {
         if (cell) { cell.classList.remove('active'); cell.classList.add(data.color); }
         systemMessageDisplay.innerHTML   = `✅ إجابة صحيحة! (${sanitizeHTML(data.answer)})`;
         systemMessageDisplay.style.color = '#4CAF50';
+        
+        if (actionButtonsContainer) actionButtonsContainer.style.display = 'none';
         buzzerBtn.style.display          = 'none';
         answerSection.style.display      = 'none';
         if (voteSkipBtn) voteSkipBtn.style.display = 'none';
     } else {
-        // 🆕 رسالة ذكية + إظهار الإجابة الصحيحة
         const feedback = data.feedback || 'إجابة خاطئة';
         let msg = `❌ ${sanitizeHTML(feedback)}: ${sanitizeHTML(data.answer)}`;
         if (data.correct_answer) {
@@ -468,12 +495,13 @@ socket.on('huroof_timeout_info', (data) => {
     clearInterval(playerTimerInterval);
     systemMessageDisplay.textContent = sanitizeHTML(data.msg);
     systemMessageDisplay.style.color = '#ff9800';
+    
+    if (actionButtonsContainer) actionButtonsContainer.style.display = 'none';
     buzzerBtn.style.display          = 'none';
     answerSection.style.display      = 'none';
     if (voteSkipBtn) voteSkipBtn.style.display = 'none';
 });
 
-// 🆕 كشف الإجابة الصحيحة للطرفين (عند فشل الاثنين أو الاتفاق على التغيير)
 socket.on('huroof_reveal_answer', (data) => {
     clearInterval(globalTimerInterval);
     clearInterval(playerTimerInterval);
@@ -481,6 +509,7 @@ socket.on('huroof_reveal_answer', (data) => {
         systemMessageDisplay.innerHTML = `الإجابة الصحيحة: <b style="color:#4CAF50;">${sanitizeHTML(data.correct_answer)}</b>`;
         systemMessageDisplay.style.color = '#4CAF50';
     }
+    if (actionButtonsContainer) actionButtonsContainer.style.display = 'none';
     buzzerBtn.style.display     = 'none';
     answerSection.style.display = 'none';
     if (voteSkipBtn) voteSkipBtn.style.display = 'none';
@@ -488,17 +517,15 @@ socket.on('huroof_reveal_answer', (data) => {
 
 socket.on('huroof_skip_voted', (data) => {
     if (data.sid === socket.id) {
-        // أنا اللي طلبت التغيير → بانتظار موافقة الخصم
         if (voteSkipBtn) {
-            voteSkipBtn.innerHTML        = '<i class="fa-solid fa-check"></i> بانتظار موافقة الخصم...';
+            voteSkipBtn.innerHTML        = '<i class="fa-solid fa-check"></i> ننتظر الخصم...';
             voteSkipBtn.style.background = '#4CAF50';
             voteSkipBtn.disabled         = true;
         }
     } else {
-        // 🆕 الخصم طلب التغيير → يطلع لي طلب الموافقة
-        showToast('🔄 الخصم يطلب تغيير السؤال — اضغط "اقتراح تغيير السؤال" للموافقة');
+        showToast('🔄 الخصم يطلب تغيير السؤال — اضغط "تغيير السؤال" للموافقة');
         if (voteSkipBtn && !voteSkipBtn.disabled) {
-            voteSkipBtn.innerHTML        = '<i class="fa-solid fa-handshake"></i> الخصم يريد التغيير — وافق؟';
+            voteSkipBtn.innerHTML        = '<i class="fa-solid fa-handshake"></i> الخصم يطلب تغييره';
             voteSkipBtn.style.background  = '#ff9800';
             ensurePulseKeyframe();
             voteSkipBtn.style.animation   = 'huroofPulse 1s infinite';
@@ -506,7 +533,6 @@ socket.on('huroof_skip_voted', (data) => {
     }
 });
 
-// 🆕 يضمن وجود keyframe النبضة (مرة واحدة)
 function ensurePulseKeyframe() {
     if (document.getElementById('huroof-pulse-style')) return;
     const style = document.createElement('style');
@@ -616,6 +642,10 @@ buzzerBtn.addEventListener('click', () => {
     if (!buzzerBtn.disabled) {
         buzzerBtn.disabled      = true;
         buzzerBtn.style.opacity = '0.5';
+        
+        // إخفاء الأزرار المجمعة فوراً
+        if (actionButtonsContainer) actionButtonsContainer.style.display = 'none';
+        
         socket.emit('huroof_buzz', { roomCode: activeRoom() });
     }
 });
@@ -658,7 +688,7 @@ document.getElementById('confirmSurrenderBtn').onclick = () => {
 
 
 // ============================================================
-//  الشريط العلوي والالملف الشخصي
+//  الشريط العلوي والملف الشخصي
 // ============================================================
 
 function updateTopBarUI() {
@@ -735,7 +765,6 @@ function startPlayerTimer(seconds) {
 /** يُطبّق شكل الواجهة بناءً على من يملك الدور الحالي */
 function applyTurnUI() {
     const turnBadge = document.getElementById('turn-status-badge');
-    // نحدّد "دوري" باللون أولاً (مستقر)، ثم sid كاحتياط
     const isMyTurn = currentTurnColor
         ? (currentTurnColor === myColor)
         : (currentTurnSid === socket.id);
@@ -777,6 +806,9 @@ function resetUIForNewTurn() {
         qText.style.display = 'block';
     }
 
+    // إخفاء الأزرار بشكل صريح قبل اختيار الحرف
+    if (actionButtonsContainer) actionButtonsContainer.style.display = 'none';
+    
     globalTimerDisplay.style.display = 'none';
     buzzerBtn.style.display          = 'none';
     buzzerBtn.disabled               = false;
@@ -799,7 +831,7 @@ function updateRoundsUI(points, currentRound) {
         const indicator = document.getElementById('round-indicator');
         indicator.textContent = `الجولة ${currentRound}`;
         indicator.classList.remove('round-animate');
-        void indicator.offsetWidth; // إعادة تشغيل الأنيميشن
+        void indicator.offsetWidth; 
         indicator.classList.add('round-animate');
     }
 }
@@ -834,7 +866,6 @@ reportUserBtn?.addEventListener('click', () => {
         showToast('⚠️ سبق وأبلغت عن الخصم في هذه المباراة');
         return;
     }
-    // نغلق البروفايل ونفتح نافذة اختيار السبب
     document.getElementById('playerProfileModal').style.display = 'none';
     reportModal.style.display = 'flex';
 });
@@ -854,7 +885,7 @@ document.querySelectorAll('.report-reason').forEach(btn => {
 socket.on('report_result', (data) => {
     showToast(data.ok ? '✅ ' + data.msg : '⚠️ ' + data.msg);
     if (data.ok) {
-        reportSentThisMatch = true;  // بلاغ واحد لكل مباراة
+        reportSentThisMatch = true; 
     }
 });
 
@@ -863,18 +894,14 @@ socket.on('chat_error', (data) => {
 });
 
 // ============================================================
-//  الصداقة والحظر (أزرار بروفايل الخصم) — ديناميكية حسب الحالة
+//  الصداقة والحظر (أزرار بروفايل الخصم)
 // ============================================================
 const addFriendBtn = document.querySelector('#modalActionButtons .add-friend');
 const blockUserBtn  = document.querySelector('#modalActionButtons .block-user');
 
-// حالة العلاقة الحالية مع الخصم (تتغيّر مع الأفعال + من الخادم)
-// 'friends' = صديق (زر: حذف صديق) | 'none' = غير صديق (زر: إضافة صديق)
-// 'pending' = طلب مُرسَل (زر: في انتظار الرد) | blockState منفصل
 let friendState = (sessionStorage.getItem('isFriendly') === '1') ? 'friends' : 'none';
 let blockState  = false;
 
-// تُستدعى من معالج room_joined لضبط الحالة حسب العلاقة الحقيقية من الخادم
 function applyOpponentRelation(relation) {
     if (relation === 'friends') { friendState = 'friends'; blockState = false; }
     else if (relation === 'i_blocked') { blockState = true; friendState = 'none'; }
@@ -889,35 +916,34 @@ function applyOpponentRelation(relation) {
 function renderFriendButton() {
     if (!addFriendBtn) return;
     if (blockState) {
-        // محظور → نخفي زر الصداقة (لا معنى لها أثناء الحظر)
         addFriendBtn.style.display = 'none';
         return;
     }
     addFriendBtn.style.display = '';
     if (friendState === 'friends') {
         addFriendBtn.innerHTML = '<i class="fa-solid fa-user-minus"></i> حذف صديق';
-        addFriendBtn.style.background = 'linear-gradient(135deg, #e74c3c, #c0392b)';  // أحمر
+        addFriendBtn.style.background = 'linear-gradient(135deg, #e74c3c, #c0392b)';
         addFriendBtn.style.boxShadow  = '0 4px 10px rgba(231, 76, 60, 0.4)';
         addFriendBtn.disabled = false;
         addFriendBtn.style.opacity = '1';
         addFriendBtn.style.cursor = 'pointer';
     } else if (friendState === 'pending') {
         addFriendBtn.innerHTML = '<i class="fa-solid fa-clock"></i> في انتظار الرد';
-        addFriendBtn.style.background = 'rgba(255,255,255,0.12)';  // رمادي معطّل
+        addFriendBtn.style.background = 'rgba(255,255,255,0.12)'; 
         addFriendBtn.style.boxShadow  = 'none';
         addFriendBtn.disabled = true;
         addFriendBtn.style.opacity = '0.7';
         addFriendBtn.style.cursor = 'default';
     } else if (friendState === 'incoming') {
         addFriendBtn.innerHTML = '<i class="fa-solid fa-user-check"></i> قبول الطلب';
-        addFriendBtn.style.background = 'linear-gradient(135deg, #2ecc71, #27ae60)';  // أخضر
+        addFriendBtn.style.background = 'linear-gradient(135deg, #2ecc71, #27ae60)'; 
         addFriendBtn.style.boxShadow  = '0 4px 10px rgba(46, 204, 113, 0.4)';
         addFriendBtn.disabled = false;
         addFriendBtn.style.opacity = '1';
         addFriendBtn.style.cursor = 'pointer';
     } else {
         addFriendBtn.innerHTML = '<i class="fa-solid fa-user-plus"></i> إضافة صديق';
-        addFriendBtn.style.background = 'linear-gradient(135deg, #3498db, #2980b9)';  // أزرق
+        addFriendBtn.style.background = 'linear-gradient(135deg, #3498db, #2980b9)'; 
         addFriendBtn.style.boxShadow  = '0 4px 10px rgba(52, 152, 219, 0.4)';
         addFriendBtn.disabled = false;
         addFriendBtn.style.opacity = '1';
@@ -929,25 +955,24 @@ function renderBlockButton() {
     if (!blockUserBtn) return;
     if (blockState) {
         blockUserBtn.innerHTML = '<i class="fa-solid fa-unlock"></i> رفع الحظر';
-        blockUserBtn.style.background = 'linear-gradient(135deg, #e67e22, #d35400)';  // برتقالي
+        blockUserBtn.style.background = 'linear-gradient(135deg, #e67e22, #d35400)'; 
     } else {
         blockUserBtn.innerHTML = '<i class="fa-solid fa-ban"></i> حظر';
-        blockUserBtn.style.background = '';  // اللون الافتراضي
+        blockUserBtn.style.background = ''; 
     }
 }
 
 renderFriendButton();
 renderBlockButton();
 
-let _pendingFriendAction = null;  // 'add' أو 'remove' — لتحديث الحالة بدقة
+let _pendingFriendAction = null; 
 
 addFriendBtn?.addEventListener('click', () => {
-    if (blockState || friendState === 'pending') return;  // معطّل أثناء الحظر أو انتظار الرد
+    if (blockState || friendState === 'pending') return; 
     if (friendState === 'friends') {
         _pendingFriendAction = 'remove';
         socket.emit('remove_friend_opponent', { roomCode, token, target_id: _opponentUserId });
     } else if (friendState === 'incoming') {
-        // الخصم أرسل لي طلباً → أقبله
         if (_opponentUserId) {
             socket.emit('respond_friend_request', { token, requester_id: _opponentUserId, accept: true });
         }
@@ -972,7 +997,6 @@ blockUserBtn?.addEventListener('click', () => {
 socket.on('friend_result', (data) => {
     showToast((data.ok ? '✅ ' : '⚠️ ') + (data.msg || ''));
     if (data.ok && _pendingFriendAction) {
-        // نحدّث الحالة حسب الفعل الذي أرسلناه (دقيق، لا يعتمد على نص الرسالة)
         friendState = (_pendingFriendAction === 'remove') ? 'none' : 'pending';
         renderFriendButton();
     }
@@ -982,7 +1006,7 @@ socket.on('block_result', (data) => {
     showToast((data.ok ? '🚫 ' : '⚠️ ') + (data.msg || ''));
     if (data.ok) {
         blockState = true;
-        friendState = 'none';  // الحظر يلغي الصداقة
+        friendState = 'none'; 
         renderBlockButton();
         renderFriendButton();
     }
@@ -996,13 +1020,11 @@ socket.on('unblock_result', (data) => {
     }
 });
 
-// 🆕 الخصم حذفني من أصدقائه → أُحدّث زري إلى "إضافة صديق"
 socket.on('opponent_unfriended', () => {
     friendState = 'none';
     renderFriendButton();
 });
 
-// 🆕 الخصم قبِل طلب صداقتي → أُحدّث زري إلى "حذف صديق"
 socket.on('opponent_accepted_friend', () => {
     friendState = 'friends';
     renderFriendButton();
@@ -1012,11 +1034,9 @@ socket.on('friend_request_received', (data) => {
     showToast('👋 ' + sanitizeHTML(data.from || 'لاعب') + ' أرسل لك طلب صداقة');
 });
 
-// 🆕 toast تفاعلي لحظي لطلب الصداقة داخل المباراة (غير معطّل، لا يوقف اللعب)
 socket.on('ingame_friend_request', (data) => {
     if (!data || !data.requesterId) return;
     showFriendRequestToast(data.requesterId, sanitizeHTML(data.requesterName || 'لاعب'));
-    // نحدّث زر بروفايل الخصم إلى "قبول الطلب" (طلب وارد منه)
     _opponentUserId = data.requesterId;
     if (friendState !== 'friends' && !blockState) {
         friendState = 'incoming';
@@ -1025,7 +1045,6 @@ socket.on('ingame_friend_request', (data) => {
 });
 
 function showFriendRequestToast(requesterId, requesterName) {
-    // نزيل أي toast صداقة سابق (نعرض واحداً فقط)
     const old = document.getElementById('ingameFriendToast');
     if (old) old.remove();
 
@@ -1062,18 +1081,15 @@ function showFriendRequestToast(requesterId, requesterName) {
     document.getElementById('frToastAccept').addEventListener('click', () => {
         socket.emit('respond_friend_request', { token, requester_id: requesterId, accept: true });
         showToast('✅ تمت إضافة الصديق');
-        // 🆕 نحدّث زر بروفايل الخصم إلى "حذف صديق" (صرنا أصدقاء)
         friendState = 'friends';
         blockState = false;
         if (typeof renderFriendButton === 'function') renderFriendButton();
         dismiss();
     });
     document.getElementById('frToastReject').addEventListener('click', () => {
-        // "لاحقاً" لا يرفض الطلب — يبقى في تبويب الطلبات (النظام الحالي محفوظ)
         dismiss();
     });
 
-    // يختفي تلقائياً بعد 8 ثوانٍ (الطلب يبقى في تبويب الطلبات)
     const autoTimer = setTimeout(dismiss, 8000);
 }
 socket.on('leaver_penalty', (data) => {
@@ -1082,7 +1098,6 @@ socket.on('leaver_penalty', (data) => {
 
 // ----------------------------------------
 //  الرسائل الجاهزة داخل اللعبة (Quick Chat)
-// زر عائم يفتح لوحة العبارات المعتمدة. يرسل phraseId فقط (لا نص حر).
 // ----------------------------------------
 (function initIngameQuickChat() {
     const btn = document.getElementById('gameQuickChatBtn');
@@ -1091,13 +1106,12 @@ socket.on('leaver_penalty', (data) => {
             socket,
             triggerBtn: btn,
             event: 'send_room_chat_message',
-            extra: () => ({ roomCode }),  // رسالة داخل غرفة المباراة الحالية
-            context: 'game',              // 🆕 عبارات المباراة (تنافسية) لا اللوبي
-            game: 'huroof',               // لجلب عبارات حروف المشتراة
+            extra: () => ({ roomCode }),
+            context: 'game',
+            game: 'huroof', 
         });
     }
 
-    // عرض الرسائل الواردة كفقاعة عائمة فوق أفاتار المُرسِل
     socket.on('new_room_chat_message', (msg) => {
         if (!msg || !msg.text) return;
         const mine = msg.senderSid === socket.id;
@@ -1105,7 +1119,6 @@ socket.on('leaver_penalty', (data) => {
     });
 
     function showChatBubble(text, mine) {
-        // نعرضها قرب أفاتار اللاعب (يمين=أنا، يسار=الخصم في الواجهة RTL)
         const anchor = mine
             ? document.getElementById('myProfileBtn')
             : document.getElementById('opponentProfileBtn');
@@ -1131,8 +1144,8 @@ socket.on('leaver_penalty', (data) => {
     let _helpsLoadout = [];
     let _helpsCatalog = [];
     let _helpsUsed = new Set();
-    let _questionActive = false;  // هل يوجد سؤال نشط (حرف مختار)؟
-    let _inventory = {};          // {help_id: quantity}
+    let _questionActive = false; 
+    let _inventory = {};         
     let _devMode = false;
     let _slots = 3;
     let _fourthSlotLevel = 10;
@@ -1154,8 +1167,6 @@ socket.on('leaver_penalty', (data) => {
             if (!h) return;
             const used = _helpsUsed.has(id);
             const owned = _owns(id);
-            // ⏱️ القفل حسب توقيت المساعدة: post = يلزم سؤال معروض،
-            // pre = قبل اختيار الحرف فقط (كانت مقفولة بوقتها الصحيح — bug عكسي)
             const timing = h.timing || 'post';
             const locked = (timing === 'pre') ? _questionActive : !_questionActive;
             const qty = _devMode ? '∞' : (_inventory[id] || 0);
@@ -1195,7 +1206,6 @@ socket.on('leaver_penalty', (data) => {
         setTimeout(() => { t.remove(); }, 3500);
     }
 
-    // طلب الكتالوج عند بدء المباراة
     socket.on('connect', () => {
         setTimeout(() => socket.emit('huroof_get_helps_catalog', { roomCode: activeRoom() }), 800);
     });
@@ -1209,7 +1219,6 @@ socket.on('leaver_penalty', (data) => {
         _devMode = !!data.devMode;
         _slots = data.slots || 3;
         _fourthSlotLevel = data.fourthSlotLevel || 10;
-        // الخانة الرابعة: لو مفتوحة، نضيف مساعدة يملكها اللاعب وليست في التحميل الأساسي
         if (_slots >= 4) {
             const owned = Object.keys(_inventory);
             const extra = owned.find(id => !_helpsLoadout.includes(id));
@@ -1218,16 +1227,12 @@ socket.on('leaver_penalty', (data) => {
         renderHelpSlots();
     });
 
-    // تفعيل الخانات عند بدء سؤال (حرف مختار)، وتعطيلها عند انتهائه
     socket.on('huroof_new_question', () => { _questionActive = true; renderHelpSlots(); });
     socket.on('huroof_hex_locked', () => { _questionActive = true; renderHelpSlots(); });
     socket.on('huroof_round_over', () => { _questionActive = false; renderHelpSlots(); });
     socket.on('huroof_match_over', () => { _questionActive = false; renderHelpSlots(); });
-    // عند العودة لاختيار حرف جديد (انتهى السؤال السابق)
     socket.on('huroof_turn_changed', () => { _questionActive = false; renderHelpSlots(); });
 
-    // نتيجة استخدام مساعدتي
-    //  اختيار التصنيف: الخادم يرسل قائمة التصنيفات لنعرضها
     socket.on('huroof_choose_category_options', (data) => {
         if (!data || !Array.isArray(data.categories) || !data.categories.length) {
             showHelpToast('⚠️ لا توجد تصنيفات متاحة');
@@ -1269,7 +1274,6 @@ socket.on('leaver_penalty', (data) => {
             showHelpToast('⚠️ ' + (data.msg || 'تعذّر استخدام المساعدة'));
             return;
         }
-        // المساعدة نجحت → نعلّمها مستخدمة + ننقص المخزون محلياً
         if (data.helpId) {
             _helpsUsed.add(data.helpId);
             if (!_devMode && _inventory[data.helpId]) {
@@ -1278,9 +1282,7 @@ socket.on('leaver_penalty', (data) => {
         }
         renderHelpSlots();
 
-        // ===== تطبيق التأثير =====
         if (data.effect === 'extend_time') {
-            // نزامن العدّاد مع القيمة الجديدة من الخادم (فعّالة حقاً)
             const newTotal = data.new_total;
             if (typeof newTotal === 'number') {
                 if (typeof _globalTimerLeft !== 'undefined' && _globalTimerLeft > 0) {
@@ -1298,7 +1300,6 @@ socket.on('leaver_penalty', (data) => {
             showHelpToast(`🔢 عدد حروف الإجابة: ${data.count}`);
         }
         else if (data.effect === 'reveal') {
-            // كشف معلومة (حرف/تصنيف/نصف) — نعرضها في toast أطول قليلاً
             showHelpToast('💡 ' + (data.msg || ''));
         }
         else if (data.effect === 'skip_letter') {
@@ -1312,99 +1313,8 @@ socket.on('leaver_penalty', (data) => {
         }
     });
 
-    // الخصم استخدم مساعدة (شفافية)
     socket.on('huroof_opponent_used_help', (data) => {
         if (!data) return;
         showHelpToast(`🔔 الخصم استخدم: ${sanitizeHTML(data.name || 'مساعدة')}`);
     });
-})();
-
-// ============================================================
-//  تعديلات الجوال برمجياً (لتجنب المساس بالكمبيوتر)
-// ============================================================
-(function initMobileEnhancements() {
-    if (window.innerWidth > 900) return;
-
-    document.addEventListener('DOMContentLoaded', () => {
-        const sidebar = document.getElementById('questionSidebar');
-        if (!sidebar) return;
-
-        // دمج أزرار (أنا أعرف + تغيير السؤال) في حاوية واحدة للترتيب
-        const buzzer = document.getElementById('buzzerBtn');
-        const skipWrap = document.querySelector('.sidebar-actions');
-        if (buzzer && skipWrap) {
-            const actionWrap = document.createElement('div');
-            actionWrap.className = 'mobile-actions-wrapper';
-            buzzer.parentNode.insertBefore(actionWrap, buzzer);
-            actionWrap.appendChild(buzzer);
-            actionWrap.appendChild(skipWrap);
-        }
-
-        // إنشاء شريط سفلي داخل الصندوق ليحتوي المساعدات والصوت والانسحاب
-        const bottomBar = document.createElement('div');
-        bottomBar.className = 'mobile-bottom-bar';
-        
-        const leftActions = document.createElement('div');
-        leftActions.className = 'left-actions';
-        
-        const surrender = document.getElementById('surrenderBtn');
-        const helpSlots = document.getElementById('helpSlots');
-        
-        if (surrender) leftActions.appendChild(surrender);
-        bottomBar.appendChild(leftActions);
-        if (helpSlots) bottomBar.appendChild(helpSlots);
-        sidebar.appendChild(bottomBar);
-
-        // نقل زر الصوت ديناميكياً
-        const sndTimer = setInterval(() => {
-            const snd = document.querySelector('.pr-sound-float');
-            if (snd) {
-                leftActions.appendChild(snd);
-                clearInterval(sndTimer);
-            }
-        }, 100);
-        setTimeout(() => clearInterval(sndTimer), 5000);
-    });
-
-    // معالج الكيبورد الذي يمنع طغيان الكيبورد ويرفع الصندوق دون إخفاء الأزرار
-    if (window.visualViewport) {
-        let isKbOpen = false;
-        let maxVvHeight = window.visualViewport.height;
-
-        function applyLayout() {
-            const sidebar = document.getElementById('questionSidebar');
-            if (!sidebar) return;
-            
-            const vv = window.visualViewport;
-            if (vv.height > maxVvHeight) maxVvHeight = vv.height;
-
-            if (vv.height < maxVvHeight * 0.85) { // إذا الكيبورد فتح
-                if (!isKbOpen) {
-                    isKbOpen = true;
-                    sidebar.classList.add('keyboard-open');
-                }
-                const topOffset = vv.offsetTop + vv.height - sidebar.offsetHeight;
-                sidebar.style.setProperty('top', topOffset + 'px', 'important');
-                sidebar.style.setProperty('bottom', 'auto', 'important');
-                
-                setTimeout(() => {
-                    const ansInput = document.getElementById('playerAnswerInput');
-                    if (ansInput) ansInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 50);
-            } else { // إذا الكيبورد أُغلق
-                if (isKbOpen) {
-                    isKbOpen = false;
-                    sidebar.classList.remove('keyboard-open');
-                    sidebar.style.removeProperty('top');
-                    sidebar.style.setProperty('bottom', '0', 'important');
-                }
-            }
-        }
-
-        window.visualViewport.addEventListener('resize', applyLayout);
-        window.visualViewport.addEventListener('scroll', applyLayout);
-        document.addEventListener('focusin', (e) => {
-            if (e.target.id === 'playerAnswerInput') setTimeout(applyLayout, 100);
-        });
-    }
 })();
