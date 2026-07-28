@@ -159,14 +159,51 @@
             const IS_APP = window.PR_IS_APP === true || (typeof window.Capacitor !== 'undefined');
 
             if (mode === 'platform') {
-                blip(523, 0.12, 0.08, 0.40, 'triangle');
-                blip(587, 0.12, 0.08, 0.55, 'triangle');
-                blip(659, 0.12, 0.08, 0.70, 'triangle');
-                blip(784, 0.12, 0.08, 0.85, 'triangle');
-                blip(880, 0.12, 0.08, 1.00, 'triangle');
-                blip(1047, 0.40, 0.10, 1.20, 'triangle');
-                el.addEventListener('click', close);
-                setTimeout(close, 2400);
+                // نُجمّد الحركة حتى نعرف هل الصوت متاح، كي لا يمضي
+                // الأنيميشن صامتاً بينما ننتظر إذن المتصفح.
+                const anims = el.querySelectorAll('.pr-sp-hex, .pr-sp-name, .pr-sp-skip');
+                anims.forEach((a) => { a.style.animationPlayState = 'paused'; });
+
+                let started = false;
+                const run = () => {
+                    if (started) return; started = true;
+                    if (gate && gate.parentNode) gate.remove();
+                    anims.forEach((a) => { a.style.animationPlayState = 'running'; });
+                    blip(523, 0.12, 0.08, 0.40, 'triangle');
+                    blip(587, 0.12, 0.08, 0.55, 'triangle');
+                    blip(659, 0.12, 0.08, 0.70, 'triangle');
+                    blip(784, 0.12, 0.08, 0.85, 'triangle');
+                    blip(880, 0.12, 0.08, 1.00, 'triangle');
+                    blip(1047, 0.40, 0.10, 1.20, 'triangle');
+                    el.addEventListener('click', close);
+                    setTimeout(close, 2400);
+                };
+
+                // بوابة «المس للبدء» — تظهر فقط لو رفض المتصفح فتح الصوت
+                // (الحالة الوحيدة عملياً: العودة من مصادقة جوجل على الويب،
+                //  فالمستند جديد بعد تنقّل خارجي ولا تفاعل فيه).
+                let gate = null;
+                const showGate = () => {
+                    if (started || gate) return;
+                    gate = document.createElement('div');
+                    gate.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;'
+                        + 'justify-content:center;flex-direction:column;gap:14px;background:#0b0e14;z-index:2;';
+                    gate.innerHTML = '<div style="font-size:2rem;">🎮</div>'
+                        + '<div style="color:#c9d1d9;font-weight:700;letter-spacing:2px;">المس للبدء</div>'
+                        + '<div style="color:#8b949e;font-size:.75rem;">PlayRush</div>';
+                    el.appendChild(gate);
+                    el.addEventListener('click', () => { _wake(); run(); }, { once: true });
+                    setTimeout(run, 2500);   // لا نحبس أحداً: يمضي صامتاً لو لم يلمس
+                };
+
+                _wake();
+                let waited = 0;
+                const poll = setInterval(() => {
+                    const a = window.__prAudioCtx;
+                    if (started) { clearInterval(poll); return; }
+                    if (a && a.state === 'running') { clearInterval(poll); run(); }
+                    else if ((waited += 60) >= 300) { clearInterval(poll); showGate(); }
+                }, 60);
                 return;
             }
 
