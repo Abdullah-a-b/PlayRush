@@ -120,21 +120,9 @@
             
             <div id="systemMessageDisplay" style="color: #00d2ff; font-weight: bold; margin: 15px 0; min-height: 24px; text-align: center;"></div>
 
-            <!-- الزر الحقيقي مخفي (يتحكم به JS) -->
-            <button id="buzzerBtn" class="party-action-btn" style="display:none; position:absolute; pointer-events:none; opacity:0; width:0; height:0; overflow:hidden; margin:0; padding:0;">
+            <button id="buzzerBtn" class="party-action-btn" style="background: #ff9800; font-size: 24px; padding: 15px; margin: 15px 0; display: none; width: 100%; box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);">
                 <i class="fa-solid fa-hand-pointer"></i> أنا أعرف!
             </button>
-            <!-- صف الأزرار الظاهر: بروكسي + تغيير السؤال -->
-            <div id="buzzerRow" style="display: none; width: 100%;">
-                <div style="display: flex; gap: 10px; align-items: stretch;">
-                    <button id="buzzerProxy" class="party-action-btn" style="background: #ff9800; font-size: 20px; padding: 14px; flex: 1; box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);">
-                        <i class="fa-solid fa-hand-pointer"></i> أنا أعرف!
-                    </button>
-                    <button id="voteSkipBtn" class="party-action-btn" style="background: #607d8b; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 14px 16px; white-space: nowrap; flex-shrink: 0;">
-                        <i class="fa-solid fa-shuffle"></i> تغيير السؤال
-                    </button>
-                </div>
-            </div>
 
             <div id="answerSection" style="display: none; width: 100%;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
@@ -147,6 +135,12 @@
 
             <div class="question-box answer-box" id="answer-container" style="display: none; margin-top: 15px;">
                 <p id="answerText"></p>
+            </div>
+
+            <div class="sidebar-actions">
+                <button id="voteSkipBtn" class="party-action-btn" style="background: #607d8b; display: none;">
+                    <i class="fa-solid fa-forward-step"></i> اقتراح تغيير السؤال
+                </button>
             </div>
         </div>
     </div>
@@ -263,40 +257,6 @@
     </div>
 </div>
 
-<script>
-// ربط البروكسي مع الزر الأصلي المخفي
-document.addEventListener('DOMContentLoaded', () => {
-    const buzzerBtn   = document.getElementById('buzzerBtn');
-    const buzzerProxy = document.getElementById('buzzerProxy');
-    const buzzerRow   = document.getElementById('buzzerRow');
-    if (!buzzerBtn || !buzzerProxy || !buzzerRow) return;
-
-    // عند الضغط على البروكسي → شغّل الزر الأصلي
-    buzzerProxy.addEventListener('click', () => {
-        if (!buzzerBtn.disabled) buzzerBtn.click();
-    });
-
-    // مزامنة حالة disabled بين الزرين
-    const syncProxy = () => {
-        buzzerProxy.disabled      = buzzerBtn.disabled;
-        buzzerProxy.style.opacity = buzzerBtn.style.opacity || '1';
-    };
-
-    // راقب التغييرات على style وdisabled للزر الأصلي
-    const observer = new MutationObserver(() => {
-        const d = buzzerBtn.style.display;
-        // إذا JS يُظهر buzzerBtn → أظهر الـ Row بدله
-        if (d && d !== 'none') {
-            buzzerBtn.style.display = 'none'; // نبقيه مخفياً دائماً
-            buzzerRow.style.display = 'block';
-        } else {
-            buzzerRow.style.display = 'none';
-        }
-        syncProxy();
-    });
-    observer.observe(buzzerBtn, { attributes: true, attributeFilter: ['style', 'disabled'] });
-});
-</script>
 <script src="../js/config.js" defer></script>
     <script src="../js/social_bar.js" defer></script>
     <script src="../js/emoji_engine.js" defer></script>
