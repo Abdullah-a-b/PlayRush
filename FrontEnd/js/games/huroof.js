@@ -349,6 +349,10 @@ socket.on('huroof_new_question', (data) => {
         voteSkipBtn.disabled         = false;
         voteSkipBtn.innerHTML        = '<i class="fa-solid fa-rotate"></i>';
         voteSkipBtn.style.background = '#607d8b';
+        voteSkipBtn.style.width      = '54px';
+        voteSkipBtn.style.height     = '54px';
+        voteSkipBtn.style.borderRadius = '50%';
+        voteSkipBtn.style.padding    = '0';
         voteSkipBtn.style.animation  = 'none';
     }
 
@@ -440,6 +444,10 @@ socket.on('huroof_last_chance', (data) => {
         voteSkipBtn.disabled         = false;
         voteSkipBtn.innerHTML        = '<i class="fa-solid fa-rotate"></i>';
         voteSkipBtn.style.background = '#607d8b';
+        voteSkipBtn.style.width      = '54px';
+        voteSkipBtn.style.height     = '54px';
+        voteSkipBtn.style.borderRadius = '50%';
+        voteSkipBtn.style.padding    = '0';
         voteSkipBtn.style.animation  = 'none';
     }
     startGlobalTimer(data.timer);
@@ -495,18 +503,24 @@ socket.on('huroof_reveal_answer', (data) => {
 
 socket.on('huroof_skip_voted', (data) => {
     if (data.sid === socket.id) {
-        // أنا اللي طلبت التغيير → بانتظار موافقة الخصم
+        // أنا اللي طلبت التغيير → بانتظار موافقة الخصم (أونلاين فقط)
         if (voteSkipBtn) {
-            voteSkipBtn.innerHTML        = '<i class="fa-solid fa-check"></i> بانتظار موافقة الخصم...';
+            voteSkipBtn.innerHTML        = '<i class="fa-solid fa-check"></i> بانتظار الموافقة...';
             voteSkipBtn.style.background = '#4CAF50';
+            voteSkipBtn.style.width      = 'auto';        // يتّسع للنصّ
+            voteSkipBtn.style.borderRadius = '14px';
+            voteSkipBtn.style.padding    = '0 14px';
             voteSkipBtn.disabled         = true;
         }
     } else {
-        // 🆕 الخصم طلب التغيير → يطلع لي طلب الموافقة
-        showToast('🔄 الخصم يطلب تغيير السؤال — اضغط "اقتراح تغيير السؤال" للموافقة');
+        // الخصم طلب التغيير → يطلع لي طلب الموافقة (أونلاين فقط)
+        showToast('🔄 الخصم يطلب تغيير السؤال — اضغط زر التغيير للموافقة');
         if (voteSkipBtn && !voteSkipBtn.disabled) {
-            voteSkipBtn.innerHTML        = '<i class="fa-solid fa-handshake"></i> الخصم يريد التغيير — وافق؟';
+            voteSkipBtn.innerHTML        = '<i class="fa-solid fa-handshake"></i> وافق على التغيير؟';
             voteSkipBtn.style.background  = '#ff9800';
+            voteSkipBtn.style.width      = 'auto';
+            voteSkipBtn.style.borderRadius = '14px';
+            voteSkipBtn.style.padding    = '0 14px';
             ensurePulseKeyframe();
             voteSkipBtn.style.animation   = 'huroofPulse 1s infinite';
         }
