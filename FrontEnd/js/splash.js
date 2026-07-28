@@ -13,12 +13,30 @@
     if (!mode) return;
 
     const FLAG = mode === 'company' ? 'pr_splash_company' : 'pr_splash_platform';
-    // 🩹 لا نضع العلم هنا! كان يُوضع قبل العرض، فلو أُعيد تحميل الصفحة
-    // (الـservice worker كان يفعلها) ضاع الأنيميشن نهائياً لبقية الجلسة.
-    // الآن: العلم يُوضع عند *انتهاء* الأنيميشن فقط (داخل close).
-    try {
-        if (sessionStorage.getItem(FLAG)) return;
-    } catch (e) { return; }
+
+    // ============================================================
+    // 🩹 السبب الحقيقي لاختفاء أنيميشن المنصة:
+    // كان الشرط الوحيد هو علم في sessionStorage «مرة لكل جلسة».
+    // لكن sessionStorage لا يموت كما نظن:
+    //   • يبقى عبر كل التنقلات في نفس التبويب (categories → لوبي → رجوع)
+    //   • ويعيده كروم كما هو عند «استعادة التبويبات» بعد إغلاق المتصفح
+    // فمن أول زيارة واحدة لصفحة categories يُدفن الأنيميشن للأبد.
+    //
+    // الحل: «تذكرة» تُصدر عند كل دخول حقيقي (login / تسجيل / استئناف
+    // جلسة / OAuth). وجود التذكرة يفرض العرض متجاوزاً العلم.
+    // ============================================================
+    let ticket = false;
+    if (mode === 'platform') {
+        try { ticket = sessionStorage.getItem('pr_splash_ticket') === '1'; } catch (e) {}
+        // عودة جوجل: ?token=... في الرابط = دخول جديد بالتأكيد
+        if (!ticket && /[?&]token=/.test(location.search)) ticket = true;
+        if (ticket) { try { sessionStorage.removeItem('pr_splash_ticket'); } catch (e) {} }
+    }
+    if (!ticket) {
+        try {
+            if (sessionStorage.getItem(FLAG)) return;
+        } catch (e) { return; }
+    }
     // حارس ضد تركيب مزدوج داخل نفس الصفحة
     if (window.__prSplashMounted) return;
     window.__prSplashMounted = true;

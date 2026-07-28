@@ -66,6 +66,8 @@
             try { sessionStorage.setItem('token', t); } catch (e) {}
 
             var dest = (me && me.player_name) ? 'categories.html' : 'profile-setup.html';
+            // 🎬 استئناف جلسة = دخول جديد → تذكرة أنيميشن المنصة
+            try { sessionStorage.setItem('pr_splash_ticket', '1'); } catch (e) {}
 
             // لا نقطع أنيميشن الشركة: لو كان يعمل، ننتظر انتهاءه ثم ننتقل.
             if (window.__prSplashActive) {

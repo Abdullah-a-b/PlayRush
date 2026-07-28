@@ -97,7 +97,10 @@ window.addEventListener('load', () => {
 
                     // 🎬 دخول جديد = أنيميشن المنصة يُعرض من جديد (حتى لو
                     // كان logout ثم login داخل نفس جلسة المتصفح)
-                    try { sessionStorage.removeItem('pr_splash_platform'); } catch (e) {}
+                    try {
+                        sessionStorage.removeItem('pr_splash_platform');
+                        sessionStorage.setItem('pr_splash_ticket', '1');   // 🎬 تذكرة عرض
+                    } catch (e) {}
 
                     //  التوجيه الذكي والفوري! (بدون انتظار لتخطي مشكلة التحديث)
                     if (data.has_profile) {

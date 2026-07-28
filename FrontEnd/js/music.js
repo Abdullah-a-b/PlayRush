@@ -145,6 +145,21 @@
         ac(); start();
     }, 120);
 
+    // 🔍 واجهة تشخيص/تحكّم (يستخدمها pr_diag.js وزر الإعدادات)
+    window.PRMusic = {
+        start: () => { try { ctx && ctx.resume(); } catch (e) {} running = false; start(); },
+        state: () => ({
+            theme:   THEME,
+            running: running,
+            ctxState: ctx ? ctx.state : 'no-ctx',
+            shared:  ctx === window.__prAudioCtx,
+            gain:    master ? Number(master.gain.value.toFixed(4)) : null,
+            muted:   !!(window.PRSound && window.PRSound.isMuted()),
+            userVol: _userVol(),
+            step:    step
+        })
+    };
+
     // تنظيف عند مغادرة الصفحة (يمنع طقطقة)
     window.addEventListener('pagehide', () => {
         if (timer) { clearInterval(timer); timer = null; }
