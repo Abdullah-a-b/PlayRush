@@ -1,6 +1,6 @@
 html, body { background: #2a0a3d !important; }
 
-/* قفل تمرير الصفحة عند فتح الكيبورد على الجوال — يمنع تحرّك الصندوق مع الـ scroll */
+/* قفل تمرير الصفحة المزعج على الجوال */
 html.kb-open, html.kb-open body {
     overflow: hidden !important;
     overscroll-behavior: none !important;
@@ -8,8 +8,6 @@ html.kb-open, html.kb-open body {
     height: 100% !important;
     position: relative !important;
 }
-html.kb-open .game-layout { pointer-events: none !important; }
-html.kb-open .question-sidebar { pointer-events: auto !important; }
 
 /* ── زر كتم الصوت العائم الافتراضي ── */
 .pr-sound-float {
@@ -29,40 +27,11 @@ html.kb-open .question-sidebar { pointer-events: auto !important; }
 .pr-sound-float:hover { opacity: 1; transform: scale(1.08); }
 .pr-sound-float:active { transform: scale(0.94); }
 
-/* إعدادات الشاشات الكبيرة (الكمبيوتر) */
-@media (min-width: 901px) {
-    /* العناصر السفلية تكسر حاوية الـ sidebar وتطفو في الشاشة */
-    .sidebar-bottom-bar { display: contents; }
-    .left-actions { display: contents; }
-    .surrender-btn { position: fixed !important; bottom: 30px !important; right: 30px !important; z-index: 200; }
-    .help-slots { position: fixed !important; bottom: 20px !important; left: 20px !important; display: flex; gap: 10px; z-index: 1000; }
-    
-    /* إخفاء الأزرار المدمجة لو أردنا فصلها بالكمبيوتر (نستخدم الفردية) */
-    .action-buttons-container {
-        display: flex;
-        flex-direction: column; /* عمودي في الكمبيوتر */
-        gap: 12px;
-        margin: 15px 0;
-        width: 100%;
-    }
-    #buzzerBtn {
-        background: linear-gradient(135deg, #ff9800, #ff5722) !important;
-        border: none; border-radius: 12px; color: white; font-size: 18px; font-weight: bold;
-        padding: 14px; cursor: pointer; width: 100%; box-shadow: 0 4px 15px rgba(255,152,0,0.4);
-    }
-    #voteSkipBtn {
-        background: rgba(96,125,139,0.6) !important;
-        border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; color: #ddd;
-        font-size: 13px; padding: 10px; width: 100%; cursor: pointer; transition: background 0.2s;
-    }
-}
-
 /* ============================================================================
-   ≤ 900px — أجهزة لوحية وجوالات
+   ≤ 900px — أجهزة لوحية وجوالات (تعديلات الجوال فقط)
    ============================================================================ */
 @media (max-width: 900px) {
 
-    /* ─── حماية شبكة الحروف ─── */
     .cells-container .grid {
         display: flex !important;
         grid-template-columns: none !important;
@@ -135,7 +104,6 @@ html.kb-open .question-sidebar { pointer-events: auto !important; }
         display: flex !important; align-items: center !important; justify-content: center !important;
     }
 
-    /* إصلاح الشبكة */
     .grid {
         --hex-size: 11.9vmin;
         position: absolute !important;
@@ -164,25 +132,23 @@ html.kb-open .question-sidebar { pointer-events: auto !important; }
     .hex-row:nth-child(5) { transform: none !important; }
 
     /* ═══════════════════════════════════════════════════════════════
-       تنسيق صندوق الأسئلة + الشريط المدمج
+       تصميم الصندوق السفلي للجوال (Sidebar)
        ═══════════════════════════════════════════════════════════════ */
     .question-sidebar,
     .question-sidebar.active {
         position: fixed !important;
         top: auto !important;
-        bottom: 15px !important; /* مسافة بسيطة من أسفل الشاشة */
-        left: 8px !important; right: 8px !important;
-        width: auto !important; max-width: none !important;
-        max-height: 40vh !important; 
+        bottom: 0 !important;
+        left: 0 !important; right: 0 !important;
+        width: 100% !important; max-width: 100% !important;
+        max-height: 42vh !important; 
         transform: none !important;
-        margin: 0 !important; padding: 12px 14px !important;
-        border: none !important; border-top: 4px solid #ffeb3b !important;
-        border-radius: 20px !important;
-        overflow: hidden !important;
-        overscroll-behavior: contain !important;
+        margin: 0 !important; padding: 0 !important;
+        border: none !important; border-top: 3px solid #ffeb3b !important;
+        border-radius: 20px 20px 0 0 !important;
         background: linear-gradient(160deg, #3d1560 0%, #200a38 100%) !important;
         box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.55) !important;
-        transition: bottom 0.2s ease !important;
+        transition: top 0.2s ease, max-height 0.2s ease !important;
         z-index: 300 !important;
         display: flex !important;
         flex-direction: column !important;
@@ -190,79 +156,117 @@ html.kb-open .question-sidebar { pointer-events: auto !important; }
 
     .question-sidebar .sidebar-content {
         flex: 1;
-        overflow-y: auto !important;
-        display: flex !important; flex-direction: column !important; gap: 8px !important;
-        padding-bottom: 5px !important;
+        padding: 16px 16px 10px 16px !important;
+        overflow-y: auto !important; 
+        -webkit-overflow-scrolling: touch !important;
     }
 
-    /* ── الأزرار (أنا أعرف + تغيير السؤال) مدمجة جنب لجنب ── */
-    .action-buttons-container {
+    /* ── الأزرار الجانبية (أنا أعرف + تغيير السؤال) ── */
+    .mobile-actions-wrapper {
+        display: flex;
+        gap: 10px;
+        width: 100%;
+        margin: 12px 0;
+    }
+    .mobile-actions-wrapper .sidebar-actions {
+        display: contents; /* يسمح للزر بالتعامل كعنصر فليكس مباشر */
+    }
+    .mobile-actions-wrapper #buzzerBtn {
+        flex: 1.5;
+        margin: 0 !important;
+        font-size: 1.1rem !important;
+        padding: 12px !important;
+        border-radius: 12px !important;
+    }
+    
+    /* ضمان إخفاء الأزرار إذا حدد الـ JS ذلك */
+    .mobile-actions-wrapper #buzzerBtn[style*="display: none"],
+    .mobile-actions-wrapper #voteSkipBtn[style*="display: none"] {
+        display: none !important;
+    }
+    
+    .mobile-actions-wrapper #voteSkipBtn[style*="display: inline-block"],
+    .mobile-actions-wrapper #voteSkipBtn[style*="display: block"] {
         display: flex !important;
-        flex-direction: row !important;
-        gap: 8px !important;
-        width: 100% !important;
-        margin: 6px 0 !important;
     }
-    .action-buttons-container #buzzerBtn {
-        flex: 1.4 !important; /* يأخذ مساحة أكبر قليلاً */
+    .mobile-actions-wrapper #voteSkipBtn {
+        flex: 1;
         margin: 0 !important;
-        font-size: clamp(0.95rem, 3.5vw, 1.1rem) !important;
-        padding: 12px 8px !important;
+        font-size: 0.85rem !important;
+        padding: 10px !important;
         border-radius: 12px !important;
-        background: linear-gradient(135deg, #ff9800, #ff5722) !important;
-        color: white !important; font-weight: bold !important; border: none !important;
-    }
-    .action-buttons-container #voteSkipBtn {
-        flex: 1 !important;
-        margin: 0 !important;
-        font-size: clamp(0.8rem, 2.5vw, 0.95rem) !important;
-        padding: 12px 6px !important;
-        border-radius: 12px !important;
-        background: rgba(96,125,139,0.8) !important;
-        color: #fff !important; font-weight: bold !important; border: 1px solid rgba(255,255,255,0.15) !important;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 4px;
+        text-align: center;
+        line-height: 1.2;
     }
 
-    /* ── الشريط السفلي للمساعدات (مدمج داخل الصندوق) ── */
-    .sidebar-bottom-bar {
-        display: flex !important;
-        flex-direction: row !important;
-        align-items: center !important;
-        justify-content: space-between !important;
-        padding-top: 10px !important;
-        margin-top: 5px !important;
-        border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
-        width: 100% !important;
+    /* ── تعديل تصميم صندوق الإجابة ── */
+    #answerSection {
+        background: rgba(0,0,0,0.25);
+        padding: 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(0, 210, 255, 0.3);
+        margin-top: 10px;
     }
-    .left-actions {
-        display: flex !important;
-        gap: 8px !important;
-        align-items: center !important;
+    #answerSection > div span {
+        font-size: 0.95rem !important;
     }
-    .surrender-btn, .pr-sound-float {
+    #playerAnswerInput {
+        padding: 14px !important;
+        font-size: 16px !important; /* يمنع الزوم التلقائي في iOS */
+        border-radius: 10px !important;
+        border: 2px solid #00d2ff !important;
+        background: #111 !important;
+        color: #fff !important;
+        margin-bottom: 12px !important;
+        box-shadow: inset 0 2px 5px rgba(0,0,0,0.5) !important;
+    }
+    #submitAnswerBtn {
+        padding: 12px !important;
+        font-size: 1.05rem !important;
+        border-radius: 10px !important;
+        background: linear-gradient(135deg, #2ecc71, #27ae60) !important;
+        box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4) !important;
+    }
+
+    /* ── الشريط السفلي للمساعدات (مدمج بطريقة منظمة) ── */
+    .mobile-bottom-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 14px;
+        background: rgba(10, 5, 20, 0.5);
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        width: 100%;
+        box-sizing: border-box;
+        flex-shrink: 0;
+    }
+    .mobile-bottom-bar .left-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+    .mobile-bottom-bar .surrender-btn,
+    .mobile-bottom-bar .pr-sound-float {
         position: relative !important;
         bottom: auto !important; left: auto !important; right: auto !important; top: auto !important;
-        width: 42px !important; height: 42px !important;
-        border-radius: 10px !important;
-        font-size: 18px !important;
-        box-shadow: none !important; margin: 0 !important;
-        background: rgba(255, 71, 87, 0.15) !important;
-        border: 2px solid #ff4757 !important;
+        width: 44px !important; height: 44px !important;
+        border-radius: 12px !important;
+        margin: 0 !important;
+        box-shadow: none !important;
     }
-    .pr-sound-float {
-        background: rgba(255, 255, 255, 0.1) !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    }
-    .help-slots {
+    .mobile-bottom-bar .help-slots {
         position: relative !important;
-        bottom: auto !important; left: auto !important;
-        flex-direction: row !important; gap: 6px !important;
+        bottom: auto !important; left: auto !important; right: auto !important;
+        gap: 8px !important;
     }
-    .help-slot {
-        width: 42px !important; height: 42px !important;
+    .mobile-bottom-bar .help-slot {
+        width: 44px !important; height: 44px !important;
         border-radius: 10px !important;
     }
-    .help-slot .help-icon { font-size: 18px !important; }
-    .help-slot .help-name { font-size: 6px !important; }
 
     /* ── نصوص الصندوق ── */
     .question-sidebar .letter-indicator {
@@ -283,29 +287,12 @@ html.kb-open .question-sidebar { pointer-events: auto !important; }
         font-size: clamp(0.85rem, 3.2vw, 1rem) !important;
         line-height: 1.4 !important; color: #f0e8ff !important; margin: 0 !important;
     }
-    .question-sidebar #playerAnswerInput {
-        width: 100% !important; box-sizing: border-box !important;
-        padding: 12px !important; font-size: 16px !important; /* 16px يمنع zoom على iOS */
-        border-radius: 10px !important; margin-bottom: 8px !important;
-    }
-    .question-sidebar #submitAnswerBtn {
-        width: 100% !important; padding: 12px !important; border-radius: 10px !important;
-        font-size: 15px !important;
-    }
 
     /* ═══════════════════════════════════════════════════════════════
-       حالة الكيبورد النشط (عند التركيز على حقل الإدخال)
+       حالة الكيبورد النشط
        ═══════════════════════════════════════════════════════════════ */
-    .question-sidebar.keyboard-active {
-        bottom: 0 !important;
-        border-radius: 16px 16px 0 0 !important;
-        border-top: 4px solid #4CAF50 !important;
-        padding-bottom: 20px !important; /* مساحة مريحة للكتابة */
-    }
-    /* إخفاء العناصر غير الضرورية أثناء الكتابة لتوفير مساحة */
-    .question-sidebar.keyboard-active .sidebar-bottom-bar,
-    .question-sidebar.keyboard-active .letter-indicator {
-        display: none !important;
+    .question-sidebar.keyboard-open {
+        max-height: 250px !important; /* تقليص الطول لإبقاء الصندوق مناسباً */
     }
     
     .ingame-quick-chat { top: 70px !important; left: 8px !important; bottom: auto !important; }
@@ -320,10 +307,6 @@ html.kb-open .question-sidebar { pointer-events: auto !important; }
     .main-container { width: 96vmin !important; height: 96vmin !important; }
     .grid { --hex-size: 12vmin; }
     .hex { --hex-size: 12vmin !important; font-size: 4.5vmin !important; }
-
-    .question-sidebar, .question-sidebar.active {
-        max-height: 38vh !important;
-    }
 }
 @media (max-width: 430px) {
     .main-container { width: 97vmin !important; height: 97vmin !important; }
@@ -334,5 +317,6 @@ html.kb-open .question-sidebar { pointer-events: auto !important; }
     .main-container { width: 98vmin !important; height: 98vmin !important; }
     .grid { --hex-size: 13vmin; }
     .hex { --hex-size: 13vmin !important; font-size: 5vmin !important; }
-    .question-sidebar, .question-sidebar.active { max-height: 35vh !important; }
+    .mobile-bottom-bar .surrender-btn, .mobile-bottom-bar .pr-sound-float { width: 38px !important; height: 38px !important; }
+    .mobile-bottom-bar .help-slot { width: 38px !important; height: 38px !important; }
 }

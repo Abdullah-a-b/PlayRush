@@ -22,15 +22,15 @@
     <link rel="stylesheet" href="../css/theme_styles.css">
     <script src="../js/ui_dialog.js"></script>
     <script src="../js/brand.js" defer></script>
-    <link rel="stylesheet" href="../css/responsive.css">
-    <link rel="stylesheet" href="../css/games/huroof_mobile.css?v=4">
-    <link rel="stylesheet" href="../css/app_perf.css">
-    <style>
-        /* الوضع الفردي: إخفاء الدردشة تماماً (لا خصم بشري) */
-        body.solo-mode #ingameQuickChatWrap,
-        body.solo-mode #gameQuickChatBtn,
-        body.solo-mode .ingame-quick-chat { display: none !important; }
-    </style>
+  <link rel="stylesheet" href="../css/responsive.css">
+  <link rel="stylesheet" href="../css/games/huroof_mobile.css?v=4">
+  <link rel="stylesheet" href="../css/app_perf.css">
+  <style>
+    /* الوضع الفردي: إخفاء الدردشة تماماً (لا خصم بشري) */
+    body.solo-mode #ingameQuickChatWrap,
+    body.solo-mode #gameQuickChatBtn,
+    body.solo-mode .ingame-quick-chat { display: none !important; }
+  </style>
 </head>
 <body>
     
@@ -120,42 +120,38 @@
             
             <div id="systemMessageDisplay" style="color: #00d2ff; font-weight: bold; margin: 15px 0; min-height: 24px; text-align: center;"></div>
 
-            <!-- حاوية الأزرار (أنا أعرف + تغيير السؤال) -->
-            <div class="action-buttons-container" id="actionButtonsContainer" style="display: none;">
-                <button id="buzzerBtn" class="party-action-btn">
-                    <i class="fa-solid fa-hand-pointer"></i> أنا أعرف!
-                </button>
-                <button id="voteSkipBtn" class="party-action-btn">
-                    <i class="fa-solid fa-rotate"></i> تغيير السؤال
-                </button>
-            </div>
+            <button id="buzzerBtn" class="party-action-btn" style="background: #ff9800; font-size: 24px; padding: 15px; margin: 15px 0; display: none; width: 100%; box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);">
+                <i class="fa-solid fa-hand-pointer"></i> أنا أعرف!
+            </button>
 
             <div id="answerSection" style="display: none; width: 100%;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                     <span style="color: #4CAF50; font-weight: bold;">اكتب إجابتك:</span>
                     <span id="playerTimer" style="color: #ff5722; font-weight: bold; font-size: 18px;">⏱️ 15</span>
                 </div>
-                <input type="text" id="playerAnswerInput" placeholder="أدخل الإجابة هنا..." autocomplete="off">
+                <input type="text" id="playerAnswerInput" placeholder="أدخل الإجابة هنا..." style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #00d2ff; background: #111; color: white; font-family: inherit; font-size: 16px; margin-bottom: 10px; text-align: center;">
                 <button id="submitAnswerBtn" class="party-action-btn" style="background: #4CAF50; width: 100%;">إرسال الإجابة</button>
             </div>
 
             <div class="question-box answer-box" id="answer-container" style="display: none; margin-top: 15px;">
                 <p id="answerText"></p>
             </div>
-        </div>
 
-        <!-- الشريط السفلي المدمج في الصندوق (يظهر منسقاً في الجوال) -->
-        <div class="sidebar-bottom-bar" id="sidebarBottomBar">
-            <div class="left-actions">
-                <button id="surrenderBtn" class="surrender-btn" title="انسحاب">
-                    <i class="fa-solid fa-flag"></i>
+            <div class="sidebar-actions">
+                <button id="voteSkipBtn" class="party-action-btn" style="background: #607d8b; display: none;">
+                    <i class="fa-solid fa-forward-step"></i> اقتراح تغيير السؤال
                 </button>
-                <div id="mobileSoundWrapper"></div> <!-- سينقل الجافاسكربت زر الصوت هنا في الجوال -->
-            </div>
-            <div id="helpSlots" class="help-slots">
-                <!-- تُملأ ديناميكياً من JS -->
             </div>
         </div>
+    </div>
+
+    <button id="surrenderBtn" class="surrender-btn" title="انسحاب">
+        <i class="fa-solid fa-flag"></i>
+    </button>
+
+    <!--  خانات المساعدات (3 خانات) -->
+    <div id="helpSlots" class="help-slots">
+        <!-- تُملأ ديناميكياً من JS -->
     </div>
 
     <!--  نافذة اختيار سبب الإبلاغ (يفتحها زر "إبلاغ" في بروفايل الخصم) -->
