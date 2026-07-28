@@ -303,11 +303,20 @@ html.kb-open, html.kb-open body {
     }
     /* عناصر تُخفى أثناء الكتابة — الشريط السفلي (المساعدات/الانسحاب/الصوت)
        يبقى ظاهراً دائماً؛ إخفاؤه كان خطأً لأنه يقطع أدوات اللاعب فجأة. */
-    .question-sidebar.keyboard-open .letter-indicator,
     .question-sidebar.keyboard-open #systemMessageDisplay,
     .question-sidebar.keyboard-open #answer-container,
     .question-sidebar.keyboard-open .mobile-actions-wrapper {
         display: none !important;
+    }
+    /* الحرف المختار يبقى ظاهراً — إخفاؤه أنسى اللاعب حرفه. سطر نحيف بلا
+       فاصل ولا حشوة، يكلّف ~18px فقط. */
+    .question-sidebar.keyboard-open .letter-indicator {
+        display: block !important;
+        font-size: 0.78rem !important;
+        margin: 0 0 3px 0 !important;
+        padding: 0 !important;
+        border-bottom: none !important;
+        opacity: 0.95;
     }
     /* الشريط السفلي: مضغوط لا مخفي */
     .question-sidebar.keyboard-open .mobile-bottom-bar {
@@ -329,14 +338,12 @@ html.kb-open, html.kb-open body {
         line-height: 1.35 !important;
         display: -webkit-box !important;
         -webkit-line-clamp: 1;
-        line-clamp: 1;
         -webkit-box-orient: vertical;
         overflow: hidden !important;
     }
     /* الحالة المفتوحة بعد اللمس */
     .question-sidebar.keyboard-open .question-box.q-open #questionText {
         -webkit-line-clamp: unset;
-        line-clamp: unset;
         max-height: 5em !important;
         overflow-y: auto !important;
         -webkit-overflow-scrolling: touch !important;

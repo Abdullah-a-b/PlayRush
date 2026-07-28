@@ -622,6 +622,7 @@ buzzerBtn.addEventListener('click', () => {
 
 function submitAnswer() {
     if (!isMyTurnToAnswer) return;
+    if (_playerTimerLeft <= 0) { lockAnswerUI(); return; }   // انتهى الوقت
     const ans = playerAnswerInput.value.trim();
     if (!ans) return;
     isMyTurnToAnswer         = false;
@@ -721,6 +722,20 @@ function startGlobalTimer(seconds) {
     }, 1000);
 }
 
+/**
+ * يُغلق واجهة الإجابة فوراً — يُستدعى حين ينتهي وقتي.
+ * كان الصندوق يبقى مفتوحاً بعد انتهاء وقتي فأستطيع الكتابة أثناء دور
+ * الخصم (والخادم يرفضها، لكن الواجهة كانت تكذب على اللاعب ولا تعود
+ * لحالتها إلا بعد ضغط «إرسال»).
+ */
+function lockAnswerUI() {
+    isMyTurnToAnswer            = false;
+    answerSection.style.display = 'none';
+    submitAnswerBtn.disabled    = true;
+    playerAnswerInput.value     = '';
+    try { playerAnswerInput.blur(); } catch (e) {}   // يُغلق الكيبورد ويُعيد التخطيط
+}
+
 function startPlayerTimer(seconds) {
     clearInterval(playerTimerInterval);
     playerTimerDisplay.textContent = `⏱️ ${seconds}`;
@@ -728,7 +743,10 @@ function startPlayerTimer(seconds) {
     playerTimerInterval = setInterval(() => {
         _playerTimerLeft--;
         playerTimerDisplay.textContent = `⏱️ ${_playerTimerLeft}`;
-        if (_playerTimerLeft <= 0) clearInterval(playerTimerInterval);
+        if (_playerTimerLeft <= 0) {
+            clearInterval(playerTimerInterval);
+            if (isMyTurnToAnswer) lockAnswerUI();   // انتهى وقتي → أُغلق فوراً
+        }
     }, 1000);
 }
 
@@ -1393,6 +1411,33 @@ socket.on('leaver_penalty', (data) => {
             return Math.max(0, Math.min(overlap, layoutH * 0.6));
         }
 
+        // اللوحة تُقاس بـ vmin (من عرض الشاشة) فلا تتقلّص حين يقتطع الكيبورد
+        // نصف الارتفاع، فيختفي نصفها. نُصغّرها تصغيراً موحّداً لتلائم المساحة
+        // المتبقية فقط أثناء الكتابة، وتعود كما هي فور إغلاق الكيبورد.
+        // (تصميمها ونِسبها لا تتغيّر إطلاقاً — transform: scale لا أكثر.)
+        function fitBoard(sidebar) {
+            const board = document.querySelector('.main-container');
+            if (!board) return;
+            if (!sidebar) {
+                board.style.removeProperty('transform');
+                board.style.removeProperty('transform-origin');
+                board.style.removeProperty('margin-bottom');
+                return;
+            }
+            const layout = document.querySelector('.game-layout');
+            const topPad = layout ? parseFloat(getComputedStyle(layout).paddingTop) || 64 : 64;
+            const avail  = sidebar.getBoundingClientRect().top - topPad - 6;
+            const natural = board.offsetHeight;   // لا يتأثّر بالـtransform
+            if (!natural || avail <= 40) return;
+            const scale = Math.min(1, avail / natural);
+            if (scale >= 0.995) { fitBoard(null); return; }
+            board.style.transition      = 'transform .15s ease';
+            board.style.transformOrigin = 'top center';
+            board.style.transform       = 'scale(' + scale.toFixed(3) + ')';
+            // نمنع الفراغ الناتج عن التصغير من دفع التخطيط
+            board.style.marginBottom = '-' + Math.round(natural * (1 - scale)) + 'px';
+        }
+
         function applyLayout() {
             const sidebar = document.getElementById('questionSidebar');
             if (!sidebar) return;
@@ -1416,7 +1461,7 @@ socket.on('leaver_penalty', (data) => {
                 // الوضع المضغوط صار قصيراً فعلاً (سؤال بسطر + صفّ إجابة +
                 // الشريط السفلي) فنُنزل السقف ليعود الباقي للوحة.
                 sidebar.style.setProperty('max-height',
-                    Math.max(130, Math.min(vv.height - 12, 200)) + 'px', 'important');
+                    Math.max(130, Math.min(vv.height - 12, 215)) + 'px', 'important');
 
                 // نمنع قفزة التمرير التلقائية التي يفعلها المتصفح
                 if (window.scrollY !== 0) window.scrollTo(0, 0);
@@ -1428,6 +1473,7 @@ socket.on('leaver_penalty', (data) => {
                 if (content && ans && ans.offsetParent !== null) {
                     content.scrollTop = Math.max(0, ans.offsetTop - 6);
                 }
+                fitBoard(sidebar);
             } else if (isKbOpen) {
                 isKbOpen = false;
                 sidebar.classList.remove('keyboard-open');
@@ -1438,6 +1484,7 @@ socket.on('leaver_penalty', (data) => {
                 // نُعيد المحتوى لأعلاه، وإلا عاد الصندوق مُمرَّراً فيبدو مقصوصاً
                 const content = sidebar.querySelector('.sidebar-content');
                 if (content) content.scrollTop = 0;
+                fitBoard(null);   // نُعيد اللوحة لحجمها الطبيعي
             }
         }
 
