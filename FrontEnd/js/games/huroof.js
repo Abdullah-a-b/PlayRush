@@ -152,52 +152,62 @@ document.addEventListener('DOMContentLoaded', () => {
     const ansInput   = document.getElementById('playerAnswerInput');
     if (!sidebar) return;
 
-    // قيم افتراضية — تطابق CSS
-    const BASE_BOTTOM   = 68;   // px — المسافة من الأسفل بدون كيبورد
-    const BASE_MAX_VH   = 0.38; // 38vh — max-height بدون كيبورد
-    const KB_THRESHOLD  = 100;  // px — الحد الأدنى لاعتبار الكيبورد مفتوحاً
+    const BASE_BOTTOM  = 68;
+    const BASE_MAX_VH  = 0.38;
+    const KB_THRESHOLD = 100;
 
     let kbOpen = false;
+    let rafId  = 0;
 
-    function onViewportChange() {
+    function applyLayout() {
+        rafId = 0;
         const vv       = window.visualViewport;
         const winH     = window.innerHeight;
         const vvBottom = vv.offsetTop + vv.height;
-        const kbHeight = Math.max(0, winH - vvBottom);  // ارتفاع الكيبورد بالـ px
+        const kbHeight = Math.max(0, winH - vvBottom);
 
         if (kbHeight > KB_THRESHOLD) {
-            // ─── الكيبورد مفتوح ───
             if (!kbOpen) {
                 kbOpen = true;
                 sidebar.classList.add('keyboard-open');
-                // نُخفي الأزرار الجانبية حتى لا تتراكم مع الصندوق
+                document.documentElement.classList.add('kb-open');
                 if (helpSlots)  helpSlots.style.setProperty('display', 'none', 'important');
                 if (surrendBtn) surrendBtn.style.setProperty('display', 'none', 'important');
                 if (soundBtn)   soundBtn.style.setProperty('display', 'none', 'important');
             }
 
-            // bottom = فوق الكيبورد مباشرة + 6px هامش
-            const newBottom  = kbHeight + 6;
-            // max-height = المساحة المرئية بين top-bar (≈62px) والكيبورد - هامش
-            const available  = vv.height - 62 - 8;
-            const newMaxH    = Math.max(120, Math.min(available, 260)); // بين 120px و260px
+            // نُثبّت الصندوق بـ top بالنسبة لأعلى الصفحة (layout viewport)
+            // top = أعلى المنطقة المرئية + المسافة المتاحة - ارتفاع الصندوق - هامش
+            const topBar     = 62;
+            const margin     = 8;
+            const available  = vv.height - topBar - margin * 2;
+            const sidebarH   = Math.max(140, Math.min(available, Math.round(vv.height * 0.55)));
+            // vv.offsetTop = إزاحة المنطقة المرئية عن أعلى layout viewport (يتغيّر مع scroll)
+            const topPx      = vv.offsetTop + vv.height - sidebarH - margin;
 
-            sidebar.style.setProperty('bottom',     newBottom + 'px', 'important');
-            sidebar.style.setProperty('max-height', newMaxH  + 'px', 'important');
-
+            sidebar.style.setProperty('top',        topPx + 'px',    'important');
+            sidebar.style.setProperty('bottom',     'auto',           'important');
+            sidebar.style.setProperty('max-height', sidebarH + 'px',  'important');
+            sidebar.style.setProperty('height',     sidebarH + 'px',  'important');
         } else {
-            // ─── الكيبورد مغلق ───
             _resetSidebar();
         }
+    }
+
+    function onViewportChange() {
+        if (rafId) return;
+        rafId = requestAnimationFrame(applyLayout);
     }
 
     function _resetSidebar() {
         if (!kbOpen) return;
         kbOpen = false;
         sidebar.classList.remove('keyboard-open');
+        document.documentElement.classList.remove('kb-open');
+        sidebar.style.removeProperty('top');
+        sidebar.style.removeProperty('height');
         sidebar.style.setProperty('bottom',     BASE_BOTTOM + 'px', 'important');
         sidebar.style.setProperty('max-height', (window.innerHeight * BASE_MAX_VH) + 'px', 'important');
-        // نُعيد الأزرار
         if (helpSlots)  helpSlots.style.removeProperty('display');
         if (surrendBtn) surrendBtn.style.removeProperty('display');
         if (soundBtn)   soundBtn.style.removeProperty('display');
@@ -205,10 +215,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.visualViewport.addEventListener('resize', onViewportChange);
     window.visualViewport.addEventListener('scroll', onViewportChange);
-
-    // reset عند blur بتأخير (Chrome يُطلق blur قبل انتهاء أنيمايشن الكيبورد)
+    // بعض متصفحات iOS تُحرّك الصفحة عند focus — نعيد الحساب فوراً
     if (ansInput) {
-        ansInput.addEventListener('blur', () => setTimeout(_resetSidebar, 200));
+        ansInput.addEventListener('focus', () => setTimeout(onViewportChange, 50));
+        ansInput.addEventListener('blur',  () => setTimeout(_resetSidebar,  200));
     }
 })();
 

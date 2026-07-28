@@ -25,6 +25,17 @@
 
 html, body { background: #2a0a3d !important; }
 
+/* قفل تمرير الصفحة عند فتح الكيبورد على الجوال — يمنع تحرّك الصندوق مع الـ scroll */
+html.kb-open, html.kb-open body {
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+    touch-action: none !important;
+    height: 100% !important;
+    position: relative !important;
+}
+html.kb-open .game-layout { pointer-events: none !important; }
+html.kb-open .question-sidebar { pointer-events: auto !important; }
+
 /* ── زر كتم الصوت العائم ── */
 .pr-sound-float {
     position: fixed;
@@ -208,19 +219,22 @@ html, body { background: #2a0a3d !important; }
         border: none !important;
         border-radius: 20px !important;
         overflow: hidden !important;
+        overscroll-behavior: contain !important;
         background: linear-gradient(160deg, #3d1560 0%, #200a38 100%) !important;
         box-shadow:
             0 -4px 24px rgba(0, 0, 0, 0.55),
             0 0 0 1.5px rgba(255, 235, 59, 0.3) inset,
             0 1px 0 rgba(255, 255, 255, 0.06) inset !important;
-        /* انتقال سلس عند رفع/خفض الصندوق مع الكيبورد */
-        transition: bottom 0.18s ease, max-height 0.18s ease !important;
+        transition: bottom 0.18s ease, top 0.18s ease, max-height 0.18s ease !important;
+        z-index: 300 !important;
+        will-change: top, bottom, max-height !important;
     }
-    /* حالة الكيبورد المفتوح — يُفعَّل بـ JS بإضافة كلاس keyboard-open */
+    /* حالة الكيبورد المفتوح — JS يُثبّت الصندوق بـ top بالنسبة لـ visualViewport */
     .question-sidebar.keyboard-open,
     .question-sidebar.keyboard-open.active {
-        border-radius: 16px 16px 12px 12px !important;
-        /* نُخفي العنوان لتوفير مساحة */
+        bottom: auto !important;           /* JS يستخدم top بدل bottom */
+        border-radius: 16px !important;
+        max-height: 46vh !important;       /* مساحة أكبر لأن الأزرار السفلية مخفية */
     }
     .question-sidebar.keyboard-open #currentLetterDisplay {
         display: none !important;
@@ -243,6 +257,9 @@ html, body { background: #2a0a3d !important; }
     .question-sidebar.keyboard-open #playerAnswerInput {
         padding: 10px !important;
     }
+    .question-sidebar.keyboard-open #answer-container,
+    .question-sidebar.keyboard-open .sidebar-actions,
+    .question-sidebar.keyboard-open #buzzerBtn { display: none !important; }
 
     .question-sidebar .sidebar-content {
         padding: clamp(10px, 3vw, 16px) clamp(12px, 4vw, 18px) clamp(12px, 3vw, 18px) !important;
