@@ -383,7 +383,7 @@ html, body {
 
     .question-sidebar,
     .question-sidebar.active { border-radius: 16px !important; }
-    .question-sidebar .sidebar-content { padding: 10px 12px 12px !important; }
+    .question-sidebar .sidebar-content { padding: 2px 12px 12px !important; }
 
 }
 
