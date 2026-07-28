@@ -1381,27 +1381,40 @@ socket.on('leaver_penalty', (data) => {
         const vv = window.visualViewport;
         let isKbOpen = false;
 
+        // ⚠️ القياس الصحيح: الصندوق `position:fixed; bottom:0` يُقاس نسبةً إلى
+        // *الشاشة التخطيطية* (documentElement.clientHeight) لا إلى
+        // window.innerHeight. بعض متصفحات أندرويد تُقلّص الشاشة التخطيطية
+        // بنفسها عند فتح الكيبورد؛ استخدام innerHeight هناك يعطي رقماً مضاعفاً
+        // فيقفز الصندوق إلى منتصف الشاشة ويحجب اللوحة. هذه المعادلة تُعيد
+        // صفراً في تلك الحالة (لأن الصندوق فوق الكيبورد أصلاً).
         function kbHeight() {
-            return Math.max(0, window.innerHeight - (vv.height + vv.offsetTop));
+            const layoutH = document.documentElement.clientHeight || window.innerHeight;
+            const overlap = layoutH - (vv.height + vv.offsetTop);
+            return Math.max(0, Math.min(overlap, layoutH * 0.6));
         }
 
         function applyLayout() {
             const sidebar = document.getElementById('questionSidebar');
             if (!sidebar) return;
             const kb = kbHeight();
+            // الكتابة جارية؟ (بعض المتصفحات تُقلّص الشاشة بنفسها فيكون kb=0
+            // رغم أن الكيبورد مفتوح — نعتمد على التركيز لا على القياس وحده)
+            const typing = document.activeElement
+                && document.activeElement.id === 'playerAnswerInput';
 
-            if (kb > 100) {
+            if (typing || kb > 100) {
                 if (!isKbOpen) {
                     isKbOpen = true;
-                    sidebar.classList.add('keyboard-open');
+                    sidebar.classList.add('keyboard-open');   // الوضع المضغوط
                     document.documentElement.classList.add('kb-open');
                 }
-                // الصندوق يجلس تماماً فوق الكيبورد
+                // الإزاحة فقط لو كان الكيبورد يغطّي الصندوق فعلاً
                 sidebar.style.setProperty('top', 'auto', 'important');
-                sidebar.style.setProperty('bottom', kb + 'px', 'important');
-                // لا يتجاوز المساحة المرئية المتبقية
+                sidebar.style.setProperty('bottom', (kb > 100 ? kb : 0) + 'px', 'important');
+                // ارتفاع مضغوط: يكفي للسؤال والحقل والزر، ويُبقي اللوحة ظاهرة
+                // فوقه (كان يتمدّد للمساحة كلها فيحجب خلية الحروف).
                 sidebar.style.setProperty('max-height',
-                    Math.max(140, vv.height - 10) + 'px', 'important');
+                    Math.max(140, Math.min(vv.height - 12, 260)) + 'px', 'important');
 
                 // نمنع قفزة التمرير التلقائية التي يفعلها المتصفح
                 if (window.scrollY !== 0) window.scrollTo(0, 0);
