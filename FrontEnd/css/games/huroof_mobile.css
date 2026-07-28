@@ -64,6 +64,35 @@ html, body {
         overscroll-behavior-y: contain !important;
     }
 
+    /* Fix 1: احجز مساحة أسفل التخطيط لأزرار التحكم الثابتة */
+    .game-layout {
+        padding-bottom: 76px !important;
+    }
+
+    /* Fix 3: رتّب محتوى الصندوق ليبقى القالب العلوي مرئياً عند فتح وضع الإجابة */
+    .question-sidebar .sidebar-content > .letter-indicator    { order: 1 !important; }
+    .question-sidebar .sidebar-content > .question-box         { order: 2 !important; }
+    .question-sidebar .sidebar-content > #systemMessageDisplay { order: 3 !important; }
+    .question-sidebar .sidebar-content > #buzzerBtn            { order: 4 !important; }
+    .question-sidebar .sidebar-content > #answerSection        { order: 5 !important; }
+    .question-sidebar .sidebar-content > .answer-box           { order: 6 !important; }
+    .question-sidebar .sidebar-content > .sidebar-actions      { order: 7 !important; }
+    .question-sidebar,
+    .question-sidebar #answerSection { scroll-margin-top: 76px !important; }
+
+    /* Fix 2: أعِد .sidebar-actions إلى تدفق الصندوق */
+    .question-sidebar .sidebar-actions {
+        position: static !important;
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        inset: auto !important;
+        transform: none !important;
+    }
+    .question-sidebar .sidebar-actions #voteSkipBtn { display: block !important; }
+
     /* ─── حماية شبكة الحروف من قواعد responsive.css العامة ─── */
     .cells-container .grid {
         display: flex !important;
@@ -231,7 +260,7 @@ html, body {
         border-inline-start: 3px solid rgba(255, 140, 0, 0.65) !important;
         border-radius: 14px !important;
         padding: clamp(8px, 2.5vw, 14px) !important;
-        margin: 0 !important; min-height: 40px !important;
+        margin: 0 !important; min-height: 36px !important;
         display: flex !important; align-items: center !important; justify-content: center !important;
     }
     .question-sidebar .question-box #questionText,
@@ -292,14 +321,15 @@ html, body {
 @media (max-width: 600px) {
     .top-bar { height: 58px !important; min-height: 58px !important; }
     .game-layout { padding-top: 64px !important; }
+    .game-layout { padding-bottom: 72px !important; }
     .avatar { width: 34px !important; height: 34px !important; }
     .info span { font-size: 11.5px !important; max-width: 60px !important; }
     .round-text { font-size: 0.72rem !important; }
     #turn-status-badge, .turn-badge { font-size: 0.64rem !important; padding: 3px 9px !important; }
 
     .main-container {
-        width: 96vmin !important; height: 96vmin !important;
-        max-width: 400px !important; max-height: 400px !important;
+        width: 88vmin !important; height: 88vmin !important;
+        max-width: 360px !important; max-height: 360px !important;
     }
     /* زيادة طفيفة في الحجم لأن الـvmin على الجوال الصغير أصغر بالبكسل */
     .grid { --hex-size: 12vmin; }
@@ -335,6 +365,7 @@ html, body {
    ≤ 380px — شاشات صغيرة جداً (iPhone SE / Galaxy A صغير)
    ============================================================================ */
 @media (max-width: 380px) {
+    .game-layout { padding-bottom: 68px !important; }
     .main-container {
         width: 98vmin !important; height: 98vmin !important;
         max-width: 330px !important; max-height: 330px !important;
