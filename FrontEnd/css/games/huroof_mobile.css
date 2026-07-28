@@ -23,7 +23,9 @@
    وتظهر على الإطار البنفسجي = تبدو "مقطوعة" على الجانبين.
    ============================================================================ */
 
-html, body { background: #2a0a3d !important; }
+html, body {
+    background: #2a0a3d !important;
+}
 
 
 /* ── زر كتم الصوت العائم ── */
@@ -52,6 +54,15 @@ html, body { background: #2a0a3d !important; }
    ≤ 900px — أجهزة لوحية وجوالات
    ============================================================================ */
 @media (max-width: 900px) {
+
+    html,
+    body {
+        height: auto !important;
+        min-height: 100% !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        overscroll-behavior-y: contain !important;
+    }
 
     /* ─── حماية شبكة الحروف من قواعد responsive.css العامة ─── */
     .cells-container .grid {
@@ -118,9 +129,11 @@ html, body { background: #2a0a3d !important; }
     .game-layout {
         display: flex !important; flex-direction: column !important;
         align-items: center !important; justify-content: flex-start !important;
-        padding: 68px 8px 76px !important;   /* أعلى: شريط اللاعبين | أسفل: أزرار المساعدات */
-        min-height: 100vh !important;
+        padding: 68px 8px 8px !important;   /* الشريط العلوي فقط؛ الصندوق يأتي بعد اللوحة مباشرة */
+        min-height: 0 !important;
         height: auto !important;
+        box-sizing: border-box !important;
+        flex: 0 0 auto !important;
         overflow-x: hidden !important;
         overflow-y: auto !important;
         -webkit-overflow-scrolling: touch !important;
@@ -172,6 +185,7 @@ html, body { background: #2a0a3d !important; }
     .question-sidebar,
     .question-sidebar.active {
         position: static !important;
+        order: 2 !important;
         top: auto !important; bottom: auto !important;
         left: auto !important; right: auto !important;
         width: 100% !important; max-width: 460px !important;
@@ -190,6 +204,7 @@ html, body { background: #2a0a3d !important; }
         opacity: 1 !important;
         visibility: visible !important;
         pointer-events: auto !important;
+        clip-path: none !important;
     }
 
     .question-sidebar .sidebar-content {
