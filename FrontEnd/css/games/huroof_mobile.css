@@ -291,9 +291,51 @@ html.kb-open, html.kb-open body {
     /* ═══════════════════════════════════════════════════════════════
        حالة الكيبورد النشط
        ═══════════════════════════════════════════════════════════════ */
+    /* الارتفاع والموضع يضبطهما JS ديناميكياً حسب ارتفاع الكيبورد الحقيقي.
+       هنا نُنظّف المحتوى فقط: نُبقي السؤال + حقل الإجابة + زر الإرسال،
+       ونُخفي كل ما عداه حتى يتّسع الصندوق في الشريط المرئي الضيق. */
     .question-sidebar.keyboard-open {
-        max-height: 250px !important; /* تقليص الطول لإبقاء الصندوق مناسباً */
+        border-radius: 16px 16px 0 0 !important;
+        transition: none !important;      /* يواكب ظهور الكيبورد بلا تأخّر */
     }
+    .question-sidebar.keyboard-open .sidebar-content {
+        padding: 8px 12px 8px 12px !important;
+    }
+    /* عناصر تُخفى أثناء الكتابة */
+    .question-sidebar.keyboard-open .letter-indicator,
+    .question-sidebar.keyboard-open #systemMessageDisplay,
+    .question-sidebar.keyboard-open #answer-container,
+    .question-sidebar.keyboard-open .mobile-actions-wrapper,
+    .question-sidebar.keyboard-open .sidebar-actions,
+    .question-sidebar.keyboard-open .mobile-bottom-bar {
+        display: none !important;
+    }
+    /* السؤال: يبقى مرئياً لكن محدود الارتفاع وقابلاً للتمرير */
+    .question-sidebar.keyboard-open .question-box {
+        padding: 8px !important;
+        max-height: 4.6em !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+    .question-sidebar.keyboard-open #questionText {
+        font-size: clamp(0.8rem, 3vw, 0.95rem) !important;
+        line-height: 1.35 !important;
+    }
+    /* منطقة الإجابة: مضغوطة وواضحة */
+    .question-sidebar.keyboard-open #answerSection {
+        margin-top: 8px !important;
+    }
+    .question-sidebar.keyboard-open #playerAnswerInput {
+        padding: 10px !important;
+        margin-bottom: 8px !important;
+        font-size: 16px !important;   /* أقل من 16px يجعل iOS يُكبّر الصفحة */
+    }
+    .question-sidebar.keyboard-open #submitAnswerBtn {
+        padding: 10px !important;
+    }
+    /* الشريط العائم للدردشة السريعة يزاحم الصندوق أثناء الكتابة */
+    html.kb-open .ingame-quick-chat { display: none !important; }
+
     
     .ingame-quick-chat { top: 70px !important; left: 8px !important; bottom: auto !important; }
 }

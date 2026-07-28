@@ -1366,45 +1366,73 @@ socket.on('leaver_penalty', (data) => {
         setTimeout(() => clearInterval(sndTimer), 5000);
     });
 
-    // معالج الكيبورد الذي يمنع طغيان الكيبورد ويرفع الصندوق دون إخفاء الأزرار
+    // ============================================================
+    // معالج كيبورد الجوال — مصدر واحد للحقيقة
+    // ------------------------------------------------------------
+    // كان هناك معالجان يتصارعان على نفس العنصر (هذا + huroof_keyboard.js):
+    // أحدهما يضبط top والآخر transform، فينتج ارتفاع وموضع متناقضان
+    // ويطغى الكيبورد على صندوق السؤال. حُذف الثاني، وأُعيد بناء هذا:
+    //   • نثبّت الصندوق فوق الكيبورد عبر bottom = ارتفاع الكيبورد
+    //     (لا نحسب ارتفاع الصندوق نفسه — كان يسبّب دوراناً في الحساب)
+    //   • نحدّ أقصى ارتفاع بالمساحة المرئية فعلاً فلا يُقصّ شيء
+    //   • نُخفي الزخارف غير الضرورية ونُبقي: السؤال + الحقل + الإرسال
+    // ============================================================
     if (window.visualViewport) {
+        const vv = window.visualViewport;
         let isKbOpen = false;
-        let maxVvHeight = window.visualViewport.height;
+
+        function kbHeight() {
+            return Math.max(0, window.innerHeight - (vv.height + vv.offsetTop));
+        }
 
         function applyLayout() {
             const sidebar = document.getElementById('questionSidebar');
             if (!sidebar) return;
-            
-            const vv = window.visualViewport;
-            if (vv.height > maxVvHeight) maxVvHeight = vv.height;
+            const kb = kbHeight();
 
-            if (vv.height < maxVvHeight * 0.85) { // إذا الكيبورد فتح
+            if (kb > 100) {
                 if (!isKbOpen) {
                     isKbOpen = true;
                     sidebar.classList.add('keyboard-open');
+                    document.documentElement.classList.add('kb-open');
                 }
-                const topOffset = vv.offsetTop + vv.height - sidebar.offsetHeight;
-                sidebar.style.setProperty('top', topOffset + 'px', 'important');
-                sidebar.style.setProperty('bottom', 'auto', 'important');
-                
-                setTimeout(() => {
-                    const ansInput = document.getElementById('playerAnswerInput');
-                    if (ansInput) ansInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 50);
-            } else { // إذا الكيبورد أُغلق
-                if (isKbOpen) {
-                    isKbOpen = false;
-                    sidebar.classList.remove('keyboard-open');
-                    sidebar.style.removeProperty('top');
-                    sidebar.style.setProperty('bottom', '0', 'important');
+                // الصندوق يجلس تماماً فوق الكيبورد
+                sidebar.style.setProperty('top', 'auto', 'important');
+                sidebar.style.setProperty('bottom', kb + 'px', 'important');
+                // لا يتجاوز المساحة المرئية المتبقية
+                sidebar.style.setProperty('max-height',
+                    Math.max(140, vv.height - 10) + 'px', 'important');
+
+                // نمنع قفزة التمرير التلقائية التي يفعلها المتصفح
+                if (window.scrollY !== 0) window.scrollTo(0, 0);
+
+                // نُظهر حقل الإجابة داخل المحتوى القابل للتمرير (بلا scrollIntoView
+                // الذي كان يُمرّر الصفحة كلها ويكسر الموضع)
+                const content = sidebar.querySelector('.sidebar-content');
+                const ans = document.getElementById('answerSection');
+                if (content && ans && ans.offsetParent !== null) {
+                    content.scrollTop = Math.max(0, ans.offsetTop - 6);
                 }
+            } else if (isKbOpen) {
+                isKbOpen = false;
+                sidebar.classList.remove('keyboard-open');
+                document.documentElement.classList.remove('kb-open');
+                sidebar.style.removeProperty('top');
+                sidebar.style.removeProperty('max-height');
+                sidebar.style.setProperty('bottom', '0', 'important');
             }
         }
 
-        window.visualViewport.addEventListener('resize', applyLayout);
-        window.visualViewport.addEventListener('scroll', applyLayout);
+        vv.addEventListener('resize', applyLayout);
+        vv.addEventListener('scroll', applyLayout);
         document.addEventListener('focusin', (e) => {
-            if (e.target.id === 'playerAnswerInput') setTimeout(applyLayout, 100);
+            if (e.target.id === 'playerAnswerInput') {
+                setTimeout(applyLayout, 120);
+                setTimeout(applyLayout, 350);   // بعض الأجهزة تفتح الكيبورد متأخراً
+            }
+        });
+        document.addEventListener('focusout', (e) => {
+            if (e.target.id === 'playerAnswerInput') setTimeout(applyLayout, 150);
         });
     }
 })();
