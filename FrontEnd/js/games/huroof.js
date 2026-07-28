@@ -367,16 +367,17 @@ socket.on('huroof_new_question', (data) => {
     systemMessageDisplay.textContent = '';
 
     if (voteSkipBtn) {
-        voteSkipBtn.style.display    = 'inline-block';
+        voteSkipBtn.style.display    = 'flex';
         voteSkipBtn.disabled         = false;
-        voteSkipBtn.innerHTML        = '<i class="fa-solid fa-forward-step"></i> اقتراح تغيير السؤال';
-        voteSkipBtn.style.background = '#607d8b';
+        voteSkipBtn.classList.remove('vote-pending', 'vote-approve');
+        voteSkipBtn.innerHTML        = '<i class="fa-solid fa-shuffle"></i><span class="btn-change-label">تغيير السؤال</span>';
+        voteSkipBtn.style.background = '';
         voteSkipBtn.style.animation  = 'none';
     }
 
     document.getElementById('answer-container').style.display = 'none';
     answerSection.style.display      = 'none';
-    globalTimerDisplay.style.display = 'block';
+    globalTimerDisplay.style.display = 'flex';
     startGlobalTimer(data.timer);
 });
 
@@ -456,10 +457,11 @@ socket.on('huroof_last_chance', (data) => {
     buzzerBtn.disabled               = false;
     buzzerBtn.style.opacity          = '1';
     if (voteSkipBtn) {
-        voteSkipBtn.style.display    = 'inline-block';
+        voteSkipBtn.style.display    = 'flex';
         voteSkipBtn.disabled         = false;
-        voteSkipBtn.innerHTML        = '<i class="fa-solid fa-forward-step"></i> اقتراح تغيير السؤال';
-        voteSkipBtn.style.background = '#607d8b';
+        voteSkipBtn.classList.remove('vote-pending', 'vote-approve');
+        voteSkipBtn.innerHTML        = '<i class="fa-solid fa-shuffle"></i><span class="btn-change-label">تغيير السؤال</span>';
+        voteSkipBtn.style.background = '';
         voteSkipBtn.style.animation  = 'none';
     }
     startGlobalTimer(data.timer);
@@ -514,16 +516,18 @@ socket.on('huroof_skip_voted', (data) => {
     if (data.sid === socket.id) {
         // أنا اللي طلبت التغيير → بانتظار موافقة الخصم
         if (voteSkipBtn) {
-            voteSkipBtn.innerHTML        = '<i class="fa-solid fa-check"></i> بانتظار موافقة الخصم...';
-            voteSkipBtn.style.background = '#4CAF50';
+            voteSkipBtn.classList.add('vote-pending');
+            voteSkipBtn.classList.remove('vote-approve');
+            voteSkipBtn.innerHTML        = '<i class="fa-solid fa-check"></i><span class="btn-change-label">بانتظار موافقة الخصم...</span>';
             voteSkipBtn.disabled         = true;
         }
     } else {
         // 🆕 الخصم طلب التغيير → يطلع لي طلب الموافقة
         showToast('🔄 الخصم يطلب تغيير السؤال — اضغط "اقتراح تغيير السؤال" للموافقة');
         if (voteSkipBtn && !voteSkipBtn.disabled) {
-            voteSkipBtn.innerHTML        = '<i class="fa-solid fa-handshake"></i> الخصم يريد التغيير — وافق؟';
-            voteSkipBtn.style.background  = '#ff9800';
+            voteSkipBtn.classList.add('vote-approve');
+            voteSkipBtn.classList.remove('vote-pending');
+            voteSkipBtn.innerHTML        = '<i class="fa-solid fa-handshake"></i><span class="btn-change-label">الخصم يريد التغيير — وافق؟</span>';
             ensurePulseKeyframe();
             voteSkipBtn.style.animation   = 'huroofPulse 1s infinite';
         }
@@ -735,7 +739,7 @@ let _playerTimerLeft = 0;
 
 function startGlobalTimer(seconds) {
     clearInterval(globalTimerInterval);
-    globalTimerDisplay.style.display = 'block';
+    globalTimerDisplay.style.display = 'flex';
     globalTimerDisplay.textContent   = `⏳ ${seconds}`;
     _globalTimerLeft = seconds;
     globalTimerInterval = setInterval(() => {
