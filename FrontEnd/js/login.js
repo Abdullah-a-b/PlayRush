@@ -95,6 +95,10 @@ window.addEventListener('load', () => {
                         } catch (e) {}
                     }
 
+                    // 🎬 دخول جديد = أنيميشن المنصة يُعرض من جديد (حتى لو
+                    // كان logout ثم login داخل نفس جلسة المتصفح)
+                    try { sessionStorage.removeItem('pr_splash_platform'); } catch (e) {}
+
                     //  التوجيه الذكي والفوري! (بدون انتظار لتخطي مشكلة التحديث)
                     if (data.has_profile) {
                         window.location.replace('categories.html');

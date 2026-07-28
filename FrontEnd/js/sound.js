@@ -14,8 +14,11 @@
 
     function ac() {
         if (!ctx) {
-            try { ctx = new (window.AudioContext || window.webkitAudioContext)(); }
-            catch (e) { return null; }
+            // 🩹 سياق مشترك: النقرة التي تفتح المؤثرات تفتح الموسيقى معها
+            try {
+                ctx = window.__prAudioCtx
+                    || (window.__prAudioCtx = new (window.AudioContext || window.webkitAudioContext)());
+            } catch (e) { return null; }
         }
         if (ctx.state === 'suspended') ctx.resume();
         return ctx;

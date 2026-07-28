@@ -30,8 +30,15 @@
             reg.update();
         }).catch(function () { /* التسجيل ليس حرجاً */ });
 
+        // 🩹 إصلاح: أول زيارة للموقع لا يكون هناك controller بعد. حين ينتهي
+        // تنصيب الـSW يلتقط السيطرة فيُطلق controllerchange → كنّا نعيد
+        // التحميل، فتُقتل شاشة الأنيميشن (بعد أن ثبّتت علمها) ويُقطع الصوت.
+        // لذلك: نعيد التحميل فقط لو كانت الصفحة *مُسيطراً عليها أصلاً*
+        // (أي تحديث حقيقي لنسخة SW قديمة)، لا عند التنصيب الأول.
+        var wasControlled = !!navigator.serviceWorker.controller;
         var reloaded = false;
         navigator.serviceWorker.addEventListener('controllerchange', function () {
+            if (!wasControlled) { wasControlled = true; return; }   // تنصيب أول — تجاهل
             if (reloaded) return;
             reloaded = true;
             window.location.reload();

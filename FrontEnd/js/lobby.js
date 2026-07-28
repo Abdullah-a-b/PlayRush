@@ -461,7 +461,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         showConfirm('تسجيل الخروج', 'هل أنت متأكد من رغبتك في تسجيل الخروج؟', () => {
             // خروج حقيقي: نمسح "تذكرني" في localStorage أيضاً
             try {
-                sessionStorage.clear();
+                sessionStorage.clear();            // يمسح أعلام الأنيميشن أيضاً
                 localStorage.removeItem('token');
                 sessionStorage.setItem('pr_logged_out', '1');
             } catch (e) {}

@@ -51,7 +51,10 @@
     function ac() {
         if (!ctx) {
             try {
-                ctx = new (window.AudioContext || window.webkitAudioContext)();
+                // 🩹 سياق مشترك مع sound.js/splash.js: فتح الصوت بنقرة واحدة
+                // يسري على الجميع بدل أن يبقى سياق الموسيقى معلّقاً (suspended).
+                ctx = window.__prAudioCtx
+                    || (window.__prAudioCtx = new (window.AudioContext || window.webkitAudioContext)());
                 master = ctx.createGain();
                 master.gain.value = 0.0001;
                 master.connect(ctx.destination);
@@ -144,7 +147,8 @@
 
     // تنظيف عند مغادرة الصفحة (يمنع طقطقة)
     window.addEventListener('pagehide', () => {
-        if (timer) clearInterval(timer);
+        if (timer) { clearInterval(timer); timer = null; }
+        running = false;                    // 🩹 كان يبقى true فيرفض start() لاحقاً
         try {
             if (master && ctx) {
                 master.gain.cancelScheduledValues(ctx.currentTime);
@@ -153,4 +157,24 @@
             }
         } catch (e) {}
     });
+
+    // 🩹 عودة الصفحة من ذاكرة الرجوع (bfcache): كنّا قد خفضنا الصوت إلى صفر
+    // وأوقفنا المؤقّت، وبقي running=true — فتصمت الموسيقى للأبد. نستأنف الآن.
+    window.addEventListener('pageshow', (e) => {
+        if (!e.persisted) return;
+        try { if (ctx && ctx.state === 'suspended') ctx.resume(); } catch (err) {}
+        start();
+    });
+
+    // 🩹 حارس: لو عُلّق السياق (تبديل تبويب/سياسة المتصفح) نوقظه ونعيد التشغيل
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) return;
+        try { if (ctx && ctx.state === 'suspended') ctx.resume(); } catch (e) {}
+        if (!running) start();
+    });
+    setInterval(() => {
+        if (!ctx) return;
+        if (ctx.state === 'suspended') { try { ctx.resume(); } catch (e) {} }
+        else if (!running) start();          // السماح وصل متأخراً — نلتقطه
+    }, 1500);
 })();

@@ -434,6 +434,9 @@ window.addEventListener('DOMContentLoaded', async () => {
                 sessionStorage.removeItem('token');
                 localStorage.removeItem('token');
                 sessionStorage.setItem('pr_logged_out', '1');
+                // 🎬 ليظهر أنيميشن المنصة مجدداً عند الدخول التالي
+                sessionStorage.removeItem('pr_splash_platform');
+                sessionStorage.removeItem('pr_music_pos_menu');
             } catch (e) {}
             window.location.replace('login.html');
         });
