@@ -14,7 +14,18 @@ const playerName   = sessionStorage.getItem('playerName')   || sessionStorage.ge
 const playerAvatar = sessionStorage.getItem('playerAvatar') || sessionStorage.getItem('avatar')     || '';
 const roomCode     = sessionStorage.getItem('gameRoomCode');
 
-if (!token || !roomCode) window.location.href = '../lobby.html';
+// 🤖 الوضع الفردي: نكتشفه من رابط الصفحة (?solo=1&difficulty=...)
+const _soloParams  = new URLSearchParams(window.location.search);
+const IS_SOLO      = _soloParams.get('solo') === '1';
+const SOLO_DIFF    = _soloParams.get('difficulty') || 'medium';
+let   soloRoomCode = null;   // يُملأ من solo_started
+
+// الغرفة الفعّالة: الفردية بعد بدئها، وإلا غرفة الأونلاين
+function activeRoom() { return soloRoomCode || roomCode; }
+
+
+// في الأونلاين نحتاج roomCode؛ في الفردي لا (الخادم ينشئ الغرفة)
+if (!token || (!roomCode && !IS_SOLO)) window.location.href = '../lobby.html';
 
 
 // ============================================================
@@ -118,10 +129,79 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // ============================================================
+//  الجوال: نضمن أنّ حقل الإجابة يظهر فوق الكيبورد عند التركيز
+//  (الصندوق نفسه inline داخل تدفّق الصفحة عبر CSS — بلا position:fixed)
+// ============================================================
+(function setupMobileAnswerScroll() {
+    const input = document.getElementById('playerAnswerInput');
+    if (!input) return;
+    const scrollIntoView = () => {
+        try {
+            input.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        } catch (e) {
+            input.scrollIntoView();
+        }
+    };
+    input.addEventListener('focus', () => setTimeout(scrollIntoView, 250));
+    // بعض المتصفحات على أندرويد تغيّر الـ viewport بعد الفتح بلحظات
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', () => {
+            if (document.activeElement === input) setTimeout(scrollIntoView, 100);
+        });
+    }
+})();
+
+
+// ============================================================
 //  الاتصال والانضمام للغرفة
 // ============================================================
 socket.on('connect', () => {
-    socket.emit('join_room', { room_code: roomCode, token, player_name: playerName, avatar: playerAvatar });
+    if (IS_SOLO) {
+        // الوضع الفردي: نطلب من الخادم إنشاء مباراة ضد البوت
+        // نرسل التوكن والبيانات لأن الصفحة قد تُفتح مباشرة دون لوبي
+        socket.emit('huroof_start_solo', {
+            difficulty: SOLO_DIFF, token: token,
+            name: playerName, avatar: playerAvatar
+        });
+    } else {
+        socket.emit('join_room', { room_code: roomCode, token, player_name: playerName, avatar: playerAvatar });
+    }
+});
+
+// 🤖 بدء المباراة الفردية: نخزّن رمز الغرفة ونعرض الخصم "الكمبيوتر"
+socket.on('solo_started', (data) => {
+    soloRoomCode = data.room_code;
+    // نضبط لوني مباشرة من الخادم (مصدر موثوق) قبل أي حدث آخر
+    if (data.your_color) {
+        myColor = data.your_color;
+        var gt = document.querySelector('.game-title');
+        if (gt) {
+            gt.textContent = 'خلية الحروف - أنت اللاعب ' + (myColor === 'green' ? 'الأخضر 🟢' : 'البرتقالي 🟠');
+            gt.style.color = myColor === 'green' ? '#4CAF50' : '#FF9800';
+        }
+    }
+    try {
+        showMatchReveal(playerName, getCorrectAvatarUrl(playerAvatar),
+                        'الكمبيوتر (' + (data.difficulty_label || '') + ')',
+                        '../assets/avatars/avatar_1.svg');
+    } catch (e) {}
+    // نطلب كتالوج المساعدات الآن بعد أن صار لدينا رمز الغرفة
+    setTimeout(() => socket.emit('huroof_get_helps_catalog', { roomCode: activeRoom() }), 300);
+
+    // تحسينات الوضع الفردي في الواجهة:
+    // 1) نخفي الدردشة (لا فائدة منها ضد بوت) — عبر صنف على body
+    //    ليصمد أمام إعادة بناء quick_chat.js للأزرار.
+    document.body.classList.add('solo-mode');
+    // 2) علم الكمبيوتر = كوكب الأرض
+    setTimeout(function () {
+        var f = document.getElementById('opponentFlagImg');
+        if (f) f.src = '../assets/flags/EARTH.svg';
+    }, 400);
+});
+
+socket.on('solo_error', (data) => {
+    if (typeof showToast === 'function') showToast((data && data.msg) || 'تعذّر بدء اللعب', 'error');
+    setTimeout(() => window.location.href = '../lobby.html', 1500);
 });
 
 
@@ -551,7 +631,7 @@ cells.forEach((cell, index) => {
             !cell.classList.contains('orange') &&
             !cell.classList.contains('active')
         ) {
-            socket.emit('huroof_select_hex', { roomCode, hexIndex: index });
+            socket.emit('huroof_select_hex', { roomCode: activeRoom(), hexIndex: index });
         }
     });
 });
@@ -560,7 +640,7 @@ buzzerBtn.addEventListener('click', () => {
     if (!buzzerBtn.disabled) {
         buzzerBtn.disabled      = true;
         buzzerBtn.style.opacity = '0.5';
-        socket.emit('huroof_buzz', { roomCode });
+        socket.emit('huroof_buzz', { roomCode: activeRoom() });
     }
 });
 
@@ -570,12 +650,12 @@ function submitAnswer() {
     if (!ans) return;
     isMyTurnToAnswer         = false;
     submitAnswerBtn.disabled = true;
-    socket.emit('huroof_submit_answer', { roomCode, answer: ans });
+    socket.emit('huroof_submit_answer', { roomCode: activeRoom(), answer: ans });
 }
 
 submitAnswerBtn.addEventListener('click', submitAnswer);
 playerAnswerInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') submitAnswer(); });
-voteSkipBtn?.addEventListener('click', () => { if (!voteSkipBtn.disabled) socket.emit('huroof_vote_skip', { roomCode }); });
+voteSkipBtn?.addEventListener('click', () => { if (!voteSkipBtn.disabled) socket.emit('huroof_vote_skip', { roomCode: activeRoom() }); });
 
 
 // ============================================================
@@ -590,7 +670,7 @@ document.getElementById('cancelSurrenderBtn').onclick = () => { surrenderModal.s
 
 document.getElementById('confirmSurrenderBtn').onclick = () => {
     surrenderModal.style.display = 'none';
-    socket.emit('huroof_surrender', { roomCode });
+    socket.emit('huroof_surrender', { roomCode: activeRoom() });
     sessionStorage.removeItem('gameRoomCode');
 
     const opponentColor = myColor === 'green' ? 'orange' : 'green';
@@ -1125,7 +1205,7 @@ socket.on('leaver_penalty', (data) => {
 
     function useHelp(id) {
         if (_helpsUsed.has(id)) return;
-        socket.emit('huroof_use_help', { roomCode, helpId: id });
+        socket.emit('huroof_use_help', { roomCode: activeRoom(), helpId: id });
     }
 
     function showHelpToast(msg) {
@@ -1141,7 +1221,7 @@ socket.on('leaver_penalty', (data) => {
 
     // طلب الكتالوج عند بدء المباراة
     socket.on('connect', () => {
-        setTimeout(() => socket.emit('huroof_get_helps_catalog', { roomCode }), 800);
+        setTimeout(() => socket.emit('huroof_get_helps_catalog', { roomCode: activeRoom() }), 800);
     });
 
     socket.on('huroof_helps_catalog', (data) => {
@@ -1192,7 +1272,7 @@ socket.on('leaver_penalty', (data) => {
             btn.textContent = cat;
             btn.style.cssText = 'background:rgba(74,144,226,0.15);border:1px solid rgba(74,144,226,0.4);color:#fff;border-radius:10px;padding:12px;cursor:pointer;font-family:inherit;font-size:14px;';
             btn.addEventListener('click', () => {
-                socket.emit('huroof_use_help', { roomCode, helpId: 'choose_category', category: cat });
+                socket.emit('huroof_use_help', { roomCode: activeRoom(), helpId: 'choose_category', category: cat });
                 modal.remove();
             });
             grid.appendChild(btn);

@@ -68,7 +68,13 @@ window.addEventListener('load', () => {
                     body: formData
                 });
 
-                const data = await response.json();
+                let data = {};
+                try { data = await response.json(); } catch (e) { data = {}; }
+
+                // 429 = تجاوز حدّ المحاولات — نوضّح السبب بدل رسالة عامة
+                if (response.status === 429) {
+                    throw new Error("__RATE_LIMIT__");
+                }
 
                 if (response.ok) {
                     messageBox.textContent = 'تم تسجيل الدخول! جاري تحويلك...';
@@ -133,7 +139,9 @@ window.addEventListener('load', () => {
                 submitBtn.textContent = "تسجيل الدخول";
                 }
             } catch (error) {
-            loginMessage.textContent = "تعذر الاتصال بالسيرفر";
+            loginMessage.textContent = (error && error.message === "__RATE_LIMIT__")
+                ? "محاولات كثيرة خلال وقت قصير. انتظر قليلاً ثم أعد المحاولة."
+                : "تعذّر الوصول للسيرفر. تحقّق من اتصالك بالإنترنت.";
             loginMessage.style.color = "#ff4d4d";
             submitBtn.disabled = false;
             submitBtn.textContent = "تسجيل الدخول";

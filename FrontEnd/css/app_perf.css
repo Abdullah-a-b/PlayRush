@@ -1,0 +1,65 @@
+/* ============================================================
+   PlayRush — تخفيف الأداء داخل التطبيق (Capacitor / WebView)
+   ------------------------------------------------------------
+   يُطبَّق فقط عندما تحمل <html> الصنف .pr-app — أي داخل التطبيق.
+   الموقع على المتصفح يبقى بكامل مؤثراته البصرية بلا أي تغيير.
+
+   المستهدَف: أثقل ثلاثة أشياء على WebView أندرويد
+     ١) backdrop-filter: blur(...)  ← الأغلى إطلاقاً
+     ٢) الجزيئات العائمة الدائمة
+     ٣) الظلال الكبيرة والانتقالات الطويلة
+
+   الفلسفة: نُبقي الحركة والهوية البصرية، ونحذف ما لا يُلاحَظ أثره
+   الجمالي مقابل كلفته العالية.
+   ============================================================ */
+
+/* ── ١) إزالة الضبابية الخلفية واستبدالها بخلفية معتمة مكافئة ── */
+.pr-app .toast,
+.pr-app .confirm-overlay,
+.pr-app .loadout-modal,
+.pr-app .modal-overlay,
+.pr-app .top-bar,
+.pr-app [style*="backdrop-filter"] {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+.pr-app .confirm-overlay { background: rgba(0, 0, 0, 0.88) !important; }
+.pr-app .loadout-modal   { background: rgba(0, 0, 0, 0.9)  !important; }
+.pr-app .toast           { background: rgba(24, 24, 27, 0.98) !important; }
+
+/* ── ٢) الجزيئات: نُبقي اثنتين فقط بحركة أبطأ (الحسّ باقٍ، الكلفة أقل) ── */
+.pr-app .particle { animation-duration: 12s !important; opacity: 0.5 !important; }
+.pr-app .particle:nth-child(n+3) { display: none !important; }
+
+/* ── ٣) النجوم في الصفحة الرئيسية: وميض أهدأ ── */
+.pr-app .star { animation-duration: 4s !important; }
+
+/* ── ٤) الظلال الثقيلة: نخففها بلا إلغائها ── */
+.pr-app .game-card,
+.pr-app .confirm-box,
+.pr-app .modal-content {
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45) !important;
+}
+
+/* ── ٥) انتقالات أسرع = إحساس أرشق على الجوال ──
+   ملاحظة مهمة: نختصر transition فقط (استجابة لمسة المستخدم).
+   لا نمسّ animation-duration إطلاقاً — الأنيميشنات الزخرفية
+   (تعويم الصندوق، تدرّج الخلفية، الوميض) مضبوطة بمدد مقصودة،
+   وسحقها يجعلها تهتز بسرعة مزعجة. */
+.pr-app * {
+    transition-duration: 0.18s !important;
+}
+
+/* ── ٦) تسريع التمرير ── */
+.pr-app .scroll-area,
+.pr-app .chat-box,
+.pr-app .games-grid {
+    -webkit-overflow-scrolling: touch;
+    will-change: scroll-position;
+}
+
+/* ── ٧) احترام تفضيل تقليل الحركة (لكل الأجهزة) ── */
+@media (prefers-reduced-motion: reduce) {
+    .particle, .star { animation: none !important; }
+    * { transition-duration: 0.01s !important; }
+}

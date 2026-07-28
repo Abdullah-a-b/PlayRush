@@ -81,7 +81,21 @@
 .otp-input-group { display: none; margin-top: 15px; animation: fadeIn 0.3s ease; }
 
 /* --- الدردشة والتنبيهات --- */
-.chat-messages { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; justify-content: flex-end; }
+/* الرسائل تلتصق بالأسفل عبر margin-top:auto على أول عنصر — وليس
+   justify-content:flex-end، لأن الأخير مع overflow يجعل الرسائل
+   القديمة تفيض من الأعلى ولا يمكن الوصول إليها بالتمرير إطلاقاً.
+   (التمرير للأسفل تلقائياً يتكفّل به utils.js عند وصول رسالة.) */
+.chat-messages {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+    max-height: 320px;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+}
+.chat-messages > *:first-child { margin-top: auto; }
 .chat-msg { background: rgba(0,0,0,0.4); padding: 8px 12px; border-radius: 8px; font-size: 13px; border-right: 3px solid var(--brand-gold, #facc15); word-wrap: break-word; animation: slideIn 0.2s ease; }
 .chat-msg span.user { font-weight: bold; color: var(--brand-gold, #facc15); margin-left: 5px; }
 

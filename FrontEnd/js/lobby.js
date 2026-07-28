@@ -307,14 +307,36 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // الوضع الفردي (ضد الكمبيوتر) — حصري لخلية الحروف حالياً
+    const soloModeBtn = document.getElementById('soloModeBtn');
+    if (soloModeBtn) {
+        soloModeBtn.style.display = (selectedGameMode === 'huroof') ? 'flex' : 'none';
+        soloModeBtn.addEventListener('click', () => {
+            if (window.openSoloLevelPicker) {
+                window.openSoloLevelPicker('huroof');
+            } else {
+                // احتياط: انتقال مباشر بمستوى متوسط
+                window.location.href = 'games/huroof.html?solo=1&difficulty=medium';
+            }
+        });
+    }
+
     // ----------------------------------------
     //  جلب بيانات الحساب
     // ----------------------------------------
     try {
         const res= await fetch(`${API_URL}/auth/me`, { headers: { 'Authorization': `Bearer ${token}` } });
         if (!res.ok) {
-            sessionStorage.removeItem('token');
-            return window.location.replace('login.html');
+            // 401/403 فقط تعني توكناً غير صالح؛ غيرها عطل مؤقت لا يستوجب الخروج
+            if (res.status === 401 || res.status === 403) {
+                sessionStorage.removeItem('token');
+                try { localStorage.removeItem('token'); } catch (e) {}
+                return window.location.replace('login.html');
+            }
+            if (typeof showToast === 'function') {
+                showToast('تعذّر تحميل بياناتك مؤقتاً. أعد المحاولة بعد قليل.', 'error');
+            }
+            return;
         }
 
         userDataCache = await res.json();
@@ -437,7 +459,12 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('logoutSettingsBtn')?.addEventListener('click', () => {
         showConfirm('تسجيل الخروج', 'هل أنت متأكد من رغبتك في تسجيل الخروج؟', () => {
-            sessionStorage.clear();
+            // خروج حقيقي: نمسح "تذكرني" في localStorage أيضاً
+            try {
+                sessionStorage.clear();
+                localStorage.removeItem('token');
+                sessionStorage.setItem('pr_logged_out', '1');
+            } catch (e) {}
             window.location.replace('login.html');
         });
     });

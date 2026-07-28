@@ -188,11 +188,19 @@
 
   // الدالة العامة: تفتح البروفايل بجلب البيانات من الخادم
   window.openPlayerProfileById = function (targetId) {
-    if (!targetId) return;
+    // نتأكد أن المعرّف رقمي قبل الإرسال — الخادم يرفض غير الرقمي
+    // بـ"معرّف غير صالح". بعض المصادر قد تمرّر player_id النصّي (PR7X2K)
+    // بالغلط بدل user_id الرقمي؛ هنا نلتقط ذلك مبكراً.
+    var numeric = parseInt(targetId, 10);
+    if (!targetId || isNaN(numeric)) {
+      if (typeof _toast === 'function') _toast('تعذّر فتح البروفايل');
+      console.warn('openPlayerProfileById: معرّف غير رقمي:', targetId);
+      return;
+    }
     _ensureModal();
-    _state.targetId = targetId;
+    _state.targetId = numeric;
     const gameMode = _currentGameMode();
-    socket.emit('get_player_profile', { token: _token(), target_id: targetId, game_mode: gameMode });
+    socket.emit('get_player_profile', { token: _token(), target_id: numeric, game_mode: gameMode });
   };
 
   // استقبال البيانات وعرضها

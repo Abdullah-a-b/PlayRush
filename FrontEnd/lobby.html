@@ -28,6 +28,8 @@
   <link rel="stylesheet" href="css/email_copy.css">
   <link rel="stylesheet" href="css/categories_hub.css">
   <link rel="stylesheet" href="css/responsive.css">
+  <link rel="stylesheet" href="css/guide_hint.css">
+  <link rel="stylesheet" href="css/app_perf.css">
 </head>
 <body>
   <div id="toastContainer" class="toast-container"></div>
@@ -74,9 +76,9 @@
 
     <nav class="main-navigation">
       <button class="nav-btn active" onclick="window.location.href='categories.html'"><i class="fa-solid fa-gamepad"></i> <span>ساحة الألعاب</span></button>
+      <button class="nav-btn nav-btn-guide" id="guideNavBtn" onclick="if(window.openHowToPlay)window.openHowToPlay()"><i class="fa-solid fa-circle-question"></i> <span>كيف ألعب؟</span></button>
       <button class="nav-btn" onclick="openStoreModal()"><i class="fa-solid fa-store"></i> <span>المتجر</span></button>
       <button class="nav-btn" onclick="if(window.openLoadout)window.openLoadout()"><i class="fa-solid fa-wand-magic-sparkles"></i> <span>المساعدات</span></button>
-      <button class="nav-btn" onclick="if(window.openHowToPlay)window.openHowToPlay()"><i class="fa-solid fa-circle-question"></i> <span>كيف تلعب</span></button>
       <button class="nav-btn" onclick="if(window.openLeaderboard)window.openLeaderboard()"><i class="fa-solid fa-ranking-star"></i> <span>الصدارة</span></button>
       <button class="nav-btn" onclick="openLobbyPass()"><i class="fa-solid fa-crown"></i> <span>البطاقة الموسمية</span></button>
       <button class="nav-btn" id="friendsNavBtn" style="position:relative;"><i class="fa-solid fa-user-group"></i> <span>الأصدقاء</span><span id="friendsBadge" style="display:none;position:absolute;top:2px;left:8px;background:#f44336;color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:11px;align-items:center;justify-content:center;padding:0 4px;">0</span></button>
@@ -101,6 +103,14 @@
               <div style="display: flex; flex-direction: column; gap: 5px; align-items: center; justify-content: center;">
                   <span style="font-size: 17px; font-weight: bold;">وضع الجَمَعات</span>
                   <span style="font-size: 11px; font-weight: normal; color: rgba(255,255,255,0.9); text-align: center; line-height: 1.4;">شاشة واحدة للجميع!<br>العب مع من حولك بنفس المكان</span>
+              </div>
+          </button>
+
+          <button class="action-btn primary" id="soloModeBtn" style="display: none; background: linear-gradient(45deg, #10b981, #059669); color: #fff; box-shadow: 0 10px 20px rgba(16, 185, 129, 0.4);">
+              <i class="fa-solid fa-robot" style="font-size: 26px;"></i>
+              <div style="display: flex; flex-direction: column; gap: 4px; align-items: center; justify-content: center;">
+                  <span style="font-size: 17px; font-weight: bold;">الوضع الفردي</span>
+                  <span style="font-size: 11px; font-weight: normal; color: rgba(255,255,255,0.9);">العب ضد الكمبيوتر</span>
               </div>
           </button>
 
@@ -390,7 +400,9 @@
 </div>
 
     <script src="js/config.js" defer></script>
+  <script src="js/app_update.js" defer></script>
     <script src="js/social_bar.js" defer></script>
+    <script src="js/emoji_engine.js" defer></script>
     <script src="js/utils.js" defer></script>
     <script src="js/settings.js" defer></script>
     <script src="js/socket.io.min.js" defer></script>
@@ -399,6 +411,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" defer></script>
     <script src="js/quick_chat.js" defer></script>
     <script src="js/presence.js" defer></script>
+    <script src="js/solo_mode.js" defer></script>
     <script src="js/lobby.js" defer></script> 
     <script src="js/friends_panel.js" defer></script>
     <script src="js/player_profile.js" defer></script>
@@ -409,6 +422,7 @@
   <script src="js/categories_hub.js" defer></script>
     <script src="js/leaderboard_ui.js" defer></script>
     <script src="js/how_to_play.js" defer></script>
+    <script src="js/guide_hint.js" defer></script>
     <script src="js/anti_cheat.js" defer></script>
   <script src="js/email_copy.js" defer></script>
   <script src="js/sound.js" defer></script>

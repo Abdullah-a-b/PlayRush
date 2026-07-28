@@ -28,6 +28,14 @@
   <link rel="stylesheet" href="css/categories_hub.css">
   <link rel="stylesheet" href="css/platform_guide.css">
   <link rel="stylesheet" href="css/responsive.css">
+  <link rel="stylesheet" href="css/guide_hint.css">
+  <link rel="stylesheet" href="css/app_perf.css">
+  <style>
+    .solo-btn { margin-top:8px; width:100%; padding:9px; border:1px solid rgba(250,204,21,.4);
+      border-radius:10px; background:linear-gradient(135deg,rgba(250,204,21,.15),rgba(250,204,21,.05));
+      color:#facc15; font-family:inherit; font-weight:700; cursor:pointer; font-size:.9rem; }
+    .solo-btn:hover { background:rgba(250,204,21,.25); }
+  </style>
 </head>
 <body>
   <div id="toastContainer" class="toast-container"></div>
@@ -84,12 +92,12 @@
 
     <nav class="main-navigation">
       <button class="nav-btn active" data-section="games"><i class="fa-solid fa-gamepad"></i> <span>ساحة الألعاب</span></button>
+      <button class="nav-btn nav-btn-guide" id="guideNavBtn" onclick="if(window.openPlatformGuide)window.openPlatformGuide()"><i class="fa-solid fa-circle-question"></i> <span>كيف ألعب؟</span></button>
       <button class="nav-btn" data-section="quests"><i class="fa-solid fa-list-check"></i> <span>المهام</span></button>
       <button class="nav-btn" data-section="pass"><i class="fa-solid fa-crown"></i> <span>البطاقة الموسمية</span></button>
       <button class="nav-btn" data-section="leaderboard"><i class="fa-solid fa-ranking-star"></i> <span>الصدارة</span></button>
       <button class="nav-btn" data-section="store"><i class="fa-solid fa-store"></i> <span>المتجر</span></button>
       <button class="nav-btn" data-section="friends" style="position:relative;"><i class="fa-solid fa-user-group"></i> <span>الأصدقاء</span><span id="friendsBadge" style="display:none;position:absolute;top:2px;left:8px;background:#f44336;color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:11px;align-items:center;justify-content:center;padding:0 4px;">0</span></button>
-      <button class="nav-btn" onclick="if(window.openPlatformGuide)window.openPlatformGuide()"><i class="fa-solid fa-book-open"></i> <span>دليل المنصة</span></button>
     </nav>
 
     <main class="main-content">
@@ -106,6 +114,7 @@
             <h3 class="game-title">خلية الحروف</h3>
             <p class="game-desc">لعبة السيطرة الاستراتيجية على لوحة الحروف السداسية.</p>
             <button type="button" class="play-btn"><i class="fa-solid fa-play"></i> الذهاب الى اللوبي</button>
+            <button type="button" class="solo-btn" data-solo="huroof"><i class="fa-solid fa-robot"></i> الوضع الفردي</button>
           </div>
 
           <div class="game-card" data-game="bank">
@@ -408,10 +417,13 @@
 
   <script src="js/splash.js"></script>
   <script src="js/config.js" defer></script>
+  <script src="js/whats_new.js" defer></script>
+  <script src="js/app_update.js" defer></script>
   <script src="js/progression_api.js" defer></script>
   <script src="js/categories_hub.js" defer></script>
   <script src="js/platform_guide.js" defer></script>
     <script src="js/social_bar.js" defer></script>
+  <script src="js/emoji_engine.js" defer></script>
   <script src="js/utils.js" defer></script>
   <script src="js/settings.js" defer></script>
   <script src="js/socket.io.min.js" defer></script>
@@ -426,6 +438,8 @@
   <script src="js/themes.js" defer></script>
     <script src="js/store.js" defer></script>
     <script src="js/loadout.js" defer></script>
+  <script src="js/guide_hint.js" defer></script>
+  <script src="js/solo_mode.js" defer></script>
   <script src="js/anti_cheat.js" defer></script>
   <script src="js/email_copy.js" defer></script>
   <script src="js/sound.js" defer></script>

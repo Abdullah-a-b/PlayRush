@@ -73,7 +73,9 @@
     row.title = 'عرض البروفايل';
     row.addEventListener('click', function () {
       if (typeof window.openPlayerProfileById === 'function') {
-        window.openPlayerProfileById(item.player_id || item.user_id);
+        // user_id هو الرقم الذي يفهمه الخادم؛ player_id معرّف نصّي
+        // للعرض فقط (مثل PR7X2K) وكان إرساله أولاً يسبب "معرّف غير صالح".
+        window.openPlayerProfileById(item.user_id || item.player_id);
       }
     });
     return row;

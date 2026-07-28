@@ -37,6 +37,17 @@
         ['📚 اختيار التصنيف', 'تحدد مجال سؤالك القادم مسبقاً — قبل اختيار الحرف.'],
       ],
       helpsNote: 'تجهّز 3 مساعدات قبل المباراة من «المساعدات»، والخانة الرابعة تُتاح للشراء من المتجر عند المستوى 10. كل مساعدة مرة واحدة بالمباراة — ولا تعطي أي مساعدة الإجابةَ نفسها أبداً.',
+      soloMode: {
+        title: '🤖 الوضع الفردي (ضد الكمبيوتر)',
+        intro: 'العب خلية الحروف ضد خصم كمبيوتر بأربعة مستويات — بلا انتظار منافس، ومثالي للتدرّب وتجربة الحروف.',
+        points: [
+          'أربعة مستويات: مبتدئ (يخطئ كثيراً)، متوسط، صعب، وخبير (نادراً ما يخطئ).',
+          'الكمبيوتر يلعب كإنسان: لا يبزّ فوراً، ويتردّد أحياناً، ولا يجيب إلا حين يعرف.',
+          'نفس قواعد اللعب تماماً — الأدوار، البزّ، بناء الخط، والمساعدات.',
+          'نتائج الوضع الفردي لا تؤثّر على تصنيفك أو نقاطك — للمتعة والتدريب فقط.',
+        ],
+        tip: 'ابدأ بالمبتدئ لتتعلّم، ثم تدرّج. الخبير يبني خطه بذكاء ويقطع خطك — راقب حركته!',
+      },
       tip: 'لا تلاحق الحروف السهلة — لاحق الحروف التي تكسر خط خصمك وتبني خطك في آن واحد.',
     },
 
@@ -237,6 +248,24 @@
     sec.appendChild(grid);
     if (g.helpsNote) sec.appendChild(el('p', 'htp-note', esc(g.helpsNote)));
     body.appendChild(sec);
+
+    // الوضع الفردي (لو كانت اللعبة تدعمه)
+    if (g.soloMode) {
+      sec = el('section', 'htp-section');
+      sec.appendChild(el('h3', null, esc(g.soloMode.title)));
+      sec.appendChild(el('p', null, esc(g.soloMode.intro)));
+      var sul = el('ul', 'htp-steps');
+      g.soloMode.points.forEach(function (p) {
+        sul.appendChild(el('li', null, esc(p)));
+      });
+      sec.appendChild(sul);
+      if (g.soloMode.tip) {
+        var stip = el('p', 'htp-note');
+        stip.innerHTML = '💡 ' + esc(g.soloMode.tip);
+        sec.appendChild(stip);
+      }
+      body.appendChild(sec);
+    }
 
     // اللعب النظيف — لماذا هذه الأنظمة؟
     sec = el('section', 'htp-section');

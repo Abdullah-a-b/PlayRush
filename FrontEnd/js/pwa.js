@@ -7,6 +7,9 @@
 (function () {
     // داخل تطبيق Capacitor الملفات محلية أصلاً — لا حاجة لـSW
     // (نفحص جسر Capacitor لأن androidScheme:"https" يجعل العنوان https://localhost)
+    // داخل تطبيق Capacitor الملفات محزومة محلياً (webDir) فلا حاجة
+    // لأي تخزين مؤقت — بل قد يخدم نسخة قديمة بعد تحديث التطبيق.
+    // نسجّله فقط على الويب.
     var isApp = window.PR_IS_APP === true
         || (typeof window.Capacitor !== 'undefined')
         || /^(capacitor|file|ionic):$/.test(window.location.protocol);
