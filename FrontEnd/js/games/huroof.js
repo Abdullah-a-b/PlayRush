@@ -129,98 +129,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // ============================================================
-//  معالج الكيبورد على الجوال (visualViewport) — نسخة محسّنة
-//
-//  المشكلة: لما يفتح الكيبورد في Chrome Android:
-//    1. الـ viewport يصغر → الصندوق يخرج من الشاشة
-//    2. الـ vh يتغير في بعض المتصفحات → max-height يتكسر
-//    3. المحتوى يتراكم لأن الـ overflow لا يعمل مع max-height ثابت
-//
-//  الحل:
-//    - نحسب ارتفاع الكيبورد بدقة من visualViewport
-//    - نضبط bottom + max-height ديناميكياً بـ px (لا vh)
-//    - نضيف كلاس keyboard-open يُخفي العناصر غير الضرورية (CSS)
-//    - نُخفي أزرار المساعدات وزر الاستسلام أثناء الكتابة
+//  الجوال: نضمن أنّ حقل الإجابة يظهر فوق الكيبورد عند التركيز
+//  (الصندوق نفسه inline داخل تدفّق الصفحة عبر CSS — بلا position:fixed)
 // ============================================================
-(function setupMobileKeyboardHandler() {
-    if (!window.visualViewport) return;
-
-    const sidebar    = document.getElementById('questionSidebar');
-    const helpSlots  = document.querySelector('.help-slots');
-    const surrendBtn = document.getElementById('surrenderBtn');
-    const soundBtn   = document.querySelector('.pr-sound-float');
-    const ansInput   = document.getElementById('playerAnswerInput');
-    if (!sidebar) return;
-
-    const BASE_BOTTOM  = 68;
-    const BASE_MAX_VH  = 0.38;
-    const KB_THRESHOLD = 100;
-
-    let kbOpen = false;
-    let rafId  = 0;
-
-    function applyLayout() {
-        rafId = 0;
-        const vv       = window.visualViewport;
-        const winH     = window.innerHeight;
-        const vvBottom = vv.offsetTop + vv.height;
-        const kbHeight = Math.max(0, winH - vvBottom);
-
-        if (kbHeight > KB_THRESHOLD) {
-            if (!kbOpen) {
-                kbOpen = true;
-                sidebar.classList.add('keyboard-open');
-                document.documentElement.classList.add('kb-open');
-                if (helpSlots)  helpSlots.style.setProperty('display', 'none', 'important');
-                if (surrendBtn) surrendBtn.style.setProperty('display', 'none', 'important');
-                if (soundBtn)   soundBtn.style.setProperty('display', 'none', 'important');
-            }
-
-            // نُثبّت الصندوق بـ top بالنسبة لأعلى الصفحة (layout viewport)
-            // top = أعلى المنطقة المرئية + المسافة المتاحة - ارتفاع الصندوق - هامش
-            const topBar     = 62;
-            const margin     = 8;
-            const available  = vv.height - topBar - margin * 2;
-            const sidebarH   = Math.max(140, Math.min(available, Math.round(vv.height * 0.55)));
-            // vv.offsetTop = إزاحة المنطقة المرئية عن أعلى layout viewport (يتغيّر مع scroll)
-            const topPx      = vv.offsetTop + vv.height - sidebarH - margin;
-
-            sidebar.style.setProperty('top',        topPx + 'px',    'important');
-            sidebar.style.setProperty('bottom',     'auto',           'important');
-            sidebar.style.setProperty('max-height', sidebarH + 'px',  'important');
-            sidebar.style.setProperty('height',     sidebarH + 'px',  'important');
-        } else {
-            _resetSidebar();
+(function setupMobileAnswerScroll() {
+    const input = document.getElementById('playerAnswerInput');
+    if (!input) return;
+    const scrollIntoView = () => {
+        try {
+            input.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        } catch (e) {
+            input.scrollIntoView();
         }
-    }
-
-    function onViewportChange() {
-        if (rafId) return;
-        rafId = requestAnimationFrame(applyLayout);
-    }
-
-    function _resetSidebar() {
-        if (!kbOpen) return;
-        kbOpen = false;
-        sidebar.classList.remove('keyboard-open');
-        document.documentElement.classList.remove('kb-open');
-        sidebar.style.removeProperty('top');
-        sidebar.style.removeProperty('height');
-        sidebar.style.setProperty('bottom',     BASE_BOTTOM + 'px', 'important');
-        sidebar.style.setProperty('max-height', (window.innerHeight * BASE_MAX_VH) + 'px', 'important');
-        if (helpSlots)  helpSlots.style.removeProperty('display');
-        if (surrendBtn) surrendBtn.style.removeProperty('display');
-        if (soundBtn)   soundBtn.style.removeProperty('display');
-    }
-
-    window.visualViewport.addEventListener('resize', onViewportChange);
-    window.visualViewport.addEventListener('scroll', onViewportChange);
-    // بعض متصفحات iOS تُحرّك الصفحة عند focus — نعيد الحساب فوراً
-    if (ansInput) {
-        ansInput.addEventListener('focus', () => setTimeout(onViewportChange, 50));
-        ansInput.addEventListener('blur',  () => setTimeout(_resetSidebar,  200));
+    };
+    input.addEventListener('focus', () => setTimeout(scrollIntoView, 250));
+    // بعض المتصفحات على أندرويد تغيّر الـ viewport بعد الفتح بلحظات
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', () => {
+            if (document.activeElement === input) setTimeout(scrollIntoView, 100);
+        });
     }
 })();
+
 
 // ============================================================
 //  الاتصال والانضمام للغرفة
