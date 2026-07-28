@@ -6,10 +6,15 @@
  * مع مؤثرات صوتية خفيفة (best-effort — تُحجب قبل أول تفاعل بسياسة المتصفح).
  */
 (function () {
-    const path = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
+    // 🩹 السبب الجذري: Cloudflare Pages يقدّم الروابط النظيفة بلا امتداد
+    // (playrush.pages.dev/categories) بينما التطبيق يفتح ملفاً باسم
+    // categories.html — فكانت المقارنة تفشل على الويب فقط، ويخرج السكربت
+    // صامتاً بلا أي أنيميشن. نُطبّع الاسم: نحذف .html ونعالج المسار الفارغ.
+    const page = (location.pathname.split('/').pop() || '')
+        .toLowerCase().replace(/\.html$/, '') || 'index';
     let mode = null;
-    if (path === '' || path === 'index.html') mode = 'company';
-    else if (path === 'categories.html') mode = 'platform';
+    if (page === 'index') mode = 'company';
+    else if (page === 'categories') mode = 'platform';
     if (!mode) return;
 
     const FLAG = mode === 'company' ? 'pr_splash_company' : 'pr_splash_platform';

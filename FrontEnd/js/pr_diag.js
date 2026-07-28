@@ -40,7 +40,8 @@
 
         setInterval(function () {
             var lines = [];
-            lines.push('page        : ' + (location.pathname.split('/').pop() || 'index.html'));
+            var _pg = (location.pathname.split('/').pop() || '').toLowerCase().replace(/\.html$/, '') || 'index';
+            lines.push('page        : ' + _pg + '   (raw: ' + location.pathname + ')');
             lines.push('music.js run: ' + (window.PRMusic ? 'YES' : '*** NO ***'));
             if (window.PRMusic) {
                 var st = window.PRMusic.state();

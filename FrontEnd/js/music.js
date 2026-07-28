@@ -14,12 +14,15 @@
  */
 (function () {
     // ===== تحديد الجو من الصفحة =====
-    const path = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
+    // 🩹 نفس علّة splash.js: الروابط النظيفة بلا .html على Cloudflare Pages
+    // كانت تُسقط كل المطابقات، فلا موسيقى في أي صفحة على الويب.
+    const page = (location.pathname.split('/').pop() || '')
+        .toLowerCase().replace(/\.html$/, '') || 'index';
     let THEME = null;
-    if (/^(index|login|register|forgot-password|reset-password|verify-code|profile-setup)\.html$/.test(path) || path === '') THEME = 'calm';
-    else if (/^(categories|lobby)\.html$/.test(path)) THEME = 'menu';
+    if (/^(index|login|register|forgot-password|reset-password|verify-code|profile-setup)$/.test(page)) THEME = 'calm';
+    else if (/^(categories|lobby)$/.test(page)) THEME = 'menu';
     else {
-        const m = path.match(/^(huroof|career|bank|knowledge|whoami)(_party)?\.html$/);
+        const m = page.match(/^(huroof|career|bank|knowledge|whoami)(_party)?$/);
         if (m) THEME = 'g_' + m[1];
     }
     if (!THEME) return;
