@@ -329,12 +329,14 @@ html.kb-open, html.kb-open body {
         line-height: 1.35 !important;
         display: -webkit-box !important;
         -webkit-line-clamp: 1;
+        line-clamp: 1;
         -webkit-box-orient: vertical;
         overflow: hidden !important;
     }
     /* الحالة المفتوحة بعد اللمس */
     .question-sidebar.keyboard-open .question-box.q-open #questionText {
         -webkit-line-clamp: unset;
+        line-clamp: unset;
         max-height: 5em !important;
         overflow-y: auto !important;
         -webkit-overflow-scrolling: touch !important;
