@@ -529,7 +529,10 @@ def register_career_events(sio):
         _pl = next((p for p in room['players'] if p.get('sid') == sid), None)
         if _pl:
             user_id = _pl.get('user_id')
-        if not dev_mode and user_id:
+        # 🤖 الوضع الفردي: لا خصم من مخزون اللاعب (تدريب لا مقامرة).
+        #    تتجدّد كل مباراة فردية، ويبقى قيد "مرة لكل مباراة" ساريًا.
+        _is_solo = bool(getattr(gs, "is_solo", False))
+        if not dev_mode and not _is_solo and user_id:
             from app.domains.wallet.help_inventory import consume_help
             if not consume_help(user_id, help_id):
                 await sio.emit('career_help_result', {'ok': False, 'msg': 'لا تملك هذه المساعدة'}, to=sid)

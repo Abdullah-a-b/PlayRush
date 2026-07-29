@@ -877,8 +877,13 @@ def register_huroof_events(sio):
             await sio.emit('huroof_help_result', {'ok': False, 'msg': 'استخدمت هذه المساعدة من قبل'}, to=sid)
             return
 
-        # 4) يملك المساعدة في مخزونه؟ (إلا في وضع التطوير)
-        if not dev_mode and user_id:
+        # 🤖 الوضع الفردي: المساعدات لا تُخصم من مخزون اللاعب إطلاقاً.
+        #    السولو تدريب لا مقامرة برصيدك؛ ولذلك تتجدّد كل مباراة فردية.
+        #    (قيد "مرة واحدة لكل مباراة" يبقى ساري المفعول عبر gs.helps_used)
+        _is_solo = bool(getattr(gs, 'is_solo', False))
+
+        # 4) يملك المساعدة في مخزونه؟ (إلا في وضع التطوير أو الفردي)
+        if not dev_mode and not _is_solo and user_id:
             from app.domains.wallet.help_inventory import get_quantity
             if get_quantity(user_id, help_id) <= 0:
                 await sio.emit('huroof_help_result', {'ok': False, 'msg': 'لا تملك هذه المساعدة — اشترها من المتجر'}, to=sid)
@@ -915,8 +920,8 @@ def register_huroof_events(sio):
             await sio.emit('huroof_help_result', {'ok': False, 'msg': 'انتظر دورك'}, to=sid)
             return
 
-        # نستهلك من المخزون (إلا في وضع التطوير) — قبل التنفيذ
-        if not dev_mode and user_id:
+        # نستهلك من المخزون (إلا في وضع التطوير أو الفردي) — قبل التنفيذ
+        if not dev_mode and not _is_solo and user_id:
             from app.domains.wallet.help_inventory import consume_help
             if not consume_help(user_id, help_id):
                 await sio.emit('huroof_help_result', {'ok': False, 'msg': 'نفد رصيدك من هذه المساعدة'}, to=sid)

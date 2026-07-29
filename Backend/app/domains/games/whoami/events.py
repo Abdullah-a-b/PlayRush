@@ -448,7 +448,10 @@ def register_whoami_events(sio):
         dev_mode = _allow_same_ip()
         sender = next((p for p in room['players'] if p.get('sid') == sid), None)
         user_id = sender.get('user_id') if sender else None
-        if not dev_mode and user_id:
+        # 🤖 الوضع الفردي: لا خصم من مخزون اللاعب (تدريب لا مقامرة).
+        #    تتجدّد كل مباراة فردية، ويبقى قيد "مرة لكل مباراة" ساريًا.
+        _is_solo = bool(getattr(gs, "is_solo", False))
+        if not dev_mode and not _is_solo and user_id:
             from app.domains.wallet.help_inventory import consume_help
             if not consume_help(user_id, help_id):
                 await sio.emit('whoami_help_result',
