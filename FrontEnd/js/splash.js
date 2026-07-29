@@ -118,14 +118,14 @@
     //    PRSplash.show('platform', () => { ... })
     // ============================================================
     let _chain = Promise.resolve();
-    function show(mode, onDone) {
+    function show(mode, onDone, onStart) {
         // لو كان أنيميشن آخر يُعرض (الشركة على index) ننتظره ثم نعرض — لا نُلغي
         _chain = _chain.then(() => new Promise((resolve) => {
-            _show(mode, () => { try { onDone && onDone(); } catch (e) {} resolve(); });
+            _show(mode, () => { try { onDone && onDone(); } catch (e) {} resolve(); }, onStart);
         }));
     }
 
-    function _show(mode, done) {
+    function _show(mode, done, onStart) {
         injectStyle();
         const el = document.createElement('div');
         el.id = 'prSplash';
@@ -148,6 +148,7 @@
 
         const mount = () => {
             document.body.appendChild(el);
+            try { onStart && onStart(); } catch (e) {}
             _wake();   // نطلب الإذن فوراً — على صفحة الدخول يكون ممنوحاً
             if (mode === 'platform') {
                 // عُرض فعلاً → لا يتكرّر في categories
@@ -255,13 +256,22 @@
         show: show,
         // يُستدعى من login/profile-setup/session_resume قبل الانتقال
         playPlatformThen: function (redirect) {
-            // التذكرة تُستهلك عند العرض الفعلي فقط؛ لو تعذّر العرض هنا
-            // (مهلة الأمان) تبقى فيظهر الأنيميشن في categories بدل ضياعه.
+            // التذكرة تُستهلك عند العرض الفعلي فقط؛ لو تعذّر العرض هنا تبقى
+            // فيظهر الأنيميشن في categories بدل ضياعه.
             try { sessionStorage.setItem('pr_splash_ticket', '1'); } catch (e) {}
-            let went = false;
+
+            let went = false, started = false;
             const go = () => { if (went) return; went = true; redirect(); };
-            setTimeout(go, 4000);        // أمان: لا نعلّق المستخدم أبداً
-            show('platform', go);
+
+            // ⚠️ الخطأ الذي كان هنا: مؤقّت أمان يعمل بعد 4 ثوانٍ **دائماً**.
+            // على الكمبيوتر تنتظر شاشة الشركة لمسة المستخدم، فيُصطفّ أنيميشن
+            // المنصة خلفها؛ فإن تأخّرت اللمسة انطلق المؤقّت وانتقل قبل أن يبدأ
+            // الأنيميشن أو في منتصفه — فيبدو كأنه لم يظهر. على الجوال تقع
+            // اللمسة أسرع عادةً فلم تظهر المشكلة.
+            // الآن: المؤقّت يعمل فقط إن **لم يبدأ** العرض إطلاقاً، وفور بدئه
+            // يُلغى ويُترك الأمر لنهاية الأنيميشن الطبيعية.
+            const safety = setTimeout(() => { if (!started) go(); }, 8000);
+            show('platform', go, () => { started = true; clearTimeout(safety); });
         }
     };
 

@@ -29,6 +29,35 @@ try {
     if (_coarse) document.documentElement.classList.add('pr-touch');
 } catch (e) {}
 
+/* ============================================================
+   إخفاء شاشة البدء الأصلية عند جهوزية الصفحة (التطبيق فقط)
+   ------------------------------------------------------------
+   كان الإعداد launchShowDuration: 400 مع launchAutoHide: true،
+   أي أن شاشة البدء تختفي بعد 400ms بينما الـWebView ما زال يُقلع
+   ويحمّل الجلسة — والفجوة بينهما هي الشاشة السوداء التي تراها.
+   الآن الإعداد launchAutoHide: false، ونحن من يُخفيها هنا حين
+   تصبح الصفحة جاهزة فعلاً.
+   ============================================================ */
+if (PR_IS_APP) {
+    (function () {
+        var hidden = false;
+        function hideSplash() {
+            if (hidden) return;
+            hidden = true;
+            try {
+                var S = window.Capacitor
+                    && window.Capacitor.Plugins
+                    && window.Capacitor.Plugins.SplashScreen;
+                if (S && S.hide) S.hide({ fadeOutDuration: 200 });
+            } catch (e) {}
+        }
+        // بعد اكتمال التحميل بقليل، مع مهلة قصوى كي لا تعلق الشاشة أبداً
+        if (document.readyState === 'complete') setTimeout(hideSplash, 200);
+        else window.addEventListener('load', function () { setTimeout(hideSplash, 200); });
+        setTimeout(hideSplash, 5000);
+    })();
+}
+
 const _host = window.location.hostname;
 const _isLocalHost = (_host === '127.0.0.1' || _host === 'localhost' || _host === '');
 const _isLanIp = /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(_host);

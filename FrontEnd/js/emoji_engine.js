@@ -56,15 +56,32 @@
         return _pending[emojiId];
     }
 
-    function _waitLottie(tries) {
-        tries = tries || 0;
+    /**
+     * ⚡ تحميل lottie عند الطلب لا عند الإقلاع.
+     * كان يُحمَّل في وسم <script> بكل صفحة: أكثر من 200KB من شبكة خارجية،
+     * وقياس DevTools أظهر أنه يبتلع ~415ms من الخيط الرئيسي في كل فتح —
+     * بينما أغلب الجلسات لا تعرض إيموجي متحرّكاً إطلاقاً. الآن يُحمَّل عند
+     * أول حاجة حقيقية، ومرة واحدة فقط لكل صفحة.
+     */
+    var _lottiePromise = null;
+    function _loadLottie() {
         if (typeof window.lottie !== 'undefined' && window.lottie.loadAnimation) {
             return Promise.resolve(true);
         }
-        if (tries >= 20) return Promise.resolve(false);
-        return new Promise(function (res) {
-            setTimeout(function () { res(_waitLottie(tries + 1)); }, 250);
+        if (_lottiePromise) return _lottiePromise;
+        _lottiePromise = new Promise(function (res) {
+            var sc = document.createElement('script');
+            sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js';
+            sc.async = true;
+            sc.onload  = function () { res(typeof window.lottie !== 'undefined'); };
+            sc.onerror = function () { res(false); };   // بلا lottie: يعود للإيموجي الثابت
+            document.head.appendChild(sc);
         });
+        return _lottiePromise;
+    }
+
+    function _waitLottie(tries) {
+        return _loadLottie();
     }
 
     function _register(anim) {

@@ -200,7 +200,9 @@
 <script src="../js/utils.js" defer></script>
 <script src="../js/socket.io.min.js" defer></script>
 <script src="../js/purify.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js" async></script>
+  <!-- ⚡ lottie لم يعد يُحمّل عند الإقلاع: 200KB+ من شبكة خارجية
+       كانت تكلّف ~415ms من الخيط الرئيسي في كل فتح. صار يُحمَّل
+       عند أول حاجة فعلية لإيموجي متحرّك (انظر emoji_engine.js). -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" async></script>
 <script src="../js/quick_chat.js" defer></script>
 <script src="../js/games/knowledge.js" defer></script>

@@ -3,7 +3,8 @@
   "appName": "PlayRush",
   "webDir": "FrontEnd",
   "android": {
-    "allowMixedContent": false
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": true
   },
   "server": {
     "androidScheme": "https",
@@ -11,10 +12,16 @@
   },
   "plugins": {
     "SplashScreen": {
-      "launchShowDuration": 400,
-      "launchAutoHide": true,
-      "backgroundColor": "#0f172a",
-      "showSpinner": false
+      "launchShowDuration": 3000,
+      "launchAutoHide": false,
+      "backgroundColor": "#0b0e14",
+      "showSpinner": false,
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP"
+    },
+    "Keyboard": {
+      "resize": "native",
+      "resizeOnFullScreen": true
     }
   }
 }
