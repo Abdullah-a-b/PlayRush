@@ -1460,15 +1460,9 @@ socket.on('leaver_penalty', (data) => {
             || (typeof window.Capacitor !== 'undefined')
             || /^(capacitor|file|ionic):$/.test(window.location.protocol);
 
-        // ════════════════════════════════════════════════════════════
-        // داخل التطبيق: لا نُشغّل أي منطق تخطيط إطلاقاً.
-        // الطريقة الصحيحة في Capacitor هي إعداد الكيبورد أصلياً
-        // (Keyboard.resize = "native" + adjustResize) فيُقلّص النظام
-        // الـWebView بنفسه ويجلس bottom:0 فوق الكيبورد بلا سطر JS واحد.
-        // كل ما كتبناه هنا كان محاولة لتقليد ذلك من داخل الصفحة، وهو
-        // ما سبّب القراءات المتكررة والتعليق.
-        // ════════════════════════════════════════════════════════════
-        if (PR_IN_APP) return;
+        // التطبيق يسلك نفس مسار الموقع تماماً. (كان هنا `if (PR_IN_APP) return`
+        // حين ظننّا أن هذا الكود سبب التعليق — تبيّن لاحقاً بقياس DevTools أن
+        // السبب نفاد ذاكرة الرسم من هالات النجوم، وقد عولج في مصدره.)
 
         // خنق: نجمع كل النداءات في إطار عرض واحد. كانت resize/scroll/الأحداث
         // الأصلية تستدعي applyLayout عشرات المرات في الثانية، وكل نداء يقرأ
@@ -1482,11 +1476,11 @@ socket.on('leaver_penalty', (data) => {
         function applyLayout(nativeKbH) {
             const sidebar = document.getElementById('questionSidebar');
             if (!sidebar) return;
-            // 📌 داخل التطبيق: الـWebView يتقلّص فعلاً عند فتح الكيبورد — والدليل
-            // أن العناصر ذات position:fixed;bottom:0 تظهر فوق الكيبورد لا تحته.
-            // إذن `bottom: 0` وحده كافٍ ولا يجوز إضافة أي إزاحة؛ كل إزاحة
-            // حسبناها من keyboardHeight كانت تدفع الصندوق خارج الشاشة.
-            const kb = PR_IN_APP ? 0 : kbHeight();
+            // 📌 مصدر واحد للقياس: الفرق بين الشاشة التخطيطية والنافذة المرئية.
+            // يُرجع صفراً حين يُقلّص المتصفح/WebView نفسه (فـbottom:0 كافٍ)،
+            // والقيمة الصحيحة حين يطفو الكيبورد فوق المحتوى. لا نستخدم
+            // keyboardHeight من Capacitor: وحدته لا تطابق بكسل CSS.
+            const kb = kbHeight();
             // الكتابة جارية؟ (بعض المتصفحات تُقلّص الشاشة بنفسها فيكون kb=0
             // رغم أن الكيبورد مفتوح — نعتمد على التركيز لا على القياس وحده)
             const typing = document.activeElement
@@ -1561,26 +1555,17 @@ socket.on('leaver_penalty', (data) => {
             if (st !== _lastState) { _lastState = st; schedule(); }
         }, 1000);
 
-        // داخل التطبيق: أحداث الكيبورد الأصلية أدقّ توقيتاً من visualViewport
-        // ⚠️ WebView لا يُقلّص visualViewport عند فتح الكيبورد، فـkbHeight()
-        // تُعيد 0. نستخدم keyboardHeight الذي يُمرَّر مع الحدث مباشرةً.
+        // داخل التطبيق نستخدم أحداث الكيبورد الأصلية كـ«جرس تنبيه» فقط:
+        // تُخبرنا *متى* نُعيد القياس، ولا نأخذ منها أي رقم. (ارتفاعها بوحدة
+        // لا تطابق بكسل CSS، واستخدامه كان يدفع الصندوق خارج الشاشة.)
         try {
             const K = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Keyboard;
             if (K && K.addListener) {
-                // نحفظ ارتفاع الكيبورد الحقيقي من حدث "show" ونُمرره لـapplyLayout
-                let _nativeKbH = 0;
-
-                K.addListener('keyboardWillShow', (info) => {
-                    _nativeKbH = (info && info.keyboardHeight) ? info.keyboardHeight : 0;
-                    setTimeout(schedule, 30);
-                    setTimeout(schedule, 220);
-                });
-                K.addListener('keyboardDidShow', () => schedule());
-                K.addListener('keyboardWillHide', () => {
-                    _nativeKbH = 0;
-                    setTimeout(schedule, 30);
-                });
-                K.addListener('keyboardDidHide', () => schedule());
+                ['keyboardWillShow', 'keyboardDidShow', 'keyboardWillHide', 'keyboardDidHide']
+                    .forEach((ev) => K.addListener(ev, () => {
+                        setTimeout(schedule, 30);
+                        setTimeout(schedule, 250);
+                    }));
             }
         } catch (e) {}
 
