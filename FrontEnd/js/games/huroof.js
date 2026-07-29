@@ -1449,7 +1449,8 @@ socket.on('leaver_penalty', (data) => {
             const avail  = sidebar.getBoundingClientRect().top - topPad - 6;
             const natural = board.offsetHeight;   // لا يتأثّر بالـtransform
             if (!natural || avail <= 40) return;
-            const scale = Math.min(1, avail / natural);
+            // حد أدنى 0.55: بلا هذا الحدّ قد يخرج مقياس ضئيل فتختفي اللوحة تماماً
+            const scale = Math.max(0.55, Math.min(1, avail / natural));
             if (scale >= 0.995) { fitBoard(null); return; }
             board.style.transition      = 'transform .15s ease';
             board.style.transformOrigin = 'top center';
@@ -1461,6 +1462,15 @@ socket.on('leaver_penalty', (data) => {
         const PR_IN_APP = window.PR_IS_APP === true
             || (typeof window.Capacitor !== 'undefined')
             || /^(capacitor|file|ionic):$/.test(window.location.protocol);
+
+        // خنق: نجمع كل النداءات في إطار عرض واحد. كانت resize/scroll/الأحداث
+        // الأصلية تستدعي applyLayout عشرات المرات في الثانية، وكل نداء يقرأ
+        // أبعاداً ويكتب أنماطاً (إجبار تخطيط متكرر) — وهذا سبب ثقل التطبيق.
+        let _raf = 0;
+        function schedule() {
+            if (_raf) return;
+            _raf = requestAnimationFrame(() => { _raf = 0; applyLayout(); });
+        }
 
         function applyLayout(nativeKbH) {
             const sidebar = document.getElementById('questionSidebar');
@@ -1515,22 +1525,7 @@ socket.on('leaver_penalty', (data) => {
                 if (content) content.scrollTop = 0;
                 fitBoard(sidebar);
 
-                // 🛡️ ضمان: إن لم يكن حقل الإجابة مرئياً فعلاً داخل الشاشة
-                // (صندوق فارغ / مقصوص لأي سبب) نتراجع فوراً عن كل تدخّلاتنا
-                // بدل أن نترك اللاعب أمام صندوق لا ينفع.
-                setTimeout(() => {
-                    if (!sidebar.classList.contains('keyboard-open')) return;
-                    const r = playerAnswerInput.getBoundingClientRect();
-                    const visibleBottom = vv.offsetTop + vv.height;
-                    const ok = r.height > 10 && r.top >= 0 && r.bottom <= visibleBottom + 2;
-                    if (!ok) {
-                        sidebar.classList.remove('keyboard-open');
-                        sidebar.style.removeProperty('max-height');
-                        fitBoard(null);
-                        if (content) content.scrollTop = 0;
-                    }
-                }, 260);
-            } else if (isKbOpen) {
+            } else {
                 isKbOpen = false;
                 sidebar.classList.remove('keyboard-open');
                 sidebar.classList.remove('kb-top');
@@ -1546,7 +1541,18 @@ socket.on('leaver_penalty', (data) => {
         }
 
         // نتيح لبقية الكود إعادة ضبط التخطيط فوراً (مثلاً عند انتهاء الوقت)
-        window.__huroofKbRefresh = applyLayout;
+        window.__huroofKbRefresh = schedule;
+
+        // حارس خفيف: يلتقط أي تغيّر في حالة اللعبة (انتهاء الدور، إخفاء حقل
+        // الإجابة من الخادم) فيُعيد الضبط. رخيص جداً — قراءة واحدة كل ثانية،
+        // ولا يفعل شيئاً إن لم تتغيّر الحالة.
+        let _lastState = '';
+        setInterval(() => {
+            const typing = document.activeElement
+                && document.activeElement.id === 'playerAnswerInput';
+            const st = (typing ? '1' : '0') + (answerSection ? answerSection.style.display : '');
+            if (st !== _lastState) { _lastState = st; schedule(); }
+        }, 1000);
 
         // داخل التطبيق: أحداث الكيبورد الأصلية أدقّ توقيتاً من visualViewport
         // ⚠️ WebView لا يُقلّص visualViewport عند فتح الكيبورد، فـkbHeight()
@@ -1559,34 +1565,27 @@ socket.on('leaver_penalty', (data) => {
 
                 K.addListener('keyboardWillShow', (info) => {
                     _nativeKbH = (info && info.keyboardHeight) ? info.keyboardHeight : 0;
-                    setTimeout(() => applyLayout(_nativeKbH), 30);
-                    setTimeout(() => applyLayout(_nativeKbH), 220);
+                    setTimeout(schedule, 30);
+                    setTimeout(schedule, 220);
                 });
-                K.addListener('keyboardDidShow', (info) => {
-                    _nativeKbH = (info && info.keyboardHeight) ? info.keyboardHeight : _nativeKbH;
-                    applyLayout(_nativeKbH);
-                });
+                K.addListener('keyboardDidShow', () => schedule());
                 K.addListener('keyboardWillHide', () => {
                     _nativeKbH = 0;
-                    setTimeout(() => applyLayout(0), 30);
+                    setTimeout(schedule, 30);
                 });
-                K.addListener('keyboardDidHide', () => {
-                    _nativeKbH = 0;
-                    applyLayout(0);
-                });
+                K.addListener('keyboardDidHide', () => schedule());
             }
         } catch (e) {}
 
-        vv.addEventListener('resize', applyLayout);
-        vv.addEventListener('scroll', applyLayout);
+        vv.addEventListener('resize', schedule);
         document.addEventListener('focusin', (e) => {
             if (e.target.id === 'playerAnswerInput') {
-                setTimeout(applyLayout, 120);
-                setTimeout(applyLayout, 350);   // بعض الأجهزة تفتح الكيبورد متأخراً
+                setTimeout(schedule, 120);
+                setTimeout(schedule, 350);   // بعض الأجهزة تفتح الكيبورد متأخراً
             }
         });
         document.addEventListener('focusout', (e) => {
-            if (e.target.id === 'playerAnswerInput') setTimeout(applyLayout, 150);
+            if (e.target.id === 'playerAnswerInput') setTimeout(schedule, 150);
         });
 
         // أثناء الكتابة يُعرض السؤال في سطر واحد؛ لمسة عليه تفتحه كاملاً
