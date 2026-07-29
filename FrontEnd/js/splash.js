@@ -75,9 +75,18 @@
         const style = document.createElement('style');
         style.id = 'prSplashStyle';
         style.textContent = `
+/* ⚡ لماذا will-change و contain هنا:
+   الأنيميشن يبدأ في اللحظة التي ينفّذ فيها المتصفح 31 ملف JS للصفحة، فيكون
+   الخيط الرئيسي مشغولاً بالكامل ولا يُنتج إطارات — فيتقطّع الأنيميشن.
+   will-change يمنح كل عنصر طبقة رسم خاصة، فتُدار حركته على خيط المُركِّب
+   المستقل ولا يوقفها انشغال الخيط الرئيسي. و contain يمنع أي تغيير داخل
+   الشاشة من إجبار إعادة تخطيط للصفحة كاملة خلفها. */
 #prSplash{position:fixed;inset:0;background:#0b0e14;z-index:99999;display:flex;
   flex-direction:column;align-items:center;justify-content:center;gap:26px;
-  transition:opacity .5s ease;cursor:pointer}
+  transition:opacity .5s ease;cursor:pointer;contain:layout paint;
+  will-change:opacity}
+#prSplash .pr-sp-hex,#prSplash .pr-sp-name,#prSplash .pr-sp-sub,
+#prSplash .pr-sp-company,#prSplash .pr-sp-skip{will-change:transform,opacity}
 #prSplash.hide{opacity:0;pointer-events:none}
 .pr-sp-company{font-size:1.35rem;letter-spacing:5px;color:#c9d1d9;font-weight:700;
   text-transform:uppercase;opacity:0;animation:prFadeUp .9s ease .3s forwards}
