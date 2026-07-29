@@ -203,7 +203,10 @@
                         + '<div style="color:#8b949e;font-size:.75rem;">PlayRush</div>';
                     el.appendChild(gate);
                     el.addEventListener('click', () => { _wake(); run(); }, { once: true });
-                    setTimeout(run, 2500);   // لا نحبس أحداً: يمضي صامتاً لو لم يلمس
+                    // ننتظر اللمسة فعلاً — هي شرط الصوت. كانت تمضي بعد 2.5s
+                    // فيظهر الأنيميشن صامتاً رغم وجود البوابة. مهلة قصوى
+                    // طويلة (12s) كي لا يعلق أحد لو تجاهلها تماماً.
+                    setTimeout(run, 12000);
                 };
 
                 _wake();
@@ -284,6 +287,17 @@
     if (page === 'index') mode = 'company';
     else if (page === 'categories') mode = 'platform';
     if (!mode) return;
+
+    // 🚪 index مع جلسة قائمة = صفحة عبور لا وجهة: session_resume سينقلك فوراً
+    // إلى categories. عرض أنيميشن الشركة هنا مزعج ومكرّر في كل فتح، ويؤخّر
+    // أنيميشن المنصة خلفه. فنتخطّاه ونترك المجال لأنيميشن المنصة وحده.
+    if (mode === 'company') {
+        let hasSession = false;
+        try {
+            hasSession = !!(sessionStorage.getItem('token') || localStorage.getItem('token'));
+        } catch (e) {}
+        if (hasSession) return;
+    }
 
     const FLAG = mode === 'company' ? 'pr_splash_company' : 'pr_splash_platform';
     let ticket = false;
