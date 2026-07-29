@@ -394,9 +394,7 @@ socket.on('huroof_buzzed', (data) => {
         answerSection.style.display      = 'block';
         submitAnswerBtn.disabled         = false;  // 🆕 نعيد تفعيل الزر للمحاولة الجديدة
         playerAnswerInput.value          = '';
-        // preventScroll: true يمنع التمرير التلقائي في المتصفح عند التركيز
-        playerAnswerInput.focus({ preventScroll: true });
-        if (window.scrollY !== 0) window.scrollTo(0, 0);
+        playerAnswerInput.focus();
     } else {
         isMyTurnToAnswer = false;
         systemMessageDisplay.textContent = 'الخصم يجيب الآن... استعد في حال أخطأ!';
@@ -415,8 +413,7 @@ socket.on('huroof_chance_transfer', (data) => {
         answerSection.style.display      = 'block';
         submitAnswerBtn.disabled         = false;  // 🆕 نعيد تفعيل الزر للمحاولة الجديدة
         playerAnswerInput.value          = '';
-        playerAnswerInput.focus({ preventScroll: true });
-        if (window.scrollY !== 0) window.scrollTo(0, 0);
+        playerAnswerInput.focus();
     } else {
         isMyTurnToAnswer = false;
         systemMessageDisplay.textContent = 'أخطأت! فرصة الخصم الآن...';
@@ -625,7 +622,7 @@ buzzerBtn.addEventListener('click', () => {
 
 function submitAnswer() {
     if (!isMyTurnToAnswer) return;
-    if (_playerTimerLeft <= 0) { lockAnswerUI(); return; }   // انتهى الوقت
+    if (_playerTimerLeft <= 0) { lockAnswerUI(); return; }
     const ans = playerAnswerInput.value.trim();
     if (!ans) return;
     isMyTurnToAnswer         = false;
@@ -662,7 +659,7 @@ document.getElementById('confirmSurrenderBtn').onclick = () => {
 
 
 // ============================================================
-//  الشريط العلوي والالملف الشخصي
+//  الشريط العلوي والملف الشخصي
 // ============================================================
 
 function updateTopBarUI() {
@@ -726,10 +723,8 @@ function startGlobalTimer(seconds) {
 }
 
 /**
- * يُغلق واجهة الإجابة فوراً — يُستدعى حين ينتهي وقتي.
- * كان الصندوق يبقى مفتوحاً بعد انتهاء وقتي فأستطيع الكتابة أثناء دور
- * الخصم (والخادم يرفضها، لكن الواجهة كانت تكذب على اللاعب ولا تعود
- * لحالتها إلا بعد ضغط «إرسال»).
+ * يُغلق واجهة الإجابة فور انتهاء وقتي. بدونها يبقى الحقل مفتوحاً طوال دور
+ * الخصم فأستطيع الكتابة بدله، ولا يعود لطبيعته إلا بعد ضغط «إرسال».
  */
 function lockAnswerUI() {
     isMyTurnToAnswer            = false;
@@ -737,15 +732,6 @@ function lockAnswerUI() {
     submitAnswerBtn.disabled    = true;
     playerAnswerInput.value     = '';
     try { playerAnswerInput.blur(); } catch (e) {}
-    // داخل التطبيق: blur لا يُغلق كيبورد أندرويد دائماً — نُغلقه صراحةً
-    try {
-        const K = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Keyboard;
-        if (K && K.hide) K.hide();
-    } catch (e) {}
-    // نُعيد ضبط التخطيط فوراً بلا انتظار حدث الكيبورد
-    if (typeof window.__huroofKbRefresh === 'function') {
-        setTimeout(window.__huroofKbRefresh, 60);
-    }
 }
 
 function startPlayerTimer(seconds) {
@@ -757,7 +743,7 @@ function startPlayerTimer(seconds) {
         playerTimerDisplay.textContent = `⏱️ ${_playerTimerLeft}`;
         if (_playerTimerLeft <= 0) {
             clearInterval(playerTimerInterval);
-            if (isMyTurnToAnswer) lockAnswerUI();   // انتهى وقتي → أُغلق فوراً
+            if (isMyTurnToAnswer) lockAnswerUI();
         }
     }, 1000);
 }
@@ -1349,262 +1335,102 @@ socket.on('leaver_penalty', (data) => {
     });
 })();
 
-// ============================================================
-//  تعديلات الجوال برمجياً (لتجنب المساس بالكمبيوتر)
-// ============================================================
-(function initMobileEnhancements() {
+
+/* ══════════════════════════════════════════════════════════════════════
+   تخطيط الكيبورد — المتصفح فقط
+   ----------------------------------------------------------------------
+   داخل التطبيق لا يعمل من هذا الملف شيء إطلاقاً: WebView يتصرّف بطريقته
+   الخاصة، وكل محاولة لمحاكاتها من داخل الصفحة أنتجت قراءات متكررة وتعليقاً.
+   التطبيق يعود لسلوكه الأصلي الذي كان يعمل جيداً.
+   ══════════════════════════════════════════════════════════════════════ */
+(function () {
+    const IN_APP = window.PR_IS_APP === true
+        || (typeof window.Capacitor !== 'undefined')
+        || /^(capacitor|file|ionic):$/.test(window.location.protocol);
+    if (IN_APP) return;
+    if (!window.visualViewport) return;
     if (window.innerWidth > 900) return;
 
-    document.addEventListener('DOMContentLoaded', () => {
-        const sidebar = document.getElementById('questionSidebar');
-        if (!sidebar) return;
+    const vv = window.visualViewport;
+    let isOpen = false, raf = 0;
 
-        // دمج أزرار (أنا أعرف + تغيير السؤال) في حاوية واحدة للترتيب
-        const buzzer = document.getElementById('buzzerBtn');
-        const skipWrap = document.querySelector('.sidebar-actions');
-        if (buzzer && skipWrap) {
-            const actionWrap = document.createElement('div');
-            actionWrap.className = 'mobile-actions-wrapper';
-            buzzer.parentNode.insertBefore(actionWrap, buzzer);
-            actionWrap.appendChild(buzzer);
-            actionWrap.appendChild(skipWrap);
-        }
-
-        // إنشاء شريط سفلي داخل الصندوق ليحتوي المساعدات والصوت والانسحاب
-        const bottomBar = document.createElement('div');
-        bottomBar.className = 'mobile-bottom-bar';
-        
-        const leftActions = document.createElement('div');
-        leftActions.className = 'left-actions';
-        
-        const surrender = document.getElementById('surrenderBtn');
-        const helpSlots = document.getElementById('helpSlots');
-        
-        if (surrender) leftActions.appendChild(surrender);
-        bottomBar.appendChild(leftActions);
-        if (helpSlots) bottomBar.appendChild(helpSlots);
-        sidebar.appendChild(bottomBar);
-
-        // نقل زر الصوت ديناميكياً
-        const sndTimer = setInterval(() => {
-            const snd = document.querySelector('.pr-sound-float');
-            if (snd) {
-                leftActions.appendChild(snd);
-                clearInterval(sndTimer);
-            }
-        }, 100);
-        setTimeout(() => clearInterval(sndTimer), 5000);
-    });
-
-    // ============================================================
-    // معالج كيبورد الجوال — مصدر واحد للحقيقة
-    // ------------------------------------------------------------
-    // كان هناك معالجان يتصارعان على نفس العنصر (هذا + huroof_keyboard.js):
-    // أحدهما يضبط top والآخر transform، فينتج ارتفاع وموضع متناقضان
-    // ويطغى الكيبورد على صندوق السؤال. حُذف الثاني، وأُعيد بناء هذا:
-    //   • نثبّت الصندوق فوق الكيبورد عبر bottom = ارتفاع الكيبورد
-    //     (لا نحسب ارتفاع الصندوق نفسه — كان يسبّب دوراناً في الحساب)
-    //   • نحدّ أقصى ارتفاع بالمساحة المرئية فعلاً فلا يُقصّ شيء
-    //   • نُخفي الزخارف غير الضرورية ونُبقي: السؤال + الحقل + الإرسال
-    // ============================================================
-    // التطبيق يعمل بوضع edge-to-edge فلا يُقلّص WebView عند فتح الكيبورد
-    // (الكيبورد يطفو فوق المحتوى) — لذلك يحتاج نفس منطق المتصفح.
-    if (window.visualViewport) {
-        const vv = window.visualViewport;
-        let isKbOpen = false;
-
-        // ⚠️ القياس الصحيح: الصندوق `position:fixed; bottom:0` يُقاس نسبةً إلى
-        // *الشاشة التخطيطية* (documentElement.clientHeight) لا إلى
-        // window.innerHeight. بعض متصفحات أندرويد تُقلّص الشاشة التخطيطية
-        // بنفسها عند فتح الكيبورد؛ استخدام innerHeight هناك يعطي رقماً مضاعفاً
-        // فيقفز الصندوق إلى منتصف الشاشة ويحجب اللوحة. هذه المعادلة تُعيد
-        // صفراً في تلك الحالة (لأن الصندوق فوق الكيبورد أصلاً).
-        // nativeH: ارتفاع الكيبورد الحقيقي من Capacitor (0 على الويب)
-        // _lastNativeKbH: نحتفظ بآخر قيمة حقيقية من Capacitor لنستخدمها كـfallback
-        let _lastNativeKbH = 0;
-        // القياس للمتصفح وحده. التطبيق لا يستدعيه إطلاقاً (يُثبّت الصندوق أعلى
-        // الشاشة). حُذف التقدير الافتراضي (40%) وحُذف تخزين آخر ارتفاع، فكلاهما
-        // كان يُنتج أرقاماً خيالية تبقى فعّالة حتى بعد إغلاق الكيبورد.
-        function kbHeight() {
-            const layoutH = document.documentElement.clientHeight || window.innerHeight;
-            const overlap = layoutH - (vv.height + vv.offsetTop);
-            return Math.max(0, Math.min(overlap, layoutH * 0.6));
-        }
-
-        // اللوحة تُقاس بـ vmin (من عرض الشاشة) فلا تتقلّص حين يقتطع الكيبورد
-        // نصف الارتفاع، فيختفي نصفها. نُصغّرها تصغيراً موحّداً لتلائم المساحة
-        // المتبقية فقط أثناء الكتابة، وتعود كما هي فور إغلاق الكيبورد.
-        // (تصميمها ونِسبها لا تتغيّر إطلاقاً — transform: scale لا أكثر.)
-        function fitBoard(sidebar) {
-            const board = document.querySelector('.main-container');
-            if (!board) return;
-            if (!sidebar) {
-                board.style.removeProperty('transform');
-                board.style.removeProperty('transform-origin');
-                board.style.removeProperty('margin-bottom');
-                return;
-            }
-            const layout = document.querySelector('.game-layout');
-            const topPad = layout ? parseFloat(getComputedStyle(layout).paddingTop) || 64 : 64;
-            const avail  = sidebar.getBoundingClientRect().top - topPad - 6;
-            const natural = board.offsetHeight;   // لا يتأثّر بالـtransform
-            if (!natural || avail <= 40) return;
-            // حد أدنى 0.55: بلا هذا الحدّ قد يخرج مقياس ضئيل فتختفي اللوحة تماماً
-            const scale = Math.max(0.55, Math.min(1, avail / natural));
-            if (scale >= 0.995) { fitBoard(null); return; }
-            board.style.transition      = 'transform .15s ease';
-            board.style.transformOrigin = 'top center';
-            board.style.transform       = 'scale(' + scale.toFixed(3) + ')';
-            // نمنع الفراغ الناتج عن التصغير من دفع التخطيط
-            board.style.marginBottom = '-' + Math.round(natural * (1 - scale)) + 'px';
-        }
-
-        const PR_IN_APP = window.PR_IS_APP === true
-            || (typeof window.Capacitor !== 'undefined')
-            || /^(capacitor|file|ionic):$/.test(window.location.protocol);
-
-        // ════════════════════════════════════════════════════════════
-        // داخل التطبيق: لا نُشغّل أي منطق تخطيط إطلاقاً.
-        // الطريقة الصحيحة في Capacitor هي إعداد الكيبورد أصلياً
-        // (Keyboard.resize = "native" + adjustResize) فيُقلّص النظام
-        // الـWebView بنفسه ويجلس bottom:0 فوق الكيبورد بلا سطر JS واحد.
-        // كل ما كتبناه هنا كان محاولة لتقليد ذلك من داخل الصفحة، وهو
-        // ما سبّب القراءات المتكررة والتعليق.
-        // ════════════════════════════════════════════════════════════
-        if (PR_IN_APP) return;
-
-        // خنق: نجمع كل النداءات في إطار عرض واحد. كانت resize/scroll/الأحداث
-        // الأصلية تستدعي applyLayout عشرات المرات في الثانية، وكل نداء يقرأ
-        // أبعاداً ويكتب أنماطاً (إجبار تخطيط متكرر) — وهذا سبب ثقل التطبيق.
-        let _raf = 0;
-        function schedule() {
-            if (_raf) return;
-            _raf = requestAnimationFrame(() => { _raf = 0; applyLayout(); });
-        }
-
-        function applyLayout(nativeKbH) {
-            const sidebar = document.getElementById('questionSidebar');
-            if (!sidebar) return;
-            // 📌 داخل التطبيق: الـWebView يتقلّص فعلاً عند فتح الكيبورد — والدليل
-            // أن العناصر ذات position:fixed;bottom:0 تظهر فوق الكيبورد لا تحته.
-            // إذن `bottom: 0` وحده كافٍ ولا يجوز إضافة أي إزاحة؛ كل إزاحة
-            // حسبناها من keyboardHeight كانت تدفع الصندوق خارج الشاشة.
-            const kb = PR_IN_APP ? 0 : kbHeight();
-            // الكتابة جارية؟ (بعض المتصفحات تُقلّص الشاشة بنفسها فيكون kb=0
-            // رغم أن الكيبورد مفتوح — نعتمد على التركيز لا على القياس وحده)
-            const typing = document.activeElement
-                && document.activeElement.id === 'playerAnswerInput';
-
-            // ⚠️ الشرط الحاسم: الوضع المضغوط مرتبط بالكتابة في حقل الإجابة
-            // **فقط**. كان يكفي أن يكون الكيبورد مفتوحاً لأي سبب (أو أن يبقى
-            // مفتوحاً في تطبيق أندرويد بعد انتهاء وقتي) ليُفرَغ الصندوق ويبقى
-            // فارغاً أثناء دور الخصم. الآن: لا كتابة = لا وضع مضغوط إطلاقاً.
-            const answerVisible = answerSection
-                && getComputedStyle(answerSection).display !== 'none';
-
-            if (typing && answerVisible) {
-                if (!isKbOpen) {
-                    isKbOpen = true;
-                    sidebar.classList.add('keyboard-open');   // الوضع المضغوط
-                    document.documentElement.classList.add('kb-open');
-                }
-
-                // الإزاحة فقط لو كان الكيبورد يغطّي الصندوق فعلاً
-                sidebar.style.setProperty('top', 'auto', 'important');
-                sidebar.style.setProperty('bottom', (kb > 100 ? kb : 0) + 'px', 'important');
-                // ارتفاع مضغوط: يكفي للسؤال والحقل والزر، ويُبقي اللوحة ظاهرة
-                // فوقه (كان يتمدّد للمساحة كلها فيحجب خلية الحروف).
-                // الوضع المضغوط صار قصيراً فعلاً (سؤال بسطر + صفّ إجابة +
-                // الشريط السفلي) فنُنزل السقف ليعود الباقي للوحة.
-                // المساحة المرئية الحقيقية = ارتفاع الشاشة ناقص الكيبورد
-                // في WebView: vv.height لا يتقلص، فنحسبها يدوياً
-                const screenH = document.documentElement.clientHeight || window.innerHeight;
-                const visibleH = kb > 0 ? (screenH - kb) : vv.height;
-                sidebar.style.setProperty('max-height',
-                    Math.max(130, Math.min(visibleH - 12, 215)) + 'px', 'important');
-
-                // نمنع قفزة التمرير التلقائية التي يفعلها المتصفح
-                if (window.scrollY !== 0) window.scrollTo(0, 0);
-
-                // ⚠️ لا نُمرّر المحتوى إطلاقاً. كنّا نضبط scrollTop على موضع حقل
-                // الإجابة المحسوب في التخطيط *الطبيعي*، ثم يُطبَّق الوضع المضغوط
-                // فيتقلّص المحتوى — فيبقى التمرير عند موضع تجاوز كل المحتوى،
-                // فيظهر الصندوق فارغاً تماماً. الوضع المضغوط يُظهر كل شيء دفعة
-                // واحدة (حرف + سؤال بسطر + صفّ الإجابة) فلا حاجة لأي تمرير.
-                const content = sidebar.querySelector('.sidebar-content');
-                if (content) content.scrollTop = 0;
-                fitBoard(sidebar);
-
-            } else {
-                isKbOpen = false;
-                sidebar.classList.remove('keyboard-open');
-                sidebar.classList.remove('kb-top');
-                document.documentElement.classList.remove('kb-open');
-                sidebar.style.removeProperty('top');
-                sidebar.style.removeProperty('max-height');
-                sidebar.style.setProperty('bottom', '0', 'important');
-                // نُعيد المحتوى لأعلاه، وإلا عاد الصندوق مُمرَّراً فيبدو مقصوصاً
-                const content = sidebar.querySelector('.sidebar-content');
-                if (content) content.scrollTop = 0;
-                fitBoard(null);   // نُعيد اللوحة لحجمها الطبيعي
-            }
-        }
-
-        // نتيح لبقية الكود إعادة ضبط التخطيط فوراً (مثلاً عند انتهاء الوقت)
-        window.__huroofKbRefresh = schedule;
-
-        // حارس خفيف: يلتقط أي تغيّر في حالة اللعبة (انتهاء الدور، إخفاء حقل
-        // الإجابة من الخادم) فيُعيد الضبط. رخيص جداً — قراءة واحدة كل ثانية،
-        // ولا يفعل شيئاً إن لم تتغيّر الحالة.
-        let _lastState = '';
-        setInterval(() => {
-            const typing = document.activeElement
-                && document.activeElement.id === 'playerAnswerInput';
-            const st = (typing ? '1' : '0') + (answerSection ? answerSection.style.display : '');
-            if (st !== _lastState) { _lastState = st; schedule(); }
-        }, 1000);
-
-        // داخل التطبيق: أحداث الكيبورد الأصلية أدقّ توقيتاً من visualViewport
-        // ⚠️ WebView لا يُقلّص visualViewport عند فتح الكيبورد، فـkbHeight()
-        // تُعيد 0. نستخدم keyboardHeight الذي يُمرَّر مع الحدث مباشرةً.
-        try {
-            const K = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Keyboard;
-            if (K && K.addListener) {
-                // نحفظ ارتفاع الكيبورد الحقيقي من حدث "show" ونُمرره لـapplyLayout
-                let _nativeKbH = 0;
-
-                K.addListener('keyboardWillShow', (info) => {
-                    _nativeKbH = (info && info.keyboardHeight) ? info.keyboardHeight : 0;
-                    setTimeout(schedule, 30);
-                    setTimeout(schedule, 220);
-                });
-                K.addListener('keyboardDidShow', () => schedule());
-                K.addListener('keyboardWillHide', () => {
-                    _nativeKbH = 0;
-                    setTimeout(schedule, 30);
-                });
-                K.addListener('keyboardDidHide', () => schedule());
-            }
-        } catch (e) {}
-
-        vv.addEventListener('resize', schedule);
-        document.addEventListener('focusin', (e) => {
-            if (e.target.id === 'playerAnswerInput') {
-                setTimeout(schedule, 120);
-                setTimeout(schedule, 350);   // بعض الأجهزة تفتح الكيبورد متأخراً
-            }
-        });
-        document.addEventListener('focusout', (e) => {
-            if (e.target.id === 'playerAnswerInput') setTimeout(schedule, 150);
-        });
-
-        // أثناء الكتابة يُعرض السؤال في سطر واحد؛ لمسة عليه تفتحه كاملاً
-        document.addEventListener('click', (e) => {
-            const box = e.target.closest && e.target.closest('.question-box');
-            if (!box || box.id === 'answer-container') return;
-            const sidebar = document.getElementById('questionSidebar');
-            if (!sidebar || !sidebar.classList.contains('keyboard-open')) return;
-            box.classList.toggle('q-open');
-        });
+    function kbHeight() {
+        const layoutH = document.documentElement.clientHeight || window.innerHeight;
+        return Math.max(0, Math.min(layoutH - (vv.height + vv.offsetTop), layoutH * 0.6));
     }
+
+    function fitBoard(on) {
+        const board = document.querySelector('.main-container');
+        const sidebar = document.getElementById('questionSidebar');
+        if (!board) return;
+        if (!on || !sidebar) {
+            board.style.removeProperty('transform');
+            board.style.removeProperty('transform-origin');
+            board.style.removeProperty('margin-bottom');
+            return;
+        }
+        const avail = sidebar.getBoundingClientRect().top - 64 - 6;
+        const natural = board.offsetHeight;
+        if (!natural || avail <= 60) return;
+        const scale = Math.max(0.55, Math.min(1, avail / natural));
+        if (scale >= 0.995) { fitBoard(false); return; }
+        board.style.transformOrigin = 'top center';
+        board.style.transform = 'scale(' + scale.toFixed(3) + ')';
+        board.style.marginBottom = '-' + Math.round(natural * (1 - scale)) + 'px';
+    }
+
+    function apply() {
+        const sidebar = document.getElementById('questionSidebar');
+        const input   = document.getElementById('playerAnswerInput');
+        const section = document.getElementById('answerSection');
+        if (!sidebar || !input || !section) return;
+
+        const typing = document.activeElement === input
+            && getComputedStyle(section).display !== 'none';
+
+        if (typing) {
+            const kb = kbHeight();
+            if (!isOpen) {
+                isOpen = true;
+                sidebar.classList.add('keyboard-open');
+            }
+            sidebar.style.setProperty('top', 'auto', 'important');
+            sidebar.style.setProperty('bottom', (kb > 100 ? kb : 0) + 'px', 'important');
+            sidebar.style.setProperty('max-height',
+                Math.max(130, Math.min(vv.height - 12, 215)) + 'px', 'important');
+            const c = sidebar.querySelector('.sidebar-content');
+            if (c) c.scrollTop = 0;
+            fitBoard(true);
+        } else if (isOpen) {
+            isOpen = false;
+            sidebar.classList.remove('keyboard-open');
+            sidebar.style.removeProperty('top');
+            sidebar.style.removeProperty('max-height');
+            sidebar.style.setProperty('bottom', '0', 'important');
+            const c = sidebar.querySelector('.sidebar-content');
+            if (c) c.scrollTop = 0;
+            fitBoard(false);
+        }
+    }
+
+    function schedule() {
+        if (raf) return;
+        raf = requestAnimationFrame(() => { raf = 0; apply(); });
+    }
+
+    vv.addEventListener('resize', schedule);
+    document.addEventListener('focusin',  (e) => {
+        if (e.target.id === 'playerAnswerInput') { setTimeout(schedule, 120); setTimeout(schedule, 350); }
+    });
+    document.addEventListener('focusout', (e) => {
+        if (e.target.id === 'playerAnswerInput') setTimeout(schedule, 150);
+    });
+    // لمسة على السؤال أثناء الكتابة تفتحه كاملاً
+    document.addEventListener('click', (e) => {
+        const box = e.target.closest && e.target.closest('.question-box');
+        const sidebar = document.getElementById('questionSidebar');
+        if (!box || !sidebar || !sidebar.classList.contains('keyboard-open')) return;
+        if (box.id === 'answer-container') return;
+        box.classList.toggle('q-open');
+    });
 })();
