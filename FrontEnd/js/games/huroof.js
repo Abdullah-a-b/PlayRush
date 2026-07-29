@@ -1465,6 +1465,10 @@ socket.on('leaver_penalty', (data) => {
         function applyLayout(nativeKbH) {
             const sidebar = document.getElementById('questionSidebar');
             if (!sidebar) return;
+            // 📌 داخل التطبيق: الـWebView يتقلّص فعلاً عند فتح الكيبورد — والدليل
+            // أن العناصر ذات position:fixed;bottom:0 تظهر فوق الكيبورد لا تحته.
+            // إذن `bottom: 0` وحده كافٍ ولا يجوز إضافة أي إزاحة؛ كل إزاحة
+            // حسبناها من keyboardHeight كانت تدفع الصندوق خارج الشاشة.
             const kb = PR_IN_APP ? 0 : kbHeight();
             // الكتابة جارية؟ (بعض المتصفحات تُقلّص الشاشة بنفسها فيكون kb=0
             // رغم أن الكيبورد مفتوح — نعتمد على التركيز لا على القياس وحده)
@@ -1485,25 +1489,6 @@ socket.on('leaver_penalty', (data) => {
                     document.documentElement.classList.add('kb-open');
                 }
 
-                // ════════════════════════════════════════════════
-                // داخل التطبيق: لا نقيس الكيبورد إطلاقاً.
-                // كل محاولات القياس فشلت لأن WebView لا يُقلّص
-                // visualViewport، و keyboardHeight القادم من Capacitor
-                // بوحدة لا تطابق بكسل CSS — فينتج bottom خيالي وصندوق
-                // طافٍ فارغ. الحقيقة الوحيدة المؤكدة: الكيبورد يشغل
-                // *أسفل* الشاشة دائماً. فنُثبّت الصندوق في *الأعلى*
-                // تحت الشريط العلوي مباشرةً — لا رقم، لا تقدير، لا فشل.
-                // ════════════════════════════════════════════════
-                if (PR_IN_APP) {
-                    sidebar.classList.add('kb-top');
-                    sidebar.style.setProperty('top', '58px', 'important');
-                    sidebar.style.setProperty('bottom', 'auto', 'important');
-                    sidebar.style.setProperty('max-height', '42vh', 'important');
-                    const c0 = sidebar.querySelector('.sidebar-content');
-                    if (c0) c0.scrollTop = 0;
-                    fitBoard(null);       // اللوحة تبقى بحجمها الطبيعي أسفله
-                    return;
-                }
                 // الإزاحة فقط لو كان الكيبورد يغطّي الصندوق فعلاً
                 sidebar.style.setProperty('top', 'auto', 'important');
                 sidebar.style.setProperty('bottom', (kb > 100 ? kb : 0) + 'px', 'important');

@@ -395,28 +395,6 @@ html.kb-open, html.kb-open body {
     }
 
 
-    /* ══════════════════════════════════════════════════════════
-       التطبيق فقط: أثناء الكتابة يُثبَّت الصندوق أعلى الشاشة.
-       الكيبورد يشغل الأسفل دائماً، فالأعلى منطقة آمنة مضمونة بلا
-       أي قياس. تُطبَّق مع .keyboard-open (المحتوى المضغوط نفسه).
-       ══════════════════════════════════════════════════════════ */
-    .question-sidebar.keyboard-open.kb-top {
-        top: 58px !important;
-        bottom: auto !important;
-        max-height: 42vh !important;
-        border-radius: 0 0 18px 18px !important;
-        box-shadow: 0 10px 26px rgba(0, 0, 0, 0.55) !important;
-    }
-    /* الشريط السفلي يعود لأسفل الشاشة مستقلاً عن الصندوق */
-    .question-sidebar.keyboard-open.kb-top .mobile-bottom-bar {
-        position: fixed !important;
-        left: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
-        z-index: 60 !important;
-        background: rgba(15, 10, 35, 0.96) !important;
-    }
-
     /* الشريط العائم للدردشة السريعة يزاحم الصندوق أثناء الكتابة */
     html.kb-open .ingame-quick-chat { display: none !important; }
 
