@@ -206,7 +206,7 @@
   socket.on('connect', () => {
     mySid = socket.id;
     socket.emit('join_room', { room_code: roomCode, token, player_name: playerName, avatar: playerAvatar });
-    socket.emit('get_help_loadout', { token, game: 'whoami' });
+    socket.emit('get_help_loadout', { token, game: 'whoami', roomCode });
   });
 
   // ===== مساعدات: التشكيلة والمخزون =====

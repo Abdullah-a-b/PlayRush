@@ -10,6 +10,38 @@ def _owns_fourth_slot(user_id):
     return owns_cosmetic(user_id, FOURTH_SLOT_ITEM)
 
 
+def _solo_virtual_inventory(inventory, catalog, room_code):
+    """🤖 مخزون افتراضي داخل الغرف الفردية.
+
+    السولو تدريب: المساعدات لا تُخصم فيه (انظر *_use_help في كل لعبة)،
+    ومن ثمّ لا معنى لأن يمنعك رصيدٌ فارغ من تجربة مساعدة. نرفع كل مساعدة
+    مفعّلة إلى 1 على الأقل **في الرسالة المُرسلة للواجهة فقط**.
+
+    ⚠️ لا نضيف شيئاً لقاعدة البيانات عمداً: لو منحنا مساعدة حقيقية عند كل
+    دخول سولو لصارت مزرعة مجانية تُستهلك في الأونلاين. والرصيد الحقيقي
+    يبقى كما هو — الترقيع يرفع الصفر ولا يخفض ما فوقه.
+
+    ولا نثق بأي علم "solo" قادم من العميل: نتحقق من حالة الغرفة نفسها.
+    """
+    if not room_code:
+        return inventory
+    try:
+        from app.domains.games.core_manager import get_room_state
+        room = get_room_state(room_code)
+        gs = (room or {}).get('game_state')
+        if not gs or not getattr(gs, 'is_solo', False):
+            return inventory
+    except Exception:
+        return inventory
+
+    inv = dict(inventory or {})
+    for h in (catalog or []):
+        hid = h.get('id') if isinstance(h, dict) else None
+        if hid and int(inv.get(hid, 0)) < 1:
+            inv[hid] = 1
+    return inv
+
+
 def register_store_events(sio):
 
     @sio.on('clear_equipped')
@@ -145,6 +177,8 @@ def register_store_events(sio):
             from app.domains.wallet.help_inventory import get_inventory
             # المساعدات خاصة بكل لعبة — نحدّد اللعبة من الطلب (افتراضياً حروف)
             game = (data or {}).get('game') or 'huroof'
+            # تُرسله شاشة اللعبة كي نتعرّف على الغرفة الفردية (اختياري)
+            _room_code = (data or {}).get('roomCode')
             level = user.level or 0
             owns_fourth = _owns_fourth_slot(user.id)
             if game == 'huroof':
@@ -152,7 +186,8 @@ def register_store_events(sio):
                                                      FOURTH_SLOT_LEVEL, DEFAULT_LOADOUT)
                 await sio.emit('help_loadout_data', {
                     'game': game,
-                    'loadout': get_loadout(user.id, level), 'inventory': get_inventory(user.id),
+                    'loadout': get_loadout(user.id, level),
+                    'inventory': _solo_virtual_inventory(get_inventory(user.id), get_enabled_catalog(), _room_code),
                     'catalog': get_enabled_catalog(), 'slots': get_slots_for_player(level, owns_fourth),
                     'ownsFourth': owns_fourth, 'fourthSlotLevel': FOURTH_SLOT_LEVEL,
                     'level': level, 'defaultLoadout': DEFAULT_LOADOUT,
@@ -170,7 +205,7 @@ def register_store_events(sio):
                 await sio.emit('help_loadout_data', {
                     'game': game,
                     'loadout': get_loadout_for_game(user.id, 'career', C_DEFAULTS),
-                    'inventory': get_inventory(user.id),
+                    'inventory': _solo_virtual_inventory(get_inventory(user.id), c_catalog(), _room_code),
                     'catalog': c_catalog(), 'slots': c_slots(level, owns4),
                     'ownsFourth': owns4, 'fourthSlotLevel': C_FSL,
                     'level': level, 'defaultLoadout': C_DEFAULTS,
@@ -190,7 +225,7 @@ def register_store_events(sio):
                 await sio.emit('help_loadout_data', {
                     'game': game,
                     'loadout': get_loadout_for_game(user.id, 'bank', B_DEFAULTS),
-                    'inventory': get_inventory(user.id),
+                    'inventory': _solo_virtual_inventory(get_inventory(user.id), b_catalog(), _room_code),
                     'catalog': b_catalog(), 'slots': b_slots(level, owns4b),
                     'ownsFourth': owns4b, 'fourthSlotLevel': B_FSL,
                     'conflicts': B_CONFLICTS,
@@ -211,7 +246,7 @@ def register_store_events(sio):
                 await sio.emit('help_loadout_data', {
                     'game': game,
                     'loadout': get_loadout_for_game(user.id, 'knowledge', K_DEFAULTS),
-                    'inventory': get_inventory(user.id),
+                    'inventory': _solo_virtual_inventory(get_inventory(user.id), k_catalog(), _room_code),
                     'catalog': k_catalog(), 'slots': k_slots(level, owns4k),
                     'ownsFourth': owns4k, 'fourthSlotLevel': K_FSL,
                     'conflicts': K_CONFLICTS,
@@ -232,7 +267,7 @@ def register_store_events(sio):
                 await sio.emit('help_loadout_data', {
                     'game': game,
                     'loadout': get_loadout_for_game(user.id, 'whoami', W_DEFAULTS),
-                    'inventory': get_inventory(user.id),
+                    'inventory': _solo_virtual_inventory(get_inventory(user.id), w_catalog(), _room_code),
                     'catalog': w_catalog(), 'slots': w_slots(level, owns4w),
                     'ownsFourth': owns4w, 'fourthSlotLevel': W_FSL,
                     'conflicts': W_CONFLICTS,

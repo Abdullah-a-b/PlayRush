@@ -622,7 +622,7 @@ socket.on('room_joined', (data) => {
   let hAnswering = false;   // أكتب إجابة الآن
   let hDone = false;        // انتهى وقتي بالجولة
 
-  socket.emit('get_help_loadout', { token, game: 'bank' });
+  socket.emit('get_help_loadout', { token, game: 'bank', roomCode });
 
   socket.on('help_loadout_data', (d) => {
     if (!d || d.game !== 'bank') return;

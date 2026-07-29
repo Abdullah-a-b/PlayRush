@@ -376,7 +376,7 @@ socket.on('room_joined', (data) => {
   socket.on('knowledge_judging', () => setStatus('⚖️ الحكم الذكي يراجع الإجابة…'));
 
   // ===== أحداث المساعدات =====
-  socket.emit('get_help_loadout', { token, game: 'knowledge' });
+  socket.emit('get_help_loadout', { token, game: 'knowledge', roomCode });
 
   socket.on('help_loadout_data', (d) => {
     if (!d || d.game !== 'knowledge') return;
