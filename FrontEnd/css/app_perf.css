@@ -19,6 +19,9 @@
 .pr-app .loadout-modal,
 .pr-app .modal-overlay,
 .pr-app .top-bar,
+.pr-app .brand-footer,
+.pr-app .quick-chat-bar,
+.pr-app .settings-panel,
 .pr-app [style*="backdrop-filter"] {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
@@ -26,6 +29,15 @@
 .pr-app .confirm-overlay { background: rgba(0, 0, 0, 0.88) !important; }
 .pr-app .loadout-modal   { background: rgba(0, 0, 0, 0.9)  !important; }
 .pr-app .toast           { background: rgba(24, 24, 27, 0.98) !important; }
+.pr-app .brand-footer    { background: rgba(0, 0, 0, 0.45) !important; }
+
+/* ── ٤) النبضات الدائمة: نمنع أي box-shadow متحرّك داخل التطبيق ──
+   حتى لو أُضيف واحد جديد لاحقاً، لن يُكلّف إعادة رسم مستمرة. */
+.pr-app [class*="pulse"],
+.pr-app .status-dot,
+.pr-app .pass-reward.claimable {
+    animation-duration: 3.5s !important;
+}
 
 /* ── ٢) الجزيئات: نُبقي اثنتين فقط بحركة أبطأ (الحسّ باقٍ، الكلفة أقل) ── */
 .pr-app .particle { animation-duration: 12s !important; opacity: 0.5 !important; }
