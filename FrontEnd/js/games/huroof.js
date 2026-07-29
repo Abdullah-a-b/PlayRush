@@ -1422,18 +1422,12 @@ socket.on('leaver_penalty', (data) => {
         // nativeH: ارتفاع الكيبورد الحقيقي من Capacitor (0 على الويب)
         // _lastNativeKbH: نحتفظ بآخر قيمة حقيقية من Capacitor لنستخدمها كـfallback
         let _lastNativeKbH = 0;
-        function kbHeight(nativeH) {
-            if (nativeH && nativeH > 0) { _lastNativeKbH = nativeH; return nativeH; }
-            // في WebView: visualViewport لا يتقلّص — نستخدم آخر قيمة حقيقية إن وُجدت
-            if (_lastNativeKbH > 0) return _lastNativeKbH;
+        // القياس للمتصفح وحده. التطبيق لا يستدعيه إطلاقاً (يُثبّت الصندوق أعلى
+        // الشاشة). حُذف التقدير الافتراضي (40%) وحُذف تخزين آخر ارتفاع، فكلاهما
+        // كان يُنتج أرقاماً خيالية تبقى فعّالة حتى بعد إغلاق الكيبورد.
+        function kbHeight() {
             const layoutH = document.documentElement.clientHeight || window.innerHeight;
             const overlap = layoutH - (vv.height + vv.offsetTop);
-            // إن كانت المساحة المرئية (vv.height) أصغر بكثير من ارتفاع الشاشة،
-            // فالكيبورد يطفو فوق المحتوى (WebView edge-to-edge) — نقدّر ارتفاعه
-            if (overlap < 30 && vv.height < layoutH * 0.65) {
-                // تقدير افتراضي: 40% من ارتفاع الشاشة (متوسط لوحة المفاتيح العربية)
-                return Math.round(layoutH * 0.40);
-            }
             return Math.max(0, Math.min(overlap, layoutH * 0.6));
         }
 
@@ -1464,10 +1458,14 @@ socket.on('leaver_penalty', (data) => {
             board.style.marginBottom = '-' + Math.round(natural * (1 - scale)) + 'px';
         }
 
+        const PR_IN_APP = window.PR_IS_APP === true
+            || (typeof window.Capacitor !== 'undefined')
+            || /^(capacitor|file|ionic):$/.test(window.location.protocol);
+
         function applyLayout(nativeKbH) {
             const sidebar = document.getElementById('questionSidebar');
             if (!sidebar) return;
-            const kb = kbHeight(nativeKbH);
+            const kb = PR_IN_APP ? 0 : kbHeight();
             // الكتابة جارية؟ (بعض المتصفحات تُقلّص الشاشة بنفسها فيكون kb=0
             // رغم أن الكيبورد مفتوح — نعتمد على التركيز لا على القياس وحده)
             const typing = document.activeElement
@@ -1485,6 +1483,26 @@ socket.on('leaver_penalty', (data) => {
                     isKbOpen = true;
                     sidebar.classList.add('keyboard-open');   // الوضع المضغوط
                     document.documentElement.classList.add('kb-open');
+                }
+
+                // ════════════════════════════════════════════════
+                // داخل التطبيق: لا نقيس الكيبورد إطلاقاً.
+                // كل محاولات القياس فشلت لأن WebView لا يُقلّص
+                // visualViewport، و keyboardHeight القادم من Capacitor
+                // بوحدة لا تطابق بكسل CSS — فينتج bottom خيالي وصندوق
+                // طافٍ فارغ. الحقيقة الوحيدة المؤكدة: الكيبورد يشغل
+                // *أسفل* الشاشة دائماً. فنُثبّت الصندوق في *الأعلى*
+                // تحت الشريط العلوي مباشرةً — لا رقم، لا تقدير، لا فشل.
+                // ════════════════════════════════════════════════
+                if (PR_IN_APP) {
+                    sidebar.classList.add('kb-top');
+                    sidebar.style.setProperty('top', '58px', 'important');
+                    sidebar.style.setProperty('bottom', 'auto', 'important');
+                    sidebar.style.setProperty('max-height', '42vh', 'important');
+                    const c0 = sidebar.querySelector('.sidebar-content');
+                    if (c0) c0.scrollTop = 0;
+                    fitBoard(null);       // اللوحة تبقى بحجمها الطبيعي أسفله
+                    return;
                 }
                 // الإزاحة فقط لو كان الكيبورد يغطّي الصندوق فعلاً
                 sidebar.style.setProperty('top', 'auto', 'important');
@@ -1530,6 +1548,7 @@ socket.on('leaver_penalty', (data) => {
             } else if (isKbOpen) {
                 isKbOpen = false;
                 sidebar.classList.remove('keyboard-open');
+                sidebar.classList.remove('kb-top');
                 document.documentElement.classList.remove('kb-open');
                 sidebar.style.removeProperty('top');
                 sidebar.style.removeProperty('max-height');
