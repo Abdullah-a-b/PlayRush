@@ -1183,6 +1183,20 @@ def register_huroof_events(sio):
                     _saved_loadout = get_loadout(user_id, player_level)
                 except Exception:
                     _saved_loadout = None
+        # 🤖 الوضع الفردي: مخزون افتراضي كامل.
+        #    السولو تدريب: لا يُخصم منك شيء، ومن ثمّ لا معنى لأن يمنعك
+        #    رصيدٌ فارغ من تجربة مساعدة. نُظهر كل مساعدة مفعّلة برصيد 1
+        #    على الأقل (الرصيد الحقيقي يبقى كما هو في قاعدة البيانات).
+        #    وقيد "مرة واحدة لكل مباراة" يبقى سارياً عبر gs.helps_used،
+        #    فيتجدّد تلقائياً في المباراة الفردية التالية.
+        if room and room.get('game_state') and getattr(room['game_state'], 'is_solo', False):
+            _inv = dict(inventory or {})
+            for _h in get_enabled_catalog():
+                _hid = _h.get('id')
+                if _hid and int(_inv.get(_hid, 0)) < 1:
+                    _inv[_hid] = 1
+            inventory = _inv
+
         await sio.emit('huroof_helps_catalog', {
             'loadout': (_saved_loadout if _saved_loadout else DEFAULT_LOADOUT),
             'catalog': get_enabled_catalog(),
