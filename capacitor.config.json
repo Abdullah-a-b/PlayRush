@@ -3,7 +3,8 @@
   "appName": "PlayRush",
   "webDir": "FrontEnd",
   "android": {
-    "allowMixedContent": false
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": true
   },
   "server": {
     "androidScheme": "https",
@@ -15,6 +16,11 @@
       "launchAutoHide": true,
       "backgroundColor": "#0f172a",
       "showSpinner": false
+    },
+
+    "Keyboard": {
+      "resize": "native",
+      "resizeOnFullScreen": true
     }
   }
 }
