@@ -2,7 +2,11 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-visual">
+    <!-- interactive-widget=resizes-visual : الكيبورد يطفو فوق المحتوى بلا تقليص
+         الشاشة التخطيطية. 100vh يبقى ثابتاً = اللوحة لا تختفي عند فتح الكيبورد.
+         الـJS في huroof.js يحرّك الصندوق السفلي (bottom = kbHeight) ليظهر
+         فوق الكيبورد. -->
     <link rel="manifest" href="../manifest.json">
     <meta name="theme-color" content="#0f172a">
     <meta name="mobile-web-app-capable" content="yes">
@@ -10,6 +14,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="PlayRush">
     <link rel="apple-touch-icon" href="../assets/icons/icon-192.png">
+  <script src="../js/stars.js"></script>
     <script src="../js/pwa.js" defer></script>
     <title>خلية الحروف</title>
     <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -23,7 +28,7 @@
     <script src="../js/ui_dialog.js"></script>
     <script src="../js/brand.js" defer></script>
   <link rel="stylesheet" href="../css/responsive.css">
-  <link rel="stylesheet" href="../css/games/huroof_mobile.css?v=20">
+  <link rel="stylesheet" href="../css/games/huroof_mobile.css?v=14">
   <link rel="stylesheet" href="../css/app_perf.css">
   <style>
     /* الوضع الفردي: إخفاء الدردشة تماماً (لا خصم بشري) */

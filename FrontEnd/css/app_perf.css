@@ -32,7 +32,12 @@
 .pr-app .particle:nth-child(n+3) { display: none !important; }
 
 /* ── ٣) النجوم في الصفحة الرئيسية: وميض أهدأ ── */
-.pr-app .star { animation-duration: 4s !important; }
+.pr-app .star {
+    /* داخل التطبيق: هالة أصغر ووميض أهدأ. القياس بـDevTools أظهر أن الهالة
+       الضبابية الكبيرة — لا عدد النجوم — هي ما كان يستنزف ذاكرة الرسم. */
+    box-shadow: 0 0 4px 1px rgba(255, 235, 59, 0.5) !important;
+    animation-duration: 5s !important;
+}
 
 /* ── ٤) الظلال الثقيلة: نخففها بلا إلغائها ── */
 .pr-app .game-card,

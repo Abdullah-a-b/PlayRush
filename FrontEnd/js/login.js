@@ -8,14 +8,9 @@ const COOLDOWN_MS = 3000; // 3 ثوانٍ انتظار بين كل محاولة
 function createStars() {
     const starsContainer = document.getElementById('stars');
     if (!starsContainer) return;
-    for (let i = 0; i < 50; i++) {
-        const star = document.createElement('div');
-        star.className = 'star';
-        star.style.left = `${Math.random() * 100}%`;
-        star.style.top = `${Math.random() * 100}%`;
-        star.style.animationDuration = `${Math.random() * 2 + 1}s`;
-        starsContainer.appendChild(star);
-    }
+    // 🌟 التوليد انتقل إلى js/stars.js: توزيع شبكي + عدد أقل
+    //    (كان 150 نجمة عشوائية بهالات ضبابية تستنزف ذاكرة الرسم)
+    if (window.PRStars) { window.PRStars.render(starsContainer); return; }
 }
 
 function setupPasswordToggle(toggleId, inputId) {

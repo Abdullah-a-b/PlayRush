@@ -402,12 +402,9 @@ function enableActionButtons() {
 function createStars() {
     const container = document.getElementById('stars');
     if (!container) return;
-    for (let i = 0; i < 150; i++) {
-        const star = document.createElement('div');
-        star.className = 'star' + (Math.random() > 0.3 ? ' purple' : '');
-        star.style.cssText = `left:${Math.random()*100}%;top:${Math.random()*100}%;animation-delay:${Math.random()*2}s;`;
-        container.appendChild(star);
-    }
+    // 🌟 التوليد انتقل إلى js/stars.js: توزيع شبكي + عدد أقل
+    //    (كان 150 نجمة عشوائية بهالات ضبابية تستنزف ذاكرة الرسم)
+    if (window.PRStars) { window.PRStars.render(container); return; }
 }
 
 function startConfetti() {

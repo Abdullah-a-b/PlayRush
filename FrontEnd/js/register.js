@@ -9,13 +9,9 @@ function createStars() {
     const starsContainer = document.getElementById('stars');
     if (!starsContainer) return;
     starsContainer.innerHTML = ''; // تنظيف النجوم القديمة
-    for (let i = 0; i < 150; i++) {
-        const star = document.createElement('div');
-        star.className = 'star';
-        star.style.left = `${Math.random() * 100}%`;
-        star.style.top = `${Math.random() * 100}%`;
-        starsContainer.appendChild(star);
-    }
+    // 🌟 التوليد انتقل إلى js/stars.js: توزيع شبكي + عدد أقل
+    //    (كان 150 نجمة عشوائية بهالات ضبابية تستنزف ذاكرة الرسم)
+    if (window.PRStars) { window.PRStars.render(starsContainer); return; }
 }
 
 function setupPasswordToggle(toggleId, inputId) {
