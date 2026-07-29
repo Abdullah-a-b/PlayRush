@@ -199,7 +199,7 @@
                     gate.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;'
                         + 'justify-content:center;flex-direction:column;gap:14px;background:#0b0e14;z-index:2;';
                     gate.innerHTML = '<div style="font-size:2rem;">🎮</div>'
-                        + '<div style="color:#c9d1d9;font-weight:700;letter-spacing:2px;">المس للبدء</div>'
+                        + '<div style="color:#c9d1d9;font-weight:700;letter-spacing:2px;">اضغط للعب</div>'
                         + '<div style="color:#8b949e;font-size:.75rem;">PlayRush</div>';
                     el.appendChild(gate);
                     el.addEventListener('click', () => { _wake(); run(); }, { once: true });
@@ -210,6 +210,15 @@
                 };
 
                 _wake();
+
+                // 📱 داخل التطبيق: نعرض البوابة **دائماً**، لا فقط عند حجب الصوت.
+                // السبب ليس الصوت (WebView يسمح به) بل التداخل: عند الفتح البارد
+                // يكون الـWebView منشغلاً بتحميل الجلسة والسكربتات، فيبدأ
+                // الأنيميشن فوق ذلك الازدحام ويتقطّع ثم ينتقل. البوابة تفصل
+                // المرحلتين: ينتهي التحميل بهدوء أثناء انتظار لمستك، ثم ينطلق
+                // الأنيميشن على جهاز فارغ الشغل — بلا تقطّع وبصوت كامل.
+                if (IS_APP) { showGate(); return; }
+
                 let waited = 0;
                 const poll = setInterval(() => {
                     const a = window.__prAudioCtx;
