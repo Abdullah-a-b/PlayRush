@@ -1423,20 +1423,26 @@ socket.on('leaver_penalty', (data) => {
 
         // 🔍 لوحة تشخيص مؤقتة على الشاشة نفسها — تُغني عن توصيل الجهاز
         // بكمبيوتر لقراءة الـconsole. تُحذف بعد تحديد سبب اختفاء الصندوق.
+        // ⚠️ مهم: ارتفاعها محدود بصرامة (55px فقط، لا 35vh كما كانت) — كانت
+        // كافية لتغطية اللوحة السداسية نفسها، فيلتبس "اختفاء اللوحة" الحقيقي
+        // بمجرد كون لوحة التشخيص هي اللي تحجبها! نخزّن كل السجل (يُمرَّر
+        // داخلياً)، لكن الصندوق المرئي صغير جداً وقابل للتمرير بإصبعك فقط.
         let _kbDebugEl = null;
         function kbDebugShow(text) {
             console.log('[KB-DEBUG]', text);
             if (!_kbDebugEl) {
                 _kbDebugEl = document.createElement('div');
                 _kbDebugEl.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;' +
-                    'background:rgba(0,0,0,.85);color:#0f0;font:9px monospace;padding:4px;' +
-                    'max-height:35vh;overflow-y:auto;white-space:pre-wrap;pointer-events:none;';
+                    'background:rgba(0,0,0,.85);color:#0f0;font:8px monospace;padding:2px 4px;' +
+                    'height:55px;overflow-y:auto;white-space:pre-wrap;pointer-events:auto;' +
+                    'border-bottom:2px solid red;';
                 document.body.appendChild(_kbDebugEl);
             }
             const line = document.createElement('div');
             line.textContent = new Date().toISOString().slice(11, 19) + ' ' + text;
             _kbDebugEl.appendChild(line);
-            while (_kbDebugEl.children.length > 12) _kbDebugEl.removeChild(_kbDebugEl.firstChild);
+            while (_kbDebugEl.children.length > 40) _kbDebugEl.removeChild(_kbDebugEl.firstChild);
+            _kbDebugEl.scrollTop = _kbDebugEl.scrollHeight;
         }
 
         // ⚠️ القياس الصحيح: الصندوق `position:fixed; bottom:0` يُقاس نسبةً إلى
@@ -1474,9 +1480,17 @@ socket.on('leaver_penalty', (data) => {
             const topPad = layout ? parseFloat(getComputedStyle(layout).paddingTop) || 64 : 64;
             const avail  = sidebar.getBoundingClientRect().top - topPad - 6;
             const natural = board.offsetHeight;   // لا يتأثّر بالـtransform
-            if (!natural || avail <= 40) return;
+            if (!natural || avail <= 40) {
+                kbDebugShow('fitBoard SKIP — natural=' + natural + ' avail=' + Math.round(avail) +
+                    ' sidebarTop=' + Math.round(sidebar.getBoundingClientRect().top) +
+                    ' boardRect=' + JSON.stringify(board.getBoundingClientRect()));
+                return;
+            }
             // حد أدنى 0.55: بلا هذا الحدّ قد يخرج مقياس ضئيل فتختفي اللوحة تماماً
             const scale = Math.max(0.55, Math.min(1, avail / natural));
+            kbDebugShow('fitBoard scale=' + scale.toFixed(3) + ' natural=' + natural +
+                ' avail=' + Math.round(avail) + ' marginBottom=-' +
+                Math.round(natural * (1 - scale)));
             if (scale >= 0.995) { fitBoard(null); return; }
             board.style.transition      = 'transform .15s ease';
             board.style.transformOrigin = 'top center';
