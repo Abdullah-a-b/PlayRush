@@ -21,3 +21,6 @@ android/
 ios/
 *.apk
 *.keystore
+
+.claude
+.github

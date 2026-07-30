@@ -84,7 +84,9 @@
       if (club.logo) {
         const img = document.createElement('img');
         img.className = 'club-logo';
-        img.src = `../assets/clubs/${club.logo}`;
+        // شعارات جديدة: رابط كامل (ويكيميديا/TheSportsDB) نستخدمه مباشرة.
+        // شعارات قديمة: اسم ملف محلي كما كان دائماً.
+        img.src = /^https?:\/\//i.test(club.logo) ? club.logo : `../assets/clubs/${club.logo}`;
         img.alt = club.name;
         img.onerror = function () {
           const ph = document.createElement('div');

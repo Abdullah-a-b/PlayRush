@@ -1504,7 +1504,16 @@ socket.on('leaver_penalty', (data) => {
             const answerVisible = answerSection
                 && getComputedStyle(answerSection).display !== 'none';
 
-            if (typing && answerVisible) {
+            // 🩹 لكن لا تكفي وحدها: الضغط على «إرسال الإجابة» (أو انتهاء الدور
+            // من الخادم) يُفقد الحقل التركيز ويُخفي القسم *فوراً*، بينما
+            // الكيبورد الحقيقي على الجوال يبقى مفتوحاً بصرياً لحظات إضافية
+            // (خاصة إن كانت اللمسة على زر لا حقل آخر). فإن رجعنا لـ bottom:0
+            // في تلك اللحظة، يهبط الصندوق خلف الكيبورد المفتوح فيختفي تقريباً
+            // كاملاً. لذلك: نبقى بالوضع المرتفع طالما القياس الفعلي kb ما زال
+            // يدل على كيبورد مفتوح، حتى لو فقد الحقل تركيزه أو اختفى القسم.
+            const stillElevated = isKbOpen && kb > 60;
+
+            if ((typing && answerVisible) || stillElevated) {
                 if (!isKbOpen) {
                     isKbOpen = true;
                     sidebar.classList.add('keyboard-open');   // الوضع المضغوط

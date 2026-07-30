@@ -246,17 +246,17 @@ def is_national_team(club_ent):
     return False
 
 
-def _save_img(fpath, content):
-    if content and len(content) > 500:
-        with open(fpath, "wb") as f:
-            f.write(content)
-        return True
-    return False
-
-
 def download_logo(club_qid, club_ent, en_name, redo=False):
-    """3 مصادر بالأولوية: TheSportsDB (شعارات رسمية حديثة) 
-    ويكيبيديا (svg/png فقط — نرفض صور jpg)  كومنز P154 (غالباً قديم — آخر ملاذ)."""
+    """3 مصادر بالأولوية: TheSportsDB (شعارات رسمية حديثة)
+    ويكيبيديا (svg/png فقط — نرفض صور jpg)  كومنز P154 (غالباً قديم — آخر ملاذ).
+
+    نُرجع رابط الصورة مباشرة (بدون تحميلها وحفظها في FrontEnd/assets/clubs) —
+    الواجهة تعرضها من مصدرها الأصلي مباشرة. السبب: هذا السكربت يشتغل تلقائياً
+    كل أسبوع من داخل سيرفر الإنتاج (career_auto_import_loop)، وما كان فيه أي
+    طريقة يوصل فيها ملف محلي محفوظ هناك إلى Cloudflare Pages إلا بـ git push
+    يدوي — فكانت الأندية الجديدة تظهر بلا شعار (404) لحد ما يصير الرفع اليدوي.
+    نتحقق أول إن الرابط فعلاً يرجّع صورة قبل ما نعتمده، لتفادي حفظ روابط ميتة.
+    (التوافق مع الشعارات القديمة المحمّلة محلياً قبل هذا التعديل باقٍ كما هو أدناه.)"""
     fname = f"club_{club_qid}.png"
     fpath = os.path.join(CLUBS_DIR, fname)
     if not redo and os.path.exists(fpath) and os.path.getsize(fpath) > 500:
@@ -313,11 +313,13 @@ def download_logo(club_qid, club_ent, en_name, redo=False):
                         break
                 if not badge:
                     continue
-                r2 = _get_with_retry(badge + "/small", max_tries=2, timeout=30)
+                logo_url = badge + "/small"
+                r2 = _get_with_retry(logo_url, max_tries=2, timeout=30)
                 if not (r2.ok and len(r2.content) > 500):
-                    r2 = _get_with_retry(badge, max_tries=2, timeout=30)
-                if r2.ok and _save_img(fpath, r2.content):
-                    return fname
+                    logo_url = badge
+                    r2 = _get_with_retry(logo_url, max_tries=2, timeout=30)
+                if r2.ok and len(r2.content) > 500:
+                    return logo_url
             except Exception:
                 continue
 
@@ -332,8 +334,8 @@ def download_logo(club_qid, club_ent, en_name, redo=False):
                 low = thumb.lower()
                 if thumb and ".jpg" not in low and ".jpeg" not in low:
                     r2 = _get_with_retry(thumb, max_tries=2, timeout=30)
-                    if r2.ok and _save_img(fpath, r2.content):
-                        return fname
+                    if r2.ok and len(r2.content) > 500:
+                        return thumb
     except Exception:
         pass
 
@@ -343,14 +345,67 @@ def download_logo(club_qid, club_ent, en_name, redo=False):
             commons_name = st["mainsnak"]["datavalue"]["value"]
             url = COMMONS_FILE.format(name=requests.utils.quote(commons_name))
             r = _get_with_retry(url, max_tries=3, timeout=30)
-            if r.ok and _save_img(fpath, r.content):
-                return fname
+            if r.ok and len(r.content) > 500:
+                return url
         except Exception:
             continue
     # فشلت المصادر: لو كنا نعيد التحميل ويوجد ملف قديم — نُبقيه
     if os.path.exists(fpath) and os.path.getsize(fpath) > 500:
         return fname
     return None
+
+
+def build_clubs_json(career_list, club_ents, skip_logos=False, redo_logos=False):
+    """يبني قائمة أندية لاعب واحد (بالاسم + الشعار) من مسيرته المفروزة
+    و كيانات الأندية المجلوبة مسبقاً. مستقلة عن run_import كي يُعاد
+    استخدامها من الاستيراد الكامل وبكسل تصحيح الشعارات القديمة معاً."""
+    clubs_json = []
+    _logo_by_base = {}
+    _starts_youth = bool(career_list and career_list[0].get("_youth"))
+
+    for _idx, e in enumerate(career_list):
+        club_ent = club_ents.get(e["club"], {})
+        if is_national_team(club_ent):
+            continue
+
+        is_youth = bool(e.get("_youth"))
+        # قاعدة الشباب: نُبقي فقط أكاديمية البداية (لامين يامال)،
+        # ونحذف أي فريق شباب آخر (يعقّد اللعبة).
+        if is_youth and not (_starts_youth and _idx == 0):
+            continue
+
+        en_lbl = (_label(club_ent, ("en",)) or "")
+        _base = re.sub(r"\b(youth|academy|u\d+|under[- ]\d+|b|ii|reserves?|juvenil|castilla)\b",
+                       "", en_lbl.lower()).strip()
+
+        if is_youth:
+            # أكاديمية البداية: نسمّيها "أكاديمية <النادي الأم>"
+            parent = _base.title() if _base else en_lbl
+            club_label = f"أكاديمية {parent}"
+        else:
+            club_label = _label(club_ent) or e["club"]
+
+        logo = None
+        if not skip_logos:
+            logo = download_logo(e["club"], club_ent,
+                                 _label(club_ent, ("en",)), redo=redo_logos)
+        entry = {"name": club_label}
+        if logo:
+            entry["logo"] = logo
+            if _base:
+                _logo_by_base.setdefault(_base, logo)
+        entry["_base"] = _base
+        entry["_youth"] = is_youth
+        clubs_json.append(entry)
+
+    # أكاديمية البداية بلا شعار  ترث شعار النادي الأم (لو ظهر لاحقاً)
+    for entry in clubs_json:
+        if "logo" not in entry and entry.get("_youth") \
+                and entry.get("_base") in _logo_by_base:
+            entry["logo"] = _logo_by_base[entry["_base"]]
+        entry.pop("_base", None)
+        entry.pop("_youth", None)
+    return clubs_json
 
 
 def gen_accepted(ar_name, en_name):
@@ -433,57 +488,8 @@ def run_import(limit=200, min_sitelinks=45, offset=0,
                     failed += 1
                     continue
 
-                clubs_json = []
-                _logo_by_base = {}
-                _first_youth_base = None  # قاعدة اسم أول فريق شباب (البداية فقط)
-                _career_list = careers.get(qid, [])
-                # هل أول قيد في المسيرة هو فريق شباب؟ (بدأ مسيرته فيه)
-                _starts_youth = bool(_career_list and _career_list[0].get("_youth"))
-
-                for _idx, e in enumerate(_career_list):
-                    club_ent = club_ents.get(e["club"], {})
-                    if is_national_team(club_ent):
-                        continue
-
-                    is_youth = bool(e.get("_youth"))
-                    # قاعدة الشباب: نُبقي فقط أكاديمية البداية (لامين يامال)،
-                    # ونحذف أي فريق شباب آخر (يعقّد اللعبة).
-                    if is_youth and not (_starts_youth and _idx == 0):
-                        continue
-
-                    en_lbl = (_label(club_ent, ("en",)) or "")
-                    _base = re.sub(r"\b(youth|academy|u\d+|under[- ]\d+|b|ii|reserves?|juvenil|castilla)\b",
-                                   "", en_lbl.lower()).strip()
-
-                    if is_youth:
-                        # أكاديمية البداية: نسمّيها "أكاديمية <النادي الأم>"
-                        parent = _base.title() if _base else en_lbl
-                        # نحاول اسماً عربياً للنادي الأم إن توفّر لاحقاً؛ وإلا الإنجليزي
-                        club_label = f"أكاديمية {parent}"
-                        _first_youth_base = _base
-                    else:
-                        club_label = _label(club_ent) or e["club"]
-
-                    logo = None
-                    if not skip_logos:
-                        logo = download_logo(e["club"], club_ent,
-                                             _label(club_ent, ("en",)), redo=redo_logos)
-                    entry = {"name": club_label}
-                    if logo:
-                        entry["logo"] = logo
-                        if _base:
-                            _logo_by_base.setdefault(_base, logo)
-                    entry["_base"] = _base
-                    entry["_youth"] = is_youth
-                    clubs_json.append(entry)
-
-                # أكاديمية البداية بلا شعار  ترث شعار النادي الأم (لو ظهر لاحقاً)
-                for entry in clubs_json:
-                    if "logo" not in entry and entry.get("_youth") \
-                            and entry.get("_base") in _logo_by_base:
-                        entry["logo"] = _logo_by_base[entry["_base"]]
-                    entry.pop("_base", None)
-                    entry.pop("_youth", None)
+                clubs_json = build_clubs_json(careers.get(qid, []), club_ents,
+                                              skip_logos=skip_logos, redo_logos=redo_logos)
 
                 if not clubs_json:
                     skipped += 1
@@ -534,6 +540,69 @@ def run_import(limit=200, min_sitelinks=45, offset=0,
             f"📊 الإجمالي: {total}")
         return {"added": added, "updated": updated, "skipped": skipped,
                 "failed": failed, "total": total, "fetched": len(players)}
+    finally:
+        db.close()
+
+
+def backfill_broken_logos(known_good_filenames=None, log=print, on_progress=None):
+    """يصحّح شعارات الأندية القديمة (اسم ملف محلي كان يُحمَّل محلياً قبل التحوّل
+    لروابط ويكيميديا/TheSportsDB المباشرة) للاعبين الموجودين فعلاً بقاعدة
+    البيانات. لا تلمس أي حقل غير `clubs` (الصعوبة/الحالة/العصر... تبقى كما
+    هي) — تصحيح شعارات فقط، بلا أي أثر جانبي على بيانات صحيحة أصلاً.
+
+    known_good_filenames: أسماء الملفات المنشورة فعلياً على الفرونت إند (لو
+    مُرّرت) — أي شعار اسم ملف موجود ضمنها يُعتبر سليماً ولا يُلمس، فلا نُعيد
+    كتابة الشعارات الـ~600 الشغّالة أصلاً، ونصلح فقط المراجع الميتة حقاً.
+
+    on_progress(checked, fixed, total): يُستدعى بعد كل لاعب — يتيح لمن يستدعي
+    الدالة (endpoint خلفي طويل التشغيل) عرض تقدّم حي بدل انتظار صامت طويل."""
+    known_good = set(known_good_filenames or ())
+    db = SessionLocal()
+    checked = fixed = 0
+    try:
+        rows = db.query(CareerPlayer).filter(
+            CareerPlayer.wikidata_id.isnot(None)).all()
+        broken = []
+        for row in rows:
+            try:
+                clubs = json.loads(row.clubs or "[]")
+            except Exception:
+                continue
+            if any(c.get("logo") and not str(c["logo"]).startswith("http")
+                   and c["logo"] not in known_good
+                   for c in clubs):
+                broken.append(row)
+
+        log(f"🔎 لاعبون بشعارات قديمة: {len(broken)}")
+        if on_progress:
+            on_progress(0, 0, len(broken))
+        for row in broken:
+            checked += 1
+            ents = wd_get_entities([row.wikidata_id])
+            ent = ents.get(row.wikidata_id, {})
+            career = parse_career(ent)
+            if not career:
+                continue
+            club_qids = {e["club"] for e in career}
+            club_ents = wd_get_entities(list(club_qids)) if club_qids else {}
+            for e in career:
+                e["_youth"] = is_youth_team(club_ents.get(e["club"], {}))
+                if e["start"] == "+9999" and e["_youth"]:
+                    e["start"] = "+0000"
+            career.sort(key=lambda e: (e["start"], 0 if e["_youth"] else 1))
+
+            new_clubs = build_clubs_json(career, club_ents, redo_logos=True)
+            if new_clubs:
+                row.clubs = json.dumps(new_clubs, ensure_ascii=False)
+                fixed += 1
+                db.commit()
+                log(f"   ✔ {row.name}")
+            if on_progress:
+                on_progress(checked, fixed, len(broken))
+            time.sleep(0.3)
+
+        log(f"✅ فُحص {checked} | 🔧 أُصلح {fixed}")
+        return {"checked": checked, "fixed": fixed, "total": len(broken)}
     finally:
         db.close()
 

@@ -1021,7 +1021,8 @@ window.addEventListener('DOMContentLoaded', async () => {
                 if (idx >= logos.length) return;
                 const img = new Image();
                 img.onload = img.onerror = next;
-                img.src = `assets/clubs/${logos[idx++]}`;
+                const logo = logos[idx++];
+                img.src = /^https?:\/\//i.test(logo) ? logo : `assets/clubs/${logo}`;
             }
             for (let k = 0; k < 5; k++) next();
             console.log(`⚽ تحميل مسبق: ${logos.length} شعار نادٍ`);
