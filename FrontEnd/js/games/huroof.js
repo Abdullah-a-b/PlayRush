@@ -1467,6 +1467,14 @@ socket.on('leaver_penalty', (data) => {
         // نصف الارتفاع، فيختفي نصفها. نُصغّرها تصغيراً موحّداً لتلائم المساحة
         // المتبقية فقط أثناء الكتابة، وتعود كما هي فور إغلاق الكيبورد.
         // (تصميمها ونِسبها لا تتغيّر إطلاقاً — transform: scale لا أكثر.)
+        // 0.55 كانت النسخة القديمة — تأكّدنا عبر جهاز حقيقي (Chrome DevTools)
+        // إنها تسبّب تراكب اللوحة فوق صندوق الإجابة حين تكون لوحة مفاتيح
+        // المستخدم طويلة (خصوصاً مع شريط اقتراحات جوجل). النسبة هنا مجرّد
+        // صمّام أمان تقني (يمنع scale=0) لا حدّاً تصميمياً — المقياس الفعلي
+        // دائماً avail/natural، فيملأ بالضبط المساحة المتبقية ولا يتراكب
+        // معها إطلاقاً مهما صغرت.
+        const BOARD_MIN_SCALE = 0.22;
+
         function fitBoard(sidebar) {
             const board = document.querySelector('.main-container');
             if (!board) return;
@@ -1486,8 +1494,7 @@ socket.on('leaver_penalty', (data) => {
                     ' boardRect=' + JSON.stringify(board.getBoundingClientRect()));
                 return;
             }
-            // حد أدنى 0.55: بلا هذا الحدّ قد يخرج مقياس ضئيل فتختفي اللوحة تماماً
-            const scale = Math.max(0.55, Math.min(1, avail / natural));
+            const scale = Math.max(BOARD_MIN_SCALE, Math.min(1, avail / natural));
             kbDebugShow('fitBoard scale=' + scale.toFixed(3) + ' natural=' + natural +
                 ' avail=' + Math.round(avail) + ' marginBottom=-' +
                 Math.round(natural * (1 - scale)));
