@@ -1505,6 +1505,14 @@ socket.on('leaver_penalty', (data) => {
         function applyLayout(nativeKbH) {
             const sidebar = document.getElementById('questionSidebar');
             if (!sidebar) return;
+            // 🩹 هذه الشاشة مصمَّمة لتكون ثابتة بلا تمرير إطلاقاً. لو انزاح
+            // التمرير (مثلاً أثناء الانتقال بين وضع الكيبورد المضغوط والعادي)
+            // ولم يُصفَّر، يظهر الصندوق "مختفياً" رغم أنه بمكانه الصحيح —
+            // المستخدم يحتاج يمرّر يدوياً ليراه. نصفّره هنا دائماً، بغض
+            // النظر عن أي فرع سيُنفَّذ لاحقاً، لا فقط داخل الوضع المضغوط.
+            if (window.scrollY !== 0 || document.documentElement.scrollTop !== 0) {
+                window.scrollTo(0, 0);
+            }
             // 📌 مصدر واحد للقياس: الفرق بين الشاشة التخطيطية والنافذة المرئية.
             // يُرجع صفراً حين يُقلّص المتصفح/WebView نفسه (فـbottom:0 كافٍ)،
             // والقيمة الصحيحة حين يطفو الكيبورد فوق المحتوى. لا نستخدم
@@ -1559,9 +1567,6 @@ socket.on('leaver_penalty', (data) => {
                 const visibleH = kb > 0 ? (screenH - kb) : vv.height;
                 sidebar.style.setProperty('max-height',
                     Math.max(130, Math.min(visibleH - 12, 215)) + 'px', 'important');
-
-                // نمنع قفزة التمرير التلقائية التي يفعلها المتصفح
-                if (window.scrollY !== 0) window.scrollTo(0, 0);
 
                 // ⚠️ لا نُمرّر المحتوى إطلاقاً. كنّا نضبط scrollTop على موضع حقل
                 // الإجابة المحسوب في التخطيط *الطبيعي*، ثم يُطبَّق الوضع المضغوط
