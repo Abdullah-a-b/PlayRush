@@ -544,69 +544,6 @@ def run_import(limit=200, min_sitelinks=45, offset=0,
         db.close()
 
 
-def backfill_broken_logos(known_good_filenames=None, log=print, on_progress=None):
-    """يصحّح شعارات الأندية القديمة (اسم ملف محلي كان يُحمَّل محلياً قبل التحوّل
-    لروابط ويكيميديا/TheSportsDB المباشرة) للاعبين الموجودين فعلاً بقاعدة
-    البيانات. لا تلمس أي حقل غير `clubs` (الصعوبة/الحالة/العصر... تبقى كما
-    هي) — تصحيح شعارات فقط، بلا أي أثر جانبي على بيانات صحيحة أصلاً.
-
-    known_good_filenames: أسماء الملفات المنشورة فعلياً على الفرونت إند (لو
-    مُرّرت) — أي شعار اسم ملف موجود ضمنها يُعتبر سليماً ولا يُلمس، فلا نُعيد
-    كتابة الشعارات الـ~600 الشغّالة أصلاً، ونصلح فقط المراجع الميتة حقاً.
-
-    on_progress(checked, fixed, total): يُستدعى بعد كل لاعب — يتيح لمن يستدعي
-    الدالة (endpoint خلفي طويل التشغيل) عرض تقدّم حي بدل انتظار صامت طويل."""
-    known_good = set(known_good_filenames or ())
-    db = SessionLocal()
-    checked = fixed = 0
-    try:
-        rows = db.query(CareerPlayer).filter(
-            CareerPlayer.wikidata_id.isnot(None)).all()
-        broken = []
-        for row in rows:
-            try:
-                clubs = json.loads(row.clubs or "[]")
-            except Exception:
-                continue
-            if any(c.get("logo") and not str(c["logo"]).startswith("http")
-                   and c["logo"] not in known_good
-                   for c in clubs):
-                broken.append(row)
-
-        log(f"🔎 لاعبون بشعارات قديمة: {len(broken)}")
-        if on_progress:
-            on_progress(0, 0, len(broken))
-        for row in broken:
-            checked += 1
-            ents = wd_get_entities([row.wikidata_id])
-            ent = ents.get(row.wikidata_id, {})
-            career = parse_career(ent)
-            if not career:
-                continue
-            club_qids = {e["club"] for e in career}
-            club_ents = wd_get_entities(list(club_qids)) if club_qids else {}
-            for e in career:
-                e["_youth"] = is_youth_team(club_ents.get(e["club"], {}))
-                if e["start"] == "+9999" and e["_youth"]:
-                    e["start"] = "+0000"
-            career.sort(key=lambda e: (e["start"], 0 if e["_youth"] else 1))
-
-            new_clubs = build_clubs_json(career, club_ents, redo_logos=True)
-            if new_clubs:
-                row.clubs = json.dumps(new_clubs, ensure_ascii=False)
-                fixed += 1
-                db.commit()
-                log(f"   ✔ {row.name}")
-            if on_progress:
-                on_progress(checked, fixed, len(broken))
-            time.sleep(0.3)
-
-        log(f"✅ فُحص {checked} | 🔧 أُصلح {fixed}")
-        return {"checked": checked, "fixed": fixed, "total": len(broken)}
-    finally:
-        db.close()
-
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, default=200)
