@@ -184,6 +184,9 @@ socket.on('solo_error', (data) => {
 /* ================================================================
    🎮 showMatchReveal — كشف التطابق عند بدء المباراة
    ================================================================ */
+const MATCH_REVEAL_DURATION = 3200;
+let _matchRevealShownAt = 0;   // يستخدمه huroof_board_init لتأجيل عدّاد "استعد" حتى لا يتراكب معها
+
 function showMatchReveal(myName, myAvatarSrc, oppName, oppAvatarSrc) {
   var overlay = document.getElementById('matchRevealOverlay');
   if (!overlay) return;
@@ -193,9 +196,10 @@ function showMatchReveal(myName, myAvatarSrc, oppName, oppAvatarSrc) {
   if (oppName)      ge('mrOppName').textContent   = oppName;
   if (oppAvatarSrc) ge('mrOppAvatar').src         = oppAvatarSrc;
   overlay.classList.add('show');
+  _matchRevealShownAt = Date.now();
   var bar = ge('mrReadyFill');
   if (bar) { bar.style.width = '0%'; void bar.offsetWidth; bar.style.width = '100%'; }
-  setTimeout(function(){ overlay.classList.remove('show'); }, 3200);
+  setTimeout(function(){ overlay.classList.remove('show'); }, MATCH_REVEAL_DURATION);
 }
 
 socket.on('room_joined', (data) => {
@@ -276,7 +280,14 @@ function playReadyAnimation(cb) {
 }
 
 socket.on('huroof_board_init', (data) => {
-    if (!_readyShown) { _readyShown = true; playReadyAnimation(); }
+    if (!_readyShown) {
+        _readyShown = true;
+        // نؤجّل عدّاد "استعد" حتى تنتهي شاشة "وجدنا لك خصماً" — كانا يظهران
+        // معاً (المباراة تُطلق الحدثين متقاربين) فيتراكب النصّان فوق بعضهما.
+        const elapsed = _matchRevealShownAt ? Date.now() - _matchRevealShownAt : Infinity;
+        const wait = Math.max(0, MATCH_REVEAL_DURATION - elapsed);
+        setTimeout(playReadyAnimation, wait);
+    }
     const roundsDisplay = document.getElementById('rounds-display');
     if (roundsDisplay) roundsDisplay.style.display = 'flex';
 

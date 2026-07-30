@@ -75,6 +75,10 @@ html.kb-open, html.kb-open body {
         text-transform: none !important; max-width: 68px !important;
         overflow: hidden !important; text-overflow: ellipsis !important;
         white-space: nowrap !important; display: inline-block !important; vertical-align: middle !important;
+        /* الصفحة dir="rtl" لكن أسماء اللاعبين قد تكون لاتينية (LTR)؛ بدون هذا
+           السطر يقتطع المتصفح البداية بدل النهاية (يظهر "...ter" بدل "AuditTe...")
+           لأن اتجاه الاقتطاع يتبع اتجاه الحاوية لا اتجاه النص نفسه. */
+        unicode-bidi: plaintext !important;
     }
     .country-flag { width: 17px !important; height: 12px !important; border-radius: 2px !important; }
     .my-color-box { padding: 0 !important; background: transparent !important; }
