@@ -1421,6 +1421,24 @@ socket.on('leaver_penalty', (data) => {
         const vv = window.visualViewport;
         let isKbOpen = false;
 
+        // 🔍 لوحة تشخيص مؤقتة على الشاشة نفسها — تُغني عن توصيل الجهاز
+        // بكمبيوتر لقراءة الـconsole. تُحذف بعد تحديد سبب اختفاء الصندوق.
+        let _kbDebugEl = null;
+        function kbDebugShow(text) {
+            console.log('[KB-DEBUG]', text);
+            if (!_kbDebugEl) {
+                _kbDebugEl = document.createElement('div');
+                _kbDebugEl.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;' +
+                    'background:rgba(0,0,0,.85);color:#0f0;font:9px monospace;padding:4px;' +
+                    'max-height:35vh;overflow-y:auto;white-space:pre-wrap;pointer-events:none;';
+                document.body.appendChild(_kbDebugEl);
+            }
+            const line = document.createElement('div');
+            line.textContent = new Date().toISOString().slice(11, 19) + ' ' + text;
+            _kbDebugEl.appendChild(line);
+            while (_kbDebugEl.children.length > 12) _kbDebugEl.removeChild(_kbDebugEl.firstChild);
+        }
+
         // ⚠️ القياس الصحيح: الصندوق `position:fixed; bottom:0` يُقاس نسبةً إلى
         // *الشاشة التخطيطية* (documentElement.clientHeight) لا إلى
         // window.innerHeight. بعض متصفحات أندرويد تُقلّص الشاشة التخطيطية
@@ -1513,6 +1531,14 @@ socket.on('leaver_penalty', (data) => {
             // يدل على كيبورد مفتوح، حتى لو فقد الحقل تركيزه أو اختفى القسم.
             const stillElevated = isKbOpen && kb > 60;
 
+            // 🔍 تشخيص مؤقت — سيُحذف بعد تحديد سبب اختفاء الصندوق فعلياً
+            kbDebugShow(JSON.stringify({
+                kb: Math.round(kb), typing, answerVisible, isKbOpen, stillElevated,
+                vvH: Math.round(vv.height), vvOffsetTop: Math.round(vv.offsetTop),
+                layoutH: document.documentElement.clientHeight,
+                activeElId: document.activeElement && document.activeElement.id,
+            }));
+
             if ((typing && answerVisible) || stillElevated) {
                 if (!isKbOpen) {
                     isKbOpen = true;
@@ -1547,6 +1573,7 @@ socket.on('leaver_penalty', (data) => {
                 fitBoard(sidebar);
 
             } else {
+                kbDebugShow('EXIT branch — reverting to bottom:0 while kb=' + Math.round(kb));
                 isKbOpen = false;
                 sidebar.classList.remove('keyboard-open');
                 sidebar.classList.remove('kb-top');
