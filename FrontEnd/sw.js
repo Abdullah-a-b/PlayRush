@@ -83,19 +83,19 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // CSS/JS: من الكاش فوراً + تحديث صامت في الخلفية (stale-while-revalidate)
+    // 🩹 CSS/JS: الشبكة أولاً فعلياً (يطابق التعليق أعلى الملف) — كانت
+    // النسخة السابقة تخدم الكاش القديم فوراً وتحدّثه بصمت لاحقاً
+    // (stale-while-revalidate)، فيبقى اللاعب نسخة كاملة متأخراً عن كل
+    // نشر جديد بلا أي علامة على ذلك. الكاش هنا شبكة أمان لانقطاع النت فقط.
     if (isCode(url)) {
         event.respondWith(
-            caches.match(req).then((hit) => {
-                const net = fetch(req).then((res) => {
-                    if (res && res.ok) {
-                        const copy = res.clone();
-                        caches.open(SHELL_CACHE).then((c) => c.put(req, copy));
-                    }
-                    return res;
-                }).catch(() => hit);
-                return hit || net;
-            })
+            fetch(req).then((res) => {
+                if (res && res.ok) {
+                    const copy = res.clone();
+                    caches.open(SHELL_CACHE).then((c) => c.put(req, copy));
+                }
+                return res;
+            }).catch(() => caches.match(req))
         );
         return;
     }
