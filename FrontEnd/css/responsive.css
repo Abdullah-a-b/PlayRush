@@ -142,11 +142,15 @@ img, video, canvas, svg, iframe {
     right: 0;
     /* 🩹 على أجهزة أندرويد بالتنقّل بالإيماءات، مؤشر النظام السفلي يجلس فوق
        هذا الشريط مباشرة لأنه ملتصق بحافة الشاشة (bottom:0 بلا هامش) —
-       فيبدو تصادماً/بروزاً بصرياً بين الشريط ومؤشر النظام. نرفعه بمقدار
-       المنطقة الآمنة السفلية (env safe-area) فقط عند وجودها (لا يؤثر على
-       أجهزة بلا هذه المنطقة). */
-    height: calc(40px + env(safe-area-inset-bottom, 0px));
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+       فيبدو تصادماً/بروزاً بصرياً بين الشريط ومؤشر النظام.
+       ⚠️ جُرِّب env(safe-area-inset-bottom) أولاً وحده فلم ينفع: تأكّدنا
+       بالقياس المباشر (Chrome DevTools على جهاز حقيقي) أن Chrome/Android لا
+       يُرجع لهذه القيمة رقماً حقيقياً لمؤشر الإيماءات (يبقى 0px دائماً على
+       عكس iOS Safari) — لذلك نضمن حداً أدنى ثابتاً (18px) دائماً عبر
+       max()، ويبقى env() يعمل تلقائياً على الأجهزة/المتصفحات التي تدعمه
+       فعلياً (أو يحتاج قيمة أكبر). */
+    height: calc(40px + max(env(safe-area-inset-bottom, 0px), 18px));
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 18px);
     box-sizing: border-box;
     z-index: 4900;
     background: rgba(10, 12, 16, 0.82);
@@ -222,16 +226,16 @@ img, video, canvas, svg, iframe {
   body:not(.in-game) .auth-box,
   body:not(.in-game) .auth-card,
   body:not(.in-game) .form-container {
-    padding-bottom: calc(48px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: calc(48px + max(env(safe-area-inset-bottom, 0px), 18px)) !important;
   }
 }
 
 /* شاشات ضيقة جداً */
 @media (max-width: 360px) {
   .pr-unified-bar {
-    height: calc(38px + env(safe-area-inset-bottom, 0px));
+    height: calc(38px + max(env(safe-area-inset-bottom, 0px), 18px));
     padding: 0 8px;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 18px);
   }
   .pub-name       { font-size: 9px; }
   .pub-social .social-icon { width: 24px !important; height: 24px !important; font-size: 11px !important; }
