@@ -140,20 +140,19 @@ img, video, canvas, svg, iframe {
     bottom: 0;
     left: 0;
     right: 0;
-    /* 🩹 على أجهزة أندرويد بالتنقّل بالإيماءات، مؤشر النظام السفلي يجلس فوق
-       هذا الشريط مباشرة لأنه ملتصق بحافة الشاشة (bottom:0 بلا هامش) —
-       فيبدو تصادماً/بروزاً بصرياً بين الشريط ومؤشر النظام.
-       ⚠️ جُرِّب env(safe-area-inset-bottom) أولاً وحده فلم ينفع: تأكّدنا
-       بالقياس المباشر (Chrome DevTools على جهاز حقيقي) أن Chrome/Android لا
-       يُرجع لهذه القيمة رقماً حقيقياً لمؤشر الإيماءات (يبقى 0px دائماً على
-       عكس iOS Safari) — لذلك نضمن حداً أدنى ثابتاً (18px) دائماً عبر
-       max()، ويبقى env() يعمل تلقائياً على الأجهزة/المتصفحات التي تدعمه
-       فعلياً (أو يحتاج قيمة أكبر). */
-    height: calc(40px + max(env(safe-area-inset-bottom, 0px), 18px));
-    padding-bottom: max(env(safe-area-inset-bottom, 0px), 18px);
+    /* 🩹 القياس المباشر أثبت أن الشريط أصلاً لا يتصادم مع مؤشر تنقّل أندرويد
+       (Chrome يرسم منطقة المؤشر خارج viewport الصفحة تماماً، بلون
+       theme-color، فلا تداخل حقيقي إطلاقاً) — الحدّ الإضافي (18px) كان يحل
+       مشكلة غير موجودة، وسبّب شريطاً إضافياً شبه أسود فوق شريط theme-color
+       الملاحي (#0f172a) فظهر كـ"درجة" لونية واضحة (البروز الحقيقي). الحل
+       الفعلي: خلفية الشريط تتماشى لونياً مع theme-color بدل تصغير/تكبير
+       الارتفاع. */
+    height: 40px;
     box-sizing: border-box;
     z-index: 4900;
-    background: rgba(10, 12, 16, 0.82);
+    /* نفس درجة theme-color/خلفية الصفحة (#0f172a) بشفافية، بدل رمادي
+       داكن مختلف تماماً — يذوب الشريط في المنطقة الآمنة تحته بلا حافة. */
+    background: rgba(15, 23, 42, 0.88);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-top: 1px solid rgba(255, 255, 255, 0.07);
@@ -226,16 +225,15 @@ img, video, canvas, svg, iframe {
   body:not(.in-game) .auth-box,
   body:not(.in-game) .auth-card,
   body:not(.in-game) .form-container {
-    padding-bottom: calc(48px + max(env(safe-area-inset-bottom, 0px), 18px)) !important;
+    padding-bottom: 48px !important;
   }
 }
 
 /* شاشات ضيقة جداً */
 @media (max-width: 360px) {
   .pr-unified-bar {
-    height: calc(38px + max(env(safe-area-inset-bottom, 0px), 18px));
+    height: 38px;
     padding: 0 8px;
-    padding-bottom: max(env(safe-area-inset-bottom, 0px), 18px);
   }
   .pub-name       { font-size: 9px; }
   .pub-social .social-icon { width: 24px !important; height: 24px !important; font-size: 11px !important; }
