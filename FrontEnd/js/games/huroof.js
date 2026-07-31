@@ -1421,30 +1421,6 @@ socket.on('leaver_penalty', (data) => {
         const vv = window.visualViewport;
         let isKbOpen = false;
 
-        // 🔍 لوحة تشخيص مؤقتة على الشاشة نفسها — تُغني عن توصيل الجهاز
-        // بكمبيوتر لقراءة الـconsole. تُحذف بعد تحديد سبب اختفاء الصندوق.
-        // ⚠️ مهم: ارتفاعها محدود بصرامة (55px فقط، لا 35vh كما كانت) — كانت
-        // كافية لتغطية اللوحة السداسية نفسها، فيلتبس "اختفاء اللوحة" الحقيقي
-        // بمجرد كون لوحة التشخيص هي اللي تحجبها! نخزّن كل السجل (يُمرَّر
-        // داخلياً)، لكن الصندوق المرئي صغير جداً وقابل للتمرير بإصبعك فقط.
-        let _kbDebugEl = null;
-        function kbDebugShow(text) {
-            console.log('[KB-DEBUG]', text);
-            if (!_kbDebugEl) {
-                _kbDebugEl = document.createElement('div');
-                _kbDebugEl.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;' +
-                    'background:rgba(0,0,0,.85);color:#0f0;font:8px monospace;padding:2px 4px;' +
-                    'height:55px;overflow-y:auto;white-space:pre-wrap;pointer-events:auto;' +
-                    'border-bottom:2px solid red;';
-                document.body.appendChild(_kbDebugEl);
-            }
-            const line = document.createElement('div');
-            line.textContent = new Date().toISOString().slice(11, 19) + ' ' + text;
-            _kbDebugEl.appendChild(line);
-            while (_kbDebugEl.children.length > 40) _kbDebugEl.removeChild(_kbDebugEl.firstChild);
-            _kbDebugEl.scrollTop = _kbDebugEl.scrollHeight;
-        }
-
         // ⚠️ القياس الصحيح: الصندوق `position:fixed; bottom:0` يُقاس نسبةً إلى
         // *الشاشة التخطيطية* (documentElement.clientHeight) لا إلى
         // window.innerHeight. بعض متصفحات أندرويد تُقلّص الشاشة التخطيطية
@@ -1467,14 +1443,6 @@ socket.on('leaver_penalty', (data) => {
         // نصف الارتفاع، فيختفي نصفها. نُصغّرها تصغيراً موحّداً لتلائم المساحة
         // المتبقية فقط أثناء الكتابة، وتعود كما هي فور إغلاق الكيبورد.
         // (تصميمها ونِسبها لا تتغيّر إطلاقاً — transform: scale لا أكثر.)
-        // 0.55 كانت النسخة القديمة — تأكّدنا عبر جهاز حقيقي (Chrome DevTools)
-        // إنها تسبّب تراكب اللوحة فوق صندوق الإجابة حين تكون لوحة مفاتيح
-        // المستخدم طويلة (خصوصاً مع شريط اقتراحات جوجل). النسبة هنا مجرّد
-        // صمّام أمان تقني (يمنع scale=0) لا حدّاً تصميمياً — المقياس الفعلي
-        // دائماً avail/natural، فيملأ بالضبط المساحة المتبقية ولا يتراكب
-        // معها إطلاقاً مهما صغرت.
-        const BOARD_MIN_SCALE = 0.22;
-
         function fitBoard(sidebar) {
             const board = document.querySelector('.main-container');
             if (!board) return;
@@ -1488,16 +1456,9 @@ socket.on('leaver_penalty', (data) => {
             const topPad = layout ? parseFloat(getComputedStyle(layout).paddingTop) || 64 : 64;
             const avail  = sidebar.getBoundingClientRect().top - topPad - 6;
             const natural = board.offsetHeight;   // لا يتأثّر بالـtransform
-            if (!natural || avail <= 40) {
-                kbDebugShow('fitBoard SKIP — natural=' + natural + ' avail=' + Math.round(avail) +
-                    ' sidebarTop=' + Math.round(sidebar.getBoundingClientRect().top) +
-                    ' boardRect=' + JSON.stringify(board.getBoundingClientRect()));
-                return;
-            }
-            const scale = Math.max(BOARD_MIN_SCALE, Math.min(1, avail / natural));
-            kbDebugShow('fitBoard scale=' + scale.toFixed(3) + ' natural=' + natural +
-                ' avail=' + Math.round(avail) + ' marginBottom=-' +
-                Math.round(natural * (1 - scale)));
+            if (!natural || avail <= 40) return;
+            // حد أدنى 0.55: بلا هذا الحدّ قد يخرج مقياس ضئيل فتختفي اللوحة تماماً
+            const scale = Math.max(0.55, Math.min(1, avail / natural));
             if (scale >= 0.995) { fitBoard(null); return; }
             board.style.transition      = 'transform .15s ease';
             board.style.transformOrigin = 'top center';
@@ -1526,14 +1487,6 @@ socket.on('leaver_penalty', (data) => {
         function applyLayout(nativeKbH) {
             const sidebar = document.getElementById('questionSidebar');
             if (!sidebar) return;
-            // 🩹 هذه الشاشة مصمَّمة لتكون ثابتة بلا تمرير إطلاقاً. لو انزاح
-            // التمرير (مثلاً أثناء الانتقال بين وضع الكيبورد المضغوط والعادي)
-            // ولم يُصفَّر، يظهر الصندوق "مختفياً" رغم أنه بمكانه الصحيح —
-            // المستخدم يحتاج يمرّر يدوياً ليراه. نصفّره هنا دائماً، بغض
-            // النظر عن أي فرع سيُنفَّذ لاحقاً، لا فقط داخل الوضع المضغوط.
-            if (window.scrollY !== 0 || document.documentElement.scrollTop !== 0) {
-                window.scrollTo(0, 0);
-            }
             // 📌 مصدر واحد للقياس: الفرق بين الشاشة التخطيطية والنافذة المرئية.
             // يُرجع صفراً حين يُقلّص المتصفح/WebView نفسه (فـbottom:0 كافٍ)،
             // والقيمة الصحيحة حين يطفو الكيبورد فوق المحتوى. لا نستخدم
@@ -1551,24 +1504,7 @@ socket.on('leaver_penalty', (data) => {
             const answerVisible = answerSection
                 && getComputedStyle(answerSection).display !== 'none';
 
-            // 🩹 لكن لا تكفي وحدها: الضغط على «إرسال الإجابة» (أو انتهاء الدور
-            // من الخادم) يُفقد الحقل التركيز ويُخفي القسم *فوراً*، بينما
-            // الكيبورد الحقيقي على الجوال يبقى مفتوحاً بصرياً لحظات إضافية
-            // (خاصة إن كانت اللمسة على زر لا حقل آخر). فإن رجعنا لـ bottom:0
-            // في تلك اللحظة، يهبط الصندوق خلف الكيبورد المفتوح فيختفي تقريباً
-            // كاملاً. لذلك: نبقى بالوضع المرتفع طالما القياس الفعلي kb ما زال
-            // يدل على كيبورد مفتوح، حتى لو فقد الحقل تركيزه أو اختفى القسم.
-            const stillElevated = isKbOpen && kb > 60;
-
-            // 🔍 تشخيص مؤقت — سيُحذف بعد تحديد سبب اختفاء الصندوق فعلياً
-            kbDebugShow(JSON.stringify({
-                kb: Math.round(kb), typing, answerVisible, isKbOpen, stillElevated,
-                vvH: Math.round(vv.height), vvOffsetTop: Math.round(vv.offsetTop),
-                layoutH: document.documentElement.clientHeight,
-                activeElId: document.activeElement && document.activeElement.id,
-            }));
-
-            if ((typing && answerVisible) || stillElevated) {
+            if (typing && answerVisible) {
                 if (!isKbOpen) {
                     isKbOpen = true;
                     sidebar.classList.add('keyboard-open');   // الوضع المضغوط
@@ -1589,6 +1525,9 @@ socket.on('leaver_penalty', (data) => {
                 sidebar.style.setProperty('max-height',
                     Math.max(130, Math.min(visibleH - 12, 215)) + 'px', 'important');
 
+                // نمنع قفزة التمرير التلقائية التي يفعلها المتصفح
+                if (window.scrollY !== 0) window.scrollTo(0, 0);
+
                 // ⚠️ لا نُمرّر المحتوى إطلاقاً. كنّا نضبط scrollTop على موضع حقل
                 // الإجابة المحسوب في التخطيط *الطبيعي*، ثم يُطبَّق الوضع المضغوط
                 // فيتقلّص المحتوى — فيبقى التمرير عند موضع تجاوز كل المحتوى،
@@ -1599,7 +1538,6 @@ socket.on('leaver_penalty', (data) => {
                 fitBoard(sidebar);
 
             } else {
-                kbDebugShow('EXIT branch — reverting to bottom:0 while kb=' + Math.round(kb));
                 isKbOpen = false;
                 sidebar.classList.remove('keyboard-open');
                 sidebar.classList.remove('kb-top');
