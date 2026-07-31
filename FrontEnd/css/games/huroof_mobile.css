@@ -304,13 +304,14 @@ html.kb-open, html.kb-open body {
     }
     .question-sidebar.keyboard-open .sidebar-content {
         padding: 8px 12px 8px 12px !important;
-        /* الوضع المضغوط مصمَّم ليعرض كل شيء دفعة واحدة بلا تمرير (نفس نية
-           applyLayout في huroof.js) — لكن overflow-y:auto العام يبقى فعّالاً
-           هنا فيسمح بلمسة/سحب "مطاطية" (rubber-band) حتى بلا محتوى زائد
-           فعلياً، فيبدو وكأن هناك تمريراً أو "قفشة" بصرية عند لمس الفراغ
-           فوق شريط الأزرار السفلي. */
-        overflow: hidden !important;
-        -webkit-overflow-scrolling: auto !important;
+        /* 🩹 كانت overflow:hidden هنا (لمنع "قفشة" بصرية) — لكن السبب الحقيقي
+           لتلك القفشة كان تصرّف viewport منفصل (resizes-visual)، تم حله من
+           جذوره في وسم viewport بـhuroof.html. إبقاء overflow:hidden هنا بعد
+           ذلك الإصلاح كان يمنع التمرير الحقيقي المطلوب حين يضيق السقف
+           (max-height) عن محتوى الصندوق فعلاً (مثلاً على شاشات قصيرة)، فيصير
+           زر الإرسال غير قابل للوصول. رجعناها overflow-y:auto كأصلها. */
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
     }
     /* عناصر تُخفى أثناء الكتابة — الشريط السفلي (المساعدات/الانسحاب/الصوت)
        يبقى ظاهراً دائماً؛ إخفاؤه كان خطأً لأنه يقطع أدوات اللاعب فجأة. */
