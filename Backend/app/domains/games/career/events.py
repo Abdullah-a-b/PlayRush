@@ -4,17 +4,26 @@
 import asyncio
 import json
 import random
+import secrets
+import string
 import time
 
 from app.infrastructure.database import SessionLocal
 from app.domains.games.models import CareerPlayer
-from app.domains.games.core_manager import get_room_state
+from app.domains.games.core_manager import get_room_state, rooms
+from app.domains.games.career.engine import CareerGameState
+from app.domains.games.career import solo_bot as _solo
 from app.domains.wallet.reward_service import record_match_result
 from app.core.text_processor import check_answer
+from app.sockets.state import connected_players
 
 
 # مرجع للدالة التي تبدأ اللعبة (تُضبط عند التسجيل، لتُستدعى من room_events)
 _start_first_player = None
+
+# 🤖 خطّافات الوضع الفردي (تُملأ داخل register_career_events، تُقرأ من
+# _emit_reveal_state/_start_player بأمان لو موجودة) — نفس نمط حروف.
+_SOLO_HOOKS = {}
 
 
 async def trigger_career_start(sio, room_code):
@@ -124,6 +133,10 @@ def register_career_events(sio):
         if extra:
             payload.update(extra)
         await sio.emit('career_reveal_state', payload, room=room_code)
+        # 🤖 نقطة ربط واحدة تغطي كل مصادر الكشف (بدء شخصية/تكة دورية/استئناف
+        # بعد سترايك) — البوت يعيد النظر بالبزّ في كل مرة تُصدَر هذي الحالة.
+        if getattr(gs, 'is_solo', False) and 'consider_buzz' in _SOLO_HOOKS:
+            sio.start_background_task(_SOLO_HOOKS['consider_buzz'], room_code, gs.state_version)
 
     async def _reveal_loop(room_code, version, resume_seconds=None):
         room = get_room_state(room_code)
@@ -183,6 +196,9 @@ def register_career_events(sio):
             await _resolve_end(room_code, forced=True)
             return
         gs.start_new_player(player, advance_index=advance)
+        # 🤖 يجمّد معرفة/تذبذب البوت لهذه الشخصية تحديداً (متزامن، بلا I/O)
+        if getattr(gs, 'is_solo', False) and 'on_new_player' in _SOLO_HOOKS:
+            _SOLO_HOOKS['on_new_player'](gs)
         await sio.emit('career_new_player', {
             'status': player['status'], 'totalClubs': len(player['clubs']),
             'scores': gs.scores, 'playerIndex': gs.player_index,
@@ -234,7 +250,9 @@ def register_career_events(sio):
         if winner_sid:
             wp = next((p for p in room['players'] if p['sid'] == winner_sid), None)
             lp = next((p for p in room['players'] if p['sid'] != winner_sid), None)
-            if wp and lp:
+            # 🤖 الوضع الفردي: لا XP/عملات/فوز-خسارة/تصنيف إطلاقاً — حارس صريح
+            # (لا نعتمد على token=None للبوت كآلية أساسية، بعكس نمط حروف).
+            if wp and lp and not getattr(gs, 'is_solo', False):
                 try:
                     # في thread — لا يحجب event loop (قفل صف + عدة استعلامات)
                     await asyncio.to_thread(
@@ -337,6 +355,16 @@ def register_career_events(sio):
                 is_correct = bool(judged.get('accept', False))  # الافتراضي: رفض
             except Exception:
                 is_correct = False  # فشل AI  رفض آمن (لا نمنح نقطة بالخطأ)
+        await _process_answer_result(room_code, sid, is_correct)
+
+    async def _process_answer_result(room_code, sid, is_correct):
+        """معالجة نتيجة إجابة مُقرَّرة مسبقاً — مشتركة بين اللاعب الحقيقي
+        (بعد check_answer/AI) والبوت (قرار solo_bot.decide_full الجاهز)."""
+        room = get_room_state(room_code)
+        if not room or not room.get('game_state'):
+            return
+        gs = room['game_state']
+        correct_name = (gs.current_player or {}).get('name', '')
         if is_correct:
             points = gs.score_for_current()
             # قفل النقطتين: إجابة صحيحة بعد الاكتمال = نقطتان (يُستهلك)
@@ -428,7 +456,7 @@ def register_career_events(sio):
         room['state'] = 'finished'
         wp = next((p for p in room['players'] if p['sid'] == winner_sid), None)
         lp = next((p for p in room['players'] if p['sid'] == sid), None)
-        if wp and lp:
+        if wp and lp and not getattr(gs, 'is_solo', False):
             try:
                 await asyncio.to_thread(
                     record_match_result, wp, lp, 'career',
@@ -586,6 +614,208 @@ def register_career_events(sio):
         opp = gs.opponent(sid)
         await sio.emit('career_opponent_used_help', {'helpId': help_id,
             'name': h.get('name'), 'icon': h.get('icon')}, to=opp)
+
+    # ==========================================
+    # 🤖 الوضع الفردي — قرارات البوت
+    # ==========================================
+    def _bot_on_new_player(gs):
+        """يُستدعى مرة عند بدء كل شخصية — يجمّد معرفة/تذبذب البوت لها."""
+        gs.bot_knows_current_player = _solo.bot_knows_player(gs.bot_difficulty)
+        gs.bot_jitter_current = _solo.new_player_jitter()
+        gs.bot_used_this_player = set()
+
+    async def _bot_consider_buzz(room_code, version):
+        room = get_room_state(room_code)
+        if not room or not room.get('game_state'):
+            return
+        gs = room['game_state']
+        if not getattr(gs, 'is_solo', False) or gs.state_version != version:
+            return
+        if gs.stage != 'revealing':
+            return
+        bot_sid = _solo.BOT_SID
+        human_sid = gs.opponent(bot_sid)
+        cp = gs.current_player or {}
+        current_player_id = cp.get('id')
+        revealed_count = gs.revealed_count
+        strikes_used = gs.strikes.get(bot_sid, 0)
+        opponent_locked = gs.strikes.get(human_sid, 0) >= gs.MAX_STRIKES
+        is_final = gs.career_complete and getattr(gs, 'first_reveal_done', False)
+        single_club = len(cp.get('clubs', [])) <= 1
+        knows = gs.bot_knows_current_player
+        jitter = gs.bot_jitter_current
+
+        # 1) قرار المساعدة أولاً (نفس تكة القرار — يؤثر على ثقة البزّ)
+        used = gs.helps_used.setdefault(bot_sid, set())
+        available = [h for h in gs.bot_loadout if h not in used]
+        hid = _solo.decide_help(gs.bot_difficulty, knows, revealed_count, strikes_used,
+                                 available, gs.bot_used_this_player, jitter,
+                                 single_club, is_final)
+        if hid:
+            try:
+                await career_use_help(bot_sid, {'roomCode': room_code, 'helpId': hid})
+            except Exception as e:
+                print(f" [career-bot] خطأ استخدام مساعدة: {e}")
+            gs.bot_used_this_player.add(hid)
+
+        room = get_room_state(room_code)
+        if not room or not room.get('game_state'):
+            return
+        gs = room['game_state']
+        if gs.stage != 'revealing' or gs.buzzed_player is not None:
+            return
+
+        used_ids = gs.helps_used.get(bot_sid, set())
+        conf_bonus = _solo.help_conf_bonus(used_ids)
+        accuracy_bonus = _solo.help_accuracy_bonus(used_ids)
+        has_shield_now = _solo.has_shield(used_ids)
+
+        decision = _solo.decide_full(gs.bot_difficulty, knows, revealed_count, strikes_used,
+                                      gs.ANSWER_WINDOW, jitter, opponent_locked, is_final,
+                                      single_club, conf_bonus, has_shield_now, accuracy_bonus)
+        if not decision['will_buzz']:
+            return
+
+        await asyncio.sleep(decision['buzz_delay'])
+        room = get_room_state(room_code)
+        if not room or not room.get('game_state'):
+            return
+        gs = room['game_state']
+        if (gs.state_version != version or gs.stage != 'revealing'
+                or gs.buzzed_player is not None
+                or (gs.current_player or {}).get('id') != current_player_id):
+            return
+
+        try:
+            await career_buzz(bot_sid, {'roomCode': room_code})
+        except Exception as e:
+            print(f" [career-bot] خطأ بزّ: {e}")
+            return
+
+        room = get_room_state(room_code)
+        if not room or not room.get('game_state'):
+            return
+        gs = room['game_state']
+        if gs.buzzed_player != bot_sid:
+            return
+        post_buzz_version = gs.state_version
+
+        await asyncio.sleep(decision['answer_delay'])
+        room = get_room_state(room_code)
+        if not room or not room.get('game_state'):
+            return
+        gs = room['game_state']
+        if (gs.stage != 'buzzed' or gs.buzzed_player != bot_sid
+                or gs.state_version != post_buzz_version):
+            return
+        gs.bump_version()
+        await _process_answer_result(room_code, bot_sid, decision['correct'])
+
+    _SOLO_HOOKS['consider_buzz'] = _bot_consider_buzz
+    _SOLO_HOOKS['on_new_player'] = _bot_on_new_player
+
+    @sio.event
+    async def career_start_solo(sid, data):
+        """يبدأ مباراة فردية: لاعب حقيقي ضد البوت.
+        data: { difficulty, token?, name?, avatar? }"""
+        difficulty = (data or {}).get('difficulty', _solo.DEFAULT_DIFFICULTY)
+        if difficulty not in _solo.DIFFICULTIES:
+            difficulty = _solo.DEFAULT_DIFFICULTY
+
+        # اللاعب قد يصل صفحة مسيرة لاعب مباشرة دون المرور باللوبي العام،
+        # فلا يكون في connected_players بعد. نتحقّق من التوكن هنا ونسجّله.
+        player = connected_players.get(sid)
+        if not player:
+            token = (data or {}).get('token')
+            player_name = str((data or {}).get('name', 'لاعب'))[:30]
+            avatar = (data or {}).get('avatar', '')
+            user_id = None
+            try:
+                from app.sockets.auth_helper import verify_socket_token
+                user, db = verify_socket_token(token)
+                if user:
+                    player_name = user.player_name or player_name
+                    avatar = user.avatar or avatar
+                    user_id = user.id
+                    db.close()
+            except Exception:
+                pass
+            player = {'name': player_name, 'avatar': avatar,
+                      'user_id': user_id, 'token': token}
+            connected_players[sid] = player
+
+        alphabet = string.ascii_uppercase + string.digits
+        room_code = 'S' + ''.join(secrets.choice(alphabet) for _ in range(5))
+
+        p_human = {'sid': sid, 'name': player.get('name', 'لاعب'),
+                   'avatar': player.get('avatar'), 'token': player.get('token'),
+                   'user_id': player.get('user_id')}
+        p_bot = {'sid': _solo.BOT_SID, 'name': _solo.BOT_NAME,
+                 'avatar': 'assets/avatars/avatar_1.svg', 'token': None,
+                 'user_id': None}
+
+        # عشوائي بحت (career لا تربط دوراً/لوناً بـp1/p2) — للتناظر مع حروف فقط
+        p1, p2 = (p_human, p_bot) if random.random() < 0.5 else (p_bot, p_human)
+
+        gs = CareerGameState(p1['sid'], p2['sid'], room_code=room_code,
+                             players=[p1, p2], is_solo=True, bot_difficulty=difficulty)
+        gs.bot_loadout = _solo.bot_loadout(difficulty)
+
+        rooms[room_code] = {
+            'code': room_code, 'type': 'solo', 'game_mode': 'career',
+            'state': 'playing', 'created_at': time.time(), 'is_solo': True,
+            'players': [
+                {'sid': p1['sid'], 'name': p1['name'], 'avatar': p1['avatar'],
+                 'user_id': p1.get('user_id'), 'role': 'host' if p1['sid'] == sid else 'bot'},
+                {'sid': p2['sid'], 'name': p2['name'], 'avatar': p2['avatar'],
+                 'user_id': p2.get('user_id'), 'role': 'host' if p2['sid'] == sid else 'bot'},
+            ],
+            'user_ids': {},          # فارغ عمداً: لا تصنيف في الفردي (دفاع إضافي — الحارس الفعلي في بند 7)
+            'game_state': gs,
+        }
+        await sio.enter_room(sid, room_code)
+
+        await sio.emit('solo_started', {
+            'room_code': room_code, 'difficulty': difficulty,
+            'difficulty_label': _solo.get_difficulty(difficulty)['label'],
+        }, to=sid)
+
+        try:
+            from app.domains.wallet.reward_service import get_player_full_stats
+            my_stats = await get_player_full_stats(player.get('token'),
+                                                   player.get('name', 'لاعب'),
+                                                   player.get('avatar', ''))
+        except Exception:
+            my_stats = {'name': player.get('name', 'لاعب'),
+                        'avatar': player.get('avatar', ''), 'wins': 0, 'losses': 0}
+
+        bot_stats = {'name': _solo.BOT_NAME, 'avatar': 'assets/avatars/avatar_1.svg',
+                     'flag': '../assets/flags/EARTH.svg',
+                     'wins': 0, 'losses': 0, 'elo': 0,
+                     'rank_label': _solo.get_difficulty(difficulty)['label']}
+
+        def _pub(p, stats):
+            return {'sid': p['sid'], 'name': p['name'], 'avatar': p.get('avatar'),
+                    'stats': stats, 'role': 'host' if p['sid'] == sid else 'bot'}
+
+        players_pub = [_pub(p1, my_stats if p1['sid'] == sid else bot_stats),
+                       _pub(p2, my_stats if p2['sid'] == sid else bot_stats)]
+
+        await sio.emit('room_joined', {
+            'code': room_code, 'game_mode': 'career', 'state': 'playing',
+            'is_solo': True, 'players': players_pub, 'your_sid': sid,
+            'opponent_relation': 'none', 'opponent_user_id': None,
+        }, to=sid)
+        await sio.emit('update_players_stats', players_pub, to=sid)
+
+        # نطابق تسلسل بدء الأونلاين: career_ready ثم استعداد 3.2 ثانية
+        # (نفس توقيت trigger_career_start بالضبط) قبل أول شخصية.
+        await sio.emit('career_ready', {'roomCode': room_code}, to=sid)
+        await asyncio.sleep(3.2)
+        room = get_room_state(room_code)
+        if not room or not room.get('game_state') or room['game_state'].stage != 'waiting':
+            return  # تغيّرت الحالة أثناء الاستعداد (مثلاً انسحاب مبكر)
+        await _start_player(room_code, advance=True)
 
     # نربط دالة البدء بالمرجع العام (لتُستدعى من room_events عند الانضمام)
     _start_first_player = _start_player

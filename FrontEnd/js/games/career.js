@@ -11,7 +11,15 @@
   const playerAvatar = sessionStorage.getItem('playerAvatar') || sessionStorage.getItem('avatar')   || '';
   let mySid = null;
 
-  if (!token || !roomCode) { window.location.href = '../lobby.html'; return; }
+  // 🤖 الوضع الفردي: نكتشفه من رابط الصفحة (?solo=1&difficulty=...)
+  const _soloParams  = new URLSearchParams(window.location.search);
+  const IS_SOLO       = _soloParams.get('solo') === '1';
+  const SOLO_DIFF      = _soloParams.get('difficulty') || 'medium';
+  let   soloRoomCode  = null;   // يُملأ من solo_started
+  function activeRoom() { return soloRoomCode || roomCode; }
+
+  // في الأونلاين نحتاج roomCode؛ في الفردي لا (الخادم ينشئ الغرفة)
+  if (!token || (!roomCode && !IS_SOLO)) { window.location.href = '../lobby.html'; return; }
 
   const $ = (id) => document.getElementById(id);
   const clubsStage      = $('clubsStage');
@@ -162,8 +170,28 @@
   // ===== الاتصال والانضمام =====
   socket.on('connect', () => {
     mySid = socket.id;
-    socket.emit('join_room', { room_code: roomCode, token, player_name: playerName, avatar: playerAvatar });
-    socket.emit('get_help_loadout', { token, game: 'career', roomCode });
+    if (IS_SOLO) {
+      // الوضع الفردي: نطلب من الخادم إنشاء مباراة ضد البوت
+      socket.emit('career_start_solo', {
+        difficulty: SOLO_DIFF, token, name: playerName, avatar: playerAvatar
+      });
+    } else {
+      socket.emit('join_room', { room_code: roomCode, token, player_name: playerName, avatar: playerAvatar });
+      socket.emit('get_help_loadout', { token, game: 'career', roomCode });
+    }
+  });
+
+  // 🤖 بدء المباراة الفردية: نخزّن رمز الغرفة ونعيد طلب عتاد المساعدات
+  // (يحتاج roomCode حقيقي ليكتشف الخادم أنها مباراة فردية)
+  socket.on('solo_started', (data) => {
+    soloRoomCode = data.room_code;
+    setTimeout(() => socket.emit('get_help_loadout', { token, game: 'career', roomCode: activeRoom() }), 300);
+    document.body.classList.add('solo-mode');
+  });
+
+  socket.on('solo_error', (data) => {
+    if (typeof showToast === 'function') showToast((data && data.msg) || 'تعذّر بدء اللعب', 'error');
+    setTimeout(() => window.location.href = '../lobby.html', 1500);
   });
 
   // بيانات اللاعبين (نفس بنية حروف بالضبط)
@@ -353,7 +381,7 @@ socket.on('room_joined', (data) => {
         socket,
         triggerBtn: btn,
         event: 'send_room_chat_message',
-        extra: () => ({ roomCode }),
+        extra: () => ({ roomCode: activeRoom() }),
         context: 'game',
         game: 'career',
       });
@@ -387,7 +415,7 @@ socket.on('room_joined', (data) => {
   buzzBtn.addEventListener('click', () => {
     if (buzzBtn.disabled) return;
     buzzBtn.disabled = true;
-    socket.emit('career_buzz', { roomCode });
+    socket.emit('career_buzz', { roomCode: activeRoom() });
   });
 
   function submitAnswer() {
@@ -396,7 +424,7 @@ socket.on('room_joined', (data) => {
     clearInterval(answerCountdown);
     answerBox.style.display = 'none';
     setStatus('⏳ جارٍ التحقق…', 'reveal');
-    socket.emit('career_submit_answer', { roomCode, answer: ans });
+    socket.emit('career_submit_answer', { roomCode: activeRoom(), answer: ans });
   }
   $('submitAnswerBtn').addEventListener('click', submitAnswer);
   answerInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitAnswer(); });
@@ -404,7 +432,7 @@ socket.on('room_joined', (data) => {
   $('surrenderBtn').addEventListener('click', () => { $('surrenderModal').style.display = 'flex'; });
   $('cancelSurrenderBtn').addEventListener('click', () => { $('surrenderModal').style.display = 'none'; });
   $('confirmSurrenderBtn').addEventListener('click', () => {
-    socket.emit('career_surrender', { roomCode });
+    socket.emit('career_surrender', { roomCode: activeRoom() });
     $('surrenderModal').style.display = 'none';
   });
   $('backToLobbyBtn').addEventListener('click', () => window.location.assign('../lobby.html?game=career'));
@@ -461,7 +489,7 @@ socket.on('room_joined', (data) => {
   cancelReportBtn?.addEventListener('click', () => { reportModal.style.display = 'none'; });
   document.querySelectorAll('.report-reason').forEach(btn => {
     btn.addEventListener('click', () => {
-      socket.emit('report_opponent', { roomCode, token, reason: btn.dataset.reason, target_id: _opponentUserId, game_mode: window.CURRENT_GAME });
+      socket.emit('report_opponent', { roomCode: activeRoom(), token, reason: btn.dataset.reason, target_id: _opponentUserId, game_mode: window.CURRENT_GAME });
       reportModal.style.display = 'none';
     });
   });
@@ -540,7 +568,7 @@ socket.on('room_joined', (data) => {
     if (blockState || friendState === 'pending') return;
     if (friendState === 'friends') {
       _pendingFriendAction = 'remove';
-      socket.emit('remove_friend_opponent', { roomCode, token, target_id: _opponentUserId });
+      socket.emit('remove_friend_opponent', { roomCode: activeRoom(), token, target_id: _opponentUserId });
     } else if (friendState === 'incoming') {
       if (_opponentUserId) {
         socket.emit('respond_friend_request', { token, requester_id: _opponentUserId, accept: true });
@@ -550,13 +578,13 @@ socket.on('room_joined', (data) => {
       showToast('✅ تمت إضافة الصديق');
     } else {
       _pendingFriendAction = 'add';
-      socket.emit('friend_request_opponent', { roomCode, token, target_id: _opponentUserId });
+      socket.emit('friend_request_opponent', { roomCode: activeRoom(), token, target_id: _opponentUserId });
     }
     document.getElementById('playerProfileModal').style.display = 'none';
   });
   blockUserBtn?.addEventListener('click', () => {
-    if (blockState) socket.emit('unblock_opponent', { roomCode, token, target_id: _opponentUserId });
-    else socket.emit('block_opponent', { roomCode, token, target_id: _opponentUserId });
+    if (blockState) socket.emit('unblock_opponent', { roomCode: activeRoom(), token, target_id: _opponentUserId });
+    else socket.emit('block_opponent', { roomCode: activeRoom(), token, target_id: _opponentUserId });
     document.getElementById('playerProfileModal').style.display = 'none';
   });
 
@@ -641,7 +669,7 @@ socket.on('room_joined', (data) => {
             : '🎯 تُستخدم أثناء عرض المسيرة');
           return;
         }
-        socket.emit('career_use_help', { roomCode, helpId: hid, token });
+        socket.emit('career_use_help', { roomCode: activeRoom(), helpId: hid, token });
       });
       bar.appendChild(btn);
     });

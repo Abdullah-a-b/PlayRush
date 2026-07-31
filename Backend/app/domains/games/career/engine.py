@@ -24,7 +24,8 @@ class CareerGameState(BaseGameState):
     ANSWER_WINDOW = 10      # نافذة الكتابة بعد الجرس
     MAX_STRIKES = 2
 
-    def __init__(self, p1_sid, p2_sid, room_code=None, players=None):
+    def __init__(self, p1_sid, p2_sid, room_code=None, players=None,
+                 is_solo=False, bot_difficulty=None):
         super().__init__(room_code=room_code or '', players=players or [])
         self.p1 = p1_sid
         self.p2 = p2_sid
@@ -41,6 +42,15 @@ class CareerGameState(BaseGameState):
         self.reveal_remaining = None
         self.helps_used = {p1_sid: set(), p2_sid: set()}
         self.state_version = 0
+        self.shields = {}
+        self.double_locks = {}
+        # 🤖 وضع فردي (ضد بوت) — انظر career/solo_bot.py
+        self.is_solo = is_solo
+        self.bot_difficulty = bot_difficulty
+        self.bot_loadout = []                    # من solo_bot.bot_loadout()
+        self.bot_knows_current_player = False    # مجمّد لكل شخصية (يُضبط عبر hook on_new_player)
+        self.bot_jitter_current = 0.0
+        self.bot_used_this_player = set()
 
     def start_new_player(self, player_data, advance_index=True):
         if advance_index:
@@ -143,12 +153,20 @@ class CareerGameState(BaseGameState):
             'buzzed_player': self.buzzed_player, 'strikes': self.strikes,
             'used_player_ids': self.used_player_ids, 'reveal_remaining': self.reveal_remaining,
             'helps_used': {k: list(v) for k, v in self.helps_used.items()},
+            'shields': self.shields, 'double_locks': self.double_locks,
+            'is_solo': self.is_solo, 'bot_difficulty': self.bot_difficulty,
+            'bot_loadout': self.bot_loadout,
+            'bot_knows_current_player': self.bot_knows_current_player,
+            'bot_jitter_current': self.bot_jitter_current,
+            'bot_used_this_player': list(self.bot_used_this_player),
         }
 
     @classmethod
     def from_dict(cls, data):
         obj = cls(data['p1'], data['p2'],
-                  room_code=data.get('room_code'), players=data.get('players', []))
+                  room_code=data.get('room_code'), players=data.get('players', []),
+                  is_solo=data.get('is_solo', False),
+                  bot_difficulty=data.get('bot_difficulty'))
         obj.winner = data.get('winner')
         obj.stage = data.get('stage', 'waiting')
         obj.created_at = data.get('created_at', time.time())
@@ -165,6 +183,12 @@ class CareerGameState(BaseGameState):
         obj.used_player_ids = data.get('used_player_ids', [])
         obj.reveal_remaining = data.get('reveal_remaining')
         obj.helps_used = {k: set(v) for k, v in data.get('helps_used', {}).items()}
+        obj.shields = data.get('shields', {})
+        obj.double_locks = data.get('double_locks', {})
+        obj.bot_loadout = data.get('bot_loadout', [])
+        obj.bot_knows_current_player = data.get('bot_knows_current_player', False)
+        obj.bot_jitter_current = data.get('bot_jitter_current', 0.0)
+        obj.bot_used_this_player = set(data.get('bot_used_this_player', []))
         return obj
 
     def is_player_in_game(self, sid):
