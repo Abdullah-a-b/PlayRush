@@ -304,6 +304,13 @@ html.kb-open, html.kb-open body {
     }
     .question-sidebar.keyboard-open .sidebar-content {
         padding: 8px 12px 8px 12px !important;
+        /* الوضع المضغوط مصمَّم ليعرض كل شيء دفعة واحدة بلا تمرير (نفس نية
+           applyLayout في huroof.js) — لكن overflow-y:auto العام يبقى فعّالاً
+           هنا فيسمح بلمسة/سحب "مطاطية" (rubber-band) حتى بلا محتوى زائد
+           فعلياً، فيبدو وكأن هناك تمريراً أو "قفشة" بصرية عند لمس الفراغ
+           فوق شريط الأزرار السفلي. */
+        overflow: hidden !important;
+        -webkit-overflow-scrolling: auto !important;
     }
     /* عناصر تُخفى أثناء الكتابة — الشريط السفلي (المساعدات/الانسحاب/الصوت)
        يبقى ظاهراً دائماً؛ إخفاؤه كان خطأً لأنه يقطع أدوات اللاعب فجأة. */
