@@ -140,13 +140,21 @@ img, video, canvas, svg, iframe {
     bottom: 0;
     left: 0;
     right: 0;
-    height: 40px;
+    /* 🩹 على أجهزة أندرويد بالتنقّل بالإيماءات، مؤشر النظام السفلي يجلس فوق
+       هذا الشريط مباشرة لأنه ملتصق بحافة الشاشة (bottom:0 بلا هامش) —
+       فيبدو تصادماً/بروزاً بصرياً بين الشريط ومؤشر النظام. نرفعه بمقدار
+       المنطقة الآمنة السفلية (env safe-area) فقط عند وجودها (لا يؤثر على
+       أجهزة بلا هذه المنطقة). */
+    height: calc(40px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-sizing: border-box;
     z-index: 4900;
     background: rgba(10, 12, 16, 0.82);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-top: 1px solid rgba(255, 255, 255, 0.07);
-    padding: 0 12px;
+    padding-left: 12px;
+    padding-right: 12px;
     gap: 8px;
     font-family: 'Tajawal', system-ui, -apple-system, Arial, sans-serif;
   }
@@ -214,13 +222,17 @@ img, video, canvas, svg, iframe {
   body:not(.in-game) .auth-box,
   body:not(.in-game) .auth-card,
   body:not(.in-game) .form-container {
-    padding-bottom: 48px !important;
+    padding-bottom: calc(48px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
 
 /* شاشات ضيقة جداً */
 @media (max-width: 360px) {
-  .pr-unified-bar { height: 38px; padding: 0 8px; }
+  .pr-unified-bar {
+    height: calc(38px + env(safe-area-inset-bottom, 0px));
+    padding: 0 8px;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
   .pub-name       { font-size: 9px; }
   .pub-social .social-icon { width: 24px !important; height: 24px !important; font-size: 11px !important; }
 }
