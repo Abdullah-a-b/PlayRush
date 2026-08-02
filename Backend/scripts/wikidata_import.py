@@ -591,6 +591,73 @@ def backfill_difficulty(log=print, on_progress=None):
         db.close()
 
 
+def backfill_missing_club_logos(log=print, on_progress=None):
+    """🩹 مؤقّت: بعض أندية اللاعبين المستوردين مسبقاً بلا شعار (logo مفقود)
+    — فشلت كل المصادر الثلاثة (TheSportsDB/ويكيبيديا/كومنز) وقت ذلك
+    الاستيراد تحديداً (غالباً حدود معدّل TheSportsDB الصارمة)، فلم يُخزَّن
+    أي شعار إطلاقاً لذلك النادي في سجلّ ذلك اللاعب. يعيد جلب مسيرة كل لاعب
+    فيه نادٍ بلا شعار من Wikidata من جديد (نفس منطق run_import بالضبط)
+    ويعيد بناء عمود clubs فقط — لا يلمس باقي الأعمدة."""
+    db = SessionLocal()
+    try:
+        rows = db.query(CareerPlayer).filter(CareerPlayer.wikidata_id.isnot(None)).all()
+        affected = []
+        for r in rows:
+            try:
+                clubs = json.loads(r.clubs) if r.clubs else []
+            except Exception:
+                continue
+            if any(not c.get("logo") for c in clubs):
+                affected.append(r)
+
+        total = len(affected)
+        log(f"🔎 {total} لاعب فيهم نادٍ واحد على الأقل بلا شعار…")
+        fixed_players = 0
+        still_missing = 0
+
+        BATCH = 25
+        for i in range(0, total, BATCH):
+            batch_rows = affected[i:i + BATCH]
+            qids = [r.wikidata_id for r in batch_rows]
+            ents = wd_get_entities(qids)
+
+            club_qids = set()
+            careers = {}
+            for qid in qids:
+                career = parse_career(ents.get(qid, {}))
+                careers[qid] = career
+                club_qids.update(e["club"] for e in career)
+            club_ents = wd_get_entities(list(club_qids)) if club_qids else {}
+
+            for row in batch_rows:
+                qid = row.wikidata_id
+                _career = careers.get(qid, [])
+                for e in _career:
+                    e["_youth"] = is_youth_team(club_ents.get(e["club"], {}))
+                    if e["start"] == "+9999" and e["_youth"]:
+                        e["start"] = "+0000"
+                _career.sort(key=lambda e: (e["start"], 0 if e["_youth"] else 1))
+
+                clubs_json = build_clubs_json(_career, club_ents, redo_logos=True)
+                if not clubs_json:
+                    still_missing += 1
+                    continue
+                if any(not c.get("logo") for c in clubs_json):
+                    still_missing += 1
+                row.clubs = json.dumps(clubs_json, ensure_ascii=False)
+                fixed_players += 1
+            db.commit()
+            done = min(i + BATCH, total)
+            log(f"   ...{done}/{total}")
+            if on_progress:
+                on_progress(done, total)
+
+        log(f"✅ أُعيد بناء أندية {fixed_players} لاعب | لسا فيهم نادٍ بلا شعار: {still_missing}")
+        return {"total": total, "processed": fixed_players, "still_missing": still_missing}
+    finally:
+        db.close()
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, default=200)

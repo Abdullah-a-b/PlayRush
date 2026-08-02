@@ -96,6 +96,43 @@ async def get_backfill_difficulty_progress(request: Request):
     return _backfill_state
 
 
+# 🩹 مؤقّت: إعادة بناء أندية اللاعبين اللي فيهم شعار مفقود (فشلت كل
+# مصادر الشعار وقت استيرادهم — راجع تعليق backfill_missing_club_logos).
+_logos_backfill_state = {"running": False, "done": 0, "total": 0, "result": None, "error": None}
+
+
+def _run_backfill_missing_logos():
+    from scripts.wikidata_import import backfill_missing_club_logos
+    _logos_backfill_state["running"] = True
+    _logos_backfill_state["error"] = None
+    try:
+        def _progress(done, total):
+            _logos_backfill_state["done"] = done
+            _logos_backfill_state["total"] = total
+        result = backfill_missing_club_logos(log=print, on_progress=_progress)
+        _logos_backfill_state["result"] = result
+    except Exception as e:
+        _logos_backfill_state["error"] = str(e)
+    finally:
+        _logos_backfill_state["running"] = False
+
+
+@router.post("/admin/backfill-missing-logos")
+async def start_backfill_missing_logos(request: Request):
+    _check_admin_secret(request)
+    if _logos_backfill_state["running"]:
+        return {"ok": False, "msg": "already running"}
+    _logos_backfill_state.update({"running": True, "done": 0, "total": 0, "result": None, "error": None})
+    asyncio.create_task(asyncio.to_thread(_run_backfill_missing_logos))
+    return {"ok": True, "msg": "started"}
+
+
+@router.get("/admin/backfill-missing-logos")
+async def get_backfill_missing_logos_progress(request: Request):
+    _check_admin_secret(request)
+    return _logos_backfill_state
+
+
 @router.get("/admin/find-club-logo")
 async def find_club_logo(q: str, request: Request, db: Session = Depends(get_db)):
     """🩹 مؤقّت: تشخيص فقط (قراءة، بلا تعديل) — يبحث عن نادٍ باسمه ضمن بيانات
