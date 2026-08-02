@@ -34,6 +34,7 @@ from app.domains.games.models import CareerPlayer
 
 WDQS_URL = "https://query.wikidata.org/sparql"
 WD_API = "https://www.wikidata.org/w/api.php"
+AR_WIKI_API = "https://ar.wikipedia.org/w/api.php"
 COMMONS_FILE = "https://commons.wikimedia.org/wiki/Special:FilePath/{name}?width=128"
 SPORTSDB_SEARCH = "https://www.thesportsdb.com/api/v1/json/3/searchteams.php"
 WIKI_SUMMARY = "https://en.wikipedia.org/api/rest_v1/page/summary/{title}"
@@ -429,11 +430,60 @@ def difficulty_for(sitelinks):
     # تحشر كل نطاق 45-69 (لاعبين معروفين فعلاً لعشاق الكرة) في "hard" —
     # فصار 83% من القاعدة المستوردة "hard" رغم إنهم مو مغمورين فعلياً بهذا
     # الحجم. خفّضناها لتنصيف هذا النطاق الواسع بدل تركه كله بخانة واحدة.
+    # ⚠️ استُبدلت فعلياً بـdifficulty_for_ar() أدناه (انظر تعليقها) — أُبقيت
+    # هنا فقط كمرجع/احتياط، غير مستخدمة في مسار الاستيراد الحالي.
     if sitelinks >= 110:
         return "easy"
     if sitelinks >= 55:
         return "medium"
     return "hard"
+
+
+def _ar_article_lengths(titles):
+    """يُرجع {title: طول_المقال_بالبايت} لعدة عناوين ويكيبيديا عربية دفعة
+    واحدة (حتى 50 بالطلب). عناوين بلا مقال عربي إطلاقاً لا تظهر بالنتيجة."""
+    out = {}
+    titles = [t for t in dict.fromkeys(titles) if t]
+    for i in range(0, len(titles), 50):
+        batch = titles[i:i + 50]
+        try:
+            r = _get_with_retry(AR_WIKI_API, params={
+                "action": "query", "titles": "|".join(batch),
+                "prop": "info", "format": "json",
+            }, max_tries=3, timeout=30)
+            pages = (r.json().get("query", {}) or {}).get("pages", {}) or {}
+            for p in pages.values():
+                t = p.get("title")
+                length = p.get("length")
+                if t and length:
+                    out[t] = length
+        except Exception:
+            pass
+        time.sleep(0.5)
+    return out
+
+
+def difficulty_for_ar(ar_length):
+    """مؤشّر الشهرة الفعلي المُعتمَد: طول مقال ويكيبيديا **العربية** بالبايت
+    (0 لو ما فيه مقال عربي إطلاقاً)، بدل عدد لغات ويكيبيديا الكلي.
+
+    السبب: عدد اللغات (sitelinks) مؤشر ضعيف لكرة القدم تحديداً — لغات
+    صغيرة كثيرة عندها بوتات تنشئ صفحات تلقائية لأي محترف بأي دوري رئيسي،
+    حتى لو محلي بحت (مثال حقيقي: لاعب قضى مسيرته كلها بالدوري البرازيلي
+    كان يتجاوز حد استيراد sitelinks بسهولة رغم كونه مجهولاً تماماً لجمهور
+    عربي). طول المقال العربي تحديداً يعكس مباشرة "هل لاعب عربي يعرفه؟" —
+    وهذا بالضبط ما يحتاجه بوت لعبة عربية، لا مؤشر عالمي عام.
+
+    عتبات مُعايَرة على عيّنة حقيقية من قاعدة اللاعبين المستوردين فعلاً
+    (أسطورة عالمي ~413,000 بايت، لاعبون معروفون لعشاق الكرة ~6,000-60,000،
+    أي أقل من ذلك أو بلا مقال عربي إطلاقاً = مغمور عربياً فعلياً)."""
+    if not ar_length:
+        return "hard"       # بلا مقال عربي إطلاقاً
+    if ar_length >= 100_000:
+        return "easy"
+    if ar_length >= 3_000:
+        return "medium"
+    return "hard"            # مقال عربي قصير جداً (مسودّة/stub)
 
 
 def run_import(limit=200, min_sitelinks=45, offset=0,
@@ -463,6 +513,15 @@ def run_import(limit=200, min_sitelinks=45, offset=0,
                     skipped += len(batch)
                     continue
             ents = wd_get_entities(qids)
+
+            # مؤشّر الشهرة الفعلي: طول مقال ويكيبيديا العربية (انظر
+            # difficulty_for_ar) — نجلبه دفعة واحدة لكل اللاعبين بهذي الدفعة.
+            ar_titles_by_qid = {}
+            for qid in qids:
+                t = (ents.get(qid, {}).get("sitelinks", {}).get("arwiki", {}) or {}).get("title")
+                if t:
+                    ar_titles_by_qid[qid] = t
+            ar_lengths_by_title = _ar_article_lengths(list(ar_titles_by_qid.values()))
 
             club_qids = set()
             careers = {}
@@ -508,7 +567,8 @@ def run_import(limit=200, min_sitelinks=45, offset=0,
                 nat_qid = extract_nationality_qid(ent)
                 nationality = _label(club_ents.get(nat_qid, {})) if nat_qid else None
 
-                sitelinks = next((s for q, s in batch if q == qid), 60)
+                ar_title = ar_titles_by_qid.get(qid)
+                ar_length = ar_lengths_by_title.get(ar_title, 0) if ar_title else 0
                 row = db.query(CareerPlayer).filter(
                     CareerPlayer.wikidata_id == qid).first()
                 if row is None:
@@ -521,7 +581,7 @@ def run_import(limit=200, min_sitelinks=45, offset=0,
                     clubs=json.dumps(clubs_json, ensure_ascii=False),
                     accepted_answers=json.dumps(gen_accepted(ar_name, en_name),
                                                 ensure_ascii=False),
-                    difficulty=difficulty_for(sitelinks), active=True,
+                    difficulty=difficulty_for_ar(ar_length), active=True,
                     era=era, position=position, nationality=nationality,
                 )
                 if dry_run:
@@ -550,15 +610,16 @@ def run_import(limit=200, min_sitelinks=45, offset=0,
 
 
 def backfill_difficulty(log=print, on_progress=None):
-    """يعيد حساب difficulty لكل اللاعبين المستوردين حالياً بالعتبات
-    الحالية في difficulty_for() — يُستخدم مرة واحدة بعد أي تعديل بالعتبات
-    كي لا ينتظر اللاعبون القدامى دورة الاستيراد الأسبوعية التالية.
-    تُعاد قراءة sitelinks الحقيقية من Wikidata لكل لاعب (غير مخزّنة بالجدول)."""
+    """يعيد حساب difficulty لكل اللاعبين المستوردين حالياً بمؤشّر الشهرة
+    الفعلي (طول مقال ويكيبيديا العربية — difficulty_for_ar) بدل عدد لغات
+    ويكيبيديا الكلي (مؤشر ضعيف لكرة القدم، انظر تعليق difficulty_for_ar) —
+    يُستخدم مرة واحدة بعد أي تعديل بمنطق التصنيف كي لا ينتظر اللاعبون
+    القدامى دورة الاستيراد الأسبوعية التالية."""
     db = SessionLocal()
     try:
         rows = db.query(CareerPlayer).filter(CareerPlayer.wikidata_id.isnot(None)).all()
         total = len(rows)
-        log(f"🔎 إعادة حساب difficulty لـ{total} لاعب…")
+        log(f"🔎 إعادة حساب difficulty لـ{total} لاعب (بطول المقال العربي)…")
         before = {}
         for r in rows:
             before[r.difficulty] = before.get(r.difficulty, 0) + 1
@@ -569,10 +630,16 @@ def backfill_difficulty(log=print, on_progress=None):
         for i in range(0, len(qids), BATCH):
             batch_qids = qids[i:i + BATCH]
             ents = wd_get_entities(batch_qids, props="sitelinks")
+            ar_titles_by_qid = {}
+            for qid in batch_qids:
+                t = (ents.get(qid, {}).get("sitelinks", {}).get("arwiki", {}) or {}).get("title")
+                if t:
+                    ar_titles_by_qid[qid] = t
+            ar_lengths_by_title = _ar_article_lengths(list(ar_titles_by_qid.values()))
             for r in rows[i:i + BATCH]:
-                ent = ents.get(r.wikidata_id, {})
-                sitelinks = len(ent.get("sitelinks", {}))
-                new_diff = difficulty_for(sitelinks) if sitelinks else r.difficulty
+                ar_title = ar_titles_by_qid.get(r.wikidata_id)
+                ar_length = ar_lengths_by_title.get(ar_title, 0) if ar_title else 0
+                new_diff = difficulty_for_ar(ar_length)
                 if new_diff != r.difficulty:
                     changed += 1
                 r.difficulty = new_diff
