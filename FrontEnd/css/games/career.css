@@ -270,6 +270,13 @@ body{
   .career-helps-bar{ bottom: 106px !important; left: 12px !important; gap: 6px; }
   .ingame-quick-chat { top: 70px !important; left: 10px !important; }
   .quick-chat-trigger.ingame { width: 40px; height: 40px; font-size: 1rem; }
+
+  /* 🩹 صندوق الإجابة (position:static ضمن التدفّق) يمتد عرض الشاشة تقريباً
+     على الجوال، فتتراكب حافته اليسرى مع شريط المساعدات الثابت (يسار أسفل)
+     حين يظهر بعد الجرس. لا نُخفي شريط المساعدات (بعضها يُستخدم أثناء
+     الكتابة تحديداً، مثل تمديد الوقت) — نُبعد صندوق الإجابة عن عمود
+     الأيقونات بدل ذلك. */
+  .answer-box { width: calc(100% - 68px) !important; margin-left: 68px !important; }
 }
 
 @media (max-width: 390px) {
