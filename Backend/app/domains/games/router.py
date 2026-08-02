@@ -94,3 +94,28 @@ async def start_backfill_difficulty(request: Request):
 async def get_backfill_difficulty_progress(request: Request):
     _check_admin_secret(request)
     return _backfill_state
+
+
+@router.get("/admin/find-club-logo")
+async def find_club_logo(q: str, request: Request, db: Session = Depends(get_db)):
+    """🩹 مؤقّت: تشخيص فقط (قراءة، بلا تعديل) — يبحث عن نادٍ باسمه ضمن بيانات
+    career_players ويُرجع قيمة الشعار المخزّنة فعلياً في قاعدة الإنتاج، عشان
+    نقارنها بالمتوقّع بدون أي وصول مباشر لقاعدة البيانات من جهاز شخصي."""
+    _check_admin_secret(request)
+    rows = db.query(CareerPlayer.name, CareerPlayer.clubs).filter(
+        CareerPlayer.active == True).all()
+    matches = []
+    for name, clubs_raw in rows:
+        if not clubs_raw:
+            continue
+        try:
+            clubs = json.loads(clubs_raw)
+        except Exception:
+            continue
+        for c in clubs:
+            if q in (c.get("name") or ""):
+                matches.append({"player": name, "club_name": c.get("name"),
+                                 "logo": c.get("logo")})
+        if len(matches) >= 30:
+            break
+    return {"query": q, "matches": matches}
