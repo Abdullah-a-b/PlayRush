@@ -26,6 +26,43 @@ MAX_STRIKES = 2
 MAX_CLUBS = 10
 FINAL_EXTRA_TICKS = 2   # تكات إضافية بعد آخر نادٍ (تمثيل مبسّط لـFINAL_WINDOW)
 
+
+def _fetch_fame_weights():
+    """توزيع شهرة الشخصيات الحقيقي من قاعدة البيانات (easy/medium/hard) —
+    نستعلمه حياً بدل ثوابت مقاسة يدوياً، عشان تبقى المحاكاة دقيقة حتى لو
+    تغيّر توزيع القاعدة لاحقاً (استيراد تلقائي مستمر)."""
+    try:
+        from app.infrastructure.database import SessionLocal
+        from app.domains.games.models import CareerPlayer
+        from sqlalchemy import func
+        db = SessionLocal()
+        try:
+            rows = (db.query(CareerPlayer.difficulty, func.count(CareerPlayer.id))
+                    .filter(CareerPlayer.active == True)
+                    .group_by(CareerPlayer.difficulty).all())
+        finally:
+            db.close()
+        weights = {"easy": 0, "medium": 0, "hard": 0}
+        for d, c in rows:
+            if d in weights:
+                weights[d] = c
+        if sum(weights.values()) > 0:
+            return weights
+    except Exception as e:
+        print(f"⚠️ تعذّر الاتصال بقاعدة البيانات ({e}) — استخدام توزيع افتراضي مقاس يدوياً.")
+    return {"easy": 20, "medium": 194, "hard": 1044}  # قياس محلي سابق كاحتياط
+
+
+def _weighted_player_difficulty(weights):
+    total = sum(weights.values())
+    r = random.uniform(0, total)
+    upto = 0
+    for k, w in weights.items():
+        upto += w
+        if r <= upto:
+            return k
+    return "medium"
+
 # "لاعب بشري" مبسّط — مو نموذجاً دقيقاً، بس أساس ثابت للمقارنة بين الصعوبات
 HUMAN = {
     'know_prob': 0.62,
@@ -37,12 +74,13 @@ HUMAN = {
 }
 
 
-def _simulate_personality(difficulty):
+def _simulate_personality(difficulty, fame_weights):
     """يُرجع ('bot'|'human'|None, buzz_tick|None, bot_used_help:bool)."""
     clubs = random.randint(1, MAX_CLUBS)
     single_club = clubs == 1
 
-    bot_knows = bot.bot_knows_player(difficulty)
+    player_fame = _weighted_player_difficulty(fame_weights)
+    bot_knows = bot.bot_knows_player(difficulty, player_fame)
     jitter = bot.new_player_jitter()
     human_knows = random.random() < HUMAN['know_prob']
 
@@ -117,13 +155,13 @@ def _simulate_personality(difficulty):
     return None, None, bot_used_help  # لا أحد أجاب — تُستبدل الشخصية
 
 
-def simulate_match(difficulty):
+def simulate_match(difficulty, fame_weights):
     bot_score = 0
     human_score = 0
     buzz_ticks = []
     help_uses = 0
     for _ in range(TOTAL_PLAYERS):
-        winner, tick, used_help = _simulate_personality(difficulty)
+        winner, tick, used_help = _simulate_personality(difficulty, fame_weights)
         if used_help:
             help_uses += 1
         if winner == 'bot':
@@ -138,13 +176,17 @@ def main(n_matches=500):
     print("=" * 60)
     print("محاكاة توازن بوت الوضع الفردي — مسيرة لاعب")
     print("=" * 60)
+    fame_weights = _fetch_fame_weights()
+    total_fame = sum(fame_weights.values())
+    print(f"توزيع شهرة الشخصيات (من DB): " + ", ".join(
+        f"{k}={v} ({100*v/total_fame:.0f}%)" for k, v in fame_weights.items()))
     for difficulty in bot.DIFFICULTIES:
         bot_wins = 0
         ties = 0
         all_ticks = []
         total_help_uses = 0
         for _ in range(n_matches):
-            bs, hs, ticks, help_uses = simulate_match(difficulty)
+            bs, hs, ticks, help_uses = simulate_match(difficulty, fame_weights)
             if bs > hs:
                 bot_wins += 1
             elif bs == hs:

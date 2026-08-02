@@ -424,9 +424,14 @@ def gen_accepted(ar_name, en_name):
 
 
 def difficulty_for(sitelinks):
+    # 🩹 حد الاستيراد الأدنى (min_sitelinks=45) مرتفع أصلاً — أي لاعب يتجاوزه
+    # معروف عالمياً بشكل معقول، مو عشوائي مغمور. عتبة medium=70 القديمة كانت
+    # تحشر كل نطاق 45-69 (لاعبين معروفين فعلاً لعشاق الكرة) في "hard" —
+    # فصار 83% من القاعدة المستوردة "hard" رغم إنهم مو مغمورين فعلياً بهذا
+    # الحجم. خفّضناها لتنصيف هذا النطاق الواسع بدل تركه كله بخانة واحدة.
     if sitelinks >= 110:
         return "easy"
-    if sitelinks >= 70:
+    if sitelinks >= 55:
         return "medium"
     return "hard"
 
@@ -540,6 +545,48 @@ def run_import(limit=200, min_sitelinks=45, offset=0,
             f"📊 الإجمالي: {total}")
         return {"added": added, "updated": updated, "skipped": skipped,
                 "failed": failed, "total": total, "fetched": len(players)}
+    finally:
+        db.close()
+
+
+def backfill_difficulty(log=print, on_progress=None):
+    """يعيد حساب difficulty لكل اللاعبين المستوردين حالياً بالعتبات
+    الحالية في difficulty_for() — يُستخدم مرة واحدة بعد أي تعديل بالعتبات
+    كي لا ينتظر اللاعبون القدامى دورة الاستيراد الأسبوعية التالية.
+    تُعاد قراءة sitelinks الحقيقية من Wikidata لكل لاعب (غير مخزّنة بالجدول)."""
+    db = SessionLocal()
+    try:
+        rows = db.query(CareerPlayer).filter(CareerPlayer.wikidata_id.isnot(None)).all()
+        total = len(rows)
+        log(f"🔎 إعادة حساب difficulty لـ{total} لاعب…")
+        before = {}
+        for r in rows:
+            before[r.difficulty] = before.get(r.difficulty, 0) + 1
+
+        changed = 0
+        qids = [r.wikidata_id for r in rows]
+        BATCH = 50
+        for i in range(0, len(qids), BATCH):
+            batch_qids = qids[i:i + BATCH]
+            ents = wd_get_entities(batch_qids, props="sitelinks")
+            for r in rows[i:i + BATCH]:
+                ent = ents.get(r.wikidata_id, {})
+                sitelinks = len(ent.get("sitelinks", {}))
+                new_diff = difficulty_for(sitelinks) if sitelinks else r.difficulty
+                if new_diff != r.difficulty:
+                    changed += 1
+                r.difficulty = new_diff
+            db.commit()
+            done = min(i + BATCH, total)
+            log(f"   ...{done}/{total}")
+            if on_progress:
+                on_progress(done, total)
+
+        after = {}
+        for r in rows:
+            after[r.difficulty] = after.get(r.difficulty, 0) + 1
+        log(f"✅ تغيّر تصنيف {changed} لاعب | قبل={before} | بعد={after}")
+        return {"total": total, "changed": changed, "before": before, "after": after}
     finally:
         db.close()
 

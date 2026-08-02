@@ -6,8 +6,10 @@
    داخل اللعبة تظهر الشعارات فوراً بلا انتظار شبكة.
 """
 import json
+import os as _os
+import asyncio
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.infrastructure.database import get_db
@@ -43,3 +45,52 @@ async def get_club_logos(db: Session = Depends(get_db)):
     _cache["logos"] = result
     _cache["ts"] = time.time()
     return {"logos": result}
+
+
+# ============================================================
+# 🩹 مؤقّت: إعادة حساب difficulty لكل لاعبي career بالعتبات الجديدة
+# (difficulty_for في wikidata_import.py). يُستخدم مرة واحدة فقط ثم يُحذف
+# — نفس نمط باك-فيل الشعارات السابق. محمي بسر بيئة (ADMIN_BACKFILL_SECRET)
+# ولا يحتاج أي صلاحية وصول لقاعدة البيانات من جهاز شخصي.
+# ============================================================
+_backfill_state = {"running": False, "done": 0, "total": 0, "result": None, "error": None}
+
+
+def _check_admin_secret(request: Request):
+    secret = _os.environ.get("ADMIN_BACKFILL_SECRET")
+    if not secret:
+        raise HTTPException(status_code=404)
+    if request.headers.get("X-Admin-Secret") != secret:
+        raise HTTPException(status_code=403, detail="forbidden")
+
+
+def _run_backfill_difficulty():
+    from scripts.wikidata_import import backfill_difficulty
+    _backfill_state["running"] = True
+    _backfill_state["error"] = None
+    try:
+        def _progress(done, total):
+            _backfill_state["done"] = done
+            _backfill_state["total"] = total
+        result = backfill_difficulty(log=print, on_progress=_progress)
+        _backfill_state["result"] = result
+    except Exception as e:
+        _backfill_state["error"] = str(e)
+    finally:
+        _backfill_state["running"] = False
+
+
+@router.post("/admin/backfill-difficulty")
+async def start_backfill_difficulty(request: Request):
+    _check_admin_secret(request)
+    if _backfill_state["running"]:
+        return {"ok": False, "msg": "already running"}
+    _backfill_state.update({"running": True, "done": 0, "total": 0, "result": None, "error": None})
+    asyncio.create_task(asyncio.to_thread(_run_backfill_difficulty))
+    return {"ok": True, "msg": "started"}
+
+
+@router.get("/admin/backfill-difficulty")
+async def get_backfill_difficulty_progress(request: Request):
+    _check_admin_secret(request)
+    return _backfill_state

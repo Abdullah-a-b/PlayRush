@@ -109,14 +109,32 @@ def get_difficulty(name):
 # ============================================================
 #  نموذج المعرفة والثقة
 # ============================================================
-def bot_knows_player(difficulty_name):
+# تأثير شهرة الشخصية الفعلية (عمود career_players.difficulty — محسوب وقت
+# الاستيراد من عدد لغات ويكيبيديا المغطّية للاعب، مؤشر شهرة حقيقي) على
+# فرصة "المعرفة" الأساسية — مستقل عن صعوبة البوت، يُطبَّق فوقها. بدون هذا
+# كانت "المعرفة" رمية عملة ثابتة بصعوبة البوت فقط بغض النظر عن شهرة من
+# يُعرض فعلياً — فيعرف بوت المبتدئ نجوماً وغير معروفين بنفس الاحتمال.
+FAME_ADJUST = {
+    "easy":   {"bonus": 0.35},    # مشهور جداً — كل مستويات البوت شبه متأكدة
+    "medium": {"bonus": 0.0},     # افتراضي — نفس know_base الحالي بلا تغيير
+    "hard":   {"factor": 0.35},   # مغمور — حتى الخبير نادراً ما يعرفه فعلياً
+}
+
+
+def bot_knows_player(difficulty_name, player_difficulty="medium"):
     """هل يعرف البوت هذه الشخصية أصلاً؟ يُستدعى مرة واحدة عند بدء كل شخصية.
 
     القرار يُتّخذ مسبقاً ويُخزَّن في حالة الغرفة، فلا يتغيّر أثناء الكشف —
-    كاللاعب البشري: إما يعرف اللاعب أو لا.
+    كاللاعب البشري: إما يعرف اللاعب أو لا. يمزج بين صعوبة البوت وشهرة
+    الشخصية الفعلية (player_difficulty: easy/medium/hard).
     """
     cfg = get_difficulty(difficulty_name)
-    return random.random() < min(0.97, cfg["know_base"])
+    adjust = FAME_ADJUST.get(player_difficulty, FAME_ADJUST["medium"])
+    if "factor" in adjust:
+        p = cfg["know_base"] * adjust["factor"]
+    else:
+        p = cfg["know_base"] + adjust.get("bonus", 0.0)
+    return random.random() < max(0.02, min(0.97, p))
 
 
 def confidence(difficulty_name, knows, revealed_count, seed_jitter=0.0,

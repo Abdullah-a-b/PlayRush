@@ -114,6 +114,10 @@ def register_career_events(sio):
                 'nationality': cp.nationality,
                 'era': getattr(cp, 'era', None),
                 'position': getattr(cp, 'position', None),
+                # مؤشر شهرة حقيقي (من عدد لغات ويكيبيديا وقت الاستيراد —
+                # difficulty_for(sitelinks) في wikidata_import.py) — يستخدمه
+                # بوت السولو ليعرف "يعرف الشخصية" بواقعية بدل رمية عملة ثابتة.
+                'difficulty': getattr(cp, 'difficulty', 'medium'),
             }
         finally:
             db.close()
@@ -619,8 +623,11 @@ def register_career_events(sio):
     # 🤖 الوضع الفردي — قرارات البوت
     # ==========================================
     def _bot_on_new_player(gs):
-        """يُستدعى مرة عند بدء كل شخصية — يجمّد معرفة/تذبذب البوت لها."""
-        gs.bot_knows_current_player = _solo.bot_knows_player(gs.bot_difficulty)
+        """يُستدعى مرة عند بدء كل شخصية — يجمّد معرفة/تذبذب البوت لها.
+        شهرة الشخصية الفعلية (easy/medium/hard من قاعدة البيانات) تدخل في
+        قرار "يعرفها" — لا نعتمد على صعوبة البوت وحدها."""
+        player_difficulty = (gs.current_player or {}).get('difficulty', 'medium')
+        gs.bot_knows_current_player = _solo.bot_knows_player(gs.bot_difficulty, player_difficulty)
         gs.bot_jitter_current = _solo.new_player_jitter()
         gs.bot_used_this_player = set()
 

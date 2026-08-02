@@ -307,16 +307,17 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // الوضع الفردي (ضد الكمبيوتر) — حصري لخلية الحروف حالياً
+    // الوضع الفردي (ضد الكمبيوتر) — خلية الحروف ومسيرة لاعب حالياً
+    const SOLO_SUPPORTED_MODES = ['huroof', 'career'];
     const soloModeBtn = document.getElementById('soloModeBtn');
     if (soloModeBtn) {
-        soloModeBtn.style.display = (selectedGameMode === 'huroof') ? 'flex' : 'none';
+        soloModeBtn.style.display = SOLO_SUPPORTED_MODES.includes(selectedGameMode) ? 'flex' : 'none';
         soloModeBtn.addEventListener('click', () => {
             if (window.openSoloLevelPicker) {
-                window.openSoloLevelPicker('huroof');
+                window.openSoloLevelPicker(selectedGameMode);
             } else {
                 // احتياط: انتقال مباشر بمستوى متوسط
-                window.location.href = 'games/huroof.html?solo=1&difficulty=medium';
+                window.location.href = 'games/' + selectedGameMode + '.html?solo=1&difficulty=medium';
             }
         });
     }
