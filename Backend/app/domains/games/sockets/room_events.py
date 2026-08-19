@@ -325,8 +325,9 @@ def register_room_events(sio):
                             'hexIndex': gs.active_hex['index'],
                             'letter': gs.active_hex['letter']
                         }, to=sid)
+                        from app.domains.games.huroof.events import public_question_payload
                         await sio.emit('huroof_new_question', {
-                            'questionData': gs.current_question,
+                            'questionData': public_question_payload(gs.current_question),
                             'round': 'r1',
                             'timer': 40
                         }, to=sid)

@@ -17,6 +17,17 @@ from app.domains.games.huroof.engine import HuroofGameState
 from app.domains.wallet.reward_service import record_match_result
 from app.infrastructure.telegram_bot import send_secret_to_mobile
 
+
+def public_question_payload(q):
+    """🩹 anti-cheat: نسخة آمنة من السؤال تُرسَل للاعبين — بدون answer/
+    accepted_answers. كانت gs.current_question (فيها الإجابة كاملة، تُقرأ
+    داخلياً للتحقّق من الإجابات) تُرسَل بالكامل لكلا اللاعبين عبر
+    huroof_new_question، فأي فتح لأدوات المطوّر (Network/WS) يكشف الإجابة
+    قبل أن يضغط أحد الجرس. الواجهة لا تقرأ إلا questionData.question."""
+    if not q:
+        return q
+    return {k: v for k, v in q.items() if k not in ('answer', 'accepted_answers')}
+
 # ==========================================
 # كاش أسئلة حروف بالذاكرة (إصلاح bottleneck حرج)
 # كان trigger_new_question يسحب جدول Question *كاملاً* من DB
@@ -434,7 +445,7 @@ def register_huroof_events(sio):
                 version = advance_state(gs, 'question')
                 gs.buzzed_player = None
                 await sio.emit('huroof_new_question', {
-                    'questionData': gs.current_question, 'round': 'r1',
+                    'questionData': public_question_payload(gs.current_question), 'round': 'r1',
                     'timer': 40, 'changed': is_change
                 }, room=room_code)
                 sio.start_background_task(huroof_timer_task, room_code, version, 40, 'timeout_buzz_r1')
@@ -506,7 +517,7 @@ def register_huroof_events(sio):
         asyncio.create_task(send_secret_to_mobile(gs.current_question['question'], gs.current_question['answer']))
 
         await sio.emit('huroof_new_question', {
-            'questionData': gs.current_question,
+            'questionData': public_question_payload(gs.current_question),
             'round': 'r1',
             'timer': 40,
             'changed': is_change
