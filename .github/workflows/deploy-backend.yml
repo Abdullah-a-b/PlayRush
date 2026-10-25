@@ -1,26 +1,27 @@
-name: نشر الباك اند إلى Azure
+﻿name: ظ†ط´ط± ط§ظ„ط¨ط§ظƒ ط§ظ†ط¯ ط¥ظ„ظ‰ Azure
 
-# ينشر تلقائياً عند أي push على main يمسّ مجلد Backend فقط.
-# (تعديلات الواجهة وحدها لا تُشغّل هذا — Cloudflare Pages يتكفّل بها.)
+# ظٹظ†ط´ط± طھظ„ظ‚ط§ط¦ظٹط§ظ‹ ط¹ظ†ط¯ ط£ظٹ push ط¹ظ„ظ‰ main ظٹظ…ط³ظ‘ ظ…ط¬ظ„ط¯ Backend ظپظ‚ط·.
+# (طھط¹ط¯ظٹظ„ط§طھ ط§ظ„ظˆط§ط¬ظ‡ط© ظˆط­ط¯ظ‡ط§ ظ„ط§ طھظڈط´ط؛ظ‘ظ„ ظ‡ط°ط§ â€” Cloudflare Pages ظٹطھظƒظپظ‘ظ„ ط¨ظ‡ط§.)
 on:
   push:
     branches: [ main ]
     paths:
       - 'Backend/**'
       - '.github/workflows/deploy-backend.yml'
-  workflow_dispatch:        # يتيح التشغيل اليدوي من تبويب Actions
+  workflow_dispatch:        # ظٹطھظٹط­ ط§ظ„طھط´ط؛ظٹظ„ ط§ظ„ظٹط¯ظˆظٹ ظ…ظ† طھط¨ظˆظٹط¨ Actions
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: جلب الكود
+      - name: ط¬ظ„ط¨ ط§ظ„ظƒظˆط¯
         uses: actions/checkout@v4
 
-      - name: النشر إلى Azure App Service
+      - name: ط§ظ„ظ†ط´ط± ط¥ظ„ظ‰ Azure App Service
         uses: azure/webapps-deploy@v3
         with:
-          app-name: playrush-api
+          app-name: playrush-server
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           package: ./Backend
+
