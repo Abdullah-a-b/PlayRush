@@ -385,7 +385,7 @@
                 banner = document.createElement('div');
                 banner.id = 'ac-warning-banner';
                 banner.style.cssText = [
-                    'position:fixed', 'top:20px', 'left:50%', 'transform:translateX(-50%) translateY(-120%)',
+                    'position:fixed', 'top:20px', 'left:50%', 'transform:translateX(-50%) translateY(-250%)',
                     'background:linear-gradient(135deg,#d32f2f,#b71c1c)', 'color:#fff',
                     'padding:16px 24px', 'border-radius:12px', 'font-family:Tajawal,sans-serif',
                     'font-size:15px', 'font-weight:600', 'z-index:999999', 'direction:rtl',
@@ -404,7 +404,7 @@
             });
             clearTimeout(banner._hideTimer);
             banner._hideTimer = setTimeout(() => {
-                banner.style.transform = 'translateX(-50%) translateY(-120%)';
+                banner.style.transform = 'translateX(-50%) translateY(-250%)';
             }, 4000);
         } catch (e) {}
     }
