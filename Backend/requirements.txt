@@ -9,6 +9,7 @@ python-socketio
 sqlalchemy
 
 # PostgreSQL driver (مطلوب لو DATABASE_URL=postgresql://)
+psycopg[binary]
 psycopg2-binary
 
 # Scalability: Redis لبثّ Socket.IO والحضور و rate limit عبر عدة workers
