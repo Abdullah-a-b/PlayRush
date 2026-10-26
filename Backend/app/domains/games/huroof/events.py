@@ -95,9 +95,9 @@ def _fetch_combined_seen(uids):
 
 
 def _mark_seen_thread(uids, qid):
-    """(يعمل في thread — fire-and-forget) يضيف السؤال لمشاهدات اللاعبَين."""
+    """(يعمل في thread) يحفظ السؤال ضمن مشاهدات اللاعبين قبل إرساله."""
     if not uids:
-        return
+        return False
     try:
         db = SessionLocal()
         try:
@@ -110,10 +110,77 @@ def _mark_seen_thread(uids, qid):
                     seen.append(qid)
                     u.seen_question_ids = json.dumps(seen)
             db.commit()
+            return True
         finally:
             db.close()
     except Exception as e:
-        print(f" [huroof] mark seen: {e}")
+        print(f" [huroof] mark seen failed: {type(e).__name__}")
+        return False
+
+
+def _store_generated_huroof_question(gen, letter):
+    """يحفظ السؤال الجديد مرة واحدة حتى يدخل سجل عدم التكرار."""
+    question_text = str(gen.get("question") or "").strip()
+    answer = str(gen.get("answer") or "").strip()
+    if not question_text or not answer:
+        return None
+
+    bare = answer[2:] if answer.startswith("ال") else answer
+    if not bare or normalize_letter(bare[0]) != normalize_letter(letter):
+        return None
+
+    db = None
+    try:
+        db = SessionLocal()
+        key = clean_text_for_match(question_text)
+        existing = db.query(Question.question_text).filter(
+            Question.game_mode == "huroof").all()
+        if not key or any(clean_text_for_match(text or "") == key for (text,) in existing):
+            return None
+
+        difficulty = gen.get("difficulty", "medium")
+        if difficulty not in ("easy", "medium", "hard"):
+            difficulty = "medium"
+        accepted = gen.get("accepted_answers") or []
+        row = Question(
+            game_mode="huroof",
+            question_text=question_text,
+            correct_answer=answer,
+            category=str(gen.get("category") or "مُولّد").strip(),
+            extra_data=json.dumps({
+                "letter": normalize_letter(letter),
+                "accepted_answers": accepted,
+                "difficulty": difficulty,
+                "source": "ai_generated",
+            }, ensure_ascii=False),
+        )
+        db.add(row)
+        db.commit()
+        db.refresh(row)
+        actual_letter = normalize_letter(bare[0])
+        return {
+            "id": row.id,
+            "question_text": row.question_text,
+            "correct_answer": row.correct_answer,
+            "category": row.category,
+            "difficulty": difficulty,
+            "accepted_answers": accepted,
+            "letter_extra": actual_letter,
+            "letter_ans": actual_letter,
+            "valid_letters": {actual_letter},
+        }
+    except Exception as e:
+        if db is not None:
+            try:
+                db.rollback()
+            except Exception:
+                pass
+        if type(e).__name__ != "IntegrityError":
+            print(f" [huroof] save generated question failed: {type(e).__name__}")
+        return None
+    finally:
+        if db is not None:
+            db.close()
 
 
 # المرحلة ب: نقطة الدخول الموحّدة للتحقق من أفعال اللاعب (BaseGame)
@@ -414,60 +481,34 @@ def register_huroof_events(sio):
         # لا على extra.letter اليدوي في القاعدة — فقد يكون مصنّفاً خطأ
         # (مثل "البحرين" تحت الألف بدل الباء).
         valid_qs = [q for q in letter_qs
-                    if q['id'] not in used and q['id'] not in combined_seen]
+                     if q['id'] not in used and q['id'] not in combined_seen]
 
-        # التدرّج حتى لا يبقى الحرف بلا سؤال أبداً (لكل الأنظمة):
-        #   1) جديد غير مرئي  →  2) غير مستخدم بالمباراة (ولو رآه سابقاً)
-        #   →  3) توليد AI جديد (يقلّل التكرار)  →  4) إعادة استخدام قديم
-        source = 'fresh'
+        # لا نرجع إلى سؤال شاهده اللاعب. عند نفاد الأسئلة، نولّد واحداً
+        # ونحفظه؛ وإن تعذّر التوليد نتجاوز هذا الحرف بدلاً من التكرار.
         if not valid_qs:
-            valid_qs = [q for q in letter_qs if q['id'] not in used]
-            source = 'seen_ok'
-
-        # 3) توليد سؤال جديد بالـAI — نحاول حين تقلّ الأسئلة الجديدة،
-        #    لتخفيف التكرار المزعج. نتخطّاه بصمت لو تعذّر (بلا إبطاء اللعبة).
-        if not valid_qs:
+            avoid_questions = [q['question_text'] for q in letter_qs[-30:]]
             try:
                 from app.infrastructure.ai_judge import generate_huroof_question
-                gen = await generate_huroof_question(norm_letter, timeout=6.0)
-            except Exception:
+                gen = await generate_huroof_question(
+                    norm_letter, timeout=12.0, avoid_questions=avoid_questions)
+            except Exception as e:
+                print(f" [huroof] question generation failed: {type(e).__name__}")
                 gen = None
             if gen and gen.get('answer'):
-                gs.current_question = {
-                    'question': gen['question'], 'answer': gen['answer'],
-                    'category': gen.get('category', 'مُولّد'),
-                    'accepted_answers': gen.get('accepted_answers', []),
-                    'difficulty': gen.get('difficulty', 'medium'),
-                }
-                gs.question_shown_at = time.time()
-                asyncio.create_task(send_secret_to_mobile(
-                    gs.current_question['question'], gs.current_question['answer']))
-                version = advance_state(gs, 'question')
-                gs.buzzed_player = None
-                await sio.emit('huroof_new_question', {
-                    'questionData': public_question_payload(gs.current_question), 'round': 'r1',
-                    'timer': 40, 'changed': is_change
-                }, room=room_code)
-                sio.start_background_task(huroof_timer_task, room_code, version, 40, 'timeout_buzz_r1')
-                if getattr(gs, 'is_solo', False) and 'consider_buzz' in _SOLO_HOOKS:
-                    sio.start_background_task(_SOLO_HOOKS['consider_buzz'], room_code, version, 40)
-                return
-
-        # 4) إعادة استخدام أي سؤال للحرف (الملاذ قبل الأخير)
-        if not valid_qs:
-            valid_qs = letter_qs[:]
-            source = 'reused'
-            if hasattr(gs, 'used_questions'):
-                gs.used_questions = [qid for qid in gs.used_questions
-                                     if qid not in {q['id'] for q in letter_qs}]
+                generated_q = await asyncio.to_thread(
+                    _store_generated_huroof_question, gen, norm_letter)
+                if generated_q:
+                    valid_qs = [generated_q]
+                    _HUROOF_QCACHE['ts'] = 0.0
+                else:
+                    print(" [huroof] generated question was duplicate or could not be saved")
 
         if not valid_qs:
-            # لا يوجد ولا سؤال واحد لهذا الحرف في القاعدة إطلاقاً (نادر جداً).
-            # التوليد الفوري بالـAI ميزة مستقبلية؛ حالياً الملاذ الأخير:
-            # نختار خلية أخرى تلقائياً بدل ترك الشاشة معلّقة.
-            print(f" لا يوجد أي سؤال لحرف '{norm_letter}' في القاعدة. اختيار حرف آخر.")
+            print(f" [huroof] no unseen question for '{norm_letter}'; skipping this letter")
+            active_idx = next((i for i, h in enumerate(gs.board)
+                               if h is gs.active_hex), None)
             empties = [i for i, h in enumerate(gs.board)
-                       if h.get('color') not in ('green', 'orange')]
+                       if i != active_idx and h.get('color') not in ('green', 'orange')]
             if empties:
                 new_idx = random.choice(empties)
                 gs.active_hex = gs.board[new_idx]
@@ -495,9 +536,9 @@ def register_huroof_events(sio):
             gs.used_questions.append(chosen['id'])
             gs.used_answers.append(chosen['correct_answer'])
 
-        # تسجيل المشاهدة fire-and-forget — لا نؤخر وصول السؤال للاعبين
-        if uids:
-            asyncio.create_task(asyncio.to_thread(_mark_seen_thread, uids, chosen['id']))
+        # احفظ المشاهدة قبل إرسال السؤال حتى لا يعيده النظام بعد إعادة الاتصال.
+        if uids and not await asyncio.to_thread(_mark_seen_thread, uids, chosen['id']):
+            print(" [huroof] failed to persist seen question")
 
         gs.current_question = {
             "question": chosen['question_text'],

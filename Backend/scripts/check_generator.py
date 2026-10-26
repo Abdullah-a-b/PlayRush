@@ -44,7 +44,7 @@ async def main():
         print("      Linux:   GEMINI_API_KEY='مفتاحك' python scripts/check_generator.py")
         return
 
-    print(f"[i] GEMINI_API_KEY موجود ({api_key[:8]}...{api_key[-4:]})")
+    print("[i] GEMINI_API_KEY موجود")
     print()
 
     model = _get_model()
