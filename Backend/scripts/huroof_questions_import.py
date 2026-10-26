@@ -344,7 +344,7 @@ def run_import():
           + build_quran_questions() + build_curated_questions())
     if len(qs) < 50:
         print(f" [huroof-import] نتائج قليلة ({len(qs)}) — إلغاء الدفعة (تحصين)")
-        return 0
+        return None  # النتائج غير مكتملة؛ لا تعتبرها دورة ناجحة
     added = save_to_db(qs)
     # تقرير التغطية: الحروف المغطاة والناقصة (الناقصة تُغطى يدوياً —
     # المولد لا يخترع أبداً إجابة لحرف بلا كيان حقيقي)

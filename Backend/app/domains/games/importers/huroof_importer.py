@@ -48,7 +48,9 @@ def _run_once():
             sys.path.insert(0, scripts)
         from huroof_questions_import import run_import
         n = run_import()
-        if n:
+        if n is None:
+            return None  # مصدر غير مكتمل أو فشل؛ أعد المحاولة في الدورة القادمة
+        if n > 0:
             # تحديث حيّ: نصفّر كاش أسئلة حروف — الجديد يدخل اللعب فوراً
             try:
                 from app.domains.games.huroof import events as huroof_events
@@ -58,8 +60,8 @@ def _run_once():
                 pass
         return n
     except Exception as e:
-        print(f" [huroof-importer] فشل التوليد (يُعاد الدورة القادمة): {e}")
-        return 0
+        print(f" [huroof-importer] فشل التوليد (يُعاد الدورة القادمة): {type(e).__name__}")
+        return None
 
 
 async def huroof_auto_import_loop():
@@ -75,7 +77,8 @@ async def huroof_auto_import_loop():
         if due:
             print(" [huroof-importer] بدء توليد دوري…")
             n = await asyncio.to_thread(_run_once)
-            if n:
+            if n is not None:
+                # حتى النتيجة الصحيحة بصفر إضافات تُعد دورة ناجحة؛ لا نكررها كل 6 ساعات.
                 st["last_run"] = time.time()
                 _save_state(st)
                 print(f" [huroof-importer] اكتمل: {n} سؤال جديد")

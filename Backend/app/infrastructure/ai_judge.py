@@ -181,7 +181,7 @@ def _extract_json(text):
         return None
 
 
-async def generate_huroof_question(letter, timeout=8.0):
+async def generate_huroof_question(letter, timeout=8.0, avoid_questions=None):
     """يولّد سؤالاً جديداً لحرف معيّن. None عند أي فشل.
 
     نتحقّق أن الإجابة تبدأ بالحرف المطلوب قبل القبول — حتى لا نُدخل
@@ -196,6 +196,12 @@ async def generate_huroof_question(letter, timeout=8.0):
         return None
 
     prompt = _GEN_PROMPT.format(letter=letter)
+    avoid = list(dict.fromkeys(
+        str(q).strip() for q in (avoid_questions or []) if str(q).strip()
+    ))[-30:]
+    if avoid:
+        prompt += "\nلا تكرر أياً من الأسئلة التالية؛ اكتب سؤالاً مختلفاً فعلاً:\n"
+        prompt += json.dumps(avoid, ensure_ascii=False)
 
     async def _call():
         def _sync():
@@ -205,11 +211,16 @@ async def generate_huroof_question(letter, timeout=8.0):
 
     try:
         text = await asyncio.wait_for(_call(), timeout=timeout)
-    except Exception:
+    except asyncio.TimeoutError:
+        print(f" [huroof-generator] timeout after {timeout}s")
+        return None
+    except Exception as e:
+        print(f" [huroof-generator] request failed: {type(e).__name__}")
         return None
 
     data = _extract_json(text)
     if not data or not data.get("question") or not data.get("answer"):
+        print(" [huroof-generator] invalid JSON or missing question/answer")
         return None
 
     answer = str(data["answer"]).strip()
@@ -221,6 +232,7 @@ async def generate_huroof_question(letter, timeout=8.0):
 
     bare = answer[2:] if answer.startswith("ال") else answer
     if not bare or _norm(bare[0]) != _norm(letter):
+        print(" [huroof-generator] answer does not start with the requested letter")
         return None
 
     return {
