@@ -87,7 +87,7 @@
   .bank-main>#knHelpsBar { order:6; position:static !important; inset:auto !important; display:flex; flex-direction:row !important; width:100%; justify-content:center; gap:6px; margin:0; flex-wrap:wrap; flex-shrink:0; }
   #knHelpsBar .bank-help-btn { min-height:42px; padding:6px 8px; }
   .bank-main>.kn-round-over { order:7; width:100%;padding:10px;font-size:14px;flex-shrink:0; }
-  body .ingame-quick-chat { top:calc(var(--knowledge-header-height,76px) + 4px) !important; bottom:auto !important; left:10px !important; }
+  body .ingame-quick-chat { top:calc(var(--knowledge-header-height,76px) - 4px) !important; bottom:auto !important; left:10px !important; }
   .surrender-btn { bottom:8px !important;right:10px !important; }
   .quick-chat-trigger.ingame,.surrender-btn { width:36px !important;height:36px !important;min-height:36px !important; }
   body.knowledge-keyboard-open .bank-main { padding-bottom:8px !important;gap:5px !important; }
