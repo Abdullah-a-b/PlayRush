@@ -21,6 +21,8 @@
     const height = viewport ? viewport.height : window.innerHeight;
     if (document.activeElement?.tagName !== 'INPUT') fullViewportHeight = Math.max(height, window.innerHeight);
     document.documentElement.style.setProperty('--knowledge-height', `${Math.round(height)}px`);
+    const header = document.querySelector('.game-topbar');
+    if (header) document.documentElement.style.setProperty('--knowledge-header-height', `${header.offsetHeight}px`);
     document.body.classList.toggle('knowledge-keyboard-open',
       window.innerWidth <= 768 && fullViewportHeight - height > 120);
   }
