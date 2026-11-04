@@ -23,3 +23,5 @@ ios/
 *.keystore
 
 .claude
+# Local Codex configuration
+.codex/
