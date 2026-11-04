@@ -1,0 +1,41 @@
+/* آخر طبقة تنسيق للألعاب الثلاث؛ الحروف وماذا تعرف مستقلتان. */
+@media(max-width:768px) {
+ body.mobile-match { position:fixed !important; inset:0; width:100%; height:var(--match-height,100dvh) !important; min-height:0 !important; overflow:hidden !important; display:flex; flex-direction:column; }
+ body.mobile-match>.game-topbar { flex:0 0 auto; min-height:64px; padding:7px 8px !important; }
+ body.mobile-match .avatar-wrap img{width:34px !important;height:34px !important}
+ body.mobile-match .pname{max-width:70px;font-size:12px}
+ body.mobile-match>.bank-main,body.mobile-match>.career-main { flex:1; min-height:0; width:100%; max-width:760px; margin:0 auto; padding:10px 10px 56px !important; gap:8px !important; overflow-y:auto; overscroll-behavior:contain; justify-content:flex-start; }
+ body.mobile-match .bank-main>*,body.mobile-match .career-main>* { flex-shrink:0; }
+ body.mobile-match #turnBanner,body.mobile-match #statusBanner { order:0; font-size:14px; padding:7px 14px; }
+ body.mobile-match .points-indicator,body.mobile-match .temp-timer-row { order:1; }
+ body.mobile-match .temp-timer-row { gap:14px; }
+ body.mobile-match .temp-balance { padding:6px 16px; }
+ body.mobile-match .tb-value { font-size:24px; }
+ body.mobile-match .turn-timer { width:48px;height:48px;font-size:22px; }
+ body.mobile-match #questionCard,body.mobile-match #clubsStage,body.mobile-match .whoami-hints { order:2; position:relative !important; inset:auto !important; transform:none !important; width:100%;min-height:0; }
+ body.mobile-match #questionCard { padding:12px; }
+ body.mobile-match .q-text { font-size:18px;line-height:1.5; }
+ body.mobile-match .clubs-stage { min-height:112px !important; padding:8px !important; }
+ body.mobile-match .club-card { width:82px !important;min-height:98px !important;padding:8px !important; }
+ body.mobile-match .club-logo { width:44px !important;height:44px !important; }
+ body.mobile-match .whoami-hints { max-height:180px !important;overflow-y:auto; }
+ body.mobile-match .hint-card { padding:9px;font-size:13px;line-height:1.6; }
+ body.mobile-match .reveal-timer-wrap { order:3; margin:0 !important; }
+ body.mobile-match #statusMsg { order:4; position:static !important;min-height:0;width:100%;font-size:13px;line-height:1.5;overflow-wrap:anywhere; }
+ body.mobile-match #answerBox { order:5;position:relative !important;inset:auto !important;transform:none !important;width:100% !important;max-width:none !important;margin:0 !important;padding:8px !important;gap:8px;box-shadow:none; }
+ body.mobile-match #answerInput { min-width:0;width:0;flex:1;font-size:16px !important;padding:8px !important; }
+ body.mobile-match #submitAnswerBtn { width:42px;min-width:42px;height:42px;padding:8px; }
+ body.mobile-match .answer-timer { width:34px;min-width:34px;height:34px; }
+ body.mobile-match .buzz-zone,body.mobile-match #actionButtons { order:6; }
+ body.mobile-match .buzz-zone { min-height:0; }
+ body.mobile-match #careerHelpsBar,body.mobile-match #bankHelpsBar { order:7;position:static !important;inset:auto !important;width:100%;display:flex;flex-direction:row !important;justify-content:center;gap:8px;flex-wrap:wrap; }
+ body.mobile-match .ingame-quick-chat { top:auto !important;bottom:10px !important;left:62px !important; }
+ body.mobile-match .ingame-quick-chat .quick-chat-panel { top:auto;bottom:calc(100% + 8px);width:min(300px,calc(100vw - 80px));max-height:50vh; }
+ body.mobile-match .surrender-btn { bottom:10px !important;right:10px !important; }
+ body.mobile-match .quick-chat-trigger.ingame,body.mobile-match .surrender-btn {width:36px !important;height:36px !important;min-height:36px}
+ body.mobile-match.match-answering .buzz-zone { display:none; }
+ body.mobile-match.match-keyboard-open>.game-topbar { min-height:56px;padding:4px 8px !important; }
+ body.mobile-match.match-keyboard-open>.bank-main,body.mobile-match.match-keyboard-open>.career-main {gap:5px !important;padding-bottom:8px !important;}
+ body.mobile-match.match-keyboard-open .whoami-hints {max-height:100px !important;}
+ body.mobile-match.match-keyboard-open .ingame-quick-chat,body.mobile-match.match-keyboard-open .surrender-btn,body.mobile-match.match-keyboard-open #prSoundBtn {display:none !important;}
+}

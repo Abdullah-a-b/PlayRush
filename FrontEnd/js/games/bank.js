@@ -266,7 +266,7 @@ socket.on('room_joined', (data) => {
   function openAnswerBox(seconds) {
     answerBox.style.display = 'flex';
     answerInput.value = '';
-    answerInput.focus();
+    answerInput.focus({ preventScroll: true });
     let t = Math.round(seconds);
     answerTimerEl.textContent = t;
     clearInterval(answerCountdown);
