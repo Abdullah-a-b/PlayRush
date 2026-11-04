@@ -30,6 +30,7 @@
   <link rel="stylesheet" href="css/responsive.css">
   <link rel="stylesheet" href="css/guide_hint.css">
   <link rel="stylesheet" href="css/app_perf.css">
+  <link rel="stylesheet" href="css/lobby_stage.css">
 </head>
 <body>
   <div id="toastContainer" class="toast-container"></div>
@@ -86,16 +87,25 @@
 
     <main class="main-content" id="lobbyMainContent">
       <section class="content-section active">
-        <div class="welcome-panel">
-          <div id="gameIconDisplay" style="font-size: 50px; margin-bottom: 10px;">🎮</div>
-          <h1 id="lobbyMainTitle">اسم اللعبة</h1>
-          <p id="lobbySubTitle">استعد للمغامرة القادمة!</p>
+        <div class="welcome-panel lobby-hero">
+          <div class="lobby-copy">
+            <div class="lobby-eyebrow"><span></span> PLAYRUSH <b id="lobbyGameNumber">01</b></div>
+            <h1 id="lobbyMainTitle">اسم اللعبة</h1>
+            <p id="lobbySubTitle">اختر طريقتك وابدأ التحدي</p>
+            <div class="lobby-identity" id="lobbyIdentity">معرفة تجمعنا، ومنافسة تحمّسنا</div>
+          </div>
+          <div class="lobby-art" aria-hidden="true">
+            <div class="stage-orbit orbit-one"></div><div class="stage-orbit orbit-two"></div>
+            <div class="stage-core"><span id="gameIconDisplay">🎮</span></div>
+            <div class="stage-tiles" id="lobbyStageTiles"></div>
+            <span class="stage-caption">ساحتك للتحدي</span>
+          </div>
         </div>
 
         <div class="quick-actions">
           <button class="action-btn primary" id="quickPlayBtn" style="background: linear-gradient(45deg, #a855f7, #9333ea); color: #fff; box-shadow: 0 10px 20px rgba(168, 85, 247, 0.4);">
               <i class="fa-solid fa-bolt" style="font-size: 26px;"></i> 
-              <span>اللعب السريع</span>
+              <span>اللعب السريع</span><small>ابحث عن منافس وابدأ المباراة</small>
           </button>
 
           <button class="action-btn primary" id="localPartyBtn" style="display: none; background: linear-gradient(45deg, #f59e0b, #ea580c); color: #fff; box-shadow: 0 10px 20px rgba(245, 158, 11, 0.4);">
@@ -116,20 +126,10 @@
 
           <button class="action-btn primary" id="playWithFriendBtn" style="background: linear-gradient(45deg, #4a90e2, #357abd); color: #fff; box-shadow: 0 10px 20px rgba(74, 144, 226, 0.4);">
               <i class="fa-solid fa-user-group" style="font-size: 26px;"></i>
-              <span>العب مع صديق</span>
+              <span>العب مع صديق</span><small>اختر صديقك وأرسل له دعوة</small>
           </button>
         </div>
-        <section id="knowledgeLobbyGuide" class="knowledge-lobby-guide" hidden aria-labelledby="knowledgeGuideTitle">
-          <h2 id="knowledgeGuideTitle">سؤال واحد، وإجابات كثيرة</h2>
-          <p>تبادل الإجابات مع منافسك، واذكر إجابة صحيحة لم تُذكر من قبل.</p>
-          <ul>
-            <li><strong>10 ثوانٍ</strong><span>لكل دور</span></li>
-            <li><strong>3 أخطاء</strong><span>وتخسر السؤال</span></li>
-            <li><strong>5 أسئلة</strong><span>ثم يُحسم الفوز بالنقاط</span></li>
-          </ul>
-          <p class="guide-example">مثال: «اذكر دول قارة أفريقيا» — مصر، غانا، تونس… كل إجابة مرة واحدة.</p>
-          <p>اللعب السريع يبحث لك عن منافس، أو أضف صديقك وادعه من «العب مع صديق».</p>
-        </section>
+
       </section>
     </main>
 

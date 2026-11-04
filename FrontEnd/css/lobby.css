@@ -351,17 +351,3 @@ body {
 .store-scope { font-size: 11px; padding: 3px 8px; border-radius: 10px; margin: 4px auto; display: inline-block; }
 .store-scope.game { background: rgba(155,89,182,0.2); color: #c39bd3; }
 .store-scope.general { background: rgba(52,152,219,0.2); color: #5dade2; }
-
-.knowledge-lobby-guide[hidden] { display: none; }
-.knowledge-lobby-guide { max-width: 720px; margin: 32px auto 16px; text-align: center; padding: 0 16px; line-height: 1.8; color: #cbd5e1; }
-.knowledge-lobby-guide h2 { color: #5eead4; font-size: 22px; margin: 0 0 8px; }
-.knowledge-lobby-guide p { margin: 8px 0; }
-.knowledge-lobby-guide ul { display: flex; justify-content: center; gap: 32px; list-style: none; padding: 16px 0; margin: 0; }
-.knowledge-lobby-guide li { display: flex; flex-direction: column; }
-.knowledge-lobby-guide strong { color: #f8fafc; font-size: 20px; }
-.knowledge-lobby-guide .guide-example { color: #e2e8f0; }
-@media (max-width: 600px) {
-  .knowledge-lobby-guide { margin-top: 24px; font-size: 14px; }
-  .knowledge-lobby-guide ul { gap: 20px; }
-  .knowledge-lobby-guide strong { font-size: 17px; }
-}

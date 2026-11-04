@@ -144,11 +144,27 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (iconEl) iconEl.textContent = theme.icon;
     }
 
-    const knowledgeGuide = document.getElementById('knowledgeLobbyGuide');
-    if (knowledgeGuide) knowledgeGuide.hidden = selectedGameMode !== 'knowledge';
-    if (selectedGameMode === 'knowledge') {
-        const subtitle = document.getElementById('lobbySubTitle');
-        if (subtitle) subtitle.textContent = 'اختبر معرفتك، ولا تكرر إجابة منافسك';
+    const lobbyScenes = {
+        huroof: { number: '01', accent: '#fbbf24', rgb: '251,191,36', line: 'كل حرف يقرّبك من الفوز', identity: 'حروف · معرفة · استراتيجية', tiles: ['أ', 'ب', 'ج', 'د'] },
+        bank: { number: '02', accent: '#c4b5fd', rgb: '196,181,253', line: 'ارفع الرصيد… واختر لحظة الحسم', identity: 'معرفة · جرأة · قرار', tiles: ['+', 'بنك', '×', '+'] },
+        career: { number: '03', accent: '#60a5fa', rgb: '96,165,250', line: 'وراء كل مسيرة، اسم تعرفه', identity: 'أندية · نجوم · ذاكرة كروية', tiles: ['⚽', '؟', '→', '★'] },
+        whoami: { number: '04', accent: '#fb923c', rgb: '251,146,60', line: 'اربط التلميحات واكشف الشخصية', identity: 'تلميحات · استنتاج · سرعة بديهة', tiles: ['؟', '…', '!', '؟'] },
+        knowledge: { number: '05', accent: '#2dd4bf', rgb: '45,212,191', line: 'معرفتك أوسع مما تتوقع', identity: 'موضوع واحد · احتمالات كثيرة', tiles: ['؟', '+', '…', '✓'] }
+    };
+    const scene = lobbyScenes[selectedGameMode];
+    if (scene) {
+        const main = document.getElementById('lobbyMainContent');
+        main.style.setProperty('--lobby-accent', scene.accent);
+        main.style.setProperty('--lobby-rgb', scene.rgb);
+        document.getElementById('lobbySubTitle').textContent = scene.line;
+        document.getElementById('lobbyIdentity').textContent = scene.identity;
+        document.getElementById('lobbyGameNumber').textContent = scene.number;
+        const tiles = document.getElementById('lobbyStageTiles');
+        scene.tiles.forEach((text) => {
+            const tile = document.createElement('span');
+            tile.textContent = text;
+            tiles.appendChild(tile);
+        });
     }
 
     // ----------------------------------------
