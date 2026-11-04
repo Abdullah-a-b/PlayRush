@@ -29,8 +29,9 @@
  body.mobile-match .buzz-zone,body.mobile-match #actionButtons { order:6; }
  body.mobile-match .buzz-zone { min-height:0; }
  body.mobile-match #careerHelpsBar,body.mobile-match #bankHelpsBar { order:7;position:static !important;inset:auto !important;width:100%;display:flex;flex-direction:row !important;justify-content:center;gap:8px;flex-wrap:wrap; }
- body.mobile-match .ingame-quick-chat { top:auto !important;bottom:10px !important;left:62px !important; }
- body.mobile-match .ingame-quick-chat .quick-chat-panel { top:auto;bottom:calc(100% + 8px);width:min(300px,calc(100vw - 80px));max-height:50vh; }
+ body.mobile-match>.game-topbar { position:relative; }
+ body.mobile-match .game-topbar .ingame-quick-chat { position:absolute !important;top:calc(100% + 8px) !important;bottom:auto !important;left:10px !important;right:auto !important; }
+ body.mobile-match .ingame-quick-chat .quick-chat-panel { top:calc(100% + 8px);bottom:auto;width:min(300px,calc(100vw - 80px));max-height:50vh; }
  body.mobile-match .surrender-btn { bottom:10px !important;right:10px !important; }
  body.mobile-match .quick-chat-trigger.ingame,body.mobile-match .surrender-btn {width:36px !important;height:36px !important;min-height:36px}
  body.mobile-match.match-answering .buzz-zone { display:none; }

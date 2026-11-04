@@ -4,6 +4,9 @@
   const answer = document.getElementById('answerBox');
   if (!main || !answer) return;
   document.body.classList.add('mobile-match');
+  const chat = document.querySelector('.ingame-quick-chat');
+  const header = document.querySelector('.game-topbar');
+  if (chat && header) header.appendChild(chat);
   const helps = document.getElementById('careerHelpsBar') || document.getElementById('bankHelpsBar');
   if (helps) main.appendChild(helps);
   const viewport = window.visualViewport;
