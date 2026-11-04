@@ -144,6 +144,13 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (iconEl) iconEl.textContent = theme.icon;
     }
 
+    const knowledgeGuide = document.getElementById('knowledgeLobbyGuide');
+    if (knowledgeGuide) knowledgeGuide.hidden = selectedGameMode !== 'knowledge';
+    if (selectedGameMode === 'knowledge') {
+        const subtitle = document.getElementById('lobbySubTitle');
+        if (subtitle) subtitle.textContent = 'اختبر معرفتك، ولا تكرر إجابة منافسك';
+    }
+
     // ----------------------------------------
     //  السوكيت: اللاعبين المتصلين
     // ----------------------------------------

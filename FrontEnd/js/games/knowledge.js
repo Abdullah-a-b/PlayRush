@@ -20,6 +20,9 @@
   let answerCountdown = null;
   let timerRAF = null;
   let iAmActive = false;
+  let roundEnded = false;
+  let revealTimer = null;
+  let revealShown = false;
   
   // 🐛 [تم التعديل هنا]: تعريف المتغير لحل مشكلة sentThisTurn is not defined
   let sentThisTurn = false; 
@@ -71,6 +74,11 @@
       btn.title = `${h.name}: ${h.desc}`;
       btn.innerHTML = `<span class="hicon">${h.icon}</span>`
         + `<span class="hqty">${qty}</span>`;
+      const label = document.createElement('span');
+      label.className = 'help-label';
+      label.textContent = h.name;
+      btn.appendChild(label);
+      btn.setAttribute('aria-label', `${h.name}: ${h.desc} — المتبقي ${qty}`);
       btn.addEventListener('click', () => {
         if (helpsUsedLocal.has(hid) || depleted) return;
         if (hid === 'k_dodge' && dodgeLocked) {
@@ -248,7 +256,10 @@
    ================================================================ */
 function showMatchReveal(myName, myAvatarSrc, oppName, oppAvatarSrc) {
   var overlay = document.getElementById('matchRevealOverlay');
-  if (!overlay) return;
+  if (!overlay || revealShown) return;
+  revealShown = true;
+  overlay.hidden = false;
+  overlay.setAttribute('aria-hidden', 'false');
   var ge = function(id){ return document.getElementById(id); };
   if (myName)       ge('mrMyName').textContent   = myName;
   if (myAvatarSrc)  ge('mrMyAvatar').src         = myAvatarSrc;
@@ -257,7 +268,28 @@ function showMatchReveal(myName, myAvatarSrc, oppName, oppAvatarSrc) {
   overlay.classList.add('show');
   var bar = ge('mrReadyFill');
   if (bar) { bar.style.width = '0%'; void bar.offsetWidth; bar.style.width = '100%'; }
-  setTimeout(function(){ overlay.classList.remove('show'); }, 3200);
+  clearTimeout(revealTimer);
+  revealTimer = setTimeout(hideMatchReveal, 3200);
+}
+
+function hideMatchReveal() {
+  revealShown = true;
+  clearTimeout(revealTimer);
+  const overlay = $('matchRevealOverlay');
+  if (!overlay) return;
+  overlay.classList.remove('show');
+  overlay.hidden = true;
+  overlay.setAttribute('aria-hidden', 'true');
+}
+
+function endRoundPresentation() {
+  roundEnded = true;
+  iAmActive = false;
+  stopTimerBar();
+  closeAnswerBox();
+  hideMatchReveal();
+  $('turnText').textContent = 'انتهى السؤال — انتظر النتيجة';
+  renderHelpsBar();
 }
 
 socket.on('room_joined', (data) => {
@@ -286,13 +318,6 @@ socket.on('room_joined', (data) => {
         playersStatsData.opponent.name, playersStatsData.opponent.avatar
       );
     }
-    // 🎮 كشف التطابق بين اللاعبين
-    if (playersStatsData.opponent && playersStatsData.opponent.name) {
-      showMatchReveal(
-        playersStatsData.me.name, playersStatsData.me.avatar,
-        playersStatsData.opponent.name, playersStatsData.opponent.avatar
-      );
-    }
     if (typeof data.opponent_user_id !== 'undefined') _opponentUserId = data.opponent_user_id;
     if (typeof data.opponent_relation === 'string') applyOpponentRelation(data.opponent_relation);
     socket.emit('knowledge_state', { roomCode });
@@ -306,6 +331,10 @@ socket.on('room_joined', (data) => {
   });
 
   socket.on('knowledge_round_start', (d) => {
+    roundEnded = false;
+    iAmActive = false;
+    hideMatchReveal();
+    renderHelpsBar();
     $('roundOverBox').style.display = 'none';
     $('knSaid').innerHTML = '';
     stopTimerBar();
@@ -320,6 +349,8 @@ socket.on('room_joined', (data) => {
 
   // 🎯 حدث موجّه من الخادم لصاحب الدور حصرياً — فتح مضمون 100%
   socket.on('knowledge_your_turn', (d) => {
+    if (roundEnded) return;
+    hideMatchReveal();
     iAmActive = true;
     $('turnText').textContent = '🫵 دورك — اكتب إجابة!';
     openAnswerBox(d.seconds || 10, d.turn_ends_at);
@@ -327,6 +358,8 @@ socket.on('room_joined', (data) => {
   });
 
   socket.on('knowledge_turn', (d) => {
+    if (roundEnded) return;
+    hideMatchReveal();
     updateStrikes(d.strikes);
     updatePoints(d.points);
     //  صاحب الدور: نطابق بالsid أولاً، وكحماية إضافية بالاسم (لو
@@ -471,8 +504,8 @@ socket.on('room_joined', (data) => {
   });
 
   socket.on('knowledge_round_over', (d) => {
-    stopTimerBar();
-    closeAnswerBox();
+    endRoundPresentation();
+    setStatus('');
     updatePoints(d.points);
     updateStrikes(d.strikes);
     const box = $('roundOverBox');
@@ -500,12 +533,19 @@ socket.on('room_joined', (data) => {
     updateStrikes(d.strikes);
     syncHelpsState(d);
     if (d.index) updateRound(d.index);
+    if (d.stage !== 'turn') {
+      endRoundPresentation();
+      return;
+    }
     if (d.stage === 'turn' && d.q) {
+      roundEnded = false;
+      hideMatchReveal();
       $('qText').textContent = d.q;
       $('qMeta').textContent = d.category || '';
       iAmActive = d.turn === mySid;
       startTimerBar(d.seconds_left || 3);
       if (iAmActive) openAnswerBox(d.seconds_left || 3, d.turn_ends_at);
+      else closeAnswerBox();
       $('turnText').textContent = iAmActive ? '🫵 دورك — اكتب إجابة!' : '⏳ دور الخصم…';
       renderHelpsBar();
     }
@@ -513,8 +553,8 @@ socket.on('room_joined', (data) => {
 
   // ===== نهاية المباراة =====
   socket.on('knowledge_match_over', (d) => {
-    stopTimerBar();
-    closeAnswerBox();
+    endRoundPresentation();
+    $('turnText').textContent = 'انتهت المباراة';
     if (typeof Swal !== 'undefined') Swal.close();
     const won = d.winner_sid === mySid;
     $('winIcon').textContent = won ? '🏆' : '😔';
