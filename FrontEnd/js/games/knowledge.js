@@ -14,6 +14,21 @@
   if (!token || !roomCode) { window.location.href = '../lobby.html'; return; }
 
   const $ = (id) => document.getElementById(id);
+  // نستخدم المساحة المرئية الفعلية عند فتح لوحة مفاتيح Android/iOS.
+  const viewport = window.visualViewport;
+  let fullViewportHeight = window.innerHeight;
+  function syncMobileViewport() {
+    const height = viewport ? viewport.height : window.innerHeight;
+    if (document.activeElement?.tagName !== 'INPUT') fullViewportHeight = Math.max(height, window.innerHeight);
+    document.documentElement.style.setProperty('--knowledge-height', `${Math.round(height)}px`);
+    document.body.classList.toggle('knowledge-keyboard-open',
+      window.innerWidth <= 768 && fullViewportHeight - height > 120);
+  }
+  viewport?.addEventListener('resize', syncMobileViewport);
+  window.addEventListener('resize', syncMobileViewport);
+  document.addEventListener('focusout', () => setTimeout(syncMobileViewport, 100));
+  syncMobileViewport();
+
   const answerBox   = $('answerBox');
   const answerInput = $('answerInput');
   const answerTimerEl = $('answerTimer');
@@ -199,7 +214,7 @@
     answerInput.value = '';
     answerInput.disabled = false;
     $('submitAnswerBtn').disabled = false;
-    answerInput.focus();
+    answerInput.focus({ preventScroll: true });
     clearInterval(answerCountdown);
     // endsAtServerTs = Unix timestamp (ثوانٍ) من الـ server
     // بدونه → نستخدم seconds كـ fallback (reconnect أو حالات خاصة)
@@ -462,7 +477,7 @@ socket.on('room_joined', (data) => {
       startTimerBar(d.seconds || 5);
       openAnswerBox(d.seconds || 5, d.turn_ends_at);
       answerInput.value = '';
-      answerInput.focus();
+      answerInput.focus({ preventScroll: true });
     } else {
       showToast(`🔄 محاولة ثانية لـ ${d.name} — خطؤه لم يُحسب`);
       startTimerBar(d.seconds || 5);
