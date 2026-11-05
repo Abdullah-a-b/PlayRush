@@ -52,6 +52,7 @@ def _get_model():
         genai.configure(api_key=api_key)
 
         _PREFERRED = [
+            "gemini-3.5-flash-lite",
             "gemini-flash-latest",
             "gemini-2.5-flash-lite",
             "gemini-2.5-flash",

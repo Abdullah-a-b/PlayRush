@@ -15,7 +15,8 @@ import os
 # أسماء مفضّلة بالترتيب (الأحدث/الأرخص أولاً). نبقيها محدّثة، لكن
 # آلية list_models تحتنا تضمن العمل حتى لو تغيّرت كلها.
 _PREFERRED = [
-    "gemini-flash-latest",      # اسم مستقر — يعمل مع مفاتيح Free Tier الجديدة
+    "gemini-3.5-flash-lite",    # اختُبر فعلياً: استجابة سريعة للتحكيم والتوليد
+    "gemini-flash-latest",      # احتياط عند عدم توفر النموذج الأخف
     "gemini-3.5-flash",         # احتياط أول
     "gemini-2.0-flash",
     "gemini-2.0-flash-lite",
@@ -74,11 +75,14 @@ def load_gemini_model(force_reload=False):
     """
     global _cached_model, _cache_tried, _cache_failed
     # لو المودل محمّل ومؤكد  ارجعه
-    if _cache_tried and _cached_model is not None:
+    if _cache_tried and _cached_model is not None and not force_reload:
         return _cached_model
     # لو فشل سابقاً وما في force_reload  لا تحاول مرة أخرى (توفير طلبات)
     if _cache_failed and not force_reload:
         return None
+    if force_reload:
+        _cached_model = None
+        _cache_failed = False
     _cache_tried = True
 
     api_key = os.environ.get("GEMINI_API_KEY", "").strip()
