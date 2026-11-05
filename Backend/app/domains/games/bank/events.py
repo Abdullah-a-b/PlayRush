@@ -15,12 +15,16 @@ from app.domains.wallet.reward_service import record_match_result
 
 _start_first_round = None
 _QUESTIONS = None
+_QUESTIONS_STAMP = None
 
 
 def _load_questions():
-    global _QUESTIONS
-    if _QUESTIONS is None:
-        from app.core.paths import DATA_DIR
+    global _QUESTIONS, _QUESTIONS_STAMP
+    from pathlib import Path
+    from app.core.paths import DATA_DIR
+    stamp = tuple((DATA_DIR / name).stat().st_mtime_ns if (DATA_DIR / name).exists() else None for name in ('bank_questions.json', 'bank_questions_auto.json'))
+    if _QUESTIONS is None or stamp != _QUESTIONS_STAMP:
+        _QUESTIONS_STAMP = stamp
         path = str(DATA_DIR / "bank_questions.json")
         auto_path = str(DATA_DIR / "bank_questions_auto.json")
         try:
@@ -34,8 +38,13 @@ def _load_questions():
             if os.path.exists(auto_path):
                 with open(auto_path, encoding="utf-8") as f:
                     auto_qs = json.load(f)
+                from app.core.import_support import canonical
                 existing = {q.get("id") for q in _QUESTIONS}
-                _QUESTIONS += [q for q in auto_qs if q.get("id") not in existing]
+                texts = {canonical(q.get("q")) for q in _QUESTIONS}
+                for q in auto_qs:
+                    key = canonical(q.get("q"))
+                    if q.get("id") not in existing and key and key not in texts:
+                        _QUESTIONS.append(q);existing.add(q.get("id"));texts.add(key)
         except Exception as e:
             print(f" [bank] دمج المولّد: {e}")
         print(f" [bank] حُمّل {len(_QUESTIONS)} سؤال (يدوي + مولّد)")

@@ -17,6 +17,7 @@ import time
 import asyncio
 
 from app.core.paths import DATA_DIR
+from app.core.import_support import atomic_json, read_json, import_lock, canonical, positive_days, due, record_result, sparql_rows
 
 _DATA_FILE = str(DATA_DIR / "knowledge_questions.json")
 STATE_FILE = str(DATA_DIR / "knowledge_import_state.json")
@@ -94,14 +95,14 @@ SELECT DISTINCT ?curAr WHERE {
         "q": "اذكر أندية لعبت في الدوري الإنجليزي الممتاز", "cat": "رياضة",
         "sparql": """
 SELECT DISTINCT ?clAr WHERE {
-  ?cl wdt:P118 wd:Q9448 .
+  ?cl p:P118 ?membership . ?membership ps:P118 wd:Q9448 . FILTER NOT EXISTS { ?membership wikibase:rank wikibase:DeprecatedRank }
   SERVICE wikibase:label { bd:serviceParam wikibase:language "ar". ?cl rdfs:label ?clAr . }
 }"""},
     "kq_laliga_clubs": {
         "q": "اذكر أندية لعبت في الدوري الإسباني", "cat": "رياضة",
         "sparql": """
 SELECT DISTINCT ?clAr WHERE {
-  ?cl wdt:P118 wd:Q324867 .
+  ?cl p:P118 ?membership . ?membership ps:P118 wd:Q324867 . FILTER NOT EXISTS { ?membership wikibase:rank wikibase:DeprecatedRank }
   SERVICE wikibase:label { bd:serviceParam wikibase:language "ar". ?cl rdfs:label ?clAr . }
 }"""},
     "kq_saudi_cities": {
@@ -110,7 +111,7 @@ SELECT DISTINCT ?clAr WHERE {
 SELECT DISTINCT ?cityAr WHERE {
   ?city wdt:P31/wdt:P279* wd:Q515 . ?city wdt:P17 wd:Q851 .
   SERVICE wikibase:label { bd:serviceParam wikibase:language "ar". ?city rdfs:label ?cityAr . }
-} LIMIT 120"""},
+}"""},
     "kq_chemical_metals": {
         "q": "اذكر معادن من العناصر الكيميائية", "cat": "علوم",
         "sparql": """
@@ -123,22 +124,6 @@ SELECT DISTINCT ?eAr WHERE {
 _ARABIC_CHARS = set("ابتثجحخدذرزسشصضطظعغفقكلمنهويءآأؤإئى")
 # نمنع أي نص ديني من التسرب من Wikidata (يأتي حصراً من القائمة اليدوية)
 _RELIGIOUS_GUARD = ("الله", "نبي", "رسول", "قرآن", "سورة", "آية", "حديث")
-
-
-def _load_state():
-    try:
-        with open(STATE_FILE, encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return {"last_run": 0}
-
-
-def _save_state(st):
-    try:
-        with open(STATE_FILE, "w", encoding="utf-8") as f:
-            json.dump(st, f)
-    except Exception as e:
-        print(f" [knowledge-importer] حفظ الحالة: {e}")
 
 
 def _is_clean_arabic(text):
@@ -161,130 +146,88 @@ def _is_clean_arabic(text):
 
 
 def _run_query(sparql):
-    import requests
-    import time as _t
-    last_err = None
-    for attempt in range(3):
-        try:
-            r = requests.get(SPARQL_URL,
-                             params={"query": sparql, "format": "json"},
-                             headers=HEADERS, timeout=45)
-            if r.status_code in (403, 429, 503):
-                # Wikidata يحدّ المعدل أحياناً  ننتظر ونعيد
-                last_err = f"HTTP {r.status_code}"
-                _t.sleep(3 * (attempt + 1))
-                continue
-            r.raise_for_status()
-            data = r.json()
-            out = []
-            for row in data.get("results", {}).get("bindings", []):
-                for v in row.values():
-                    val = (v.get("value") or "").strip()
-                    if _is_clean_arabic(val):
-                        out.append(val)
-            return out
-        except Exception as e:
-            last_err = str(e)[:80]
-            _t.sleep(2 * (attempt + 1))
-    raise RuntimeError(f"Wikidata تعذّر بعد 3 محاولات: {last_err}")
+    import re
+    # اكتمال القائمة مهم للتحكيم؛ لا نخفي اقتطاع النتائج خلف LIMIT ثابت.
+    sparql = re.sub(r"\s+LIMIT\s+[0-9]+\s*$", "", sparql, flags=re.I)
+    field = re.search(r"SELECT\s+(?:DISTINCT\s+)?(\?[A-Za-z_][A-Za-z0-9_]*)", sparql, re.I)
+    if not field: raise ValueError("استعلام قائمة غير معروف")
+    out = {}; size = 200
+    for page in range(50):
+        rows = sparql_rows(sparql + f" ORDER BY {field.group(1)} LIMIT {size} OFFSET {page * size}", HEADERS)
+        for row in rows:
+            val = (row.get(field.group(1)[1:]) or {}).get("value", "").strip()
+            if _is_clean_arabic(val): out.setdefault(canonical(val), val)
+        if len(rows) < size: return sorted(out.values(), key=canonical)
+    raise RuntimeError("القائمة تجاوزت حد الصفحات؛ لم نعتبرها مكتملة")
+
+
+def _merge_answers(manual, automatic):
+    seen = set(); out = []
+    for value in list(manual) + list(automatic):
+        key = canonical(str(value).split("|")[0])
+        if key and key not in seen: out.append(value);seen.add(key)
+    return out
 
 
 def _run_once():
-    """يوسّع قوائم الأسئلة من Wikidata، يدمجها مع الموجود (لا يحذف)."""
-    try:
-        with open(_DATA_FILE, encoding="utf-8") as f:
-            doc = json.load(f)
-    except Exception as e:
-        print(f" [knowledge-importer] قراءة الملف: {e}")
-        return 0
-
-    by_id = {q["id"]: q for q in doc.get("questions", [])}
-    added_total = 0
-
-    # 🆕 إنشاء أسئلة قوائم جديدة كاملة (إن لم تكن موجودة)
-    for qid, tmpl in NEW_QUESTION_TEMPLATES.items():
-        if qid in by_id:
-            continue
-        try:
-            fetched = _run_query(tmpl["sparql"])
-        except Exception as e:
-            print(f" [knowledge-importer] قالب {qid} فشل: {e}")
-            continue
-        if len(fetched) < 8:
-            continue  # 🛡️ قائمة قصيرة جداً = سؤال ضعيف، نتخطاه
-        new_q = {"id": qid, "q": tmpl["q"], "cat": tmpl["cat"],
-                 "answers": fetched}
-        doc["questions"].append(new_q)
-        by_id[qid] = new_q
-        added_total += len(fetched)
-        print(f" [knowledge-importer] 🆕 سؤال جديد: {tmpl['q']} "
-              f"({len(fetched)} إجابة)")
-
-    for qid, sparql in QUERIES.items():
-        if qid not in by_id:
-            continue  # نوسّع الموجود فقط (لا ننشئ أسئلة جديدة عمياء)
-        try:
-            fetched = _run_query(sparql)
-        except Exception as e:
-            print(f" [knowledge-importer] استعلام {qid} فشل: {e}")
-            continue
-        if not fetched:
-            continue
-        # الإجابات الحالية (نطبّع للمقارنة: أول متغيّر قبل |)
-        existing = set()
-        for ans in by_id[qid].get("answers", []):
-            existing.add(str(ans).split("|")[0].strip())
-        # نضيف الجديد فقط
-        added = 0
-        for val in fetched:
-            if val not in existing:
-                by_id[qid]["answers"].append(val)
-                existing.add(val)
-                added += 1
-        if added:
-            added_total += added
-            print(f" [knowledge-importer] {qid}: +{added} إجابة "
-                  f"(الإجمالي {len(by_id[qid]['answers'])})")
-
-    if added_total > 0:
-        try:
-            with open(_DATA_FILE, "w", encoding="utf-8") as f:
-                json.dump(doc, f, ensure_ascii=False, indent=2)
-            print(f" [knowledge-importer] أُضيف {added_total} إجابة إجمالاً")
-            # نصفّر كاش الأسئلة (تحديث حيّ بلا إعادة تشغيل)
+    with import_lock(STATE_FILE) as acquired:
+        if not acquired: return {"status": "busy"}
+        state = read_json(STATE_FILE, {})
+        doc = read_json(_DATA_FILE, {"questions": []})
+        by_id = {q["id"]: q for q in doc.setdefault("questions", [])}
+        sources = state.setdefault("sources", {})
+        stats = {"status": "success", "added": 0, "updated": 0, "answers_added": 0, "failed_sources": []}
+        all_queries = dict(QUERIES)
+        all_queries.update({qid: t["sparql"] for qid, t in NEW_QUESTION_TEMPLATES.items()})
+        for qid, query in all_queries.items():
+            source = sources.setdefault(qid, {})
+            if not due(source, positive_days("KNOWLEDGE_IMPORT_INTERVAL_DAYS")): continue
+            if qid not in by_id and qid not in NEW_QUESTION_TEMPLATES: continue
             try:
-                from app.domains.games.knowledge import events as _kev
-                _kev._QCACHE['loaded'] = False
-                _kev._load_questions()
-            except Exception as e:
-                print(f" [knowledge-importer] تصفير الكاش: {e}")
-        except Exception as e:
-            print(f" [knowledge-importer] كتابة الملف: {e}")
-
-    _save_state({"last_run": time.time()})
-    return added_total
+                fetched = _run_query(query)
+                if len(fetched) < 15: raise RuntimeError("نتائج غير كافية للعبة")
+                question = by_id.get(qid)
+                if question is None:
+                    tmpl = NEW_QUESTION_TEMPLATES[qid]
+                    question = {"id": qid, "q": tmpl["q"], "cat": tmpl["cat"], "manual_answers": [], "source": "wikidata"}
+                    doc["questions"].append(question);by_id[qid] = question;stats["added"] += 1
+                before = json.dumps(question, ensure_ascii=False, sort_keys=True)
+                manual = question.get("manual_answers")
+                if manual is None:
+                    # المحتوى السابق بلا مصدر واضح يُحفظ للمراجعة، لا يُحذف تخميناً.
+                    manual = [] if question.get("source") == "wikidata" else list(question.get("answers", []))
+                old = question.get("answers", [])
+                merged = _merge_answers(manual, fetched)
+                question["manual_answers"] = manual;question["auto_answers"] = fetched;question["answers"] = merged
+                if before != json.dumps(question, ensure_ascii=False, sort_keys=True): stats["updated"] += 1
+                stats["answers_added"] += len({canonical(a.split('|')[0]) for a in merged} - {canonical(a.split('|')[0]) for a in old})
+                source["last_run"] = time.time();source.pop("retry_after", None)
+            except Exception as exc:
+                source["retry_after"] = time.time() + 3600;stats["failed_sources"].append(qid)
+                print(f" [knowledge-importer] فشل {qid}: {type(exc).__name__}")
+        if stats["added"] or stats["updated"]:
+            atomic_json(_DATA_FILE, doc)
+            try:
+                from app.domains.games.knowledge import events
+                events._QCACHE['loaded'] = False
+            except ImportError: pass
+        stats["status"] = "partial" if stats["failed_sources"] else "success"
+        atomic_json(STATE_FILE, record_result(state, stats))
+        print(f" [knowledge-importer] {stats}")
+        return stats
 
 
 async def knowledge_auto_import_loop():
-    """حلقة الخلفية: أول تشغيل بعد 5 دقائق، ثم كل INTERVAL أيام."""
-    if os.environ.get("KNOWLEDGE_AUTO_IMPORT", "1") != "1":
-        print(" [knowledge-importer] معطّل (KNOWLEDGE_AUTO_IMPORT=0)")
-        return
-    interval_days = float(os.environ.get("KNOWLEDGE_IMPORT_INTERVAL_DAYS", "7"))
-    interval = interval_days * 86400
-    await asyncio.sleep(300)  # 5 دقائق بعد الإقلاع
+    if os.getenv("KNOWLEDGE_AUTO_IMPORT", "1").strip() == "0": return
+    await asyncio.sleep(300)
     while True:
-        st = _load_state()
-        if time.time() - st.get("last_run", 0) >= interval:
-            print(" [knowledge-importer] بدء دورة توسيع الأسئلة…")
-            try:
+        try:
+            if read_json(STATE_FILE, {}).get("schema_version") != 2 or due(read_json(STATE_FILE, {}), positive_days("KNOWLEDGE_IMPORT_INTERVAL_DAYS")):
                 await asyncio.to_thread(_run_once)
-            except Exception as e:
-                print(f" [knowledge-importer] دورة فشلت: {e}")
-        await asyncio.sleep(3600)  # نفحص كل ساعة
+        except Exception as exc:
+            print(f" [knowledge-importer] خطأ الحالة/الحفظ: {type(exc).__name__}")
+        await asyncio.sleep(300)
 
 
 if __name__ == "__main__":
-    # تشغيل يدوي فوري: python -m app.domains.games.importers.knowledge_importer
-    n = _run_once()
-    print(f"تم. أُضيف {n} إجابة.")
+    print(_run_once())

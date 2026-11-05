@@ -19,12 +19,16 @@ from app.core.paths import DATA_DIR
 _start_first_character = None
 _CHARS_FILE = str(DATA_DIR / "whoami_characters.json")
 _chars_cache = None
+_chars_stamp = None
 
 
 def _load_pool():
     """تحميل قاعدة الشخصيات (مرة واحدة لكل عملية)."""
-    global _chars_cache
-    if _chars_cache is None:
+    global _chars_cache, _chars_stamp
+    from pathlib import Path
+    stamp = Path(_CHARS_FILE).stat().st_mtime_ns if Path(_CHARS_FILE).exists() else None
+    if _chars_cache is None or stamp != _chars_stamp:
+        _chars_stamp = stamp
         try:
             with open(_CHARS_FILE, encoding="utf-8") as f:
                 _chars_cache = (json.load(f) or {}).get("characters", [])

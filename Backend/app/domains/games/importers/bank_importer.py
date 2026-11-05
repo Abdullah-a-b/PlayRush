@@ -1,79 +1,45 @@
-"""
- التجديد التلقائي لأسئلة البنك — خلفية المنصة
-
-يعمل دورياً (افتراضياً كل 7 أيام) بلا تدخل:
-  - يولّد أسئلة حقائق ثابتة من Wikidata (عواصم/عملات/قارات) بقوالب حتمية.
-  - أول تشغيل بعد 5 دقائق من الإقلاع (لا يزاحم).
-  - في thread منفصل + يصفّر كاش الأسئلة بعد النجاح (تحديث حيّ بلا إعادة تشغيل).
-
-الضبط عبر البيئة (.env):
-  BANK_AUTO_IMPORT=1              (افتراضي مفعّل — 0 للتعطيل)
-  BANK_IMPORT_INTERVAL_DAYS=7
-"""
-import os
-import json
-import time
+"""استيراد دوري بقفل وحالة دائمة وتقارير تفصل الجديد عن المحدّث."""
 import asyncio
-
-from app.core.paths import DATA_DIR, SCRIPTS_DIR
-
+import time
+import os
+from app.core.paths import DATA_DIR
+from app.core.import_support import atomic_json, read_json, import_lock, positive_days, due, record_result
 STATE_FILE = str(DATA_DIR / "bank_import_state.json")
 
 
-def _load_state():
-    try:
-        with open(STATE_FILE, encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return {"last_run": 0}
-
-
-def _save_state(st):
-    try:
-        with open(STATE_FILE, "w", encoding="utf-8") as f:
-            json.dump(st, f)
-    except Exception as e:
-        print(f" [bank-importer] حفظ الحالة: {e}")
-
-
 def _run_once():
-    """توليد دفعة (thread منفصل)."""
-    try:
-        import sys
-        scripts = str(SCRIPTS_DIR)
-        if scripts not in sys.path:
-            sys.path.insert(0, scripts)
-        from bank_questions_import import run_import
-        n = run_import()
-        if n:
-            # تحديث حيّ: نصفّر كاش الأسئلة ليُعاد تحميلها بالدمج الجديد
-            try:
+    with import_lock(STATE_FILE) as acquired:
+        if not acquired:
+            return {"status": "busy"}
+        state = read_json(STATE_FILE, {})
+        try:
+            from scripts.bank_questions_import import run_import
+            result = run_import()
+            # دعم أي استدعاء قديم يرجع عدداً، بما فيه الصفر الناجح.
+            if isinstance(result, int):
+                result = {"status": "success", "added": result}
+            if result.get("status") not in ("success", "partial"):
+                raise RuntimeError("المصدر لم يكتمل")
+            if result.get("added", 0) or result.get("updated", 0) or result.get("deactivated", 0):
                 from app.domains.games.bank import events as bank_events
                 bank_events._QUESTIONS = None
-                print(" [bank-importer] كاش الأسئلة صُفّر — الجديد يُحمّل فوراً")
-            except Exception:
-                pass
-        return n
-    except Exception as e:
-        print(f" [bank-importer] فشل التوليد (يُعاد الدورة القادمة): {e}")
-        return 0
+        except Exception as exc:
+            result = {"status": "error", "error": type(exc).__name__}
+            print(f" [bank-importer] فشلت الدورة؛ إعادة خلال ساعة: {type(exc).__name__}")
+        atomic_json(STATE_FILE, record_result(state, result))
+        print(f" [bank-importer] {result}")
+        return result
 
 
 async def bank_auto_import_loop():
-    if os.getenv("BANK_AUTO_IMPORT", "1") != "1":
-        print(" [bank-importer] معطّل (BANK_AUTO_IMPORT=0)")
+    if os.getenv("BANK_AUTO_IMPORT", "1").strip() == "0":
         return
-    interval_days = float(os.getenv("BANK_IMPORT_INTERVAL_DAYS", "7"))
-    interval = interval_days * 24 * 3600
-    await asyncio.sleep(300)  # بعد 5 دقائق من الإقلاع
+    await asyncio.sleep(300)
     while True:
-        st = _load_state()
-        due = (time.time() - st.get("last_run", 0)) >= interval
-        if due:
-            print(" [bank-importer] بدء توليد دوري…")
-            n = await asyncio.to_thread(_run_once)
-            if n:
-                st["last_run"] = time.time()
-                _save_state(st)
-                print(f" [bank-importer] اكتمل: {n} سؤال مولّد")
-        await asyncio.sleep(6 * 3600)  # فحص كل 6 ساعات
+        try:
+            state = read_json(STATE_FILE, {})
+            if state.get("schema_version") != 2 or due(state, positive_days("BANK_IMPORT_INTERVAL_DAYS")):
+                await asyncio.to_thread(_run_once)
+        except Exception as exc:
+            print(f" [bank-importer] خطأ حالة: {type(exc).__name__}")
+        await asyncio.sleep(300)

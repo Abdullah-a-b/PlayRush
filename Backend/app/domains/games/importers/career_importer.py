@@ -58,38 +58,56 @@ def _batch_size():
         return 150
 
 
-async def career_auto_import_loop():
-    """حلقة الخلفية — تُطلق من lifespan في main.py."""
-    if not _enabled():
-        print(" [auto-import] معطّل (CAREER_AUTO_IMPORT=0)")
-        return
-
-    await asyncio.sleep(180)  # لا نزاحم إقلاع الخادم
-
-    while True:
-        state = _load_state()
-        due = (time.time() - state.get("last_run", 0)) >= _interval_seconds()
-        if due:
-            batch = _batch_size()
-            offset = state.get("offset", 0)
-            print(f" [auto-import] بدء دورة تجديد (offset={offset}, batch={batch})")
+def _run_once():
+    from app.core.import_support import import_lock, read_json, atomic_json, due, record_result
+    with import_lock(STATE_FILE) as acquired:
+        if not acquired: return {"status": "busy"}
+        state = read_json(STATE_FILE, {})
+        sources = state.setdefault("sources", {})
+        results = {}; failed = []
+        for lane in ("refresh", "discover"):
+            source = sources.setdefault(lane, {})
+            from app.core.import_support import positive_days
+            interval = positive_days("CAREER_REFRESH_INTERVAL_DAYS", 1) if lane == "refresh" else _interval_seconds()
+            if not due(source, interval): continue
             try:
                 from scripts.wikidata_import import run_import
-                result = await asyncio.to_thread(
-                    run_import, batch, 45, offset, False, False, False, False,
-                    lambda m: print(f"[auto-import] {m}"))
-                # لو الدفعة رجعت لاعبين  نتقدّم؛ لو فرغت  نعود للبداية (تحديث)
-                if result.get("fetched", 0) > 0:
-                    state["offset"] = offset + batch
+                offset, batch = source.get("offset", 0), _batch_size()
+                if lane == "refresh":
+                    from app.infrastructure.database import SessionLocal
+                    from app.domains.games.models import CareerPlayer
+                    db = SessionLocal()
+                    try:
+                        qids = [q for (q,) in db.query(CareerPlayer.wikidata_id).filter(CareerPlayer.wikidata_id.isnot(None)).order_by(CareerPlayer.id).offset(offset).limit(batch).all()]
+                    finally: db.close()
+                    if not qids:
+                        source["offset"] = 0
+                        result = {"fetched": 0, "added": 0, "updated": 0}
+                    else:
+                        result = run_import(refresh=True, player_qids=qids, log=lambda m: print(f" [auto-import] {m}"))
                 else:
-                    state["offset"] = 0
-                state["last_run"] = time.time()
-                _save_state(state)
-                print(f" [auto-import] اكتملت: +{result.get('added', 0)} لاعب "
-                      f"(الإجمالي {result.get('total', '?')})")
-            except Exception as e:
-                print(f" [auto-import] فشل (سيُعاد لاحقاً): {e}")
-                # لا نحدّث last_run بالكامل — نعيد بعد 6 ساعات
-                state["last_run"] = time.time() - _interval_seconds() + 6 * 3600
-                _save_state(state)
-        await asyncio.sleep(3600)  # فحص كل ساعة
+                    result = run_import(limit=batch, min_sitelinks=45, offset=offset, refresh=True, log=lambda m: print(f" [auto-import] {m}"))
+                source["offset"] = offset + result.get("fetched", 0) if result.get("fetched", 0) >= batch else 0
+                source["last_run"] = time.time();source.pop("retry_after", None)
+                results[lane] = result
+            except Exception as exc:
+                source["retry_after"] = time.time() + 3600
+                failed.append(lane)
+                print(f" [auto-import] فشل {lane}: {type(exc).__name__}")
+        if not results and not failed: return {"status": "not_due"}
+        result = {"status": "partial" if failed else "success", "lanes": results, "failed_sources": failed}
+        atomic_json(STATE_FILE, record_result(state, result))
+        print(f" [auto-import] {result}")
+        return result
+
+
+async def career_auto_import_loop():
+    from app.core.import_support import read_json, due
+    if not _enabled(): return
+    await asyncio.sleep(180)
+    while True:
+        try:
+            await asyncio.to_thread(_run_once)
+        except Exception as exc:
+            print(f" [auto-import] خطأ الحالة/الحفظ: {type(exc).__name__}")
+        await asyncio.sleep(300)

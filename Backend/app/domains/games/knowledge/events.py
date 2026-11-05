@@ -40,8 +40,11 @@ def _norm(t):
 
 def _load_questions():
     """يحمّل أسئلة القوائم + سؤال السور (من قائمة SURAHS المدققة)."""
-    if _QCACHE['loaded']:
+    from pathlib import Path
+    stamp = Path(_DATA_FILE).stat().st_mtime_ns if Path(_DATA_FILE).exists() else None
+    if _QCACHE['loaded'] and _QCACHE.get('stamp') == stamp:
         return _QCACHE['questions']
+    _QCACHE['stamp'] = stamp
     out = []
     try:
         with open(_DATA_FILE, encoding='utf-8') as f:
@@ -61,12 +64,7 @@ def _load_questions():
         print(f" [knowledge] تحميل الأسئلة: {e}")
     # سؤال السور — يُبنى من القائمة المنسّقة نفسها (مصدر واحد للحقيقة)
     try:
-        import sys
-        scripts = os.path.join(os.path.dirname(_DATA_FILE), '..', 'scripts')
-        scripts = os.path.abspath(scripts)
-        if scripts not in sys.path:
-            sys.path.insert(0, scripts)
-        from huroof_questions_import import SURAHS
+        from scripts.huroof_questions_import import SURAHS
         pool = [{'display': s, 'norm': {_norm(s), _norm('سورة ' + s)}}
                 for s in SURAHS]
         out.append({'id': 'kq_surahs', 'q': 'اذكر سوراً من القرآن الكريم',

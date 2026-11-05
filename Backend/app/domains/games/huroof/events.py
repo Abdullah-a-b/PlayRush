@@ -51,6 +51,8 @@ def _load_huroof_questions_cached():
                 extra = json.loads(q.extra_data) if q.extra_data else {}
             except Exception:
                 extra = {}
+            if extra.get('active') is False:
+                continue
             ans = (q.correct_answer or '').strip()
             core = ans[2:] if ans.startswith("ال") else ans
             # الحرف المميّز = الحرف الأول بعد إزالة "ال" التعريف.
@@ -424,35 +426,7 @@ def register_huroof_events(sio):
             valid_qs = [q for q in letter_qs if q['id'] not in used]
             source = 'seen_ok'
 
-        # 3) توليد سؤال جديد بالـAI — نحاول حين تقلّ الأسئلة الجديدة،
-        #    لتخفيف التكرار المزعج. نتخطّاه بصمت لو تعذّر (بلا إبطاء اللعبة).
-        if not valid_qs:
-            try:
-                from app.infrastructure.ai_judge import generate_huroof_question
-                gen = await generate_huroof_question(norm_letter, timeout=6.0)
-            except Exception:
-                gen = None
-            if gen and gen.get('answer'):
-                gs.current_question = {
-                    'question': gen['question'], 'answer': gen['answer'],
-                    'category': gen.get('category', 'مُولّد'),
-                    'accepted_answers': gen.get('accepted_answers', []),
-                    'difficulty': gen.get('difficulty', 'medium'),
-                }
-                gs.question_shown_at = time.time()
-                asyncio.create_task(send_secret_to_mobile(
-                    gs.current_question['question'], gs.current_question['answer']))
-                version = advance_state(gs, 'question')
-                gs.buzzed_player = None
-                await sio.emit('huroof_new_question', {
-                    'questionData': public_question_payload(gs.current_question), 'round': 'r1',
-                    'timer': 40, 'changed': is_change
-                }, room=room_code)
-                sio.start_background_task(huroof_timer_task, room_code, version, 40, 'timeout_buzz_r1')
-                if getattr(gs, 'is_solo', False) and 'consider_buzz' in _SOLO_HOOKS:
-                    sio.start_background_task(_SOLO_HOOKS['consider_buzz'], room_code, version, 40)
-                return
-
+        # لا تدخل أسئلة AI غير المراجعة إلى مباراة فعلية. التوسع من مستورد الحقائق.
         # 4) إعادة استخدام أي سؤال للحرف (الملاذ قبل الأخير)
         if not valid_qs:
             valid_qs = letter_qs[:]

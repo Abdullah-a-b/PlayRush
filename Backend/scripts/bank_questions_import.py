@@ -1,5 +1,5 @@
 """
- مولّد أسئلة البنك من Wikidata — حقائق ثابتة محصّنة من الخطأ.
+ مولّد أسئلة البنك من Wikidata — حقائق ثابتة بقوالب حتمية.
 
 المبدأ: قوالب حتمية (عاصمة/عملة/قارة الدول) — لا توليد لغوي قد يهلوس.
 - طلب SPARQL واحد يجلب كل الدول ذات السيادة + P36/P38/P30 بالعربية والإنجليزية.
@@ -21,11 +21,11 @@ HEADERS = {"User-Agent": "PlayRushBankQuestions/1.0 (educational game)",
            "Accept": "application/sparql-results+json"}
 
 QUERY = """
-SELECT ?cLabelAr ?cLabelEn ?capAr ?capEn ?curAr ?curEn ?contAr WHERE {
+SELECT ?c ?cap ?cur ?cont ?cLabelAr ?cLabelEn ?capAr ?capEn ?curAr ?curEn ?contAr WHERE {
   ?c wdt:P31 wd:Q3624078 .          # دولة ذات سيادة
   FILTER NOT EXISTS { ?c wdt:P31 wd:Q3024240 }   # ليست دولة تاريخية
-  OPTIONAL { ?c wdt:P36 ?cap . }
-  OPTIONAL { ?c wdt:P38 ?cur . }
+  OPTIONAL { ?c p:P36 ?capClaim . ?capClaim ps:P36 ?cap . FILTER NOT EXISTS { ?capClaim pq:P582 ?endedCap } FILTER NOT EXISTS { ?capClaim wikibase:rank wikibase:DeprecatedRank } }
+  OPTIONAL { ?c p:P38 ?curClaim . ?curClaim ps:P38 ?cur . FILTER NOT EXISTS { ?curClaim pq:P582 ?endedCur } FILTER NOT EXISTS { ?curClaim wikibase:rank wikibase:DeprecatedRank } }
   OPTIONAL { ?c wdt:P30 ?cont . }
   SERVICE wikibase:label { bd:serviceParam wikibase:language "ar".
     ?c rdfs:label ?cLabelAr . ?cap rdfs:label ?capAr .
@@ -52,7 +52,7 @@ def _variants(ar, en):
     """تنويعات الإملاء الحتمية (جغ، حذف ألف المد: سانتياغو/سانتياجو/
     سنتياغو...) — محرك مشترك مع مولّد حروف (answer_variants.py)."""
     try:
-        from answer_variants import spelling_variants
+        from scripts.answer_variants import spelling_variants
         return spelling_variants(ar, en)
     except ImportError:
         out = {ar}
@@ -64,56 +64,50 @@ def _variants(ar, en):
 
 
 def fetch_rows():
-    import requests
-    r = requests.get(SPARQL_URL, params={"query": QUERY, "format": "json"},
-                     headers=HEADERS, timeout=90)
-    r.raise_for_status()
-    return r.json()["results"]["bindings"]
+    from app.core.import_support import sparql_rows
+    return sparql_rows(QUERY, HEADERS)
 
 
 def build_questions(rows):
-    qs, seen_keys = [], set()
-    for b in rows:
-        def g(k):
-            return (b.get(k) or {}).get("value", "").strip()
-        country = g("cLabelAr")
-        if not _is_arabic(country) or country in seen_keys:
-            continue
-        seen_keys.add(country)
+    from scripts.wikidata_facts import country_facts
+    qs = []
+    for fact in country_facts(rows):
+        kind, country = fact["kind"], fact["country"]
         famous = country in FAMOUS
-        cap_ar, cap_en = g("capAr"), g("capEn")
-        cur_ar, cur_en = g("curAr"), g("curEn")
-        cont_ar = g("contAr")
-        # تحصين: نقبل الحقل فقط إن كانت قيمته عربية سليمة (لا QIDs خام)
-        if _is_arabic(cap_ar) and not cap_ar.startswith("Q"):
-            qs.append({"id": f"wd_cap_{len(qs)}", "q": f"ما عاصمة {country}؟",
-                       "a": cap_ar, "accepted": _variants(cap_ar, cap_en),
-                       "cat": "جغرافيا", "diff": "easy" if famous else "medium"})
-        if _is_arabic(cur_ar) and not cur_ar.startswith("Q"):
-            qs.append({"id": f"wd_cur_{len(qs)}", "q": f"ما العملة الرسمية في {country}؟",
-                       "a": cur_ar, "accepted": _variants(cur_ar, cur_en),
-                       "cat": "عام", "diff": "medium" if famous else "hard"})
-        if _is_arabic(cont_ar) and not cont_ar.startswith("Q"):
-            qs.append({"id": f"wd_cont_{len(qs)}", "q": f"في أي قارة تقع {country}؟",
-                       "a": cont_ar, "accepted": _variants(cont_ar, None),
-                       "cat": "جغرافيا", "diff": "easy" if famous else "medium"})
-    return qs
+        text = {"cap": f"ما عاصمة {country}؟", "cur": f"ما العملة الرسمية في {country}؟", "cont": f"في أي قارة تقع {country}؟"}[kind]
+        qs.append({"id": fact["id"], "source_id": fact["id"], "q": text, "a": fact["answer"], "accepted": _variants(fact["answer"], fact["english"]), "cat": "عام" if kind == "cur" else "جغرافيا", "diff": ("medium" if famous else "hard") if kind == "cur" else ("easy" if famous else "medium"), "source": "wikidata", "entity_id": fact["country_id"]})
+    from app.core.import_support import unambiguous_questions
+    return unambiguous_questions(qs)
 
 
 def run_import():
-    out_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                            "data", "bank_questions_auto.json")
-    rows = fetch_rows()
-    qs = build_questions(rows)
+    from app.core.paths import DATA_DIR
+    from app.core.import_support import atomic_json, canonical, read_json
+    out_path = DATA_DIR / "bank_questions_auto.json"
+    qs = build_questions(fetch_rows())
     if len(qs) < 30:
-        print(f" [bank-import] نتائج قليلة ({len(qs)}) — أُبقي الملف القديم (تحصين)")
-        return 0
-    json.dump(qs, open(out_path, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-    print(f" [bank-import] وُلّد {len(qs)} سؤال  {out_path}")
-    return len(qs)
+        raise RuntimeError(f"نتائج قليلة ({len(qs)})؛ لم يُمس الملف الحالي")
+    old = read_json(out_path, [])
+    by_text = {canonical(q.get("q")): q for q in old}
+    added = updated = unchanged = 0
+    used_ids = set()
+    for q in qs:
+        previous = by_text.get(canonical(q["q"]))
+        # ترحيل آمن: سؤال قديم معروف يحتفظ بمعرّفه ومشاهداته.
+        if previous and previous.get("id") not in used_ids:
+            q["id"] = previous["id"]
+        used_ids.add(q["id"])
+        if previous is None:
+            added += 1
+        elif any(previous.get(k) != q.get(k) for k in ("q", "a", "accepted", "cat", "diff")):
+            updated += 1
+        else:
+            unchanged += 1
+    atomic_json(out_path, qs)
+    result = {"status": "success", "fetched": len(qs), "added": added, "updated": updated, "unchanged": unchanged, "total": len(qs)}
+    print(f" [bank-import] {result}")
+    return result
 
 
 if __name__ == "__main__":
-    t = time.time()
-    n = run_import()
-    print(f"انتهى ({n} سؤال، {time.time()-t:.1f}ث)")
+    print(run_import())

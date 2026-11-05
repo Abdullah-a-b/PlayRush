@@ -72,7 +72,7 @@ def sparql_top_players(limit, min_sitelinks, offset=0):
       ?player wdt:P106 wd:Q937857 ;
               wikibase:sitelinks ?sitelinks .
       FILTER(?sitelinks >= {min_sitelinks})
-    }} ORDER BY DESC(?sitelinks) LIMIT {limit} OFFSET {offset}
+    }} ORDER BY DESC(?sitelinks) ?player LIMIT {limit} OFFSET {offset}
     """
     r = _get_with_retry(WDQS_URL, params={"query": query, "format": "json"},
                         timeout=120)
@@ -147,6 +147,8 @@ def parse_career(player_ent):
     claims = player_ent.get("claims", {}).get("P54", [])
     entries = []
     for c in claims:
+        if c.get("rank") == "deprecated":
+            continue
         try:
             club_qid = c["mainsnak"]["datavalue"]["value"]["id"]
         except (KeyError, TypeError):
@@ -219,11 +221,13 @@ def detect_status(player_ent, career_entries):
     - بين ناديين (آخر نهاية خلال آخر سنتين)  حالي (مثل كاسيميرو).
     - آخر نهاية أقدم من سنتين  معتزل."""
     import datetime as _dt
+    claims = player_ent.get("claims", {})
+    def confirmed(pid):
+        return any(c.get("rank") != "deprecated" and c.get("mainsnak", {}).get("datavalue") for c in claims.get(pid, []))
+    if confirmed("P570") or confirmed("P2032"):
+        return "retired"
     if any(not e["has_end"] for e in career_entries):
         return "current"
-    claims = player_ent.get("claims", {})
-    if claims.get("P2032") or claims.get("P570"):
-        return "retired"
     end_years = [y for y in (_year_of(e.get("end")) for e in career_entries) if y]
     if end_years and (_dt.date.today().year - max(end_years)) <= 2:
         return "current"  # خرج من ناديه مؤخراً ولم يعتزل
@@ -366,6 +370,8 @@ def build_clubs_json(career_list, club_ents, skip_logos=False, redo_logos=False)
 
     for _idx, e in enumerate(career_list):
         club_ent = club_ents.get(e["club"], {})
+        if not _label(club_ent):
+            continue
         if is_national_team(club_ent):
             continue
 
@@ -419,7 +425,7 @@ def gen_accepted(ar_name, en_name):
         parts = [p for p in re.split(r"\s+", n) if len(p) > 2]
         if len(parts) >= 2:
             out.add(parts[-1])
-            out.add(parts[0])            # الاسم الأول وحده (بيبي، كاكا…)
+            # الاسم الأول وحده لا يكفي لتحديد لاعب متعدد الأسماء.
             out.add(f"{parts[0]} {parts[-1]}")
     return sorted(out)
 
@@ -442,23 +448,25 @@ def difficulty_for(sitelinks):
 def _ar_article_lengths(titles):
     """يُرجع {title: طول_المقال_بالبايت} لعدة عناوين ويكيبيديا عربية دفعة
     واحدة (حتى 50 بالطلب). عناوين بلا مقال عربي إطلاقاً لا تظهر بالنتيجة."""
-    out = {}
     titles = [t for t in dict.fromkeys(titles) if t]
+    out = {t: None for t in titles}
     for i in range(0, len(titles), 50):
         batch = titles[i:i + 50]
         try:
-            r = _get_with_retry(AR_WIKI_API, params={
-                "action": "query", "titles": "|".join(batch),
-                "prop": "info", "format": "json",
-            }, max_tries=3, timeout=30)
-            pages = (r.json().get("query", {}) or {}).get("pages", {}) or {}
-            for p in pages.values():
-                t = p.get("title")
-                length = p.get("length")
-                if t and length:
-                    out[t] = length
+            r = _get_with_retry(AR_WIKI_API, params={"action": "query", "titles": "|".join(batch), "redirects": 1, "prop": "info", "format": "json"}, max_tries=3, timeout=30)
+            query = r.json().get("query", {})
+            pages = query.get("pages", {})
+            if not isinstance(pages, dict): raise ValueError("استجابة ويكيبيديا غير مكتملة")
+            lengths = {p.get("title"): p.get("length", 0) for p in pages.values()}
+            aliases = {v["from"]: v["to"] for k in ("normalized", "redirects") for v in query.get(k, [])}
+            for title in batch:
+                resolved = title
+                for _ in range(5):
+                    if resolved not in aliases: break
+                    resolved = aliases[resolved]
+                if resolved in lengths: out[title] = lengths[resolved]
         except Exception:
-            pass
+            print(" [auto-import] تعذر قياس بعض المقالات؛ نحافظ على تصنيف اللاعب الموجود")
         time.sleep(0.5)
     return out
 
@@ -488,19 +496,26 @@ def difficulty_for_ar(ar_length):
 
 def run_import(limit=200, min_sitelinks=45, offset=0,
                dry_run=False, skip_logos=False, refresh=False,
-               redo_logos=False, log=print):
+               redo_logos=False, log=print, player_qids=None):
     """الاستيراد الفعلي — قابلة للاستدعاء من خلفية المنصة.
     ترجع dict بالنتائج."""
-    os.makedirs(CLUBS_DIR, exist_ok=True)
+    _ENTITY_CACHE.clear()
     _ensure_wikidata_column()
 
     log(f"🔎 جلب {limit} لاعب (offset={offset})…")
-    players = sparql_top_players(limit, min_sitelinks, offset)
+    if player_qids is None:
+        players = sparql_top_players(limit, min_sitelinks, offset)
+    else:
+        players = [(q, None) for q in dict.fromkeys(player_qids) if re.fullmatch(r"Q[1-9][0-9]*", q)]
     log(f"   وجدت {len(players)}")
 
     db = SessionLocal()
     added = updated = skipped = failed = 0
     try:
+        if not dry_run:
+            from app.core.import_support import content_backup
+            fields = ("id", "wikidata_id", "name", "status", "clubs", "accepted_answers", "difficulty", "active", "era", "position", "nationality")
+            content_backup("career", [{k: getattr(row, k) for k in fields} for row in db.query(CareerPlayer).all()])
         existing_qids = {q for (q,) in db.query(CareerPlayer.wikidata_id)
                          .filter(CareerPlayer.wikidata_id.isnot(None)).all()}
 
@@ -509,10 +524,12 @@ def run_import(limit=200, min_sitelinks=45, offset=0,
             qids = [q for q, _ in batch]
             if not refresh:
                 qids = [q for q in qids if q not in existing_qids]
+                skipped += len(batch) - len(qids)
                 if not qids:
-                    skipped += len(batch)
                     continue
             ents = wd_get_entities(qids)
+            if any(q not in ents or ents[q].get("missing") for q in qids):
+                raise RuntimeError("استجابة كيانات اللاعبين غير مكتملة")
 
             # مؤشّر الشهرة الفعلي: طول مقال ويكيبيديا العربية (انظر
             # difficulty_for_ar) — نجلبه دفعة واحدة لكل اللاعبين بهذي الدفعة.
@@ -534,6 +551,8 @@ def run_import(limit=200, min_sitelinks=45, offset=0,
                     if _fx:
                         club_qids.add(_fx)
             club_ents = wd_get_entities(list(club_qids)) if club_qids else {}
+            if any(q not in club_ents or club_ents[q].get("missing") for q in club_qids):
+                raise RuntimeError("استجابة كيانات الأندية غير مكتملة")
 
             for qid in qids:
                 ent = ents.get(qid, {})
@@ -552,37 +571,43 @@ def run_import(limit=200, min_sitelinks=45, offset=0,
                     failed += 1
                     continue
 
+                row = db.query(CareerPlayer).filter(CareerPlayer.wikidata_id == qid).first()
+                if row is None:
+                    manual = db.query(CareerPlayer).filter(CareerPlayer.name == display).first()
+                    if manual is not None:
+                        skipped += 1
+                        continue  # الربط اليدوي أو إزالة النسخ المكررة تُراجع في الغربلة.
                 clubs_json = build_clubs_json(careers.get(qid, []), club_ents,
-                                              skip_logos=skip_logos, redo_logos=redo_logos)
-
+                                              skip_logos=skip_logos or (row is not None and not redo_logos), redo_logos=redo_logos)
                 if not clubs_json:
                     skipped += 1
                     continue
-
-                # حالي/معتزل بدقة (يعالج حالة "بين ناديين" مثل كاسيميرو)
-                status = detect_status(ent, careers.get(qid, []))
-                era = compute_era(careers.get(qid, []))
+                if row and row.clubs:
+                    try:
+                        old_logos = {c.get("name"): c.get("logo") for c in json.loads(row.clubs) if c.get("logo")}
+                        for club in clubs_json:
+                            if not club.get("logo") and club["name"] in old_logos: club["logo"] = old_logos[club["name"]]
+                    except (ValueError, TypeError): pass
+                club_career = [e for e in careers.get(qid, []) if not is_national_team(club_ents.get(e["club"], {}))]
+                status = detect_status(ent, club_career)
+                era = compute_era(club_career)
+                if status == "retired" and era:
+                    era = era.replace("-الآن", "")
                 pos_qid = extract_position_qid(ent)
                 position = _label(club_ents.get(pos_qid, {})) if pos_qid else None
                 nat_qid = extract_nationality_qid(ent)
                 nationality = _label(club_ents.get(nat_qid, {})) if nat_qid else None
-
                 ar_title = ar_titles_by_qid.get(qid)
-                ar_length = ar_lengths_by_title.get(ar_title, 0) if ar_title else 0
-                row = db.query(CareerPlayer).filter(
-                    CareerPlayer.wikidata_id == qid).first()
-                if row is None:
-                    row = db.query(CareerPlayer).filter(
-                        CareerPlayer.name == display).first()
-
+                ar_length = ar_lengths_by_title.get(ar_title) if ar_title else 0
+                difficulty = difficulty_for_ar(ar_length) if ar_length is not None else (row.difficulty if row else difficulty_for(dict(batch).get(qid) or 0))
                 payload = dict(
                     wikidata_id=qid, name=display,
                     status=status,
                     clubs=json.dumps(clubs_json, ensure_ascii=False),
                     accepted_answers=json.dumps(gen_accepted(ar_name, en_name),
                                                 ensure_ascii=False),
-                    difficulty=difficulty_for_ar(ar_length), active=True,
-                    era=era, position=position, nationality=nationality,
+                    difficulty=difficulty, active=row.active if row is not None else True,
+                    era=era or (row.era if row else None), position=position or (row.position if row else None), nationality=nationality or (row.nationality if row else None),
                 )
                 if dry_run:
                     log(f"   [{'تحديث' if row else 'إضافة'}] {display} — "

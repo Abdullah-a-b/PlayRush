@@ -2,7 +2,7 @@
  مولّد أسئلة "حروف" من Wikidata — حقائق ثابتة محصّنة من الهلوسة.
 
 المبادئ الصارمة (شروط المطوّر — النسخة المنقّحة):
-1. صفر هلوسة: قوالب نصية ثابتة + قيم verbatim من مصادر موثوقة.
+1. دون اختلاق لغوي: قوالب نصية ثابتة + قيم verbatim من مصادر موثوقة.
    لا توليد لغوي إطلاقاً — نفس مبدأ مولّدي البنك والمسيرة.
 2. الحرف يُشتق من الإجابة الحقيقية (بنفس normalize_letter حق المحرك)،
    لا العكس. الحروف النادرة (كـ ظ) تحصل على أسئلة فقط إن وُجد كيان
@@ -39,11 +39,11 @@ HEADERS = {"User-Agent": "PlayRushHuroofQuestions/1.0 (educational game)",
 
 # ===== قالب 1-3: الدول (نفس استعلام البنك — علاقات موثوقة) =====
 QUERY_COUNTRIES = """
-SELECT ?cLabelAr ?cLabelEn ?capAr ?capEn ?curAr ?curEn WHERE {
+SELECT ?c ?cap ?cur ?cLabelAr ?cLabelEn ?capAr ?capEn ?curAr ?curEn WHERE {
   ?c wdt:P31 wd:Q3624078 .
   FILTER NOT EXISTS { ?c wdt:P31 wd:Q3024240 }
-  OPTIONAL { ?c wdt:P36 ?cap . }
-  OPTIONAL { ?c wdt:P38 ?cur . }
+  OPTIONAL { ?c p:P36 ?capClaim . ?capClaim ps:P36 ?cap . FILTER NOT EXISTS { ?capClaim pq:P582 ?endedCap } FILTER NOT EXISTS { ?capClaim wikibase:rank wikibase:DeprecatedRank } }
+  OPTIONAL { ?c p:P38 ?curClaim . ?curClaim ps:P38 ?cur . FILTER NOT EXISTS { ?curClaim pq:P582 ?endedCur } FILTER NOT EXISTS { ?curClaim wikibase:rank wikibase:DeprecatedRank } }
   SERVICE wikibase:label { bd:serviceParam wikibase:language "ar".
     ?c rdfs:label ?cLabelAr . ?cap rdfs:label ?capAr . ?cur rdfs:label ?curAr . }
   SERVICE wikibase:label { bd:serviceParam wikibase:language "en".
@@ -51,9 +51,9 @@ SELECT ?cLabelAr ?cLabelEn ?capAr ?capEn ?curAr ?curEn WHERE {
 }
 """
 
-# ===== قالب 4-5: العناصر الكيميائية (أحادية مضمونة 100%) =====
+# ===== قالب 4-5: العناصر الكيميائية (أحادية تُتحقق شروطها) =====
 QUERY_ELEMENTS = """
-SELECT ?eLabelAr ?eLabelEn ?symbol ?z WHERE {
+SELECT ?e ?eLabelAr ?eLabelEn ?symbol ?z WHERE {
   ?e wdt:P31 wd:Q11344 .
   ?e wdt:P246 ?symbol .
   ?e wdt:P1086 ?z .
@@ -150,20 +150,19 @@ def _religious(*texts):
 def _answer_letter(ans):
     """يشتق حرف اللوحة من الإجابة الحقيقية — بنفس منطق المحرك حرفياً:
     إسقاط 'ال' ثم تطبيع الحرف الأول. يرجع None لو خارج حروف اللوحة."""
-    from app.domains.games.huroof.events import normalize_letter
-    from app.domains.games.huroof.engine import ARABIC_LETTERS
     t = (ans or "").strip()
     if t.startswith("ال") and len(t) > 3:
         t = t[2:]
     if not t:
         return None
-    letter = normalize_letter(t[0])
-    return letter if letter in ARABIC_LETTERS else None
+    mapping = {'ا': 'أ', 'إ': 'أ', 'آ': 'أ', 'ٱ': 'أ', 'ة': 'ه', 'ى': 'ي', 'ؤ': 'و'}
+    letter = mapping.get(t[0], t[0])
+    return letter if letter in 'أبتثجحخدذرزسشصضطظعغفقكلمنهوي' else None
 
 
 def _variants(ar, en):
     """تنويعات الإملاء الحتمية (جغ، حذف ألف المد...) — محرك مشترك."""
-    from answer_variants import spelling_variants
+    from scripts.answer_variants import spelling_variants
     return spelling_variants(ar, en)
 
 
@@ -174,11 +173,8 @@ def _valid_answer(ans):
 
 
 def fetch_rows(query):
-    import requests
-    r = requests.get(SPARQL_URL, params={"query": query, "format": "json"},
-                     headers=HEADERS, timeout=90)
-    r.raise_for_status()
-    return r.json()["results"]["bindings"]
+    from app.core.import_support import sparql_rows
+    return sparql_rows(query, HEADERS)
 
 
 def _g(b, k):
@@ -186,82 +182,24 @@ def _g(b, k):
 
 
 def build_country_questions(rows):
-    """قوالب الدول الثلاثة — مع استبعاد الغموض."""
-    # تجميع أولي لكشف الغموض (عاصمة لدولتين / دولة بعملتين)
-    by_country = {}
-    for b in rows:
-        c = _g(b, "cLabelAr")
-        if not _is_arabic(c):
-            continue
-        e = by_country.setdefault(c, {"en": _g(b, "cLabelEn"),
-                                      "caps": set(), "caps_en": {},
-                                      "curs": set(), "curs_en": {}})
-        cap, cur = _g(b, "capAr"), _g(b, "curAr")
-        if cap:
-            e["caps"].add(cap)
-            e["caps_en"][cap] = _g(b, "capEn")
-        if cur:
-            e["curs"].add(cur)
-            e["curs_en"][cur] = _g(b, "curEn")
-
-    # عاصمة مشتركة بين دولتين  غموض، تُستبعد الدولتان من قالب T1
-    cap_owners = {}
-    for c, e in by_country.items():
-        for cap in e["caps"]:
-            cap_owners.setdefault(cap, set()).add(c)
-    ambiguous_caps = {cap for cap, owners in cap_owners.items() if len(owners) > 1}
-
+    from scripts.wikidata_facts import country_facts
+    from app.core.import_support import stable_id
     qs = []
-    for country, e in sorted(by_country.items()):
-        if _religious(country):
+    for f in country_facts(rows):
+        country, answer, kind = f["country"], f["answer"], f["kind"]
+        if _religious(country, answer):
             continue
-        # T2 يحتاج عاصمة واحدة محددة؛ أكثر من عاصمة = غموض  تخطٍّ
-        cap = next(iter(e["caps"])) if len(e["caps"]) == 1 else None
-        cap_en = e["caps_en"].get(cap, "") if cap else ""
-
-        # T1: "دولة عاصمتها X"  الإجابة اسم الدولة (الحرف من الدولة)
-        if cap and cap not in ambiguous_caps and _valid_answer(country) \
-                and _is_arabic(cap) and not _religious(cap):
-            letter = _answer_letter(country)
-            if letter:
-                qs.append({
-                    "question_text": f"دولة عاصمتها {cap}",
-                    "correct_answer": country,
-                    "category": "جغرافيا",
-                    "letter": letter,
-                    "accepted_answers": _variants(country, e["en"]),
-                })
-
-        # T2: "عاصمة دولة X"  الإجابة العاصمة (الحرف من العاصمة)
-        if cap and _valid_answer(cap) and not _religious(cap):
-            letter = _answer_letter(cap)
-            if letter:
-                qs.append({
-                    "question_text": f"عاصمة دولة {country}",
-                    "correct_answer": cap,
-                    "category": "جغرافيا",
-                    "letter": letter,
-                    "accepted_answers": _variants(cap, cap_en),
-                })
-
-        # T3: "العملة الرسمية لدولة X" — فقط لو للدولة عملة واحدة (أحادية)
-        if len(e["curs"]) == 1:
-            cur = next(iter(e["curs"]))
-            if _valid_answer(cur) and not _religious(cur):
-                letter = _answer_letter(cur)
-                if letter:
-                    qs.append({
-                        "question_text": f"العملة الرسمية لدولة {country}",
-                        "correct_answer": cur,
-                        "category": "جغرافيا",
-                        "letter": letter,
-                        "accepted_answers": _variants(cur, e["curs_en"].get(cur, "")),
-                    })
-    return qs
+        if kind == "cap" and f["inverse_unique"] and _valid_answer(country):
+            qs.append({"question_text": f"دولة عاصمتها {answer}", "correct_answer": country, "category": "جغرافيا", "letter": _answer_letter(country), "accepted_answers": _variants(country, f["country_en"]), "source_id": stable_id("country_by_cap", f["country_id"])})
+        if _valid_answer(answer) and kind in ("cap", "cur"):
+            text = f"عاصمة دولة {country}" if kind == "cap" else f"العملة الرسمية لدولة {country}"
+            qs.append({"question_text": text, "correct_answer": answer, "category": "جغرافيا", "letter": _answer_letter(answer), "accepted_answers": _variants(answer, f["english"]), "source_id": f["id"]})
+    return [q for q in qs if q["letter"]]
 
 
 def build_element_questions(rows):
     """قوالب العناصر — علاقة أحادية مضمونة (رمز/عدد ذري  عنصر واحد)."""
+    from app.core.import_support import stable_id
     qs, seen = [], set()
     for b in rows:
         name, en = _g(b, "eLabelAr"), _g(b, "eLabelEn")
@@ -277,10 +215,10 @@ def build_element_questions(rows):
         acc = _variants(name, en)
         qs.append({"question_text": f"عنصر كيميائي رمزه ({sym})",
                    "correct_answer": name, "category": "علوم",
-                   "letter": letter, "accepted_answers": acc})
+                   "letter": letter, "accepted_answers": acc, "source_id": stable_id("element_symbol", _g(b, "e") or name)})
         qs.append({"question_text": f"العنصر الكيميائي ذو العدد الذري ({int(z)})",
                    "correct_answer": name, "category": "علوم",
-                   "letter": letter, "accepted_answers": acc})
+                   "letter": letter, "accepted_answers": acc, "source_id": stable_id("element_number", _g(b, "e") or name)})
     return qs
 
 
@@ -305,60 +243,183 @@ def build_quran_questions():
     return qs
 
 
-def save_to_db(questions):
-    """إدخال لجدول questions مع dedup بنص السؤال — لا يمس اليدوي."""
+def build_extra_questions(rows, kind):
+    from app.core.import_support import stable_id
+    groups = {}
+    for b in rows:
+        key = _g(b, "item")
+        label, answer = _g(b, "itemAr"), _g(b, "answerAr")
+        import re
+        valid_label = _is_arabic(label) if kind == "book" else bool(re.fullmatch(r"[a-z]{2}", label))
+        if not key or not _valid_answer(answer) or not valid_label or _religious(label, answer):
+            continue
+        group = groups.setdefault(key, {"label": label, "answers": set(), "en": _g(b, "answerEn")})
+        group["answers"].add(answer)
+    qs = []
+    for key, g in groups.items():
+        if len(g["answers"]) != 1:
+            continue
+        answer = next(iter(g["answers"]))
+        original_answer = answer
+        if kind == "language":
+            import re
+            answer = re.sub(r"^(?:اللغة|لغة)\s+", "", answer).strip()
+        text = f"من مؤلف كتاب «{g['label']}»؟" if kind == "book" else f"لغة رمزها الدولي ({g['label']})"
+        letter = _answer_letter(answer)
+        if letter:
+            qs.append({"question_text": text, "correct_answer": answer, "category": "ثقافة", "letter": letter, "accepted_answers": sorted(set(_variants(answer, g["en"]) + [original_answer])), "source_id": stable_id(kind, key)})
+    return qs
+
+
+EXTRA_QUERIES = {
+    "language": """SELECT ?item ?itemAr ?answerAr ?answerEn WHERE {
+      ?item wdt:P218 ?itemAr .
+      ?item rdfs:label ?answerAr FILTER(LANG(?answerAr)='ar')
+      OPTIONAL { ?item rdfs:label ?answerEn FILTER(LANG(?answerEn)='en') }
+    } ORDER BY ?item""",
+    "book": """SELECT ?item ?itemAr ?answerAr ?answerEn WHERE {
+      { SELECT DISTINCT ?item WHERE { ?item wdt:P31 wd:Q571; wikibase:sitelinks ?n; wdt:P50 ?a . FILTER(?n>=20) ?item rdfs:label ?titleAr . FILTER(LANG(?titleAr)="ar") ?a rdfs:label ?authorAr . FILTER(LANG(?authorAr)="ar") } ORDER BY ?item LIMIT 250 }
+      ?item wdt:P50 ?author; rdfs:label ?itemAr . FILTER(LANG(?itemAr)='ar')
+      ?author rdfs:label ?answerAr FILTER(LANG(?answerAr)='ar')
+      OPTIONAL { ?author rdfs:label ?answerEn FILTER(LANG(?answerEn)='en') }
+    } ORDER BY ?item ?answerAr""",
+}
+
+
+def save_to_db(questions, complete_groups=()):
+    """تحديث الآلي بهوية المصدر؛ لا نستبدل أي سجل يدوي."""
     from app.infrastructure.database import SessionLocal
     from app.domains.games.models import Question
+    from app.core.import_support import canonical, stable_id
     db = SessionLocal()
+    stats = {"added": 0, "updated": 0, "unchanged": 0, "manual_protected": 0, "deactivated": 0}
     try:
-        existing = {t for (t,) in db.query(Question.question_text).filter(
-            Question.game_mode == "huroof").all()}
-        added = 0
+        existing = db.query(Question).filter(Question.game_mode == "huroof").all()
+        from app.core.import_support import content_backup
+        content_backup("huroof", [{"id": r.id, "game_mode": r.game_mode, "question_text": r.question_text, "correct_answer": r.correct_answer, "category": r.category, "extra_data": r.extra_data} for r in existing])
+        by_text, by_source = {}, {}
+        for row in existing:
+            try:
+                extra = json.loads(row.extra_data or '{}')
+            except (ValueError, TypeError):
+                extra = {}
+            by_text.setdefault(canonical(row.question_text), row)
+            if extra.get("source_id"):
+                by_source[extra["source_id"]] = row
         for q in questions:
-            if q["question_text"] in existing:
+            sid = q.get("source_id") or stable_id("curated", q["question_text"])
+            key = canonical(q["question_text"])
+            row = by_source.get(sid) or by_text.get(key)
+            try:
+                extra = json.loads(row.extra_data or '{}') if row and row.extra_data else {}
+            except (ValueError, TypeError):
+                extra = {}
+            if row and extra.get("source") not in ("auto_wikidata", "auto_curated"):
+                stats["manual_protected"] += 1
                 continue
-            existing.add(q["question_text"])
-            db.add(Question(
-                game_mode="huroof",
-                question_text=q["question_text"],
-                correct_answer=q["correct_answer"],
-                category=q["category"],
-                extra_data=json.dumps({
-                    "letter": q["letter"],
-                    "accepted_answers": q["accepted_answers"],
-                    "source": "auto_wikidata",
-                }, ensure_ascii=False),
-            ))
-            added += 1
+            # تحديث النص لا يصطدم بسجل آخر حتى لو كان يدوياً.
+            if row and by_text.get(key) not in (None, row):
+                stats["manual_protected"] += 1
+                continue
+            data = {"letter": q["letter"], "accepted_answers": q["accepted_answers"], "source": "auto_wikidata" if q.get("source_id") else "auto_curated", "source_id": sid, "active": True}
+            encoded = json.dumps(data, ensure_ascii=False, sort_keys=True)
+            if row is None:
+                row = Question(game_mode="huroof", question_text=q["question_text"], correct_answer=q["correct_answer"], category=q["category"], extra_data=encoded)
+                db.add(row); by_text[key] = row; by_source[sid] = row; stats["added"] += 1
+            elif (row.question_text, row.correct_answer, row.category, row.extra_data) != (q["question_text"], q["correct_answer"], q["category"], encoded):
+                by_text.pop(canonical(row.question_text), None)
+                row.question_text, row.correct_answer, row.category, row.extra_data = q["question_text"], q["correct_answer"], q["category"], encoded
+                by_text[key] = row; by_source[sid] = row; stats["updated"] += 1
+            else:
+                stats["unchanged"] += 1
+        # العلاقة التي لم تعد مؤهلة تُعزل عن اللعب، لا تُحذف؛ اليدوي والقديم بلا هوية يراجعان لاحقاً.
+        prefixes = {"countries": ("wd_cap_", "wd_cur_", "wd_country_by_cap_"), "elements": ("wd_element_symbol_", "wd_element_number_"), "language": ("wd_language_",), "curated": ("wd_curated_",)}
+        active_ids = {q.get("source_id") or stable_id("curated", q["question_text"]) for q in questions}
+        active_texts = {canonical(q["question_text"]) for q in questions}
+        allowed = tuple(prefix for group in complete_groups for prefix in prefixes.get(group, ()))
+        for old in existing:
+            try: extra = json.loads(old.extra_data or '{}')
+            except (ValueError, TypeError): continue
+            sid = extra.get("source_id", "")
+            stale = bool(allowed and sid.startswith(allowed) and sid not in active_ids)
+            if not sid and extra.get("source") == "auto_wikidata":
+                text = old.question_text or ""
+                legacy_group = "countries" if text.startswith(("دولة عاصمتها ", "عاصمة دولة ", "العملة الرسمية لدولة ")) else ("elements" if text.startswith(("عنصر كيميائي رمزه ", "العنصر الكيميائي ذو العدد الذري ")) else None)
+                stale = legacy_group in complete_groups and canonical(text) not in active_texts
+            if stale and extra.get("source") in ("auto_wikidata", "auto_curated") and extra.get("active", True):
+                extra["active"] = False
+                old.extra_data = json.dumps(extra, ensure_ascii=False, sort_keys=True)
+                stats["deactivated"] += 1
         db.commit()
-        return added
+        return stats
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()
 
 
 def run_import():
-    """قابلة للاستدعاء من خلفية المنصة. ترجع عدد الأسئلة المضافة."""
-    rows_c = fetch_rows(QUERY_COUNTRIES)
-    rows_e = fetch_rows(QUERY_ELEMENTS)
-    qs = (build_country_questions(rows_c) + build_element_questions(rows_e)
-          + build_quran_questions() + build_curated_questions())
-    if len(qs) < 50:
-        print(f" [huroof-import] نتائج قليلة ({len(qs)}) — إلغاء الدفعة (تحصين)")
-        return 0
-    added = save_to_db(qs)
-    # تقرير التغطية: الحروف المغطاة والناقصة (الناقصة تُغطى يدوياً —
-    # المولد لا يخترع أبداً إجابة لحرف بلا كيان حقيقي)
-    from app.domains.games.huroof.engine import ARABIC_LETTERS
-    covered = {}
-    for q in qs:
-        covered[q["letter"]] = covered.get(q["letter"], 0) + 1
-    missing = [l for l in ARABIC_LETTERS if l not in covered]
-    print(f" [huroof-import] وُلّد {len(qs)} سؤالاً، أُضيف {added} جديداً — "
-          f"تغطية {len(covered)}/{len(ARABIC_LETTERS)} حرفاً")
-    if missing:
-        print(f" [huroof-import] حروف بلا أسئلة مولّدة (تُغطى يدوياً): {' '.join(missing)}")
-    return added
+    from app.core.paths import DATA_DIR
+    from app.core.import_support import read_json, atomic_json
+    # نتائج كل مصدر مستقلة؛ نجاح مصدر لا يمنع إعادة المصدر الذي فشل.
+    cache_path = DATA_DIR / "huroof_source_snapshots.json"
+    cache = read_json(cache_path, {})
+    questions = build_quran_questions() + build_curated_questions()
+    failed = []
+    complete_groups = ["curated"]
+    sources = {"countries": QUERY_COUNTRIES, "elements": QUERY_ELEMENTS, **EXTRA_QUERIES}
+    # استعلام الكتب تجريبي وثقيل على Wikidata؛ لا يُفعّل في الإنتاج افتراضياً.
+    if os.getenv("HUROOF_BOOK_IMPORT", "0") != "1":
+        sources.pop("book", None)
+    for name, query in sources.items():
+        try:
+            import time
+            entry = cache.get(name, {})
+            if not isinstance(entry, dict): entry = {"rows": entry}
+            reused = isinstance(entry, dict) and entry.get("last_success", 0) > time.time() - 7 * 86400 and not entry.get("error")
+            if reused:
+                rows = entry["rows"]
+            else:
+                if name == "book":
+                    query = query.replace("LIMIT 250 }", f"LIMIT 250 OFFSET {entry.get('offset', 0)} }}")
+                rows = fetch_rows(query)
+            if name != "book" and len(rows) < 50:
+                raise RuntimeError("نتائج المصدر أقل من حد الأمان")
+            if not rows and not (name == "book" and entry.get("offset", 0) > 0):
+                raise RuntimeError("المصدر فارغ")
+            next_offset = entry.get("offset", 0) if isinstance(entry, dict) else 0
+            if name == "book" and not reused:
+                seen_items = {_g(b, "item") for b in rows}
+                previous = entry.get("rows", [])
+                merged = [b for b in previous if _g(b, "item") not in seen_items] + rows
+                next_offset = next_offset + 250 if len(seen_items) >= 250 else 0
+                rows = merged
+            cache[name] = {"rows": rows, "last_success": entry["last_success"] if reused else time.time(), "offset": next_offset}
+            complete_groups.append(name)
+        except Exception as exc:
+            failed.append(name)
+            print(f" [huroof-import] فشل المصدر {name}: {type(exc).__name__}")
+            entry = cache.get(name, {})
+            rows = entry.get("rows", []) if isinstance(entry, dict) else entry
+            cache[name] = {**(entry if isinstance(entry, dict) else {}), "rows": rows, "last_success": entry.get("last_success", 0) if isinstance(entry, dict) else 0, "error": True}
+        if name == "countries":
+            questions += build_country_questions(rows)
+        elif name == "elements":
+            questions += build_element_questions(rows)
+        else:
+            questions += build_extra_questions(rows, name)
+    if len(failed) == len(sources):
+        raise RuntimeError("فشلت جميع مصادر حروف؛ لم نغير قاعدة الأسئلة")
+    from app.core.import_support import unambiguous_questions
+    questions = unambiguous_questions(questions, "question_text", "correct_answer")
+    stats = save_to_db(questions, complete_groups)
+    atomic_json(cache_path, cache)
+    from collections import Counter
+    stats.update(status="partial" if failed else "success", failed_sources=failed, generated=len(questions), coverage=dict(Counter(q["letter"] for q in questions)))
+    print(f" [huroof-import] {stats}")
+    return stats
 
 
 if __name__ == "__main__":
-    run_import()
+    print(run_import())

@@ -22,10 +22,10 @@ SPARQL_URL = "https://query.wikidata.org/sparql"
 HEADERS = {"User-Agent": "PlayRushWhoami/1.0 (educational game)",
            "Accept": "application/sparql-results+json"}
 
-_DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))), "data")
-_DATA_FILE = os.path.join(_DATA_DIR, "whoami_characters.json")
-STATE_FILE = os.path.join(_DATA_DIR, "whoami_import_state.json")
+from app.core.paths import DATA_DIR
+from app.core.import_support import atomic_json, read_json, import_lock, canonical, stable_id, positive_days, due, record_result, sparql_rows
+_DATA_FILE = str(DATA_DIR / "whoami_characters.json")
+STATE_FILE = str(DATA_DIR / "whoami_import_state.json")
 
 # فئات مهنية مستهدفة (QID المهنة → تصنيف عربي للعبة)
 OCCUPATIONS = {
@@ -41,21 +41,26 @@ OCCUPATIONS = {
 
 # استعلام واحد لكل مهنة: مشاهير (sitelinks عالية) بحقول مكتملة
 QUERY_TMPL = """
-SELECT ?pAr ?pEn ?natAr ?occAr ?birth ?death ?links WHERE {
-  ?p wdt:P106 wd:%(occ)s .
-  ?p wdt:P27 ?nat .
-  ?p wdt:P569 ?birth .
+SELECT ?p ?pAr ?pEn ?natAr ?occAr ?birth ?death ?links WHERE {
+  %(selection)s
+  ?p wdt:P27 ?nat; wdt:P569 ?birth .
   OPTIONAL { ?p wdt:P570 ?death . }
-  ?p wikibase:sitelinks ?links .
-  FILTER(?links >= 60)
   ?p rdfs:label ?pAr . FILTER(LANG(?pAr) = "ar")
-  ?p rdfs:label ?pEn . FILTER(LANG(?pEn) = "en")
+  OPTIONAL { ?p rdfs:label ?pEn . FILTER(LANG(?pEn) = "en") }
   SERVICE wikibase:label { bd:serviceParam wikibase:language "ar".
     ?nat rdfs:label ?natAr . wd:%(occ)s rdfs:label ?occAr . }
-}
-ORDER BY DESC(?links)
-LIMIT 60
+} ORDER BY ?p ?natAr
 """
+
+
+def _query_for(occupation, offset=0, qids=None):
+    if qids is not None:
+        import re
+        safe = [q for q in qids if re.fullmatch(r"Q[1-9][0-9]*", q)]
+        selection = "VALUES ?p { " + " ".join("wd:" + q for q in safe) + " }"
+    else:
+        selection = "{ SELECT ?p ?links WHERE { ?p wdt:P106 wd:" + occupation + "; wikibase:sitelinks ?links . FILTER(?links >= 60) } ORDER BY DESC(?links) ?p LIMIT 60 OFFSET " + str(int(offset)) + " }"
+    return QUERY_TMPL % {"selection": selection, "occ": occupation}
 
 _ARABIC_CHARS = set("ابتثجحخدذرزسشصضطظعغفقكلمنهويءآأؤإئى")
 # الشخصيات الدينية حصراً من القائمة اليدوية المراجَعة — لا توليد آلي
@@ -68,19 +73,17 @@ def _is_arabic(s):
 
 def _century_ar(year):
     """القرن بالعربية (1879 → التاسع عشر)."""
-    c = (year - 1) // 100 + 1
+    c = (abs(year) - 1) // 100 + 1
     names = {15: "الخامس عشر", 16: "السادس عشر", 17: "السابع عشر",
              18: "الثامن عشر", 19: "التاسع عشر", 20: "العشرين",
              21: "الحادي والعشرين"}
-    return names.get(c, f"الـ{c}")
+    return names.get(c, f"الـ{c}") + (" قبل الميلاد" if year < 0 else "")
 
 
 def _year_of(iso):
-    try:
-        s = str(iso).lstrip("+")
-        return int(s[:4])
-    except Exception:
-        return None
+    import re
+    match = re.match(r"^([+-]?[0-9]+)-", str(iso))
+    return int(match.group(1)) if match else None
 
 
 def build_hints(name_ar, nat_ar, occ_ar, birth_y, death_y):
@@ -90,7 +93,7 @@ def build_hints(name_ar, nat_ar, occ_ar, birth_y, death_y):
               f"وتوفيت في القرن {_century_ar(death_y)}.")
         h4 = f"عشت بين عامي {birth_y} و{death_y} تقريباً."
     else:
-        h1 = f"وُلدت في القرن {_century_ar(birth_y)} وما زلت على قيد الحياة."
+        h1 = f"وُلدت في القرن {_century_ar(birth_y)}."
         h4 = f"وُلدت عام {birth_y} تقريباً."
     h2 = f"أنتمي إلى دولة {nat_ar}."
     h3 = f"مجال شهرتي: {occ_ar}."
@@ -100,122 +103,121 @@ def build_hints(name_ar, nat_ar, occ_ar, birth_y, death_y):
 
 
 def _run_query(sparql):
-    import requests
-    r = requests.get(SPARQL_URL, params={"query": sparql, "format": "json"},
-                     headers=HEADERS, timeout=90)
-    r.raise_for_status()
-    return r.json()["results"]["bindings"]
+    return sparql_rows(sparql, HEADERS)
 
 
 def _gen_accepted(name_ar, name_en):
-    """صيغ القبول: الاسم الكامل + آخر كلمة (اللقب) + أول كلمة + الإنجليزي."""
+    # الاسم الأول وحده لا يحدد الشخصية.
     out = {name_ar}
-    parts = name_ar.split()
-    if len(parts) >= 2:
-        out.add(parts[-1])
-        out.add(parts[0])
-    if name_en:
-        out.add(name_en.lower())
-        en_parts = name_en.split()
-        if len(en_parts) >= 2:
-            out.add(en_parts[-1].lower())
+    for name in (name_ar, name_en):
+        if not name:
+            continue
+        out.add(name.lower())
+        parts = name.split()
+        if len(parts) >= 2 and len(parts[-1]) >= 4:
+            out.add(parts[-1].lower())
     return sorted(out)
 
 
-def _load_state():
-    try:
-        with open(STATE_FILE, encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return {"last_run": 0}
-
-
-def _save_state(st):
-    try:
-        with open(STATE_FILE, "w", encoding="utf-8") as f:
-            json.dump(st, f)
-    except Exception as e:
-        print(f"⚠️ [whoami-importer] حفظ الحالة: {e}")
+def _character_rows(rows, occupation, category):
+    groups = {}
+    for b in rows:
+        def g(k): return (b.get(k) or {}).get("value", "").strip()
+        qid = g("p").rsplit("/", 1)[-1]
+        if not qid.startswith("Q") or not _is_arabic(g("pAr")) or not _is_arabic(g("natAr")) or not _is_arabic(g("occAr")):
+            continue
+        group = groups.setdefault(qid, {"name": g("pAr"), "en": g("pEn"), "nations": set(), "births": set(), "deaths": set(), "occupation": g("occAr")})
+        group["nations"].add(g("natAr"))
+        if _year_of(g("birth")) is not None: group["births"].add(_year_of(g("birth")))
+        if g("death") and _year_of(g("death")) is not None: group["deaths"].add(_year_of(g("death")))
+    out = []
+    import datetime
+    for qid, g in groups.items():
+        if len(g["births"]) != 1 or len(g["deaths"]) > 1 or any(w in g["name"] for w in _RELIGIOUS_GUARD):
+            continue
+        birth = next(iter(g["births"])); death = next(iter(g["deaths"]), None)
+        if birth > datetime.date.today().year or (death is not None and (death < birth or death > datetime.date.today().year)):
+            continue
+        out.append({"id": stable_id("person", qid), "wikidata_id": qid, "name": g["name"], "accepted_answers": _gen_accepted(g["name"], g["en"]), "category": category, "hints": build_hints(g["name"], " و".join(sorted(g["nations"])), g["occupation"], birth, death), "source": {"provider": "wikidata", "occupation": occupation}})
+    return out
 
 
 def _run_once():
-    """يولّد شخصيات ويدمجها (لا يحذف اليدوي أبداً)."""
-    try:
-        with open(_DATA_FILE, encoding="utf-8") as f:
-            doc = json.load(f)
-    except Exception:
-        doc = {"characters": []}
-    chars = doc.setdefault("characters", [])
-    existing_names = {c.get("name", "").strip() for c in chars}
-    existing_ids = {c.get("id") for c in chars}
-
-    added = 0
-    for occ_qid, category in OCCUPATIONS.items():
-        try:
-            rows = _run_query(QUERY_TMPL % {"occ": occ_qid})
-        except Exception as e:
-            print(f"⚠️ [whoami-importer] استعلام {occ_qid} فشل: {e}")
-            continue
-        for b in rows:
-            def g(k):
-                return (b.get(k) or {}).get("value", "").strip()
-            name_ar, name_en = g("pAr"), g("pEn")
-            nat_ar, occ_ar = g("natAr"), g("occAr")
-            birth_y = _year_of(g("birth"))
-            death_y = _year_of(g("death")) if g("death") else None
-            # 🛡️ تحصين: اكتمال عربي + لا نص ديني + لا تكرار
-            if not (_is_arabic(name_ar) and _is_arabic(nat_ar)
-                    and _is_arabic(occ_ar) and birth_y):
-                continue
-            if any(w in name_ar for w in _RELIGIOUS_GUARD):
-                continue
-            if name_ar in existing_names:
-                continue
-            cid = f"wd_{occ_qid}_{len(chars)}"
-            if cid in existing_ids:
-                continue
-            chars.append({
-                "id": cid, "name": name_ar,
-                "accepted_answers": _gen_accepted(name_ar, name_en),
-                "category": category,
-                "hints": build_hints(name_ar, nat_ar, occ_ar, birth_y, death_y),
-            })
-            existing_names.add(name_ar)
-            existing_ids.add(cid)
-            added += 1
-        time.sleep(1.2)  # احترام حدود Wikidata
-
-    if added:
-        with open(_DATA_FILE, "w", encoding="utf-8") as f:
-            json.dump(doc, f, ensure_ascii=False, indent=2)
-        print(f"🎭 [whoami-importer] +{added} شخصية (الإجمالي {len(chars)})")
-        # تحديث حيّ: تصفير كاش الشخصيات
-        try:
-            from app.domains.games.whoami import events as _wev
-            _wev._chars_cache = None
-        except Exception:
-            pass
-    _save_state({"last_run": time.time()})
-    return added
+    with import_lock(STATE_FILE) as acquired:
+        if not acquired: return {"status": "busy"}
+        state = read_json(STATE_FILE, {})
+        doc = read_json(_DATA_FILE, {"characters": []})
+        chars = doc.setdefault("characters", [])
+        by_qid = {c["wikidata_id"]: c for c in chars if c.get("wikidata_id")}
+        by_name = {canonical(c.get("name")): c for c in chars}
+        sources = state.setdefault("sources", {})
+        stats = {"status": "success", "added": 0, "updated": 0, "unchanged": 0, "failed_sources": [], "manual_protected": 0}
+        interval = positive_days("WHOAMI_IMPORT_INTERVAL_DAYS")
+        for occ, category in OCCUPATIONS.items():
+            known = [c["wikidata_id"] for c in chars if c.get("wikidata_id") and (c.get("source", {}) if isinstance(c.get("source"), dict) else {}).get("occupation") == occ]
+            for lane in ("refresh", "discover"):
+                key = occ + ":" + lane
+                source = sources.setdefault(key, {})
+                if not due(source, interval): continue
+                if lane == "refresh" and not known:
+                    source["last_run"] = time.time()
+                    continue
+                try:
+                    if lane == "refresh":
+                        rows = []
+                        for i in range(0, len(known), 50): rows.extend(_run_query(_query_for(occ, qids=known[i:i+50])))
+                    else:
+                        rows = _run_query(_query_for(occ, source.get("offset", 0)))
+                    candidates = _character_rows(rows, occ, category)
+                    for new in candidates:
+                        old = by_qid.get(new["wikidata_id"]) or by_name.get(canonical(new["name"]))
+                        if old:
+                            old_source = old.get("source", {}) if isinstance(old.get("source"), dict) else {}
+                            if old.get("wikidata_id") and old["wikidata_id"] != new["wikidata_id"]:
+                                stats["manual_protected"] += 1; continue
+                            if old_source.get("occupation") not in (None, occ):
+                                stats["unchanged"] += 1; continue
+                            if not old.get("wikidata_id") and not str(old.get("id", "")).startswith("wd_"):
+                                stats["manual_protected"] += 1; continue
+                            new["id"] = old["id"]  # الحفاظ على مشاهدات الشخصية القديمة
+                            if old != new:
+                                old.update(new); stats["updated"] += 1
+                            else: stats["unchanged"] += 1
+                            by_qid[new["wikidata_id"]] = old
+                            by_name[canonical(new["name"])] = old
+                        else:
+                            chars.append(new);by_qid[new["wikidata_id"]] = new;by_name[canonical(new["name"])] = new;stats["added"] += 1
+                    if lane == "discover": source["offset"] = source.get("offset", 0) + 60 if rows else 0
+                    source["last_run"] = time.time();source.pop("retry_after", None)
+                except Exception as exc:
+                    source["retry_after"] = time.time() + 3600
+                    stats["failed_sources"].append(key)
+                    print(f" [whoami-importer] فشل {key}: {type(exc).__name__}")
+        if stats["added"] or stats["updated"]:
+            atomic_json(_DATA_FILE, doc)
+            try:
+                from app.domains.games.whoami import events
+                events._chars_cache = None
+            except ImportError: pass
+        stats["status"] = "partial" if stats["failed_sources"] else "success"
+        atomic_json(STATE_FILE, record_result(state, stats))
+        print(f" [whoami-importer] {stats}")
+        return stats
 
 
 async def whoami_auto_import_loop():
-    """حلقة أسبوعية تلقائية (WHOAMI_AUTO_IMPORT=1 افتراضي)."""
     import asyncio
-    if os.getenv("WHOAMI_AUTO_IMPORT", "1") != "1":
-        print("🎭 [whoami-importer] معطّل")
-        return
-    interval = float(os.getenv("WHOAMI_IMPORT_INTERVAL_DAYS", "7")) * 86400
-    await asyncio.sleep(420)  # بعد 7 دقائق من الإقلاع (تفادي زحمة الإقلاع)
+    if os.getenv("WHOAMI_AUTO_IMPORT", "1").strip() == "0": return
+    await asyncio.sleep(420)
     while True:
-        st = _load_state()
-        if (time.time() - st.get("last_run", 0)) >= interval:
-            print("🎭 [whoami-importer] بدء توليد دوري…")
-            n = await __import__("asyncio").to_thread(_run_once)
-            if n is not None:
-                print(f"🎭 [whoami-importer] اكتمل ({n} جديدة)")
-        await __import__("asyncio").sleep(6 * 3600)
+        try:
+            state = read_json(STATE_FILE, {})
+            if state.get("schema_version") != 2 or due(state, positive_days("WHOAMI_IMPORT_INTERVAL_DAYS")):
+                await asyncio.to_thread(_run_once)
+        except Exception as exc:
+            print(f" [whoami-importer] خطأ الحالة/الحفظ: {type(exc).__name__}")
+        await asyncio.sleep(300)
 
 
 if __name__ == "__main__":
-    print(f"انتهى: +{_run_once()} شخصية")
+    print(_run_once())
