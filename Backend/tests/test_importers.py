@@ -220,4 +220,10 @@ class ImportTests(unittest.TestCase):
   merged=knowledge._merge_answers(['اسم شائع|اسم رسمي'],['اسم رسمي'])
   self.assertEqual(len(merged),1);self.assertIn('اسم شائع',merged[0]);self.assertIn('اسم رسمي',merged[0])
 
+
+ def test_small_complete_list_is_not_a_network_failure(self):
+  data=self.root/'knowledge.json';state=self.root/'state.json';support.atomic_json(data,{'questions':[]})
+  with patch.object(knowledge,'_DATA_FILE',str(data)),patch.object(knowledge,'STATE_FILE',str(state)),patch.object(knowledge,'QUERIES',{}),patch.object(knowledge,'NEW_QUESTION_TEMPLATES',{'small':dict(q='قائمة',cat='عام',sparql='query')}),patch.object(knowledge,'_run_query',return_value=['إجابة '+str(i) for i in range(12)]):r=knowledge._run_once()
+  self.assertEqual(r['status'],'success');self.assertEqual(r['ineligible_sources'],['small']);self.assertEqual(r['failed_sources'],[]);self.assertNotIn('retry_after',support.read_json(state));self.assertEqual(support.read_json(data),{'questions':[]})
+
 if __name__=='__main__':unittest.main()

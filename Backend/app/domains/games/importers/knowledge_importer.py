@@ -187,7 +187,7 @@ def _run_once():
         doc = read_json(_DATA_FILE, {"questions": []})
         by_id = {q["id"]: q for q in doc.setdefault("questions", [])}
         sources = state.setdefault("sources", {})
-        stats = {"status": "success", "added": 0, "updated": 0, "answers_added": 0, "failed_sources": []}
+        stats = {"status": "success", "added": 0, "updated": 0, "answers_added": 0, "failed_sources": [], "ineligible_sources": []}
         all_queries = dict(QUERIES)
         all_queries.update({qid: t["sparql"] for qid, t in NEW_QUESTION_TEMPLATES.items()})
         for qid, query in all_queries.items():
@@ -196,7 +196,14 @@ def _run_once():
             if qid not in by_id and qid not in NEW_QUESTION_TEMPLATES: continue
             try:
                 fetched = _run_query(query)
-                if len(fetched) < 15: raise RuntimeError("نتائج غير كافية للعبة")
+                if not fetched: raise RuntimeError("المصدر فارغ")
+                if len(fetched) < 15:
+                    # قائمة كاملة وصحيحة قد تكون أصغر من الحد الذي يتطلبه المحرك.
+                    source["last_run"] = time.time();source.pop("retry_after", None)
+                    source["eligibility"] = "below_game_minimum"
+                    stats["ineligible_sources"].append(qid)
+                    continue
+                source["eligibility"] = "playable"
                 question = by_id.get(qid)
                 if question is None:
                     tmpl = NEW_QUESTION_TEMPLATES[qid]
