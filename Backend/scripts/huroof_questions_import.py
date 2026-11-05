@@ -301,6 +301,7 @@ def save_to_db(questions, complete_groups=()):
         for row in existing:
             try:
                 extra = json.loads(row.extra_data or '{}')
+                if not isinstance(extra, dict): extra = {}
             except (ValueError, TypeError):
                 extra = {}
             by_text.setdefault(canonical(row.question_text), row)
@@ -312,6 +313,7 @@ def save_to_db(questions, complete_groups=()):
             row = by_source.get(sid) or by_text.get(key)
             try:
                 extra = json.loads(row.extra_data or '{}') if row and row.extra_data else {}
+                if not isinstance(extra, dict): extra = {}
             except (ValueError, TypeError):
                 extra = {}
             if row and extra.get("source") not in ("auto_wikidata", "auto_curated"):
@@ -340,7 +342,8 @@ def save_to_db(questions, complete_groups=()):
         for old in existing:
             try: extra = json.loads(old.extra_data or '{}')
             except (ValueError, TypeError): continue
-            sid = extra.get("source_id", "")
+            if not isinstance(extra, dict): continue
+            sid = extra.get("source_id") or ""
             stale = bool(allowed and sid.startswith(allowed) and sid not in active_ids)
             if not sid and extra.get("source") == "auto_wikidata":
                 text = old.question_text or ""

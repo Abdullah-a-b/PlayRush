@@ -162,11 +162,22 @@ def _run_query(sparql):
 
 
 def _merge_answers(manual, automatic):
-    seen = set(); out = []
+    groups = []
     for value in list(manual) + list(automatic):
-        key = canonical(str(value).split("|")[0])
-        if key and key not in seen: out.append(value);seen.add(key)
-    return out
+        variants = [v.strip() for v in str(value).split("|") if v.strip()]
+        keys = {canonical(v) for v in variants}
+        if not keys: continue
+        overlaps = [i for i, group in enumerate(groups) if group[1] & keys]
+        if not overlaps:
+            groups.append((variants, keys))
+        else:
+            first = overlaps[0]
+            merged = groups[first][0] + variants
+            all_keys = groups[first][1] | keys
+            for i in overlaps[1:]: merged += groups[i][0];all_keys |= groups[i][1]
+            groups[first] = (list(dict.fromkeys(merged)), all_keys)
+            for i in reversed(overlaps[1:]): groups.pop(i)
+    return ["|".join(variants) for variants, _ in groups]
 
 
 def _run_once():
@@ -211,6 +222,8 @@ def _run_once():
                 from app.domains.games.knowledge import events
                 events._QCACHE['loaded'] = False
             except ImportError: pass
+        pending = {key for key, source in sources.items() if source.get("retry_after")}
+        stats["failed_sources"] = sorted(set(stats["failed_sources"]) | pending)
         stats["status"] = "partial" if stats["failed_sources"] else "success"
         atomic_json(STATE_FILE, record_result(state, stats))
         print(f" [knowledge-importer] {stats}")

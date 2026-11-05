@@ -199,6 +199,8 @@ def _run_once():
                 from app.domains.games.whoami import events
                 events._chars_cache = None
             except ImportError: pass
+        pending = {key for key, source in sources.items() if source.get("retry_after")}
+        stats["failed_sources"] = sorted(set(stats["failed_sources"]) | pending)
         stats["status"] = "partial" if stats["failed_sources"] else "success"
         atomic_json(STATE_FILE, record_result(state, stats))
         print(f" [whoami-importer] {stats}")

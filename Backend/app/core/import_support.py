@@ -101,7 +101,8 @@ def record_result(state, result, now=None):
         state["last_run"] = now
         state.pop("retry_after", None)
     else:
-        state["retry_after"] = now + 3600
+        pending = [s["retry_after"] for s in state.get("sources", {}).values() if s.get("retry_after")]
+        state["retry_after"] = min(pending) if pending else now + 3600
     return state
 
 

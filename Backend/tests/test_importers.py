@@ -198,4 +198,26 @@ class ImportTests(unittest.TestCase):
   env=dict(json=json,os=os,_DATA_FILE=str(p),_QCACHE={'loaded':False,'questions':[]},_norm=lambda x:x)
   read=self._reader('knowledge','_load_questions',env);pool=read();self.assertEqual({q['id'] for q in pool},{'manual','kq_surahs'})
 
+
+ def test_early_retry_check_keeps_pending_failure(self):
+  data=self.root/'who.json';state=self.root/'state.json';future=__import__('time').time()+1000
+  support.atomic_json(data,{'characters':[]});support.atomic_json(state,{'sources':{'Q901:discover':{'retry_after':future},'Q901:refresh':{'last_run':__import__('time').time()}}})
+  with patch.object(who,'_DATA_FILE',str(data)),patch.object(who,'STATE_FILE',str(state)),patch.object(who,'OCCUPATIONS',{'Q901':'علماء'}),patch.object(who,'_run_query') as get:r=who._run_once()
+  self.assertEqual(r['status'],'partial');self.assertEqual(support.read_json(state)['retry_after'],future);get.assert_not_called()
+ def test_huroof_list_metadata_is_protected(self):
+  q=Question(id=1,game_mode='huroof',question_text='سؤال',correct_answer='قديم',extra_data='[]')
+  with patch.object(fake_database,'SessionLocal',return_value=Session([q])):r=huroof.save_to_db([dict(question_text='سؤال',correct_answer='جديد',category='عام',letter='ج',accepted_answers=[])])
+  self.assertEqual(r['manual_protected'],1)
+
+
+ def test_career_background_import_never_runs_schema_ddl(self):
+  session=Session()
+  with patch.object(career,'SessionLocal',return_value=session),patch.object(career,'_ensure_wikidata_column') as ddl:career.run_import(player_qids=[],refresh=True,log=lambda _:None)
+  ddl.assert_not_called();self.assertTrue(session.rolled_back)
+
+
+ def test_knowledge_alias_overlap_is_one_answer(self):
+  merged=knowledge._merge_answers(['اسم شائع|اسم رسمي'],['اسم رسمي'])
+  self.assertEqual(len(merged),1);self.assertIn('اسم شائع',merged[0]);self.assertIn('اسم رسمي',merged[0])
+
 if __name__=='__main__':unittest.main()

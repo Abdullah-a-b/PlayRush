@@ -51,6 +51,8 @@ def _load_huroof_questions_cached():
                 extra = json.loads(q.extra_data) if q.extra_data else {}
             except Exception:
                 extra = {}
+            if not isinstance(extra, dict):
+                continue
             if extra.get('active') is False:
                 continue
             ans = (q.correct_answer or '').strip()

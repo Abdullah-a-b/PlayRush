@@ -500,7 +500,7 @@ def run_import(limit=200, min_sitelinks=45, offset=0,
     """الاستيراد الفعلي — قابلة للاستدعاء من خلفية المنصة.
     ترجع dict بالنتائج."""
     _ENTITY_CACHE.clear()
-    _ensure_wikidata_column()
+    # تغييرات مخطط القاعدة مهمة ترحيل مستقلة، لا تعمل داخل استيراد الخلفية.
 
     log(f"🔎 جلب {limit} لاعب (offset={offset})…")
     if player_qids is None:
@@ -518,6 +518,7 @@ def run_import(limit=200, min_sitelinks=45, offset=0,
             content_backup("career", [{k: getattr(row, k) for k in fields} for row in db.query(CareerPlayer).all()])
         existing_qids = {q for (q,) in db.query(CareerPlayer.wikidata_id)
                          .filter(CareerPlayer.wikidata_id.isnot(None)).all()}
+        db.rollback()  # تحرير معاملة القراءة قبل انتظار الشبكة
 
         for i in range(0, len(players), 25):
             batch = players[i:i + 25]
