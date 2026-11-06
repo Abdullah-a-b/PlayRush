@@ -69,7 +69,7 @@ class ImportTests(unittest.TestCase):
  def test_partial_has_retry(self):
   s=support.record_result({'last_run':50},{'status':'partial'},100);self.assertEqual(s['last_run'],50);self.assertFalse(support.due(s,10,200));self.assertTrue(support.due(s,10000,3700))
  def test_huroof_curated(self):
-  qs=huroof.build_quran_questions()+huroof.build_curated_questions();self.assertEqual(len(qs),119);self.assertIn('ظ',{q['letter'] for q in qs})
+  qs=huroof.build_quran_questions()+huroof.build_curated_questions();self.assertEqual(len(qs),120);self.assertIn('ظ',{q['letter'] for q in qs})
  def test_huroof_rejects_ambiguous_capital(self):
   rows=self.countries()+[row(c='Q1',cLabelAr='دولة تجريبية',cap='Q9',capAr='عاصمة ثانية')];self.assertFalse(any(q['question_text'].startswith('عاصمة دولة') for q in huroof.build_country_questions(rows)))
  def test_huroof_source_identity(self):

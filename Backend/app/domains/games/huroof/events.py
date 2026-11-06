@@ -56,11 +56,7 @@ def _load_huroof_questions_cached():
             if extra.get('active') is False:
                 continue
             ans = (q.correct_answer or '').strip()
-            core = ans[2:] if ans.startswith("ال") else ans
-            # الحرف المميّز = الحرف الأول بعد إزالة "ال" التعريف.
-            # "البحرين" → ب (لا ا)، "السعودية" → س، "الكويت" → ك.
-            # لا نضيف حرف "ال" نفسه — يُصنّف السؤال خطأ تحت الألف.
-            main_letter = normalize_letter(core[0]) if core else ''
+            main_letter = answer_letter(ans)
             valid_letters = {main_letter} if main_letter else set()
             rows.append({
                 'id': q.id,
@@ -143,7 +139,7 @@ def _action_allowed(gs, sid, action_type):
         return True
 
 # معالج النصوص العربية (Normalize  Fuzzy  Token)
-from app.core.text_processor import check_answer
+from app.core.huroof_answers import check_answer, answer_letter
 
 # Anti-Cheat (server-side validation)
 from app.core.anticheat import (
@@ -779,24 +775,9 @@ def register_huroof_events(sio):
         accepted_list = gs.current_question['accepted_answers']
         req_letter = gs.current_question['letter']
 
-        # المعالج: Normalize  Fuzzy  Token analysis (فوري — يحل ~97%)
+        # مطابقة الاسم الكامل أو بديل معتمد، دون قبول كلمة عامة كاسم كيان.
         result = check_answer(player_ans, correct_ans, accepted_list, req_letter)
         is_correct = result['verdict'] == 'accept'
-
-        # الطبقة 4 (AI Judge) — فقط للحالات الحدّية النادرة 'maybe'
-        # مع timeout صارم + تساهل افتراضي (لا يُبطئ اللعبة).
-        if result.get('verdict') == 'maybe':
-            try:
-                from app.infrastructure.ai_judge import judge_answer
-                judged = await judge_answer(
-                    gs.current_question.get('text', '') or correct_ans,
-                    correct_ans, player_ans, timeout=2.0
-                )
-                is_correct = judged.get('accept', True)
-                result['ai_source'] = judged.get('source')
-            except Exception:
-                # أي خطأ  متساهل (نعطي اللاعب الفائدة عند الشك)
-                is_correct = True
 
         await process_answer_result(room_code, is_correct, player_ans, result)
 
@@ -1337,9 +1318,10 @@ def register_huroof_events(sio):
                     if ans.startswith("ال"):
                         ans = ans[2:]
                     extra = json.loads(q.extra_data) if q.extra_data else {}
-                    letter_from_extra = normalize_letter(extra.get("letter", ""))
-                    letter_from_ans = normalize_letter(ans[0]) if ans else ""
-                    if letter_from_extra == norm_letter or letter_from_ans == norm_letter:
+                    if not isinstance(extra, dict) or extra.get("active") is False:
+                        continue
+                    letter_from_ans = answer_letter(q.correct_answer)
+                    if letter_from_ans == norm_letter:
                         valid.append(q)
                 except (json.JSONDecodeError, AttributeError, IndexError, TypeError):
                     pass

@@ -110,6 +110,8 @@ assert len(SURAHS) == 114 and len(set(SURAHS)) == 114, "قائمة السور ي
 # وسيلتقطها المولد تلقائياً في الدورة القادمة.
 # ==========================================================
 CURATED_FACTS = [
+    {"q": "ظاهرة جوية من قطرات ماء قرب سطح الأرض تقل معها الرؤية الأفقية عن كيلومتر",
+     "a": "ضباب", "cat": "علوم"},
     {"q": "محافظة عُمانية مركزها مدينة صلالة",
      "a": "ظفار", "cat": "جغرافيا"},
     {"q": "مدينة سعودية تقع فيها جامعة الملك فهد للبترول والمعادن",
@@ -297,6 +299,19 @@ def save_to_db(questions, complete_groups=()):
     from app.infrastructure.database import SessionLocal
     from app.domains.games.models import Question
     from app.core.import_support import canonical, stable_id
+    # مراجعة الهوية تسبق الحفظ حتى لا تعيد المصادر أخطاءً عُزلت سابقاً.
+    from pathlib import Path
+    from app.core.huroof_answers import answer_letter
+    rules = json.loads((Path(__file__).resolve().parents[1] / 'data/huroof_review_rules.json').read_text(encoding='utf-8'))['rules']
+    reviewed = []
+    for question in questions:
+        rule = rules.get(question.get('source_id'), {})
+        if rule.get('active') is False:
+            continue
+        question = {**question, **{k: v for k, v in rule.items() if k != 'active'}}
+        question['letter'] = answer_letter(question['correct_answer'])
+        reviewed.append(question)
+    questions = reviewed
     db = SessionLocal()
     stats = {"added": 0, "updated": 0, "unchanged": 0, "manual_protected": 0, "deactivated": 0}
     try:

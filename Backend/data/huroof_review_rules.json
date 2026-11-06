@@ -1,0 +1,3085 @@
+{
+  "reviewed_at": "2026-11-06",
+  "rules": {
+    "wd_cur_cc80b904550927d58d29": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة آيسلندا",
+      "correct_answer": "كرونة آيسلندية",
+      "accepted_answers": [
+        "كرونة آيسلندية",
+        "icelandic króna",
+        "كرونة"
+      ]
+    },
+    "wd_cur_966df02786abe2abba15": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة أستراليا",
+      "correct_answer": "دولار أسترالي",
+      "accepted_answers": [
+        "دولار أسترالي",
+        "australian dollar",
+        "دولار"
+      ]
+    },
+    "wd_cur_97ec55259e8730488759": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة أنتيغوا وباربودا",
+      "correct_answer": "دولار شرق الكاريبي",
+      "accepted_answers": [
+        "دولار شرق الكاريبي",
+        "eastern caribbean dollar",
+        "دولار"
+      ]
+    },
+    "wd_cur_f28a716d726193200d75": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة أوغندا",
+      "correct_answer": "شلن أوغندي",
+      "accepted_answers": [
+        "شلن أوغندي",
+        "ugandan shilling",
+        "شلن"
+      ]
+    },
+    "wd_cur_2b3cefdd00704b72848f": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة إندونيسيا",
+      "correct_answer": "روبية إندونيسية",
+      "accepted_answers": [
+        "روبية إندونيسية",
+        "rupiah",
+        "روبية"
+      ]
+    },
+    "wd_cur_cc0a88511f05e2bad9b1": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة إيران",
+      "correct_answer": "ريال إيراني",
+      "accepted_answers": [
+        "ريال إيراني",
+        "iranian rial",
+        "ريال"
+      ]
+    },
+    "wd_cur_034f32dc1fb10801275e": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة الأرجنتين",
+      "correct_answer": "بيزو أرجنتيني",
+      "accepted_answers": [
+        "بيزو أرجنتيني",
+        "argentine convertible peso",
+        "بيزو"
+      ]
+    },
+    "wd_cur_0433bcd187727499af74": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة الأردن",
+      "correct_answer": "دينار أردني",
+      "accepted_answers": [
+        "دينار أردني",
+        "jordanian dinar",
+        "دينار"
+      ]
+    },
+    "wd_cur_7d783952e9cfccec8bc1": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة الأوروغواي",
+      "correct_answer": "بيزو أوروغواني",
+      "accepted_answers": [
+        "بيزو أوروغواني",
+        "uruguayan peso",
+        "بيزو"
+      ]
+    },
+    "wd_cur_08dfd3f2bd2e848fa6a9": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة الإكوادور",
+      "correct_answer": "دولار للولايات المتحدة",
+      "accepted_answers": [
+        "دولار للولايات المتحدة",
+        "united states dollar",
+        "دولار"
+      ]
+    },
+    "wd_cur_3501434633aada8c5f7b": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة الإمارات العربية المتحدة",
+      "correct_answer": "درهم إماراتي",
+      "accepted_answers": [
+        "درهم إماراتي",
+        "united arab emirates dirham",
+        "درهم"
+      ]
+    },
+    "wd_cur_60f9061fc8c05558bf49": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة البحرين",
+      "correct_answer": "دينار بحريني",
+      "accepted_answers": [
+        "دينار بحريني",
+        "bahraini dinar",
+        "دينار"
+      ]
+    },
+    "wd_cur_c1202ee2b97bc75d5d45": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة البرازيل",
+      "correct_answer": "ريال برازيلي",
+      "accepted_answers": [
+        "ريال برازيلي",
+        "brazilian real",
+        "ريال"
+      ]
+    },
+    "wd_cur_6b249273af468105f77a": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة الجزائر",
+      "correct_answer": "دينار جزائري",
+      "accepted_answers": [
+        "دينار جزائري",
+        "algerian dinar",
+        "دينار"
+      ]
+    },
+    "wd_cur_6c16b0d368d2ff221ad9": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة السعودية",
+      "correct_answer": "ريال سعودي",
+      "accepted_answers": [
+        "ريال سعودي",
+        "saudi riyal",
+        "ريال"
+      ]
+    },
+    "wd_cur_98ba4a012af9a7558501": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة السنغال",
+      "correct_answer": "فرنك غرب إفريقي",
+      "accepted_answers": [
+        "فرنك غرب إفريقي",
+        "west african cfa franc",
+        "فرنك"
+      ]
+    },
+    "wd_cur_fd3daec097fa3734a1b2": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة السودان",
+      "correct_answer": "جنيه سوداني",
+      "accepted_answers": [
+        "جنيه سوداني",
+        "sudanese pound",
+        "جنيه"
+      ]
+    },
+    "wd_cur_9545cd0762feca6829fa": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة السويد",
+      "correct_answer": "كرونة سويدية",
+      "accepted_answers": [
+        "كرونة سويدية",
+        "swedish krona",
+        "كرونة"
+      ]
+    },
+    "wd_cur_2b4113b7a9e5f31bdaa1": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة الصومال",
+      "correct_answer": "شلن صومالي",
+      "accepted_answers": [
+        "شلن صومالي",
+        "somali shilling",
+        "شلن"
+      ]
+    },
+    "wd_cur_ce24c58c1302679170db": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة العراق",
+      "correct_answer": "دينار عراقي",
+      "accepted_answers": [
+        "دينار عراقي",
+        "iraqi dinar",
+        "دينار"
+      ]
+    },
+    "wd_cur_d0f4b13a45f4eed76596": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة الغابون",
+      "correct_answer": "فرنك وسط إفريقي",
+      "accepted_answers": [
+        "فرنك وسط إفريقي",
+        "central african cfa franc",
+        "فرنك"
+      ]
+    },
+    "wd_cur_a70a110f826cd6f51199": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة الكاميرون",
+      "correct_answer": "فرنك وسط إفريقي",
+      "accepted_answers": [
+        "فرنك وسط إفريقي",
+        "central african cfa franc",
+        "فرنك"
+      ]
+    },
+    "wd_cur_9fe52efb14521e28a3b6": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة الكويت",
+      "correct_answer": "دينار كويتي",
+      "accepted_answers": [
+        "دينار كويتي",
+        "kuwaiti dinar",
+        "دينار"
+      ]
+    },
+    "wd_cur_305fd78d4b42c674e177": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة المغرب",
+      "correct_answer": "درهم مغربي",
+      "accepted_answers": [
+        "درهم مغربي",
+        "moroccan dirham",
+        "درهم"
+      ]
+    },
+    "wd_cur_c2ab0ec780d89041047f": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة المكسيك",
+      "correct_answer": "بيزو مكسيكي",
+      "accepted_answers": [
+        "بيزو مكسيكي",
+        "peso",
+        "بيزو"
+      ]
+    },
+    "wd_cur_42fd9810a1c101786aa2": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة المملكة المتحدة",
+      "correct_answer": "جنيه إسترليني",
+      "accepted_answers": [
+        "جنيه إسترليني",
+        "pound sterling",
+        "جنيه"
+      ]
+    },
+    "wd_cur_3d3b9cd11ceab16ef536": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة النرويج",
+      "correct_answer": "كرونة نروجية",
+      "accepted_answers": [
+        "كرونة نروجية",
+        "norwegian krone",
+        "كرونة"
+      ]
+    },
+    "wd_cur_1db159e076908db8068d": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة النيجر",
+      "correct_answer": "فرنك غرب إفريقي",
+      "accepted_answers": [
+        "فرنك غرب إفريقي",
+        "west african cfa franc",
+        "فرنك"
+      ]
+    },
+    "wd_cur_7277776e089e44b4b10a": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة الهند",
+      "correct_answer": "روبية هندية",
+      "accepted_answers": [
+        "روبية هندية",
+        "indian rupee",
+        "روبية"
+      ]
+    },
+    "wd_cur_35761fb7e035aa623e46": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة الولايات المتحدة",
+      "correct_answer": "دولار للولايات المتحدة",
+      "accepted_answers": [
+        "دولار للولايات المتحدة",
+        "united states dollar",
+        "دولار"
+      ]
+    },
+    "wd_cur_8a48cfd82487a1b0a6c1": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة اليابان",
+      "correct_answer": "ين ياباني",
+      "accepted_answers": [
+        "ين ياباني",
+        "yen",
+        "ين"
+      ]
+    },
+    "wd_cur_33bfa2407fe4aa3fca8d": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة اليمن",
+      "correct_answer": "ريال يمني",
+      "accepted_answers": [
+        "ريال يمني",
+        "yemeni rial",
+        "ريال"
+      ]
+    },
+    "wd_cur_d147498102395bbe8528": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة باربادوس",
+      "correct_answer": "دولار بربادوسي",
+      "accepted_answers": [
+        "دولار بربادوسي",
+        "barbadian dollar",
+        "دولار"
+      ]
+    },
+    "wd_cur_fdc0a21ee07e7bf32a87": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة باكستان",
+      "correct_answer": "روبية باكستانية",
+      "accepted_answers": [
+        "روبية باكستانية",
+        "pakistani rupee",
+        "روبية"
+      ]
+    },
+    "wd_cur_fb0c3f6ce0a91b3db577": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة بالاو",
+      "correct_answer": "دولار للولايات المتحدة",
+      "accepted_answers": [
+        "دولار للولايات المتحدة",
+        "united states dollar",
+        "دولار"
+      ]
+    },
+    "wd_cur_cf497558aefb6af44b85": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة بروناي",
+      "correct_answer": "دولار بروني",
+      "accepted_answers": [
+        "دولار بروني",
+        "brunei dollar",
+        "دولار"
+      ]
+    },
+    "wd_cur_b04962565edb10ecda69": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة بليز",
+      "correct_answer": "دولار بليزي",
+      "accepted_answers": [
+        "دولار بليزي",
+        "belize dollar",
+        "دولار"
+      ]
+    },
+    "wd_cur_793e36b4c500b5b8cdf0": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة بنين",
+      "correct_answer": "فرنك غرب إفريقي",
+      "accepted_answers": [
+        "فرنك غرب إفريقي",
+        "west african cfa franc",
+        "فرنك"
+      ]
+    },
+    "wd_cur_ff781cfe3a3e6aa52611": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة بوركينا فاسو",
+      "correct_answer": "فرنك غرب إفريقي",
+      "accepted_answers": [
+        "فرنك غرب إفريقي",
+        "west african cfa franc",
+        "فرنك"
+      ]
+    },
+    "wd_cur_c1bfcf823269ab549d41": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة بوروندي",
+      "correct_answer": "فرنك بوروندي",
+      "accepted_answers": [
+        "فرنك بوروندي",
+        "burundian franc",
+        "فرنك"
+      ]
+    },
+    "wd_cur_9ca9687565ba2d9d0bf7": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة بيرو",
+      "correct_answer": "سول بيروفي جديد",
+      "accepted_answers": [
+        "سول بيروفي جديد",
+        "nuevo sol",
+        "سول"
+      ]
+    },
+    "wd_cur_65e03b73040919be530d": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة بيلاروس",
+      "correct_answer": "روبل بيلاروسي",
+      "accepted_answers": [
+        "روبل بيلاروسي",
+        "belarusian ruble",
+        "روبل"
+      ]
+    },
+    "wd_cur_f02f7046f7ee3073ebaa": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة تايلاند",
+      "correct_answer": "بات تايلاندي",
+      "accepted_answers": [
+        "بات تايلاندي",
+        "baht",
+        "بات"
+      ]
+    },
+    "wd_cur_184ad7740d8e4478cefc": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة تايوان",
+      "correct_answer": "دولار تايواني جديد",
+      "accepted_answers": [
+        "دولار تايواني جديد",
+        "new taiwan dollar",
+        "دولار"
+      ]
+    },
+    "wd_cur_cdeb8b8d1b841e7cfef2": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة تركيا",
+      "correct_answer": "ليرة تركية",
+      "accepted_answers": [
+        "ليرة تركية",
+        "turkish lira",
+        "ليرة"
+      ]
+    },
+    "wd_cur_9ba58fcec0b44a7e382c": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة ترينيداد وتوباغو",
+      "correct_answer": "دولار ترينيداد وتوباغو",
+      "accepted_answers": [
+        "دولار ترينيداد وتوباغو",
+        "trinidad and tobago dollar",
+        "دولار"
+      ]
+    },
+    "wd_cur_3c01825a72e735e436bb": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة تشاد",
+      "correct_answer": "فرنك وسط إفريقي",
+      "accepted_answers": [
+        "فرنك وسط إفريقي",
+        "central african cfa franc",
+        "فرنك"
+      ]
+    },
+    "wd_cur_71a053e7aaf9dc52ed96": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة تنزانيا",
+      "correct_answer": "شلن تنزاني",
+      "accepted_answers": [
+        "شلن تنزاني",
+        "tanzanian shilling",
+        "شلن"
+      ]
+    },
+    "wd_cur_308563e30528975790f1": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة توغو",
+      "correct_answer": "فرنك غرب إفريقي",
+      "accepted_answers": [
+        "فرنك غرب إفريقي",
+        "west african cfa franc",
+        "فرنك"
+      ]
+    },
+    "wd_cur_5c7815a2dda571ce3504": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة تونس",
+      "correct_answer": "دينار تونسي",
+      "accepted_answers": [
+        "دينار تونسي",
+        "tunisian dinar",
+        "دينار"
+      ]
+    },
+    "wd_cur_092f9ee9cfaed3a2a719": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة جامايكا",
+      "correct_answer": "دولار جامايكي",
+      "accepted_answers": [
+        "دولار جامايكي",
+        "jamaican dollar",
+        "دولار"
+      ]
+    },
+    "wd_cur_1a56c9401341bb1d0f5c": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة جزر البهاما",
+      "correct_answer": "دولار بهامي",
+      "accepted_answers": [
+        "دولار بهامي",
+        "bahamian dollar",
+        "دولار"
+      ]
+    },
+    "wd_cur_4dfb61c3fc7550d4d8ae": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة جزر القمر",
+      "correct_answer": "فرنك قمري",
+      "accepted_answers": [
+        "فرنك قمري",
+        "comorian franc",
+        "فرنك"
+      ]
+    },
+    "wd_cur_9e41eba129a0cba085f2": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة جزر سليمان",
+      "correct_answer": "دولار جزر سليمان",
+      "accepted_answers": [
+        "دولار جزر سليمان",
+        "solomon islands dollar",
+        "دولار"
+      ]
+    },
+    "wd_cur_710292be303364dd2d7b": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة جمهورية إفريقيا الوسطى",
+      "correct_answer": "فرنك وسط إفريقي",
+      "accepted_answers": [
+        "فرنك وسط إفريقي",
+        "central african cfa franc",
+        "فرنك"
+      ]
+    },
+    "wd_cur_05da1045b1c3d5f8ad72": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة جمهورية التشيك",
+      "correct_answer": "كرونة تشيكية",
+      "accepted_answers": [
+        "كرونة تشيكية",
+        "czech koruna",
+        "كرونة"
+      ]
+    },
+    "wd_cur_9fe7aed6945f34d5e349": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة جمهورية الدومينيكان",
+      "correct_answer": "بيزو دومنيكاني",
+      "accepted_answers": [
+        "بيزو دومنيكاني",
+        "dominican peso",
+        "بيزو"
+      ]
+    },
+    "wd_cur_f3a3d18a8d0eb106799a": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة جمهورية الكونغو",
+      "correct_answer": "فرنك وسط إفريقي",
+      "accepted_answers": [
+        "فرنك وسط إفريقي",
+        "central african cfa franc",
+        "فرنك"
+      ]
+    },
+    "wd_cur_797a7c5ee3eb2057ce8e": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة جمهورية الكونغو الديمقراطية",
+      "correct_answer": "فرنك كونغولي",
+      "accepted_answers": [
+        "فرنك كونغولي",
+        "congolese franc",
+        "فرنك"
+      ]
+    },
+    "wd_cur_acf1c818aa2ef2c45630": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة جنوب إفريقيا",
+      "correct_answer": "راند جنوب إفريقي",
+      "accepted_answers": [
+        "راند جنوب إفريقي",
+        "rand",
+        "راند"
+      ]
+    },
+    "wd_cur_1238c5f1fc77242050ac": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة جنوب السودان",
+      "correct_answer": "جنيه جنوب سوداني",
+      "accepted_answers": [
+        "جنيه جنوب سوداني",
+        "south sudanese pound",
+        "جنيه"
+      ]
+    },
+    "wd_cur_1592701fb7a2a7b7ae93": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة جيبوتي",
+      "correct_answer": "فرنك جيبوتي",
+      "accepted_answers": [
+        "فرنك جيبوتي",
+        "djiboutian franc",
+        "فرنك"
+      ]
+    },
+    "wd_cur_efd3667f02e4978568aa": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة دومينيكا",
+      "correct_answer": "دولار شرق الكاريبي",
+      "accepted_answers": [
+        "دولار شرق الكاريبي",
+        "eastern caribbean dollar",
+        "دولار"
+      ]
+    },
+    "wd_cur_7ed798dd2c1a75290590": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة رواندا",
+      "correct_answer": "فرنك روندي",
+      "accepted_answers": [
+        "فرنك روندي",
+        "rwandan franc",
+        "فرنك"
+      ]
+    },
+    "wd_cur_b5a07437f3dfc73b7d2e": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة روسيا",
+      "correct_answer": "روبل روسي",
+      "accepted_answers": [
+        "روبل روسي",
+        "russian ruble",
+        "روبل"
+      ]
+    },
+    "wd_cur_6cb9a6a88e00cd7a374c": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة ساحل العاج",
+      "correct_answer": "فرنك غرب إفريقي",
+      "accepted_answers": [
+        "فرنك غرب إفريقي",
+        "west african cfa franc",
+        "فرنك"
+      ]
+    },
+    "wd_cur_008e1017264da2307d1c": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة سانت فينسنت والغرينادين",
+      "correct_answer": "دولار شرق الكاريبي",
+      "accepted_answers": [
+        "دولار شرق الكاريبي",
+        "eastern caribbean dollar",
+        "دولار"
+      ]
+    },
+    "wd_cur_3d4236b157f3c542acc0": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة سانت كيتس ونيفيس",
+      "correct_answer": "دولار شرق الكاريبي",
+      "accepted_answers": [
+        "دولار شرق الكاريبي",
+        "eastern caribbean dollar",
+        "دولار"
+      ]
+    },
+    "wd_cur_76f0c0df0f1d9fd34cd7": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة سانت لوسيا",
+      "correct_answer": "دولار شرق الكاريبي",
+      "accepted_answers": [
+        "دولار شرق الكاريبي",
+        "eastern caribbean dollar",
+        "دولار"
+      ]
+    },
+    "wd_cur_3cd20e5adb5a72f2313b": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة سريلانكا",
+      "correct_answer": "روبية سريلانكية",
+      "accepted_answers": [
+        "روبية سريلانكية",
+        "sri lankan rupee",
+        "روبية"
+      ]
+    },
+    "wd_cur_ff488ff01236ea4e7f13": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة سلطنة عمان",
+      "correct_answer": "ريال عُماني",
+      "accepted_answers": [
+        "ريال عُماني",
+        "omani rial",
+        "ريال"
+      ]
+    },
+    "wd_cur_1c19dfd2eb93534bed89": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة سنغافورة",
+      "correct_answer": "دولار سنغافوري",
+      "accepted_answers": [
+        "دولار سنغافوري",
+        "singapore dollar",
+        "دولار"
+      ]
+    },
+    "wd_cur_1defd97e2c0e7bf85728": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة سوريا",
+      "correct_answer": "ليرة سورية",
+      "accepted_answers": [
+        "ليرة سورية",
+        "syrian pound",
+        "ليرة"
+      ]
+    },
+    "wd_cur_cf0fbdeb083436631ecd": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة سورينام",
+      "correct_answer": "دولار سورينامي",
+      "accepted_answers": [
+        "دولار سورينامي",
+        "surinamese dollar",
+        "دولار"
+      ]
+    },
+    "wd_cur_dcbc402fa1f2c7e21323": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة سويسرا",
+      "correct_answer": "فرنك سويسري",
+      "accepted_answers": [
+        "فرنك سويسري",
+        "swiss franc",
+        "فرنك"
+      ]
+    },
+    "wd_cur_1595fa10e459df2f3b47": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة سيشل",
+      "correct_answer": "روبية سيشلية",
+      "accepted_answers": [
+        "روبية سيشلية",
+        "seychellois rupee",
+        "روبية"
+      ]
+    },
+    "wd_cur_3db6bf0e06a0d30330ca": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة صربيا",
+      "correct_answer": "دينار صربي",
+      "accepted_answers": [
+        "دينار صربي",
+        "serbian dinar",
+        "دينار"
+      ]
+    },
+    "wd_cur_5bff65e14f523128d65e": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة غرنادة",
+      "correct_answer": "دولار شرق الكاريبي",
+      "accepted_answers": [
+        "دولار شرق الكاريبي",
+        "eastern caribbean dollar",
+        "دولار"
+      ]
+    },
+    "wd_cur_246926ca16fe65a956f9": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة غيانا",
+      "correct_answer": "دولار غوياني",
+      "accepted_answers": [
+        "دولار غوياني",
+        "guyanese dollar",
+        "دولار"
+      ]
+    },
+    "wd_cur_e6ff9575e9cc3d118b84": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة غينيا",
+      "correct_answer": "فرنك غيني",
+      "accepted_answers": [
+        "فرنك غيني",
+        "guinean franc",
+        "فرنك"
+      ]
+    },
+    "wd_cur_eb65d88e23debfabc920": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة غينيا الاستوائية",
+      "correct_answer": "فرنك وسط إفريقي",
+      "accepted_answers": [
+        "فرنك وسط إفريقي",
+        "central african cfa franc",
+        "فرنك"
+      ]
+    },
+    "wd_cur_7a9efd468c1d1a6b1721": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة غينيا بيساو",
+      "correct_answer": "فرنك غرب إفريقي",
+      "accepted_answers": [
+        "فرنك غرب إفريقي",
+        "west african cfa franc",
+        "فرنك"
+      ]
+    },
+    "wd_cur_b98a525697af163a706e": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة فنزويلا",
+      "correct_answer": "بوليفار السيادي",
+      "accepted_answers": [
+        "بوليفار السيادي",
+        "sovereign bolivar",
+        "بوليفار"
+      ]
+    },
+    "wd_cur_9632e097f9a23dd184ca": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة فيجي",
+      "correct_answer": "دولار فيجي",
+      "accepted_answers": [
+        "دولار فيجي",
+        "fijian dollar",
+        "دولار"
+      ]
+    },
+    "wd_cur_728ba4112db95621850b": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة قطر",
+      "correct_answer": "ريال قطري",
+      "accepted_answers": [
+        "ريال قطري",
+        "qatari riyal",
+        "ريال"
+      ]
+    },
+    "wd_cur_6ee96609cec2562469b9": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة كمبوديا",
+      "correct_answer": "ريال كمبودي",
+      "accepted_answers": [
+        "ريال كمبودي",
+        "riel",
+        "ريال"
+      ]
+    },
+    "wd_cur_c1e06d3ba10538a98f67": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة كندا",
+      "correct_answer": "دولار كندي",
+      "accepted_answers": [
+        "دولار كندي",
+        "canadian dollar",
+        "دولار"
+      ]
+    },
+    "wd_cur_fbd2fb11ad9e1c0a0e1d": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة كوبا",
+      "correct_answer": "بيزو كوبي",
+      "accepted_answers": [
+        "بيزو كوبي",
+        "cuban peso",
+        "بيزو"
+      ]
+    },
+    "wd_cur_579a9842078487c78c99": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة كوريا الشمالية",
+      "correct_answer": "وون كوري شمالي",
+      "accepted_answers": [
+        "وون كوري شمالي",
+        "north korean won",
+        "وون"
+      ]
+    },
+    "wd_cur_f3960cd4dd3421f859ab": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة كولومبيا",
+      "correct_answer": "بيزو كولومبي",
+      "accepted_answers": [
+        "بيزو كولومبي",
+        "colombian peso",
+        "بيزو"
+      ]
+    },
+    "wd_cur_10d73ae8e7237a26c80b": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة كينيا",
+      "correct_answer": "شلن كيني",
+      "accepted_answers": [
+        "شلن كيني",
+        "kenyan shilling",
+        "شلن"
+      ]
+    },
+    "wd_cur_f879273ee4a8c086919a": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة لبنان",
+      "correct_answer": "ليرة لبنانية",
+      "accepted_answers": [
+        "ليرة لبنانية",
+        "lebanese pound",
+        "ليرة"
+      ]
+    },
+    "wd_cur_e29ca907eb4985f47ffa": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة ليبيا",
+      "correct_answer": "دينار ليبي",
+      "accepted_answers": [
+        "دينار ليبي",
+        "libyan dinar",
+        "دينار"
+      ]
+    },
+    "wd_cur_8fb5bd904f2c87a9a210": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة ليختنشتاين",
+      "correct_answer": "فرنك سويسري",
+      "accepted_answers": [
+        "فرنك سويسري",
+        "swiss franc",
+        "فرنك"
+      ]
+    },
+    "wd_country_by_cap_b820492f48580658c629": {
+      "active": true,
+      "question_text": "دولة عاصمتها فاليتا",
+      "correct_answer": "مالطا",
+      "accepted_answers": [
+        "مالطا",
+        "malta"
+      ]
+    },
+    "wd_cap_b820492f48580658c629": {
+      "active": true,
+      "question_text": "عاصمة دولة مالطا",
+      "correct_answer": "فاليتا",
+      "accepted_answers": [
+        "فاليتا",
+        "فالتا",
+        "Valletta"
+      ]
+    },
+    "wd_cur_4b1fe40587cc25470a80": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة مالي",
+      "correct_answer": "فرنك غرب إفريقي",
+      "accepted_answers": [
+        "فرنك غرب إفريقي",
+        "west african cfa franc",
+        "فرنك"
+      ]
+    },
+    "wd_cur_d8e03c26d26117676dd6": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة ماليزيا",
+      "correct_answer": "رينغيت ماليزي",
+      "accepted_answers": [
+        "رينغيت ماليزي",
+        "malaysian ringgit",
+        "رينغيت"
+      ]
+    },
+    "wd_cur_26da7372b85133d857d3": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة مصر",
+      "correct_answer": "جنيه مصري",
+      "accepted_answers": [
+        "جنيه مصري",
+        "egyptian pound",
+        "جنيه"
+      ]
+    },
+    "wd_cur_92a57e1046bc9daff07a": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة مقدونيا الشمالية",
+      "correct_answer": "دينار مقدوني",
+      "accepted_answers": [
+        "دينار مقدوني",
+        "macedonian denar",
+        "دينار"
+      ]
+    },
+    "wd_cur_9ffb368dede1d83a4285": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة ناورو",
+      "correct_answer": "دولار أسترالي",
+      "accepted_answers": [
+        "دولار أسترالي",
+        "australian dollar",
+        "دولار"
+      ]
+    },
+    "wd_cur_a3715cce9154e9f37f01": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة نيبال",
+      "correct_answer": "روبية نيبالية",
+      "accepted_answers": [
+        "روبية نيبالية",
+        "nepalese rupee",
+        "روبية"
+      ]
+    },
+    "wd_cur_833d9fd456c3ac5cb996": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة نيوزيلندا",
+      "correct_answer": "دولار نيوزيلندي",
+      "accepted_answers": [
+        "دولار نيوزيلندي",
+        "new zealand dollar",
+        "دولار"
+      ]
+    },
+    "wd_cur_e99b032b4ccfa5681ea7": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة ولايات ميكرونيسيا المتحدة",
+      "correct_answer": "دولار للولايات المتحدة",
+      "accepted_answers": [
+        "دولار للولايات المتحدة",
+        "united states dollar",
+        "دولار"
+      ]
+    },
+    "wd_element_symbol_f5cff737da2b3a7a9932": {
+      "active": true,
+      "question_text": "عنصر كيميائي رمزه (N)",
+      "correct_answer": "نيتروجين",
+      "accepted_answers": [
+        "نيتروجين",
+        "nitrogen",
+        "نتروجين"
+      ]
+    },
+    "wd_element_number_f5cff737da2b3a7a9932": {
+      "active": true,
+      "question_text": "العنصر الكيميائي ذو العدد الذري (7)",
+      "correct_answer": "نيتروجين",
+      "accepted_answers": [
+        "نيتروجين",
+        "nitrogen",
+        "نتروجين"
+      ]
+    },
+    "wd_element_symbol_d7bd3e937f418386d99d": {
+      "active": true,
+      "question_text": "عنصر كيميائي رمزه (O)",
+      "correct_answer": "أكسجين",
+      "accepted_answers": [
+        "أكسجين",
+        "oxygen",
+        "أوكسجين"
+      ]
+    },
+    "wd_element_number_d7bd3e937f418386d99d": {
+      "active": true,
+      "question_text": "العنصر الكيميائي ذو العدد الذري (8)",
+      "correct_answer": "أكسجين",
+      "accepted_answers": [
+        "أكسجين",
+        "oxygen",
+        "أوكسجين"
+      ]
+    },
+    "wd_element_symbol_cadbfab8910dfc45ed6e": {
+      "active": true,
+      "question_text": "عنصر كيميائي رمزه (Mg)",
+      "correct_answer": "مغنسيوم",
+      "accepted_answers": [
+        "مغنسيوم",
+        "magnesium",
+        "مغنيسيوم",
+        "ماغنسيوم"
+      ]
+    },
+    "wd_element_number_cadbfab8910dfc45ed6e": {
+      "active": true,
+      "question_text": "العنصر الكيميائي ذو العدد الذري (12)",
+      "correct_answer": "مغنسيوم",
+      "accepted_answers": [
+        "مغنسيوم",
+        "magnesium",
+        "مغنيسيوم",
+        "ماغنسيوم"
+      ]
+    },
+    "wd_element_symbol_e0e3df1342800d44b05e": {
+      "active": true,
+      "question_text": "عنصر كيميائي رمزه (Al)",
+      "correct_answer": "ألومنيوم",
+      "accepted_answers": [
+        "ألومنيوم",
+        "aluminium",
+        "ألمنيوم",
+        "ألومينيوم"
+      ]
+    },
+    "wd_element_number_e0e3df1342800d44b05e": {
+      "active": true,
+      "question_text": "العنصر الكيميائي ذو العدد الذري (13)",
+      "correct_answer": "ألومنيوم",
+      "accepted_answers": [
+        "ألومنيوم",
+        "aluminium",
+        "ألمنيوم",
+        "ألومينيوم"
+      ]
+    },
+    "wd_element_symbol_229f59b14d2c413899a0": {
+      "active": true,
+      "question_text": "عنصر كيميائي رمزه (Si)",
+      "correct_answer": "سيليكون",
+      "accepted_answers": [
+        "سيليكون",
+        "silicon",
+        "سليكون"
+      ]
+    },
+    "wd_element_number_229f59b14d2c413899a0": {
+      "active": true,
+      "question_text": "العنصر الكيميائي ذو العدد الذري (14)",
+      "correct_answer": "سيليكون",
+      "accepted_answers": [
+        "سيليكون",
+        "silicon",
+        "سليكون"
+      ]
+    },
+    "wd_element_symbol_3eb87ed411f66feff280": {
+      "active": true,
+      "question_text": "عنصر كيميائي رمزه (P)",
+      "correct_answer": "فسفور",
+      "accepted_answers": [
+        "فسفور",
+        "phosphorus",
+        "فوسفور"
+      ]
+    },
+    "wd_element_number_3eb87ed411f66feff280": {
+      "active": true,
+      "question_text": "العنصر الكيميائي ذو العدد الذري (15)",
+      "correct_answer": "فسفور",
+      "accepted_answers": [
+        "فسفور",
+        "phosphorus",
+        "فوسفور"
+      ]
+    },
+    "wd_element_symbol_0b014f40fdfc933bccad": {
+      "active": true,
+      "question_text": "عنصر كيميائي رمزه (Ar)",
+      "correct_answer": "أرغون",
+      "accepted_answers": [
+        "أرغون",
+        "argon",
+        "أرجون"
+      ]
+    },
+    "wd_element_number_0b014f40fdfc933bccad": {
+      "active": true,
+      "question_text": "العنصر الكيميائي ذو العدد الذري (18)",
+      "correct_answer": "أرغون",
+      "accepted_answers": [
+        "أرغون",
+        "argon",
+        "أرجون"
+      ]
+    },
+    "wd_element_symbol_a8edcb50c39de1b107d8": {
+      "active": true,
+      "question_text": "عنصر كيميائي رمزه (Mn)",
+      "correct_answer": "منغنيز",
+      "accepted_answers": [
+        "منغنيز",
+        "manganese",
+        "منجنيز"
+      ]
+    },
+    "wd_element_number_a8edcb50c39de1b107d8": {
+      "active": true,
+      "question_text": "العنصر الكيميائي ذو العدد الذري (25)",
+      "correct_answer": "منغنيز",
+      "accepted_answers": [
+        "منغنيز",
+        "manganese",
+        "منجنيز"
+      ]
+    },
+    "wd_element_symbol_a771fb429f4140ec3a9b": {
+      "active": true,
+      "question_text": "عنصر كيميائي رمزه (W)",
+      "correct_answer": "تنجستن",
+      "accepted_answers": [
+        "تنجستن",
+        "tungsten",
+        "تنغستن",
+        "تنجستين",
+        "ولفرام"
+      ]
+    },
+    "wd_element_number_a771fb429f4140ec3a9b": {
+      "active": true,
+      "question_text": "العنصر الكيميائي ذو العدد الذري (74)",
+      "correct_answer": "تنجستن",
+      "accepted_answers": [
+        "تنجستن",
+        "tungsten",
+        "تنغستن",
+        "تنجستين",
+        "ولفرام"
+      ]
+    },
+    "wd_element_symbol_fb9961ddb9b467fbd080": {
+      "active": true,
+      "question_text": "عنصر كيميائي رمزه (Zn)",
+      "correct_answer": "زنك",
+      "accepted_answers": [
+        "زنك",
+        "zinc",
+        "خارصين"
+      ]
+    },
+    "wd_element_number_fb9961ddb9b467fbd080": {
+      "active": true,
+      "question_text": "العنصر الكيميائي ذو العدد الذري (30)",
+      "correct_answer": "زنك",
+      "accepted_answers": [
+        "زنك",
+        "zinc",
+        "خارصين"
+      ]
+    },
+    "wd_cur_bba7cfb4fef1713c99d2": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة جزر مارشال",
+      "correct_answer": "دولار للولايات المتحدة",
+      "accepted_answers": [
+        "دولار للولايات المتحدة",
+        "united states dollar",
+        "دولار"
+      ]
+    },
+    "wd_cur_d5655dd6097bd6e1c65c": {
+      "active": true,
+      "question_text": "العملة الرسمية لدولة كوريا الجنوبية",
+      "correct_answer": "وون كوري جنوبي",
+      "accepted_answers": [
+        "وون كوري جنوبي",
+        "won",
+        "وون"
+      ]
+    },
+    "wd_language_29c7b375d5250a20747c": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (aa)؟",
+      "correct_answer": "العفارية",
+      "accepted_answers": [
+        "afar",
+        "العفارية",
+        "عفارية"
+      ]
+    },
+    "wd_language_4eec6bbc82b756132873": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ab)؟",
+      "correct_answer": "الأبخازية",
+      "accepted_answers": [
+        "abkhaz",
+        "أبخازية",
+        "الأبخازية"
+      ]
+    },
+    "wd_language_4b6891901ab23ddda94c": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ae)؟",
+      "correct_answer": "الأوستية",
+      "accepted_answers": [
+        "avestan",
+        "أوستية",
+        "الأوستية"
+      ]
+    },
+    "wd_language_77498517b7f06bff4a2b": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (af)؟",
+      "correct_answer": "الأفريقانية",
+      "accepted_answers": [
+        "afrikaans",
+        "أفريقانية",
+        "الأفريقانية"
+      ]
+    },
+    "wd_language_2252a1b99f3f16a241a3": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ak)؟",
+      "correct_answer": "الأكانية",
+      "accepted_answers": [
+        "akan",
+        "أكانية",
+        "الأكانية",
+        "اللغة الأكانية"
+      ]
+    },
+    "wd_language_c554b0278003552d4b2f": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (am)؟",
+      "correct_answer": "الأمهرية",
+      "accepted_answers": [
+        "amharic",
+        "أمهرية",
+        "الأمهرية"
+      ]
+    },
+    "wd_language_862f0e0e2e6365b69ab0": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (an)؟",
+      "correct_answer": "الأرغونية",
+      "accepted_answers": [
+        "aragonese",
+        "أرغونية",
+        "الأرغونية"
+      ]
+    },
+    "wd_language_a9556c4003765c30175f": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ar)؟",
+      "correct_answer": "العربية",
+      "accepted_answers": [
+        "arabic",
+        "العربية",
+        "عربية"
+      ]
+    },
+    "wd_language_bc8d024cc7ae46a14720": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (as)؟",
+      "correct_answer": "الآسامية",
+      "accepted_answers": [
+        "assamese",
+        "آسامية",
+        "الآسامية"
+      ]
+    },
+    "wd_language_875881da06fe75c690bf": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (av)؟",
+      "correct_answer": "الأوارية",
+      "accepted_answers": [
+        "avar",
+        "أوارية",
+        "الأوارية"
+      ]
+    },
+    "wd_language_56ff57b69ef441599e4a": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ay)؟",
+      "correct_answer": "الأيمرية",
+      "accepted_answers": [
+        "aymara",
+        "أيمرية",
+        "الأيمرية"
+      ]
+    },
+    "wd_language_5687bb0f8a9d3104699a": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (az)؟",
+      "correct_answer": "الأذرية",
+      "accepted_answers": [
+        "azerbaijani",
+        "أذرية",
+        "الأذرية"
+      ]
+    },
+    "wd_language_e39d4ce28de6529547fb": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ba)؟",
+      "correct_answer": "الباشقيرية",
+      "accepted_answers": [
+        "bashkir",
+        "الباشقيرية",
+        "باشقيرية"
+      ]
+    },
+    "wd_language_06b75c5570b6502a9c6c": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (be)؟",
+      "correct_answer": "البيلاروسية",
+      "accepted_answers": [
+        "belarusian",
+        "البيلاروسية",
+        "بيلاروسية"
+      ]
+    },
+    "wd_language_846feede007544d1eb3a": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (bg)؟",
+      "correct_answer": "البلغارية",
+      "accepted_answers": [
+        "bulgarian",
+        "البلغارية",
+        "بلغارية"
+      ]
+    },
+    "wd_language_7de3d6de6e733e5b7c28": {
+      "active": false,
+      "question_text": "لغة رمزها الدولي (bh)",
+      "correct_answer": "قائمة اللغات البهارية",
+      "accepted_answers": [
+        "bihari",
+        "قائمة اللغات البهارية"
+      ]
+    },
+    "wd_language_a84bf910d7b6aafaab69": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (bi)؟",
+      "correct_answer": "بسلاما",
+      "accepted_answers": [
+        "bislama",
+        "بسلاما",
+        "لغة بسلاما"
+      ]
+    },
+    "wd_language_2c50a3b2141b8cce578d": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (bm)؟",
+      "correct_answer": "البمبرية",
+      "accepted_answers": [
+        "bambara",
+        "البمبرية",
+        "بمبرية"
+      ]
+    },
+    "wd_language_b1018bcff7af3c6cf40a": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (bn)؟",
+      "correct_answer": "البنغالية",
+      "accepted_answers": [
+        "bangla",
+        "البنغالية",
+        "بنغالية"
+      ]
+    },
+    "wd_language_b451034eefab54106496": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (bo)؟",
+      "correct_answer": "التبتية",
+      "accepted_answers": [
+        "tibetan",
+        "التبتية",
+        "تبتية"
+      ]
+    },
+    "wd_language_c04ca8d96ed2959c073e": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (br)؟",
+      "correct_answer": "البريتانية",
+      "accepted_answers": [
+        "breton",
+        "البريتانية",
+        "اللغة البريتانية",
+        "بريتانية"
+      ]
+    },
+    "wd_language_0947c8897e85b00b04b5": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (bs)؟",
+      "correct_answer": "البوسنية",
+      "accepted_answers": [
+        "bosnian",
+        "البوسنية",
+        "بوسنية"
+      ]
+    },
+    "wd_language_4dc83b5043df96ec8e40": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ca)؟",
+      "correct_answer": "الكتالونية",
+      "accepted_answers": [
+        "catalan",
+        "الكتالونية",
+        "كتالونية"
+      ]
+    },
+    "wd_language_a5d541eb17c8ad6ab001": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ce)؟",
+      "correct_answer": "الشيشانية",
+      "accepted_answers": [
+        "chechen",
+        "الشيشانية",
+        "شيشانية"
+      ]
+    },
+    "wd_language_781b748c4315dc57bc8e": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ch)؟",
+      "correct_answer": "تشاموروية",
+      "accepted_answers": [
+        "chamorro",
+        "تشاموروية",
+        "لغة تشاموروية"
+      ]
+    },
+    "wd_language_1789d13701705546e9d9": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (co)؟",
+      "correct_answer": "الكورسيكية",
+      "accepted_answers": [
+        "corsican",
+        "الكورسيكية",
+        "كورسيكية"
+      ]
+    },
+    "wd_language_ee1105367cbf4bec06b8": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (cr)؟",
+      "correct_answer": "كري",
+      "accepted_answers": [
+        "cree",
+        "كري",
+        "لغة كري"
+      ]
+    },
+    "wd_language_9f9ca9c50755cc597964": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (cs)؟",
+      "correct_answer": "التشيكية",
+      "accepted_answers": [
+        "czech",
+        "التشيكية",
+        "تشيكية"
+      ]
+    },
+    "wd_language_b0ef92a12384fed58094": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (cu)؟",
+      "correct_answer": "الصقلبية الكنسية",
+      "accepted_answers": [
+        "church slavonic",
+        "الصقلبية الكنسية",
+        "صقلبية الكنسية"
+      ]
+    },
+    "wd_language_bcb507d9d62d17e75e9c": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (cv)؟",
+      "correct_answer": "التشوفاشية",
+      "accepted_answers": [
+        "chuvash",
+        "التشوفاشية",
+        "تشوفاشية"
+      ]
+    },
+    "wd_language_67772a94ac683fd1ca41": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (cy)؟",
+      "correct_answer": "الويلزية",
+      "accepted_answers": [
+        "welsh",
+        "الويلزية",
+        "ويلزية"
+      ]
+    },
+    "wd_language_66f5765b93fcc8f95d97": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (da)؟",
+      "correct_answer": "الدنماركية",
+      "accepted_answers": [
+        "danish",
+        "الدنماركية",
+        "دنماركية"
+      ]
+    },
+    "wd_language_907b3973b357687e5277": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (de)؟",
+      "correct_answer": "الألمانية",
+      "accepted_answers": [
+        "german",
+        "ألمانية",
+        "الألمانية"
+      ]
+    },
+    "wd_language_734f4f4bc39393f3e761": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (dv)؟",
+      "correct_answer": "ديفهي",
+      "accepted_answers": [
+        "maldivian",
+        "ديفهي"
+      ]
+    },
+    "wd_language_133bb461972569003450": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (dz)؟",
+      "correct_answer": "دزونكا",
+      "accepted_answers": [
+        "dzongkha",
+        "دزونكا",
+        "لغة دزونكا"
+      ]
+    },
+    "wd_language_1d5f75120a4001fda6a6": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ee)؟",
+      "correct_answer": "الإيوي",
+      "accepted_answers": [
+        "ewe",
+        "إيوي",
+        "الإيوي",
+        "لغة الإيوي"
+      ]
+    },
+    "wd_language_f81a88e8d24efb2f8cac": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (en)؟",
+      "correct_answer": "الإنجليزية",
+      "accepted_answers": [
+        "english",
+        "إنجليزية",
+        "الإنجليزية"
+      ]
+    },
+    "wd_language_889fda22c3c73d37e49b": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (eo)؟",
+      "correct_answer": "الإسبرانتية",
+      "accepted_answers": [
+        "esperanto",
+        "إسبرانتية",
+        "الإسبرانتية"
+      ]
+    },
+    "wd_language_30fe95eef3f1021de18f": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (es)؟",
+      "correct_answer": "الإسبانية",
+      "accepted_answers": [
+        "spanish",
+        "إسبانية",
+        "الإسبانية"
+      ]
+    },
+    "wd_language_d7eeb0205b618908890b": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (et)؟",
+      "correct_answer": "الإستونية",
+      "accepted_answers": [
+        "estonian",
+        "إستونية",
+        "الإستونية"
+      ]
+    },
+    "wd_language_9fa1241de499cc0728ea": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (eu)؟",
+      "correct_answer": "البشكنشية",
+      "accepted_answers": [
+        "basque",
+        "البشكنشية",
+        "بشكنشية"
+      ]
+    },
+    "wd_language_a2e3fc56e1a2a80a5f28": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (fa)؟",
+      "correct_answer": "الفارسية",
+      "accepted_answers": [
+        "persian",
+        "الفارسية",
+        "فارسية"
+      ]
+    },
+    "wd_language_7d96f5373bd2253514c4": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ff)؟",
+      "correct_answer": "الفولانية",
+      "accepted_answers": [
+        "fula",
+        "الفولانية",
+        "فولانية"
+      ]
+    },
+    "wd_language_f79ba81ec08963c90298": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (fi)؟",
+      "correct_answer": "الفنلندية",
+      "accepted_answers": [
+        "finnish",
+        "الفنلندية",
+        "فنلندية"
+      ]
+    },
+    "wd_language_15dc3d0e7f265f55a34b": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (fj)؟",
+      "correct_answer": "الفيجية",
+      "accepted_answers": [
+        "fijian",
+        "الفيجية",
+        "فيجية"
+      ]
+    },
+    "wd_language_571baed47b2682ebe98a": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (fo)؟",
+      "correct_answer": "الفاروية",
+      "accepted_answers": [
+        "faroese",
+        "الفاروية",
+        "فاروية"
+      ]
+    },
+    "wd_language_894222d12550ec698f73": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (fr)؟",
+      "correct_answer": "الفرنسية",
+      "accepted_answers": [
+        "french",
+        "الفرنسية",
+        "فرنسية"
+      ]
+    },
+    "wd_language_ab5355111125836da5f5": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (fy)؟",
+      "correct_answer": "الفريزية الغربية",
+      "accepted_answers": [
+        "west frisian",
+        "الفريزية الغربية",
+        "فريزية الغربية"
+      ]
+    },
+    "wd_language_1ca472bcb50b1be2b31e": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ga)؟",
+      "correct_answer": "الأيرلندية",
+      "accepted_answers": [
+        "irish",
+        "أيرلندية",
+        "الأيرلندية"
+      ]
+    },
+    "wd_language_561455e48292ec537f4b": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (gd)؟",
+      "correct_answer": "الغيلية الإسكتلندية",
+      "accepted_answers": [
+        "scottish gaelic",
+        "الغيلية الإسكتلندية",
+        "غيلية الإسكتلندية"
+      ]
+    },
+    "wd_language_900a50390a46bea2736f": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (gl)؟",
+      "correct_answer": "الجليقية",
+      "accepted_answers": [
+        "galician",
+        "الجليقية",
+        "جليقية"
+      ]
+    },
+    "wd_language_8b50ec5ea0e2634bae54": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (gn)؟",
+      "correct_answer": "الغوارانية",
+      "accepted_answers": [
+        "guarani",
+        "الغوارانية",
+        "اللغة الغوارانية",
+        "غوارانية"
+      ]
+    },
+    "wd_language_bd22f7b330c1b8779893": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (gu)؟",
+      "correct_answer": "الكجراتية",
+      "accepted_answers": [
+        "gujarati",
+        "الكجراتية",
+        "كجراتية"
+      ]
+    },
+    "wd_language_0ca9d6196011f8180a23": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (gv)؟",
+      "correct_answer": "المنكية",
+      "accepted_answers": [
+        "manx",
+        "اللغة المنكية",
+        "المنكية",
+        "منكية"
+      ]
+    },
+    "wd_language_e7667d2ab982428c81af": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ha)؟",
+      "correct_answer": "الهوسية",
+      "accepted_answers": [
+        "hausa",
+        "الهوسية",
+        "هوسية"
+      ]
+    },
+    "wd_language_5442f8f253a65efa7b87": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (he)؟",
+      "correct_answer": "العبرية",
+      "accepted_answers": [
+        "hebrew",
+        "العبرية",
+        "عبرية"
+      ]
+    },
+    "wd_language_e920dc077548dad463de": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (hi)؟",
+      "correct_answer": "الهندية",
+      "accepted_answers": [
+        "hindi",
+        "الهندية",
+        "هندية"
+      ]
+    },
+    "wd_language_b1597f2a763ef5fa2c8a": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ho)؟",
+      "correct_answer": "هيري موتو",
+      "accepted_answers": [
+        "hiri motu",
+        "هيري موتو"
+      ]
+    },
+    "wd_language_d13667533637f8b8199f": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (hr)؟",
+      "correct_answer": "الكرواتية",
+      "accepted_answers": [
+        "croatian",
+        "الكرواتية",
+        "كرواتية"
+      ]
+    },
+    "wd_language_fdd6320f81eaa21a4126": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ht)؟",
+      "correct_answer": "الكريولية الهايتية",
+      "accepted_answers": [
+        "haitian creole",
+        "الكريولية الهايتية",
+        "كريولية الهايتية"
+      ]
+    },
+    "wd_language_2f15a30bdbee91c1e945": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (hu)؟",
+      "correct_answer": "المجرية",
+      "accepted_answers": [
+        "hungarian",
+        "المجرية",
+        "مجرية"
+      ]
+    },
+    "wd_language_c034edc1dcdf90ee9b15": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (hy)؟",
+      "correct_answer": "الأرمنية",
+      "accepted_answers": [
+        "armenian",
+        "أرمنية",
+        "الأرمنية"
+      ]
+    },
+    "wd_language_1738a5b369120a15e80e": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (hz)؟",
+      "correct_answer": "هيريرو",
+      "accepted_answers": [
+        "herero",
+        "هيريرو"
+      ]
+    },
+    "wd_language_5bf66db1aa75c8f2986e": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ia)؟",
+      "correct_answer": "إنترلنغوا",
+      "accepted_answers": [
+        "interlingua",
+        "إنترلنغوا"
+      ]
+    },
+    "wd_language_d6ca52658e19bd1ca69e": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (id)؟",
+      "correct_answer": "الإندونيسية",
+      "accepted_answers": [
+        "indonesian",
+        "إندونيسية",
+        "الإندونيسية"
+      ]
+    },
+    "wd_language_a7a81b482de0182fffc2": {
+      "active": false,
+      "question_text": "لغة رمزها الدولي (ie)",
+      "correct_answer": "الغربية (لغة)",
+      "accepted_answers": [
+        "interlingue",
+        "الغربية (لغة)",
+        "غربية (لغة)"
+      ]
+    },
+    "wd_language_9e68bbd06e50a308bcfb": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ig)؟",
+      "correct_answer": "الإيجبوية",
+      "accepted_answers": [
+        "igbo",
+        "إيجبوية",
+        "الإيجبوية"
+      ]
+    },
+    "wd_language_e047f6f97bdcb1663724": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ik)؟",
+      "correct_answer": "إنوبياك",
+      "accepted_answers": [
+        "iñupiaq",
+        "إنوبياك",
+        "لغة إنوبياك"
+      ]
+    },
+    "wd_language_5e58639d9bdddc2ce083": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (io)؟",
+      "correct_answer": "إيدو",
+      "accepted_answers": [
+        "ido",
+        "إيدو",
+        "لغة إيدو"
+      ]
+    },
+    "wd_language_9027baad06c3f69004c4": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (is)؟",
+      "correct_answer": "الآيسلندية",
+      "accepted_answers": [
+        "icelandic",
+        "آيسلندية",
+        "الآيسلندية"
+      ]
+    },
+    "wd_language_be93745994e76e957ded": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (it)؟",
+      "correct_answer": "الإيطالية",
+      "accepted_answers": [
+        "italian",
+        "إيطالية",
+        "الإيطالية"
+      ]
+    },
+    "wd_language_831e766b60c24a91cfd5": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (iu)؟",
+      "correct_answer": "الإنكتيتوتية",
+      "accepted_answers": [
+        "inuktitut",
+        "إنكتيتوتية",
+        "الإنكتيتوتية"
+      ]
+    },
+    "wd_language_0a3e23910a40ccb53a12": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ja)؟",
+      "correct_answer": "اليابانية",
+      "accepted_answers": [
+        "japanese",
+        "اليابانية",
+        "يابانية"
+      ]
+    },
+    "wd_language_31d959b9067955a074a0": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (jv)؟",
+      "correct_answer": "الجاوية",
+      "accepted_answers": [
+        "javanese",
+        "الجاوية",
+        "جاوية"
+      ]
+    },
+    "wd_language_5c173841a4956f63c7e7": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ka)؟",
+      "correct_answer": "الجورجية",
+      "accepted_answers": [
+        "georgian",
+        "الجورجية",
+        "جورجية"
+      ]
+    },
+    "wd_language_e717c7d18bc392228c09": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (kg)؟",
+      "correct_answer": "كونغو",
+      "accepted_answers": [
+        "kongo",
+        "كونغو",
+        "لغة كونغو"
+      ]
+    },
+    "wd_language_f4b3e25573b68084b43e": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ki)؟",
+      "correct_answer": "الكيكويوئية",
+      "accepted_answers": [
+        "gikuyu",
+        "الكيكويوئية",
+        "كيكويوئية"
+      ]
+    },
+    "wd_language_4be1bde395b3f0d13ae0": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (kk)؟",
+      "correct_answer": "القزاقية",
+      "accepted_answers": [
+        "kazakh",
+        "القزاقية",
+        "قزاقية"
+      ]
+    },
+    "wd_language_0804a4fcd20f277eeaaf": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (kl)؟",
+      "correct_answer": "الغرينلاندية",
+      "accepted_answers": [
+        "greenlandic",
+        "الغرينلاندية",
+        "غرينلاندية"
+      ]
+    },
+    "wd_language_00550629c8437f3e7a00": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (km)؟",
+      "correct_answer": "الخميرية",
+      "accepted_answers": [
+        "khmer",
+        "الخميرية",
+        "خميرية"
+      ]
+    },
+    "wd_language_6dc2e020e6de2363b410": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (kn)؟",
+      "correct_answer": "الكنادية",
+      "accepted_answers": [
+        "kannada",
+        "الكنادية",
+        "كنادية"
+      ]
+    },
+    "wd_language_5604a22f86e444b7896d": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ko)؟",
+      "correct_answer": "الكورية",
+      "accepted_answers": [
+        "korean",
+        "الكورية",
+        "كورية"
+      ]
+    },
+    "wd_language_43229750d2bfca266faf": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (kr)؟",
+      "correct_answer": "الكانورية",
+      "accepted_answers": [
+        "kanuri",
+        "الكانورية",
+        "كانورية"
+      ]
+    },
+    "wd_language_95af77ebd66e496ab2de": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ks)؟",
+      "correct_answer": "الكشميرية",
+      "accepted_answers": [
+        "kashmiri",
+        "الكشميرية",
+        "كشميرية"
+      ]
+    },
+    "wd_language_b7d7920aa84f621cb2d6": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ku)؟",
+      "correct_answer": "الكردية",
+      "accepted_answers": [
+        "kurdish language",
+        "الكردية",
+        "كردية"
+      ]
+    },
+    "wd_language_f0b6170f935515ff4aea": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (kv)؟",
+      "correct_answer": "الكومية",
+      "accepted_answers": [
+        "komi",
+        "الكومية",
+        "كومية"
+      ]
+    },
+    "wd_language_10305d068fe0546f5f01": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (kw)؟",
+      "correct_answer": "الكورنية",
+      "accepted_answers": [
+        "cornish",
+        "الكورنية",
+        "كورنية"
+      ]
+    },
+    "wd_language_b0ab88d0437926e9d92a": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ky)؟",
+      "correct_answer": "القرغيزية",
+      "accepted_answers": [
+        "kyrgyz",
+        "القرغيزية",
+        "قرغيزية"
+      ]
+    },
+    "wd_language_c935bdccfd5ef66bda1b": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (la)؟",
+      "correct_answer": "اللاتينية",
+      "accepted_answers": [
+        "latin",
+        "اللاتينية",
+        "لاتينية"
+      ]
+    },
+    "wd_language_fac92c87169f33598397": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (lb)؟",
+      "correct_answer": "اللوكسمبورغية",
+      "accepted_answers": [
+        "luxembourgish",
+        "اللوكسمبورغية",
+        "لوكسمبورغية"
+      ]
+    },
+    "wd_language_f71bc3109d3181f34008": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (lg)؟",
+      "correct_answer": "اللوغندية",
+      "accepted_answers": [
+        "luganda",
+        "اللوغندية",
+        "لوغندية"
+      ]
+    },
+    "wd_language_bbbba26ad809b13c38fe": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (li)؟",
+      "correct_answer": "الليمبورغية",
+      "accepted_answers": [
+        "limburgish",
+        "اللغة الليمبورغية",
+        "الليمبورغية",
+        "ليمبورغية"
+      ]
+    },
+    "wd_language_77c033152c08f1765877": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ln)؟",
+      "correct_answer": "لنغالا",
+      "accepted_answers": [
+        "lingala",
+        "لنغالا"
+      ]
+    },
+    "wd_language_14899efb94ba004fcd3c": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (lo)؟",
+      "correct_answer": "لاو",
+      "accepted_answers": [
+        "lao",
+        "لاو"
+      ]
+    },
+    "wd_language_47a027585ebcf0a85d2f": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (lt)؟",
+      "correct_answer": "اللتوانية",
+      "accepted_answers": [
+        "lithuanian",
+        "اللتوانية",
+        "لتوانية"
+      ]
+    },
+    "wd_language_041ecfa148e7eb90129b": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (lv)؟",
+      "correct_answer": "اللاتفية",
+      "accepted_answers": [
+        "latvian",
+        "اللاتفية",
+        "لاتفية"
+      ]
+    },
+    "wd_language_9d518530a139a9320248": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (mg)؟",
+      "correct_answer": "الملغاشية",
+      "accepted_answers": [
+        "malagasy",
+        "الملغاشية",
+        "ملغاشية"
+      ]
+    },
+    "wd_language_6ceb152837863a736fb4": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (mh)؟",
+      "correct_answer": "المارشالية",
+      "accepted_answers": [
+        "marshallese",
+        "المارشالية",
+        "مارشالية"
+      ]
+    },
+    "wd_language_af3f4b2ff3931e68969d": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (mi)؟",
+      "correct_answer": "الماورية",
+      "accepted_answers": [
+        "māori",
+        "الماورية",
+        "ماورية"
+      ]
+    },
+    "wd_language_eca8020d28e9b5a5f036": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (mk)؟",
+      "correct_answer": "المقدونية",
+      "accepted_answers": [
+        "macedonian",
+        "المقدونية",
+        "مقدونية"
+      ]
+    },
+    "wd_language_f179bd0a403b34c86256": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ml)؟",
+      "correct_answer": "المليالية",
+      "accepted_answers": [
+        "malayalam",
+        "المليالية",
+        "مليالية"
+      ]
+    },
+    "wd_language_342e476238300c0703eb": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (mn)؟",
+      "correct_answer": "المغولية",
+      "accepted_answers": [
+        "mongolian",
+        "المغولية",
+        "مغولية"
+      ]
+    },
+    "wd_language_e4b2ddeb5cc06f7ed185": {
+      "active": false,
+      "question_text": "لغة رمزها الدولي (mo)",
+      "correct_answer": "الملداوية",
+      "accepted_answers": [
+        "moldovan",
+        "الملداوية",
+        "ملداوية"
+      ]
+    },
+    "wd_language_b57e6c255ca6e7e88995": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (mr)؟",
+      "correct_answer": "المراثية",
+      "accepted_answers": [
+        "marathi",
+        "المراثية",
+        "مراثية"
+      ]
+    },
+    "wd_language_560924734319dfb31c6e": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ms)؟",
+      "correct_answer": "الملايوية",
+      "accepted_answers": [
+        "malay",
+        "الملايوية",
+        "ملايوية"
+      ]
+    },
+    "wd_language_dcf00ae778c116f5eb1e": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (mt)؟",
+      "correct_answer": "المالطية",
+      "accepted_answers": [
+        "maltese",
+        "المالطية",
+        "مالطية"
+      ]
+    },
+    "wd_language_be89e13188cb094e4b3c": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (my)؟",
+      "correct_answer": "البورمية",
+      "accepted_answers": [
+        "burmese",
+        "البورمية",
+        "بورمية"
+      ]
+    },
+    "wd_language_099e102548315c1f0b34": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (na)؟",
+      "correct_answer": "الناوروية",
+      "accepted_answers": [
+        "nauruan",
+        "الناوروية",
+        "ناوروية"
+      ]
+    },
+    "wd_language_2f0aa0534bcf970966e5": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (nb)؟",
+      "correct_answer": "بوكمول",
+      "accepted_answers": [
+        "bokmål",
+        "بوكمول"
+      ]
+    },
+    "wd_language_31e22eb4992ac82ad078": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (nd)؟",
+      "correct_answer": "النديبيلية الشمالية",
+      "accepted_answers": [
+        "northern ndebele",
+        "النديبيلية الشمالية",
+        "نديبيلية الشمالية"
+      ]
+    },
+    "wd_language_d6db4a3109cccbb23202": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ne)؟",
+      "correct_answer": "النيبالية",
+      "accepted_answers": [
+        "nepali",
+        "النيبالية",
+        "نيبالية"
+      ]
+    },
+    "wd_language_71596263aff6889cda37": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (nl)؟",
+      "correct_answer": "الهولندية",
+      "accepted_answers": [
+        "dutch",
+        "الهولندية",
+        "هولندية"
+      ]
+    },
+    "wd_language_32528cbb4db1230a6b3e": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (nn)؟",
+      "correct_answer": "ني نوشك",
+      "accepted_answers": [
+        "nynorsk",
+        "ني نوشك"
+      ]
+    },
+    "wd_language_d4ee87448d277dbb9589": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (no)؟",
+      "correct_answer": "النرويجية",
+      "accepted_answers": [
+        "norwegian",
+        "النرويجية",
+        "نرويجية"
+      ]
+    },
+    "wd_language_3351e1f18b212393460e": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (nr)؟",
+      "correct_answer": "نديبلي جنوبية",
+      "accepted_answers": [
+        "southern ndebele",
+        "لغة نديبلي جنوبية",
+        "نديبلي جنوبية"
+      ]
+    },
+    "wd_language_03077be959d12dc42418": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (nv)؟",
+      "correct_answer": "نافاهو",
+      "accepted_answers": [
+        "navajo",
+        "نافاهو"
+      ]
+    },
+    "wd_language_eb1f64a8b65fe4d06cce": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ny)؟",
+      "correct_answer": "الشيشيوائية",
+      "accepted_answers": [
+        "chewa",
+        "الشيشيوائية",
+        "شيشيوائية"
+      ]
+    },
+    "wd_language_0b2993bd95226a9ffdd7": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (oc)؟",
+      "correct_answer": "القسطانية",
+      "accepted_answers": [
+        "occitan",
+        "القسطانية",
+        "قسطانية"
+      ]
+    },
+    "wd_language_a33328b18168b92fd18c": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (oj)؟",
+      "correct_answer": "الأوجيبوية",
+      "accepted_answers": [
+        "ojibwe",
+        "أوجيبوية",
+        "الأوجيبوية"
+      ]
+    },
+    "wd_language_8edbccb3d744454a3856": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (om)؟",
+      "correct_answer": "الأوروموية",
+      "accepted_answers": [
+        "oromo",
+        "أوروموية",
+        "الأوروموية"
+      ]
+    },
+    "wd_language_be489435c95a02b6787b": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (or)؟",
+      "correct_answer": "الأوريا",
+      "accepted_answers": [
+        "odia",
+        "أوريا",
+        "الأوريا",
+        "لغة الأوريا"
+      ]
+    },
+    "wd_language_43463749f312d2a0fa95": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (pa)؟",
+      "correct_answer": "البنجابية",
+      "accepted_answers": [
+        "punjabi",
+        "البنجابية",
+        "بنجابية"
+      ]
+    },
+    "wd_language_ce3e305cae4db4ed6cba": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (pi)؟",
+      "correct_answer": "بالي",
+      "accepted_answers": [
+        "pali",
+        "بالي"
+      ]
+    },
+    "wd_language_539dba547ffb17509df5": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (pl)؟",
+      "correct_answer": "البولندية",
+      "accepted_answers": [
+        "polish",
+        "البولندية",
+        "بولندية"
+      ]
+    },
+    "wd_language_b82ccdbf2a7b7351f7f6": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ps)؟",
+      "correct_answer": "البشتوية",
+      "accepted_answers": [
+        "pashto",
+        "البشتوية",
+        "بشتوية"
+      ]
+    },
+    "wd_language_9ae684a5129eaef52263": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (pt)؟",
+      "correct_answer": "البرتغالية",
+      "accepted_answers": [
+        "portuguese",
+        "البرتغالية",
+        "برتغالية"
+      ]
+    },
+    "wd_language_a3b0eeff6294dc9dce03": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (qu)؟",
+      "correct_answer": "كتشوا",
+      "accepted_answers": [
+        "quechua",
+        "كتشوا"
+      ]
+    },
+    "wd_language_ba9dc92cf4aee47c5e3d": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (rm)؟",
+      "correct_answer": "الرومانشية",
+      "accepted_answers": [
+        "romansh",
+        "الرومانشية",
+        "رومانشية"
+      ]
+    },
+    "wd_language_a08cd1b071e02636becb": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (rn)؟",
+      "correct_answer": "الكيروندية",
+      "accepted_answers": [
+        "kirundi",
+        "الكيروندية",
+        "كيروندية"
+      ]
+    },
+    "wd_language_cfb59b4b1ae0df278b10": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ro)؟",
+      "correct_answer": "الرومانية",
+      "accepted_answers": [
+        "romanian",
+        "الرومانية",
+        "رومانية"
+      ]
+    },
+    "wd_language_6086d1443746ea4b35f5": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ru)؟",
+      "correct_answer": "الروسية",
+      "accepted_answers": [
+        "russian",
+        "الروسية",
+        "روسية"
+      ]
+    },
+    "wd_language_7d949cc08a4a30588270": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (rw)؟",
+      "correct_answer": "الكينيارواندية",
+      "accepted_answers": [
+        "kinyarwanda",
+        "الكينيارواندية",
+        "كينيارواندية"
+      ]
+    },
+    "wd_language_411ac2f2c831568e90bd": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (sa)؟",
+      "correct_answer": "السنسكريتية",
+      "accepted_answers": [
+        "sanskrit",
+        "السنسكريتية",
+        "سنسكريتية"
+      ]
+    },
+    "wd_language_cf039674b38d192701fb": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (sc)؟",
+      "correct_answer": "سردينية",
+      "accepted_answers": [
+        "sardinian",
+        "سردينية"
+      ]
+    },
+    "wd_language_437692da10c9b5ac418e": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (sd)؟",
+      "correct_answer": "السندية",
+      "accepted_answers": [
+        "sindhi",
+        "السندية",
+        "سندية"
+      ]
+    },
+    "wd_language_b0460c6b23232a3069af": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (se)؟",
+      "correct_answer": "السامي الشمالية",
+      "accepted_answers": [
+        "northern sami",
+        "السامي الشمالية",
+        "اللغة السامي الشمالية",
+        "سامي الشمالية"
+      ]
+    },
+    "wd_language_d4f87b0a922ca4b647b1": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (sg)؟",
+      "correct_answer": "السنغوية",
+      "accepted_answers": [
+        "sango",
+        "السنغوية",
+        "سنغوية"
+      ]
+    },
+    "wd_language_982adeb8cf1c13224089": {
+      "active": false,
+      "question_text": "لغة رمزها الدولي (sh)",
+      "correct_answer": "الصربية الكرواتية",
+      "accepted_answers": [
+        "serbo-croatian",
+        "الصربية الكرواتية",
+        "صربية الكرواتية"
+      ]
+    },
+    "wd_language_4ec920e4645bf8508177": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (si)؟",
+      "correct_answer": "السنهالية",
+      "accepted_answers": [
+        "sinhala",
+        "السنهالية",
+        "سنهالية"
+      ]
+    },
+    "wd_language_5114b7fe379a750d6e95": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (sk)؟",
+      "correct_answer": "السلوفاكية",
+      "accepted_answers": [
+        "slovak",
+        "السلوفاكية",
+        "سلوفاكية"
+      ]
+    },
+    "wd_language_e8f8945da7ede6f6b480": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (sl)؟",
+      "correct_answer": "السلوفينية",
+      "accepted_answers": [
+        "slovene",
+        "السلوفينية",
+        "سلوفينية"
+      ]
+    },
+    "wd_language_ec2fc7e54bdfbee6665b": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (sm)؟",
+      "correct_answer": "الساموية",
+      "accepted_answers": [
+        "samoan",
+        "الساموية",
+        "ساموية"
+      ]
+    },
+    "wd_language_2fd1c3236a366903b085": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (sn)؟",
+      "correct_answer": "الشونا",
+      "accepted_answers": [
+        "shona",
+        "الشونا",
+        "شونا",
+        "لغة الشونا"
+      ]
+    },
+    "wd_language_c024a64a1707f7335e90": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (so)؟",
+      "correct_answer": "الصومالية",
+      "accepted_answers": [
+        "somali",
+        "الصومالية",
+        "صومالية"
+      ]
+    },
+    "wd_language_4c192ca9a207b175696c": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (sq)؟",
+      "correct_answer": "الألبانية",
+      "accepted_answers": [
+        "albanian",
+        "ألبانية",
+        "الألبانية"
+      ]
+    },
+    "wd_language_ca02339d98733793ff3b": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (sr)؟",
+      "correct_answer": "الصربية",
+      "accepted_answers": [
+        "serbian",
+        "الصربية",
+        "صربية"
+      ]
+    },
+    "wd_language_f8a39675c0015cdf1d9a": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ss)؟",
+      "correct_answer": "السوازية",
+      "accepted_answers": [
+        "swazi",
+        "السوازية",
+        "سوازية"
+      ]
+    },
+    "wd_language_0cddb718e8c23ef0049b": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (st)؟",
+      "correct_answer": "سوتية",
+      "accepted_answers": [
+        "sesotho",
+        "سوتية",
+        "لغة سوتية"
+      ]
+    },
+    "wd_language_c7110c2f4a686f8545c0": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (su)؟",
+      "correct_answer": "الصندية",
+      "accepted_answers": [
+        "sundanese",
+        "الصندية",
+        "صندية"
+      ]
+    },
+    "wd_language_720d8c75eb3561371410": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (sv)؟",
+      "correct_answer": "السويدية",
+      "accepted_answers": [
+        "swedish",
+        "السويدية",
+        "سويدية"
+      ]
+    },
+    "wd_language_45df9bf535d5d48e534f": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (sw)؟",
+      "correct_answer": "السواحلية",
+      "accepted_answers": [
+        "swahili",
+        "السواحلية",
+        "سواحلية"
+      ]
+    },
+    "wd_language_2d39498b4abdae5b9a8d": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ta)؟",
+      "correct_answer": "التملية",
+      "accepted_answers": [
+        "tamil",
+        "التملية",
+        "تملية"
+      ]
+    },
+    "wd_language_e8fb32c0ec38b598e268": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (te)؟",
+      "correct_answer": "التيلوغوية",
+      "accepted_answers": [
+        "telugu",
+        "التيلوغوية",
+        "تيلوغوية"
+      ]
+    },
+    "wd_language_d9b4cf75638ba65ea559": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (tg)؟",
+      "correct_answer": "الطاجيكية",
+      "accepted_answers": [
+        "tajik",
+        "الطاجيكية",
+        "طاجيكية"
+      ]
+    },
+    "wd_language_1454e9f6419f650dcce5": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (th)؟",
+      "correct_answer": "التايلندية",
+      "accepted_answers": [
+        "thai",
+        "التايلندية",
+        "تايلندية"
+      ]
+    },
+    "wd_language_c94a6f5072c57a237852": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ti)؟",
+      "correct_answer": "التغرينية",
+      "accepted_answers": [
+        "tigrinya",
+        "التغرينية",
+        "تغرينية"
+      ]
+    },
+    "wd_language_b53a12ca7e3cf81abb02": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (tk)؟",
+      "correct_answer": "التركمانية",
+      "accepted_answers": [
+        "turkmen",
+        "التركمانية",
+        "تركمانية"
+      ]
+    },
+    "wd_language_ac631636c7a2b65c5b1a": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (tl)؟",
+      "correct_answer": "التاغالوغية",
+      "accepted_answers": [
+        "tagalog",
+        "التاغالوغية",
+        "تاغالوغية"
+      ]
+    },
+    "wd_language_ae118470c894515cd050": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (tn)؟",
+      "correct_answer": "التسوانية",
+      "accepted_answers": [
+        "tswana",
+        "التسوانية",
+        "تسوانية"
+      ]
+    },
+    "wd_language_84a8c0d1192cb5b461e0": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (to)؟",
+      "correct_answer": "التونغية",
+      "accepted_answers": [
+        "tongan",
+        "التونغية",
+        "اللغة التونغية",
+        "تونغية"
+      ]
+    },
+    "wd_language_e3c839bc1b92c09b8395": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (tr)؟",
+      "correct_answer": "التركية",
+      "accepted_answers": [
+        "turkish",
+        "التركية",
+        "تركية"
+      ]
+    },
+    "wd_language_6e627740cebc0a99b94f": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ts)؟",
+      "correct_answer": "تسونجا",
+      "accepted_answers": [
+        "tsonga",
+        "تسونجا",
+        "لغة تسونجا"
+      ]
+    },
+    "wd_language_c1b40271c5c2072249a3": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (tt)؟",
+      "correct_answer": "التترية",
+      "accepted_answers": [
+        "tatar",
+        "التترية",
+        "تترية"
+      ]
+    },
+    "wd_language_bcb7eb5cdeeb3aa6d6d5": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (tw)؟",
+      "correct_answer": "توي",
+      "accepted_answers": [
+        "twi",
+        "توي"
+      ]
+    },
+    "wd_language_2b9b67c7cbe93f71dd5e": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ty)؟",
+      "correct_answer": "التاهيتية",
+      "accepted_answers": [
+        "tahitian",
+        "التاهيتية",
+        "تاهيتية"
+      ]
+    },
+    "wd_language_4dafcae2ec8d1c5244b5": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ug)؟",
+      "correct_answer": "الأويغورية",
+      "accepted_answers": [
+        "uyghur",
+        "أويغورية",
+        "الأويغورية"
+      ]
+    },
+    "wd_language_67db71177ed220bbc1e0": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (uk)؟",
+      "correct_answer": "الأوكرانية",
+      "accepted_answers": [
+        "ukrainian",
+        "أوكرانية",
+        "الأوكرانية"
+      ]
+    },
+    "wd_language_733deb5d23f79d7092d6": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ur)؟",
+      "correct_answer": "الأردية",
+      "accepted_answers": [
+        "urdu",
+        "أردية",
+        "الأردية"
+      ]
+    },
+    "wd_language_9546789720777d132467": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (uz)؟",
+      "correct_answer": "الأوزبكية",
+      "accepted_answers": [
+        "uzbek",
+        "أوزبكية",
+        "الأوزبكية"
+      ]
+    },
+    "wd_language_6b942196d76563c72583": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (ve)؟",
+      "correct_answer": "الفيندية",
+      "accepted_answers": [
+        "venda",
+        "الفيندية",
+        "فيندية"
+      ]
+    },
+    "wd_language_38f37bf845f97417b276": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (vi)؟",
+      "correct_answer": "الفيتنامية",
+      "accepted_answers": [
+        "vietnamese",
+        "الفيتنامية",
+        "فيتنامية"
+      ]
+    },
+    "wd_language_aff4df60b71e93bc1d2f": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (vo)؟",
+      "correct_answer": "فولابوك",
+      "accepted_answers": [
+        "volapük",
+        "فولابوك"
+      ]
+    },
+    "wd_language_4d09ae61df151d6f0a52": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (wa)؟",
+      "correct_answer": "والون",
+      "accepted_answers": [
+        "walloon",
+        "لغة والون",
+        "والون"
+      ]
+    },
+    "wd_language_d2888c42f3ecba29dd7d": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (wo)؟",
+      "correct_answer": "الولوفية",
+      "accepted_answers": [
+        "wolof",
+        "الولوفية",
+        "ولوفية"
+      ]
+    },
+    "wd_language_63e901f423e96fe99955": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (xh)؟",
+      "correct_answer": "الكوسية",
+      "accepted_answers": [
+        "xhosa",
+        "الكوسية",
+        "كوسية"
+      ]
+    },
+    "wd_language_81c2c2317e24bc46acc4": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (yi)؟",
+      "correct_answer": "اليديشية",
+      "accepted_answers": [
+        "yiddish",
+        "اليديشية",
+        "يديشية"
+      ]
+    },
+    "wd_language_e38a28d14442522a0bbb": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (yo)؟",
+      "correct_answer": "اليوروبية",
+      "accepted_answers": [
+        "yoruba",
+        "اليوروبية",
+        "يوروبية"
+      ]
+    },
+    "wd_language_bc3ca02f5c7a926b76a4": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (za)؟",
+      "correct_answer": "التشوانغية",
+      "accepted_answers": [
+        "zhuang",
+        "التشوانغية",
+        "تشوانغية"
+      ]
+    },
+    "wd_language_851d758331bbf751dc9e": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (zh)؟",
+      "correct_answer": "الصينية",
+      "accepted_answers": [
+        "chinese",
+        "الصينية",
+        "صينية"
+      ]
+    },
+    "wd_language_330cfa4361e2ab537e28": {
+      "active": true,
+      "question_text": "ما اللغة التي رمزها ذو الحرفين في ISO 639 هو (zu)؟",
+      "correct_answer": "الزولوية",
+      "accepted_answers": [
+        "zulu",
+        "الزولوية",
+        "زولوية"
+      ]
+    },
+    "wd_country_by_cap_9ffb368dede1d83a4285": {
+      "question_text": "دولة يقع مقر حكومتها في منطقة يارين",
+      "correct_answer": "ناورو",
+      "active": true,
+      "accepted_answers": [
+        "ناورو",
+        "nauru"
+      ]
+    },
+    "wd_cap_9ffb368dede1d83a4285": {
+      "question_text": "المنطقة التي تضم مقر حكومة ناورو",
+      "correct_answer": "يارين",
+      "active": true,
+      "accepted_answers": [
+        "يارين",
+        "Yaren"
+      ]
+    }
+  }
+}
