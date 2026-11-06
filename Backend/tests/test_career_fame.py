@@ -19,6 +19,12 @@ class FameTests(unittest.TestCase):
   (self.root/'career_fame_review.json').write_text(json.dumps({'players':players}),encoding='utf-8')
  def test_unreviewed_is_pending_not_automatically_medium(self):
   r=fame.reviewed_classification('Q9999');self.assertFalse(r['eligible']);self.assertEqual(r['status'],'pending_review')
+ def test_catalog_excludes_women_without_changing_fame_of_male_players(self):
+  data=json.loads((Path(__file__).resolve().parents[1]/'data/career_fame_review.json').read_text(encoding='utf-8'))
+  self.assertEqual(data['scope'],'men_only')
+  self.assertEqual(data['players']['Q4721366']['status'],'excluded')
+  self.assertEqual(data['players']['Q4721366']['reason'],'catalog_men_only')
+  self.assertEqual(data['players']['Q12897']['fame'],'easy')
  def test_failed_or_missing_measurement_does_not_downgrade_known_anchor(self):
   self.save({'Q62786':dict(status='reviewed',fame='medium',career_memory='standard',evidence={'attention':{'status':'rate_limited','median_monthly':None}})})
   self.assertEqual(fame.reviewed_classification('Q62786','hard')['difficulty'],'medium')

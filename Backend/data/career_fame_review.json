@@ -1756,11 +1756,11 @@
     },
     "Q4721366": {
       "name": "ألكسيا بوتياس",
-      "status": "reviewed",
-      "fame": "medium",
+      "status": "excluded",
+      "fame": null,
       "reviewed_at": "2026-11-06",
       "career_memory": "standard",
-      "reason": "معروف لدى المتابع المنتظم لدوري أو حقبة أو منتخب؛ لا يُعامل كاسم جماهيري عام ولا كمغمور.",
+      "reason": "catalog_men_only",
       "evidence": {
         "wikidata": "https://www.wikidata.org/wiki/Q4721366",
         "attention": {
@@ -5493,5 +5493,6 @@
       },
       "calibration": "user_anchor_and_editorial_review"
     }
-  }
+  },
+  "scope": "men_only"
 }

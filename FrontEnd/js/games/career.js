@@ -157,15 +157,29 @@
     renderStrikeRow($('oppStrikes'), oppStrk);
   }
 
+  let revealBarFrame = null;
   function startRevealBar(seconds) {
+    if (revealBarFrame !== null) cancelAnimationFrame(revealBarFrame);
+    const duration = (Number.isFinite(Number(seconds)) && Number(seconds) > 0 ? Number(seconds) : 5) * 1000;
+    const started = performance.now();
     revealTimerWrap.style.display = 'block';
-    revealTimerBar.style.transition = 'none';
+    revealTimerBar.style.setProperty('transition', 'none', 'important');
     revealTimerBar.style.width = '100%';
-    void revealTimerBar.offsetWidth;
-    revealTimerBar.style.transition = `width ${seconds}s linear`;
-    revealTimerBar.style.width = '0%';
+    revealTimerBar.style.transformOrigin = 'right center';
+    revealTimerBar.style.transform = 'scaleX(1)';
+    // الوقت وظيفة أساسية؛ لا يعتمد على انتقالات CSS أو إعداد تقليل الحركة.
+    function tick(now) {
+      const remaining = Math.max(0, 1 - (now - started) / duration);
+      revealTimerBar.style.transform = `scaleX(${remaining})`;
+      revealBarFrame = remaining > 0 ? requestAnimationFrame(tick) : null;
+    }
+    revealBarFrame = requestAnimationFrame(tick);
   }
-  function stopRevealBar() { revealTimerWrap.style.display = 'none'; }
+  function stopRevealBar() {
+    if (revealBarFrame !== null) cancelAnimationFrame(revealBarFrame);
+    revealBarFrame = null;
+    revealTimerWrap.style.display = 'none';
+  }
 
   // ===== الاتصال والانضمام =====
   socket.on('connect', () => {

@@ -70,6 +70,7 @@ def sparql_top_players(limit, min_sitelinks, offset=0):
     query = f"""
     SELECT ?player ?sitelinks WHERE {{
       ?player wdt:P31 wd:Q5 ; wdt:P106 wd:Q937857 ;
+              wdt:P21 wd:Q6581097 ;
               wikibase:sitelinks ?sitelinks .
       FILTER(?sitelinks >= {min_sitelinks})
     }} ORDER BY DESC(?sitelinks) ?player LIMIT {limit} OFFSET {offset}
