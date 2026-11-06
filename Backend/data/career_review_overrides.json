@@ -1,0 +1,53 @@
+{
+  "reviewed_at": "2026-11-06",
+  "players": {
+    "Q84086": {
+      "name": "ألكسندر ميتروفيتش",
+      "accepted_answers": [
+        "ألكسندر ميتروفيتش",
+        "ألكساندر ميتروفيتش",
+        "ميتروفيتش",
+        "Aleksandar Mitrovic",
+        "Aleksandar Mitrović",
+        "Mitrovic",
+        "Mitrović"
+      ],
+      "sources": [
+        "https://www.spl.com.sa/en/news/al-hilal-confirm-aleksandar-mitrovic-out-for-six-weeks-through-injury"
+      ]
+    },
+    "Q66241169": {
+      "name": "جود بيلينغهام",
+      "accepted_answers": [
+        "جود بيلينغهام",
+        "جود بيلينجهام",
+        "بيلينغهام",
+        "بيلينجهام",
+        "Jude Bellingham",
+        "Bellingham"
+      ],
+      "sources": [
+        "https://www.realmadrid.com/ar-AE/football/first-team/players/jude-bellingham"
+      ]
+    },
+    "Q193768": {
+      "status": "retired",
+      "era": null,
+      "sources": [
+        "https://ghanasoccernet.com/im-done-ghana-legend-sulley-muntari-confirms-retirement"
+      ]
+    },
+    "Q7085": {
+      "active": false
+    },
+    "Q57641": {
+      "active": false
+    },
+    "Q169963": {
+      "active": false
+    },
+    "Q122003": {
+      "active": false
+    }
+  }
+}

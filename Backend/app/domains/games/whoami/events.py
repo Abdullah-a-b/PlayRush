@@ -31,7 +31,7 @@ def _load_pool():
         _chars_stamp = stamp
         try:
             with open(_CHARS_FILE, encoding="utf-8") as f:
-                _chars_cache = (json.load(f) or {}).get("characters", [])
+                _chars_cache = [c for c in (json.load(f) or {}).get("characters", []) if c.get("active", True)]
         except Exception as e:
             print(f" [whoami] فشل تحميل الشخصيات: {e}")
             _chars_cache = []

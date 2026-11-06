@@ -47,6 +47,7 @@ def _load_questions():
                         _QUESTIONS.append(q);existing.add(q.get("id"));texts.add(key)
         except Exception as e:
             print(f" [bank] دمج المولّد: {e}")
+        _QUESTIONS = [q for q in _QUESTIONS if q.get("active", True)]
         print(f" [bank] حُمّل {len(_QUESTIONS)} سؤال (يدوي + مولّد)")
     return _QUESTIONS
 

@@ -55,7 +55,8 @@ SELECT DISTINCT ?cAr WHERE {
     # العناصر الكيميائية
     "kq_elements": """
 SELECT DISTINCT ?eAr WHERE {
-  ?e wdt:P31 wd:Q11344 .
+  ?e wdt:P31 wd:Q11344 ; wdt:P1086 ?atomicNumber .
+  FILTER(?atomicNumber >= 1 && ?atomicNumber <= 118)
   SERVICE wikibase:label { bd:serviceParam wikibase:language "ar". ?e rdfs:label ?eAr . }
 }""",
 }
@@ -95,6 +96,8 @@ SELECT DISTINCT ?curAr WHERE {
         "q": "اذكر أندية لعبت في الدوري الإنجليزي الممتاز", "cat": "رياضة",
         "sparql": """
 SELECT DISTINCT ?clAr WHERE {
+  ?cl wdt:P31/wdt:P279* wd:Q476028 .
+  FILTER NOT EXISTS { ?cl wdt:P31 wd:Q5 }
   ?cl p:P118 ?membership . ?membership ps:P118 wd:Q9448 . FILTER NOT EXISTS { ?membership wikibase:rank wikibase:DeprecatedRank }
   SERVICE wikibase:label { bd:serviceParam wikibase:language "ar". ?cl rdfs:label ?clAr . }
 }"""},
@@ -102,6 +105,8 @@ SELECT DISTINCT ?clAr WHERE {
         "q": "اذكر أندية لعبت في الدوري الإسباني", "cat": "رياضة",
         "sparql": """
 SELECT DISTINCT ?clAr WHERE {
+  ?cl wdt:P31/wdt:P279* wd:Q476028 .
+  FILTER NOT EXISTS { ?cl wdt:P31 wd:Q5 }
   ?cl p:P118 ?membership . ?membership ps:P118 wd:Q324867 . FILTER NOT EXISTS { ?membership wikibase:rank wikibase:DeprecatedRank }
   SERVICE wikibase:label { bd:serviceParam wikibase:language "ar". ?cl rdfs:label ?clAr . }
 }"""},
@@ -187,11 +192,17 @@ def _run_once():
         doc = read_json(_DATA_FILE, {"questions": []})
         by_id = {q["id"]: q for q in doc.setdefault("questions", [])}
         sources = state.setdefault("sources", {})
-        stats = {"status": "success", "added": 0, "updated": 0, "answers_added": 0, "failed_sources": [], "ineligible_sources": []}
+        stats = {"status": "success", "added": 0, "updated": 0, "answers_added": 0, "failed_sources": [], "ineligible_sources": [], "held_sources": []}
         all_queries = dict(QUERIES)
         all_queries.update({qid: t["sparql"] for qid, t in NEW_QUESTION_TEMPLATES.items()})
         for qid, query in all_queries.items():
             source = sources.setdefault(qid, {})
+            # لا يعيد المصدر الآلي نشر قائمة معزولة أو معتمدة بمراجعة بشرية.
+            if by_id.get(qid, {}).get("_curation", {}).get("hold_import") or by_id.get(qid, {}).get("active") is False:
+                source["eligibility"] = "review_hold"
+                source.pop("retry_after", None)
+                stats["held_sources"].append(qid)
+                continue
             if not due(source, positive_days("KNOWLEDGE_IMPORT_INTERVAL_DAYS")): continue
             if qid not in by_id and qid not in NEW_QUESTION_TEMPLATES: continue
             try:

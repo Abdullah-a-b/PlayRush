@@ -148,7 +148,7 @@ def _run_once():
         state = read_json(STATE_FILE, {})
         doc = read_json(_DATA_FILE, {"characters": []})
         chars = doc.setdefault("characters", [])
-        by_qid = {c["wikidata_id"]: c for c in chars if c.get("wikidata_id")}
+        by_qid = {(c.get("wikidata_id") or c.get("_curation", {}).get("wikidata_id")): c for c in reversed(chars) if c.get("wikidata_id") or c.get("_curation", {}).get("wikidata_id")}
         by_name = {canonical(c.get("name")): c for c in chars}
         sources = state.setdefault("sources", {})
         stats = {"status": "success", "added": 0, "updated": 0, "unchanged": 0, "failed_sources": [], "manual_protected": 0}
@@ -172,6 +172,8 @@ def _run_once():
                     for new in candidates:
                         old = by_qid.get(new["wikidata_id"]) or by_name.get(canonical(new["name"]))
                         if old:
+                            if old.get("_curation", {}).get("hold_import") or old.get("active") is False:
+                                stats["manual_protected"] += 1; continue
                             old_source = old.get("source", {}) if isinstance(old.get("source"), dict) else {}
                             if old.get("wikidata_id") and old["wikidata_id"] != new["wikidata_id"]:
                                 stats["manual_protected"] += 1; continue

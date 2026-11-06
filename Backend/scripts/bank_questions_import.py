@@ -23,7 +23,8 @@ HEADERS = {"User-Agent": "PlayRushBankQuestions/1.0 (educational game)",
 QUERY = """
 SELECT ?c ?cap ?cur ?cont ?cLabelAr ?cLabelEn ?capAr ?capEn ?curAr ?curEn ?contAr WHERE {
   ?c wdt:P31 wd:Q3624078 .          # دولة ذات سيادة
-  FILTER NOT EXISTS { ?c wdt:P31 wd:Q3024240 }   # ليست دولة تاريخية
+  FILTER NOT EXISTS { ?c wdt:P31 wd:Q3024240 }
+  FILTER NOT EXISTS { ?c wdt:P576 ?dissolved }   # ليست دولة تاريخية
   OPTIONAL { ?c p:P36 ?capClaim . ?capClaim ps:P36 ?cap . FILTER NOT EXISTS { ?capClaim pq:P582 ?endedCap } FILTER NOT EXISTS { ?capClaim wikibase:rank wikibase:DeprecatedRank } }
   OPTIONAL { ?c p:P38 ?curClaim . ?curClaim ps:P38 ?cur . FILTER NOT EXISTS { ?curClaim pq:P582 ?endedCur } FILTER NOT EXISTS { ?curClaim wikibase:rank wikibase:DeprecatedRank } }
   OPTIONAL { ?c wdt:P30 ?cont . }
@@ -75,6 +76,8 @@ def build_questions(rows):
         kind, country = fact["kind"], fact["country"]
         famous = country in FAMOUS
         text = {"cap": f"ما عاصمة {country}؟", "cur": f"ما العملة الرسمية في {country}؟", "cont": f"في أي قارة تقع {country}؟"}[kind]
+        if kind == "cap" and fact["country_id"].rsplit("/", 1)[-1] == "Q801":
+            text = "ما المدينة التي تعلنها إسرائيل عاصمة لها؟"
         qs.append({"id": fact["id"], "source_id": fact["id"], "q": text, "a": fact["answer"], "accepted": _variants(fact["answer"], fact["english"]), "cat": "عام" if kind == "cur" else "جغرافيا", "diff": ("medium" if famous else "hard") if kind == "cur" else ("easy" if famous else "medium"), "source": "wikidata", "entity_id": fact["country_id"]})
     from app.core.import_support import unambiguous_questions
     return unambiguous_questions(qs)
@@ -89,13 +92,19 @@ def run_import():
         raise RuntimeError(f"نتائج قليلة ({len(qs)})؛ لم يُمس الملف الحالي")
     old = read_json(out_path, [])
     by_text = {canonical(q.get("q")): q for q in old}
+    by_identity = {q["source_id"]: q for q in old if q.get("source_id")}
     added = updated = unchanged = 0
     used_ids = set()
     for q in qs:
-        previous = by_text.get(canonical(q["q"]))
+        previous = by_identity.get(q.get("source_id")) or by_text.get(canonical(q["q"]))
         # ترحيل آمن: سؤال قديم معروف يحتفظ بمعرّفه ومشاهداته.
         if previous and previous.get("id") not in used_ids:
             q["id"] = previous["id"]
+        if previous and previous.get("_curation", {}).get("hold_import"):
+            # لا يعيد المصدر صياغة سؤال حُسم نطاقه بالمراجعة أو يعيد تكرارًا معزولًا.
+            q.clear();q.update(previous)
+        elif previous and previous.get("active") is False:
+            q["active"] = False
         used_ids.add(q["id"])
         if previous is None:
             added += 1

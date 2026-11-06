@@ -122,7 +122,7 @@ class ImportTests(unittest.TestCase):
  def test_career_real_refresh_updates_preserves_curated_state(self):
   player=self._player();session=Session([player]);entities=self._entities();career._ENTITY_CACHE['stale']={}
   with patch.object(career,'SessionLocal',return_value=session),patch.object(career,'_ensure_wikidata_column'),patch.object(career,'wd_get_entities',side_effect=lambda ids:{q:entities[q] for q in ids}),patch.object(career,'_ar_article_lengths',return_value={'مقال اللاعب':None}):result=career.run_import(refresh=True,player_qids=['Q100'],skip_logos=True,log=lambda _:None)
-  self.assertEqual(result['updated'],1);self.assertEqual(player.id,1);self.assertEqual(player.status,'retired');self.assertEqual(player.difficulty,'easy');self.assertFalse(player.active);self.assertEqual(json.loads(player.clubs)[0]['logo'],'old.png');self.assertNotIn('الآن',player.era);self.assertNotIn('stale',career._ENTITY_CACHE)
+  self.assertEqual(result['updated'],1);self.assertEqual(player.id,1);self.assertEqual(player.status,'retired');self.assertEqual(player.difficulty,'easy');self.assertFalse(player.active);self.assertEqual(json.loads(player.clubs)[0]['logo'],'old.png');self.assertIsNone(player.era);self.assertNotIn('stale',career._ENTITY_CACHE)
  def test_career_incomplete_clubs_not_committed(self):
   player=self._player();session=Session([player]);entities=self._entities()
   with patch.object(career,'SessionLocal',return_value=session),patch.object(career,'_ensure_wikidata_column'),patch.object(career,'wd_get_entities',side_effect=lambda ids:{q:entities[q] for q in ids if q=='Q100'}),patch.object(career,'_ar_article_lengths',return_value={}):
@@ -225,5 +225,56 @@ class ImportTests(unittest.TestCase):
   data=self.root/'knowledge.json';state=self.root/'state.json';support.atomic_json(data,{'questions':[]})
   with patch.object(knowledge,'_DATA_FILE',str(data)),patch.object(knowledge,'STATE_FILE',str(state)),patch.object(knowledge,'QUERIES',{}),patch.object(knowledge,'NEW_QUESTION_TEMPLATES',{'small':dict(q='قائمة',cat='عام',sparql='query')}),patch.object(knowledge,'_run_query',return_value=['إجابة '+str(i) for i in range(12)]):r=knowledge._run_once()
   self.assertEqual(r['status'],'success');self.assertEqual(r['ineligible_sources'],['small']);self.assertEqual(r['failed_sources'],[]);self.assertNotIn('retry_after',support.read_json(state));self.assertEqual(support.read_json(data),{'questions':[]})
+
+
+ def test_reviewed_inactive_content_never_enters_readers(self):
+  support.atomic_json(self.root/'bank_questions.json',[dict(id='hidden',q='سؤال معزول',active=False),dict(id='visible',q='سؤال منشور')]);support.atomic_json(self.root/'bank_questions_auto.json',[dict(id='auto-hidden',q='آلي معزول',active=False)])
+  self.assertEqual([q['id'] for q in self._reader('bank','_load_questions',dict(json=json,os=os,_QUESTIONS=None,_QUESTIONS_STAMP=None))()],['visible'])
+  p=self.root/'who.json';support.atomic_json(p,{'characters':[dict(id='hidden',active=False),dict(id='visible')]})
+  self.assertEqual([c['id'] for c in self._reader('whoami','_load_pool',dict(json=json,_CHARS_FILE=str(p),_chars_cache=None,_chars_stamp=None))()],['visible'])
+  p=self.root/'knowledge.json';support.atomic_json(p,{'questions':[dict(id='hidden',q='قائمة معزولة',active=False,answers=['جواب '+str(i) for i in range(20)])]})
+  pool=self._reader('knowledge','_load_questions',dict(json=json,os=os,_DATA_FILE=str(p),_QCACHE={'loaded':False},_norm=lambda x:x))()
+  self.assertNotIn('hidden',[q['id'] for q in pool])
+ def test_knowledge_review_hold_does_not_fetch_or_restore(self):
+  data=self.root/'knowledge.json';state=self.root/'state.json';doc={'questions':[dict(id='held',q='قائمة',active=False,answers=[],_curation={'hold_import':True})]};support.atomic_json(data,doc)
+  with patch.object(knowledge,'_DATA_FILE',str(data)),patch.object(knowledge,'STATE_FILE',str(state)),patch.object(knowledge,'QUERIES',{'held':'query'}),patch.object(knowledge,'NEW_QUESTION_TEMPLATES',{}),patch.object(knowledge,'_run_query') as fetch:r=knowledge._run_once()
+  fetch.assert_not_called();self.assertEqual(support.read_json(data),doc);self.assertEqual(support.read_json(state)['sources']['held']['eligibility'],'review_hold')
+ def test_huroof_review_hold_survives_source_refresh(self):
+  extra=dict(source='auto_wikidata',source_id='fact',active=False,_curation={'hold_import':True});old=Question(id=1,game_mode='huroof',question_text='سؤال معزول',correct_answer='قديم',extra_data=json.dumps(extra))
+  candidate=dict(source_id='fact',question_text='سؤال معزول',correct_answer='جديد',category='عام',letter='ج',accepted_answers=['جديد'])
+  with patch.object(fake_database,'SessionLocal',return_value=Session([old])):huroof.save_to_db([candidate])
+  self.assertEqual(old.correct_answer,'قديم');self.assertFalse(json.loads(old.extra_data)['active'])
+ def test_bank_review_identity_survives_source_question_rename(self):
+  rows=[dict(id='new'+str(i),source_id='fact'+str(i),q='صياغة جديدة '+str(i),a='جواب',accepted=['جواب'],cat='عام',diff='easy') for i in range(31)]
+  previous=dict(rows[0],id='legacy',q='صياغة قديمة',active=False,_curation={'hold_import':True,'duplicate_of':'manual'})
+  support.atomic_json(self.root/'bank_questions_auto.json',[previous])
+  with patch.object(bank,'fetch_rows',return_value=[]),patch.object(bank,'build_questions',return_value=rows):bank.run_import()
+  saved=support.read_json(self.root/'bank_questions_auto.json')[0];self.assertEqual(saved['id'],'legacy');self.assertFalse(saved['active']);self.assertEqual(saved['_curation']['duplicate_of'],'manual')
+ def test_whoami_reviewed_identity_prevents_alias_duplicate(self):
+  data=self.root/'who.json';state=self.root/'state.json';old=dict(id='manual',name='اسم شائع',hints=['يدوي'],_curation={'wikidata_id':'Q1','hold_import':True});support.atomic_json(data,{'characters':[old]})
+  candidate=dict(id='new',wikidata_id='Q1',name='اسم رسمي مختلف',hints=['آلي'])
+  with patch.object(who,'_DATA_FILE',str(data)),patch.object(who,'STATE_FILE',str(state)),patch.object(who,'OCCUPATIONS',{'Q901':'علماء'}),patch.object(who,'_run_query',return_value=[]),patch.object(who,'_character_rows',return_value=[candidate]):who._run_once()
+  self.assertEqual(support.read_json(data)['characters'],[old])
+ def test_general_work_end_does_not_prove_football_retirement(self):
+  e={'claims':{'P2032':[{'mainsnak':{'datavalue':{'value':{'time':'+2020-01-01'}}}}]}}
+  self.assertEqual(career.detect_status(e,[dict(has_end=False,end=None)]),'current')
+ def test_future_transfer_is_not_played_career(self):
+  e={'claims':{'P54':[{'mainsnak':{'datavalue':{'value':{'id':'Q200'}}},'qualifiers':{'P580':[{'datavalue':{'value':{'time':'+2099-01-01T00:00:00Z'}}}]}}]}}
+  self.assertEqual(career.parse_career(e),[])
+ def test_invalid_ancient_start_is_not_published_as_player_era(self):
+  self.assertIsNone(career.compute_era([dict(start='+0001-01-01',end='+2016-01-01',has_end=True)]))
+ def test_official_review_overrides_vandalized_source_name(self):
+  player=self._player();player.wikidata_id='Q84086';entities=self._entities();entities['Q84086']=entities.pop('Q100');entities['Q84086']['labels']['ar']['value']='اسم مخرب'
+  support.atomic_json(self.root/'career_review_overrides.json',{'players':{'Q84086':{'name':'ألكسندر ميتروفيتش','accepted_answers':['ميتروفيتش']}}})
+  with patch.object(career,'SessionLocal',return_value=Session([player])),patch.object(career,'wd_get_entities',side_effect=lambda ids:{q:entities[q] for q in ids}),patch.object(career,'_ar_article_lengths',return_value={}):career.run_import(refresh=True,player_qids=['Q84086'],skip_logos=True,log=lambda _:None)
+  self.assertEqual(player.name,'ألكسندر ميتروفيتش');self.assertEqual(json.loads(player.accepted_answers),['ميتروفيتش'])
+
+
+ def test_future_contract_end_is_ongoing_not_completed_career(self):
+  e={'claims':{'P54':[{'mainsnak':{'datavalue':{'value':{'id':'Q200'}}},'qualifiers':{'P580':[{'datavalue':{'value':{'time':'+2020-01-01T00:00:00Z'}}}],'P582':[{'datavalue':{'value':{'time':'+2099-01-01T00:00:00Z'}}}]}}]}}
+  entries=career.parse_career(e);self.assertFalse(entries[0]['has_end']);self.assertEqual(career.compute_era(entries),'2020-الآن')
+ def test_disputed_capital_uses_declared_scope_not_unique_inverse(self):
+  rows=[row(c='http://www.wikidata.org/entity/Q801',cLabelAr='إسرائيل',cap='Q1',capAr='القدس')]
+  questions=huroof.build_country_questions(rows);self.assertEqual(len(questions),1);self.assertIn('تعلنها',questions[0]['question_text']);self.assertIn('تعلنها',bank.build_questions(rows)[0]['q'])
 
 if __name__=='__main__':unittest.main()

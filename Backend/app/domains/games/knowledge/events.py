@@ -50,6 +50,8 @@ def _load_questions():
         with open(_DATA_FILE, encoding='utf-8') as f:
             raw = json.load(f).get('questions', [])
         for q in raw:
+            if not q.get("active", True):
+                continue
             pool = []
             for entry in q.get('answers', []):
                 variants = [v.strip() for v in str(entry).split('|') if v.strip()]

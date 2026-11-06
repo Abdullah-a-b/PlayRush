@@ -69,7 +69,7 @@ def _ensure_wikidata_column():
 def sparql_top_players(limit, min_sitelinks, offset=0):
     query = f"""
     SELECT ?player ?sitelinks WHERE {{
-      ?player wdt:P106 wd:Q937857 ;
+      ?player wdt:P31 wd:Q5 ; wdt:P106 wd:Q937857 ;
               wikibase:sitelinks ?sitelinks .
       FILTER(?sitelinks >= {min_sitelinks})
     }} ORDER BY DESC(?sitelinks) ?player LIMIT {limit} OFFSET {offset}
@@ -155,8 +155,12 @@ def parse_career(player_ent):
             continue
         start = _qualifier_time(c, "P580") or "+9999"
         end = _qualifier_time(c, "P582")
+        # انتقال معلن للمستقبل لا يُعرض كنادٍ لعب له اللاعب بالفعل.
+        from datetime import date
+        if start != "+9999" and start.lstrip("+")[:10].replace("-00", "-01") > date.today().isoformat():
+            continue
         entries.append({"club": club_qid, "start": start,
-                        "has_end": end is not None, "end": end})
+                        "has_end": end is not None and end.lstrip("+")[:10].replace("-00", "-01") <= date.today().isoformat(), "end": end})
     entries.sort(key=lambda e: e["start"])
     return entries
 
@@ -184,7 +188,8 @@ def is_youth_team(club_ent):
 
 def compute_era(career_entries):
     """فترة المسيرة: "1995-2010" أو "2015-الآن" للحالي."""
-    starts = [y for y in (_year_of(e.get("start")) for e in career_entries) if y and y < 9000]
+    from datetime import date
+    starts = [y for y in (_year_of(e.get("start")) for e in career_entries) if y and 1850 <= y <= date.today().year]
     ends = [y for y in (_year_of(e.get("end")) for e in career_entries) if y]
     if not starts:
         return None
@@ -197,6 +202,8 @@ def compute_era(career_entries):
 def extract_position_qid(player_ent):
     """QID مركز اللاعب (P413) الأول إن وُجد."""
     for st in player_ent.get("claims", {}).get("P413", []):
+        if st.get("rank") == "deprecated":
+            continue
         try:
             return st["mainsnak"]["datavalue"]["value"]["id"]
         except (KeyError, TypeError):
@@ -207,6 +214,8 @@ def extract_position_qid(player_ent):
 def extract_nationality_qid(player_ent):
     """QID الجنسية (P27) الأولى إن وُجدت."""
     for st in player_ent.get("claims", {}).get("P27", []):
+        if st.get("rank") == "deprecated":
+            continue
         try:
             return st["mainsnak"]["datavalue"]["value"]["id"]
         except (KeyError, TypeError):
@@ -215,22 +224,22 @@ def extract_nationality_qid(player_ent):
 
 
 def detect_status(player_ent, career_entries):
-    """حالي/معتزل بدقة:
+    """تصنيف تقريبي من المصدر، والتصحيح المنسق له الأولوية:
     - نادٍ بلا تاريخ نهاية  حالي.
-    - P2032 (نهاية المسيرة) أو P570 (وفاة)  معتزل.
+    - الوفاة تؤكد انتهاء اللعب؛ نهاية العمل العامة P2032 لا تثبت اعتزال كرة القدم.
     - بين ناديين (آخر نهاية خلال آخر سنتين)  حالي (مثل كاسيميرو).
     - آخر نهاية أقدم من سنتين  معتزل."""
     import datetime as _dt
     claims = player_ent.get("claims", {})
     def confirmed(pid):
         return any(c.get("rank") != "deprecated" and c.get("mainsnak", {}).get("datavalue") for c in claims.get(pid, []))
-    if confirmed("P570") or confirmed("P2032"):
+    if confirmed("P570"):
         return "retired"
     if any(not e["has_end"] for e in career_entries):
         return "current"
     end_years = [y for y in (_year_of(e.get("end")) for e in career_entries) if y]
     if end_years and (_dt.date.today().year - max(end_years)) <= 2:
-        return "current"  # خرج من ناديه مؤخراً ولم يعتزل
+        return "current"  # استدلال تقريبي، وليس إعلاناً موثقاً بعدم الاعتزال
     return "retired"
 
 
@@ -591,9 +600,12 @@ def run_import(limit=200, min_sitelinks=45, offset=0,
                     except (ValueError, TypeError): pass
                 club_career = [e for e in careers.get(qid, []) if not is_national_team(club_ents.get(e["club"], {}))]
                 status = detect_status(ent, club_career)
+                # ادعاء نادٍ بلا نهاية لا يثبت الرجوع من اعتزال معروف.
+                if row and row.status == "retired":
+                    status = "retired"
                 era = compute_era(club_career)
-                if status == "retired" and era:
-                    era = era.replace("-الآن", "")
+                if status == "retired" and era and "-الآن" in era:
+                    era = None
                 pos_qid = extract_position_qid(ent)
                 position = _label(club_ents.get(pos_qid, {})) if pos_qid else None
                 nat_qid = extract_nationality_qid(ent)
@@ -608,8 +620,15 @@ def run_import(limit=200, min_sitelinks=45, offset=0,
                     accepted_answers=json.dumps(gen_accepted(ar_name, en_name),
                                                 ensure_ascii=False),
                     difficulty=difficulty, active=row.active if row is not None else True,
-                    era=era or (row.era if row else None), position=position or (row.position if row else None), nationality=nationality or (row.nationality if row else None),
+                    era=era, position=position or (row.position if row else None), nationality=nationality or (row.nationality if row else None),
                 )
+                # التصحيح المنسق له أولوية على تسميات خارجية قابلة للتخريب.
+                from app.core.paths import DATA_DIR
+                from app.core.import_support import read_json
+                reviewed = read_json(DATA_DIR / "career_review_overrides.json", {}).get("players", {}).get(qid, {})
+                for field in ("name", "status", "era", "active", "accepted_answers"):
+                    if field in reviewed:
+                        payload[field] = json.dumps(reviewed[field], ensure_ascii=False) if field == "accepted_answers" else reviewed[field]
                 if dry_run:
                     log(f"   [{'تحديث' if row else 'إضافة'}] {display} — "
                         f"{len(clubs_json)} نادٍ ({'حالي' if status == 'current' else 'معتزل'})")

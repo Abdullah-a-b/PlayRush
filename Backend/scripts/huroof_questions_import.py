@@ -42,6 +42,7 @@ QUERY_COUNTRIES = """
 SELECT ?c ?cap ?cur ?cLabelAr ?cLabelEn ?capAr ?capEn ?curAr ?curEn WHERE {
   ?c wdt:P31 wd:Q3624078 .
   FILTER NOT EXISTS { ?c wdt:P31 wd:Q3024240 }
+  FILTER NOT EXISTS { ?c wdt:P576 ?dissolved }
   OPTIONAL { ?c p:P36 ?capClaim . ?capClaim ps:P36 ?cap . FILTER NOT EXISTS { ?capClaim pq:P582 ?endedCap } FILTER NOT EXISTS { ?capClaim wikibase:rank wikibase:DeprecatedRank } }
   OPTIONAL { ?c p:P38 ?curClaim . ?curClaim ps:P38 ?cur . FILTER NOT EXISTS { ?curClaim pq:P582 ?endedCur } FILTER NOT EXISTS { ?curClaim wikibase:rank wikibase:DeprecatedRank } }
   SERVICE wikibase:label { bd:serviceParam wikibase:language "ar".
@@ -57,6 +58,7 @@ SELECT ?e ?eLabelAr ?eLabelEn ?symbol ?z WHERE {
   ?e wdt:P31 wd:Q11344 .
   ?e wdt:P246 ?symbol .
   ?e wdt:P1086 ?z .
+  FILTER(?z >= 1 && ?z <= 118)
   SERVICE wikibase:label { bd:serviceParam wikibase:language "ar".
     ?e rdfs:label ?eLabelAr . }
   SERVICE wikibase:label { bd:serviceParam wikibase:language "en".
@@ -189,10 +191,12 @@ def build_country_questions(rows):
         country, answer, kind = f["country"], f["answer"], f["kind"]
         if _religious(country, answer):
             continue
-        if kind == "cap" and f["inverse_unique"] and _valid_answer(country):
+        if kind == "cap" and f["inverse_unique"] and _valid_answer(country) and f["country_id"].rsplit("/", 1)[-1] != "Q801":
             qs.append({"question_text": f"دولة عاصمتها {answer}", "correct_answer": country, "category": "جغرافيا", "letter": _answer_letter(country), "accepted_answers": _variants(country, f["country_en"]), "source_id": stable_id("country_by_cap", f["country_id"])})
         if _valid_answer(answer) and kind in ("cap", "cur"):
             text = f"عاصمة دولة {country}" if kind == "cap" else f"العملة الرسمية لدولة {country}"
+            if kind == "cap" and f["country_id"].rsplit("/", 1)[-1] == "Q801":
+                text = "المدينة التي تعلنها إسرائيل عاصمة لها"
             qs.append({"question_text": text, "correct_answer": answer, "category": "جغرافيا", "letter": _answer_letter(answer), "accepted_answers": _variants(answer, f["english"]), "source_id": f["id"]})
     return [q for q in qs if q["letter"]]
 
@@ -267,6 +271,8 @@ def build_extra_questions(rows, kind):
         text = f"من مؤلف كتاب «{g['label']}»؟" if kind == "book" else f"لغة رمزها الدولي ({g['label']})"
         letter = _answer_letter(answer)
         if letter:
+            if kind == "cap" and f["country_id"].rsplit("/", 1)[-1] == "Q801":
+                text = "المدينة التي تعلنها إسرائيل عاصمة لها"
             qs.append({"question_text": text, "correct_answer": answer, "category": "ثقافة", "letter": letter, "accepted_answers": sorted(set(_variants(answer, g["en"]) + [original_answer])), "source_id": stable_id(kind, key)})
     return qs
 
@@ -316,6 +322,9 @@ def save_to_db(questions, complete_groups=()):
                 if not isinstance(extra, dict): extra = {}
             except (ValueError, TypeError):
                 extra = {}
+            if row and extra.get("_curation", {}).get("hold_import"):
+                stats["manual_protected"] += 1
+                continue
             if row and extra.get("source") not in ("auto_wikidata", "auto_curated"):
                 stats["manual_protected"] += 1
                 continue

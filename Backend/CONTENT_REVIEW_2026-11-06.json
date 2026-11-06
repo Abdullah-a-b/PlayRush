@@ -1,0 +1,47 @@
+{
+  "reviewed_at": "2026-11-06",
+  "changed_records": {
+    "huroof": 2,
+    "bank_auto": 27,
+    "bank": 37,
+    "knowledge": 15,
+    "whoami": 101,
+    "career": 31
+  },
+  "checks": [
+    {
+      "game": "huroof",
+      "total": 1101,
+      "matched_source": 1092,
+      "source_scope": "Wikidata cross-check; elements additionally IUPAC/PubChem, currencies active ISO codes. Not an independent second source for every language/capital."
+    },
+    {
+      "game": "whoami",
+      "total": 101,
+      "identity_matched": 101,
+      "scope": "Current structured biography; disputed or ambiguous records quarantined. Selected manual anecdotes corrected; not every surviving manual clue has independent primary-source verification."
+    },
+    {
+      "game": "career",
+      "total": 307,
+      "source_cross_checked": 304,
+      "missing_club_metadata": [
+        25,
+        268,
+        304
+      ],
+      "scope": "All available Wikidata player claims re-read; absence of transfer data cannot certify official completeness. No subjective difficulty changes."
+    }
+  ],
+  "limitations": [
+    "Structured-source cross-check is not independent primary-source proof for every fact.",
+    "Historical league membership is date-scoped; historical clubs and successors remain distinct.",
+    "Reviewed knowledge lists held from unsafe automatic merge pending validated replacement sources."
+  ],
+  "data_only": true,
+  "hard_deletions": 0,
+  "accounts_or_matches_modified": false,
+  "knowledge_import_policy": "Reviewed lists are held from unvalidated automatic merging. They require revalidation before replacement.",
+  "evidence": "Detailed old/new values and source snapshots retained in timestamped content backups; a source cross-check is not proof of every real-world fact.",
+  "regression_tests_passed": 70
+}
