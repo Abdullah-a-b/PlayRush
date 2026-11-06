@@ -129,8 +129,7 @@ class KnowledgeGameState(BaseGameState):
         """يبحث النص المطبّع في القائمة. يرجع:
         ('correct', idx) | ('repeat', idx) | ('none', None)"""
         for i, item in enumerate(self.answers_pool):
-            from app.core.huroof_answers import _forms
-            if any(_forms(norm_text) & _forms(v) for v in item['norm']):
+            if ''.join(norm_text.split()) in {''.join(v.split()) for v in item['norm']}:
                 return ('repeat', i) if i in self.used_answer_idx else ('correct', i)
         return ('none', None)
 

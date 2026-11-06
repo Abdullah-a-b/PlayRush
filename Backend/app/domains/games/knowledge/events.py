@@ -41,6 +41,7 @@ def _norm(t):
 def _load_questions():
     """يحمّل أسئلة القوائم + سؤال السور (من قائمة SURAHS المدققة)."""
     from pathlib import Path
+    from app.core.huroof_answers import _forms as answer_forms
     stamp = Path(_DATA_FILE).stat().st_mtime_ns if Path(_DATA_FILE).exists() else None
     if _QCACHE['loaded'] and _QCACHE.get('stamp') == stamp:
         return _QCACHE['questions']
@@ -58,7 +59,7 @@ def _load_questions():
                 if not variants:
                     continue
                 pool.append({'display': variants[0],
-                             'norm': {_norm(v) for v in variants}})
+                             'norm': set().union(*(answer_forms(v) for v in variants))})
             if len(pool) >= 15:
                 out.append({'id': q['id'], 'q': q['q'],
                             'cat': q.get('cat', 'عام'), 'pool': pool})
@@ -67,7 +68,7 @@ def _load_questions():
     # سؤال السور — يُبنى من القائمة المنسّقة نفسها (مصدر واحد للحقيقة)
     try:
         from scripts.huroof_questions_import import SURAHS
-        pool = [{'display': s, 'norm': {_norm(s), _norm('سورة ' + s)}}
+        pool = [{'display': s, 'norm': answer_forms(s) | answer_forms('سورة ' + s)}
                 for s in SURAHS]
         out.append({'id': 'kq_surahs', 'q': 'اذكر سوراً من القرآن الكريم',
                     'cat': 'دين', 'pool': pool})

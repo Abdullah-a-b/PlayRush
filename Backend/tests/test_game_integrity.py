@@ -91,6 +91,15 @@ class IntegrityTests(unittest.TestCase):
         gs=CareerGameState('a','b');gs.shields={'a':True};gs.double_locks={'a':True};gs.start_new_player({'id':1,'clubs':[{'name':'x'}]})
         self.assertEqual(gs.shields,{});self.assertEqual(gs.double_locks,{})
 
+    def test_article_forms_preserve_proper_name_initials(self):
+        from app.domains.games.knowledge.engine import KnowledgeGameState
+        from app.core.huroof_answers import _forms
+        gs=KnowledgeGameState('a','b');gs.answers_pool=[{'display':'ألبانيا','norm':_forms('ألبانيا')}]
+        self.assertEqual(gs.match_answer(normalize_arabic('ألبانيا'))[0],'correct')
+        self.assertEqual(gs.match_answer(normalize_arabic('بانيا'))[0],'none')
+        gs.answers_pool=[{'display':'الجزائر','norm':_forms('الجزائر')}]
+        self.assertEqual(gs.match_answer(normalize_arabic('جزائر'))[0],'correct')
+
     def test_no_fuzzy_country_substitution_in_knowledge_handler(self):
         from app.domains.games.knowledge.engine import KnowledgeGameState
         async def exercise():
