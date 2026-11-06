@@ -253,6 +253,11 @@ async function confirmSecurityChange(action, otp, newValue, token, onSuccess) {
         const res  = await fetch(`${API_URL}/auth/settings/update-security`, { method: 'POST', body: fd });
         const data = await res.json();
         if (res.ok) {
+            if (data.new_token) {
+                localStorage.setItem('token', data.new_token);
+                sessionStorage.setItem('token', data.new_token);
+                setTimeout(() => window.location.reload(), 700);
+            }
             showToast(data.message, 'success');
             onSuccess?.();
         } else {

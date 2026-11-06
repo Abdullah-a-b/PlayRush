@@ -129,7 +129,8 @@ class KnowledgeGameState(BaseGameState):
         """يبحث النص المطبّع في القائمة. يرجع:
         ('correct', idx) | ('repeat', idx) | ('none', None)"""
         for i, item in enumerate(self.answers_pool):
-            if norm_text in item['norm']:
+            from app.core.huroof_answers import _forms
+            if any(_forms(norm_text) & _forms(v) for v in item['norm']):
                 return ('repeat', i) if i in self.used_answer_idx else ('correct', i)
         return ('none', None)
 
@@ -186,7 +187,6 @@ class KnowledgeGameState(BaseGameState):
     def mark_help_used(self, sid, help_id):
         self._sync_keys()
         self.helps_used.setdefault(sid, set()).add(help_id)
-        self.bump_version()
 
     def in_tiebreak(self):
         return self.round_index > self.TOTAL_ROUNDS

@@ -1,28 +1,20 @@
-"""
- AI Judge — الطبقة الرابعة من التحكيم (للحالات الحدّية فقط)
+"""حكم اختياري لإجابات غير محسومة.
 
- حلّ مشكلة البطء (latency):
-هذا الـ Judge **لا يُستدعى لكل إجابة** — فقط للحالات الحدّية النادرة (~3%)
-التي تعطيها الطبقات 1-3 حُكم 'maybe'. أي:
-  • الطبقات 1-3 (Normalize/Fuzzy/Token) = فورية، تحل ~97%.
-  • AI Enrichment (offline) = يملأ accepted_answers مسبقاً، يقلل maybe أكثر.
-  • AI Judge (هنا) = الملاذ الأخير للـ 3% المتبقية فقط.
-
- ضمانات ضد البطء:
-  1. Timeout صارم (افتراضي 2 ثانية) — لا ينتظر أبداً أكثر.
-  2. Lenient default — عند Timeout أو فشل: نقبل الإجابة (نعطي اللاعب الفائدة).
-  3. لا يُستدعى إلا عند verdict == 'maybe' (نادر).
-
-حسب وثيقة PlayRush (ص7): "Timeout 2s + lenient default. ~3% فقط تصله".
+الأسماء والحقائق ذات البدائل المحددة تُطابق محليًا. عند استدعاء الحكم، تشمل
+المهلة تهيئة النموذج وطلبه، وينفذ عاملان فقط الطلبات المتزامنة. غياب الخدمة
+أو الرد غير المطابق لا يمنح نقاطًا، ولا تُفسر الجمل المنفية كموافقة.
 """
 import os
 import asyncio
 import json
 import re
+from concurrent.futures import ThreadPoolExecutor
+
+_JUDGE_EXECUTOR = ThreadPoolExecutor(max_workers=2, thread_name_prefix="answer-judge")
 
 
-# نتيجة افتراضية متساهلة (نعطي اللاعب الفائدة عند أي شك/فشل)
-_LENIENT_DEFAULT = {"accept": True, "source": "lenient_default"}
+# نتيجة آمنة عند تعذر التحقق
+_LENIENT_DEFAULT = {"accept": False, "source": "unavailable"}
 
 
 def _get_model():
@@ -107,37 +99,23 @@ _JUDGE_PROMPT = """أنت حكم لإجابات لعبة معرفية عربية
 
 
 async def judge_answer(question_text, correct_answer, player_answer, timeout=2.0):
-    """يحكم على إجابة حدّية. يرجع dict: {accept: bool, source: str}.
-
-     يضمن عدم تجاوز timeout (افتراضي 2s). عند أي تأخير/فشل  lenient (accept).
+    """يحكم على إجابة حدّية ضمن مهلة تشمل التهيئة، ويرفض عند تعذر التحقق.
     """
-    model = _get_model()
-    if model is None:
-        # لا AI متاح  متساهل (لا نعاقب اللاعب على غياب الإعداد)
-        return dict(_LENIENT_DEFAULT)
-
-    prompt = _JUDGE_PROMPT.format(
-        question=question_text, correct=correct_answer, player=player_answer
-    )
-
-    async def _call():
-        # نشغّل الاستدعاء المتزامن في thread حتى لا يحجب event loop
-        def _sync():
-            resp = model.generate_content(prompt)
-            return (resp.text or "").strip()
-        return await asyncio.to_thread(_sync)
-
+    def _sync_call():
+        model = _get_model()
+        if model is None:
+            return {"accept": False, "source": "unavailable"}
+        prompt = _JUDGE_PROMPT.format(question=question_text, correct=correct_answer, player=player_answer)
+        response = model.generate_content(prompt)
+        text = (response.text or '').strip().lower().strip(' .!؟')
+        return {"accept": text in {'نعم', 'yes'}, "source": "ai_judge"}
     try:
-        # timeout صارم — لا ننتظر أبداً أكثر منه
-        text = await asyncio.wait_for(_call(), timeout=timeout)
-        verdict = "نعم" in text or "صحيح" in text or text.lower().startswith("yes")
-        return {"accept": bool(verdict), "source": "ai_judge"}
+        task = asyncio.get_running_loop().run_in_executor(_JUDGE_EXECUTOR, _sync_call)
+        return await asyncio.wait_for(task, timeout=timeout)
     except asyncio.TimeoutError:
-        # تجاوز الوقت  متساهل (الأهم: لا نُبطئ اللعبة)
-        return {"accept": True, "source": "ai_timeout_lenient"}
+        return {"accept": False, "source": "timeout"}
     except Exception:
-        # أي خطأ آخر  متساهل
-        return {"accept": True, "source": "ai_error_lenient"}
+        return {"accept": False, "source": "error"}
 
 
 def should_use_judge(verdict):

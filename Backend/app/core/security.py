@@ -1,6 +1,8 @@
 import os
+import secrets
+import hmac
 import html
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from fastapi import Request, HTTPException, Depends
 from jose import jwt, JWTError
 from sqlalchemy.orm import Session
@@ -32,10 +34,37 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def create_access_token(data: dict):
     """توليد توكن مشفر ومختوم"""
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
+
+def session_is_valid(user, payload):
+    epoch = getattr(user, 'session_token', None)
+    claimed = payload.get('sv')
+    # التوكن القديم يظل صالحًا حتى أول تدوير جلسة، لتجنب إخراج الجميع عند النشر.
+    return (not epoch and not claimed) or (isinstance(epoch, str) and isinstance(claimed, str)
+            and hmac.compare_digest(epoch, claimed))
+
+
+def issue_user_token(user):
+    if not user.session_token:
+        user.session_token = secrets.token_urlsafe(32)
+    return create_access_token({'sub': user.email, 'sv': user.session_token})
+
+
+def revoke_user_sessions(user):
+    user.session_token = secrets.token_urlsafe(32)
+
+
+async def disconnect_user_sessions(user_id):
+    from app.sockets.state import connected_players
+    from app.main import sio
+    for sid, player in list(connected_players.items()):
+        if player.get('user_id') == user_id:
+            await sio.emit('session_expired', {'msg':'انتهت الجلسة؛ سجل الدخول مجددًا'}, to=sid)
+            await sio.disconnect(sid)
+
 
 async def get_current_user(request: Request, db: Session = Depends(get_db)):
     """حارس الأمن المطور: يصطاد التوكن من أي مكان يرسله الفرونت اند"""
@@ -71,6 +100,9 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)):
     if user is None:
         raise HTTPException(status_code=401, detail="حساب اللاعب لم يعد موجوداً")
 
+    if not session_is_valid(user, payload):
+        raise HTTPException(status_code=401, detail='انتهت الجلسة، يرجى تسجيل الدخول')
+
     # فحص الحظر — يمنع المحظور من استخدام أي API محمي
     if getattr(user, 'is_banned', False):
         raise HTTPException(status_code=403, detail="تم حظر حسابك لانتهاك سياسات اللعب العادل والأمان.")
@@ -88,7 +120,7 @@ def get_user_from_token(db: Session, token: str):
             return None
         
         user = db.query(User).filter(User.email == user_email).first()
-        return user
+        return user if user and session_is_valid(user, payload) else None
     except JWTError:
         return None
 

@@ -116,7 +116,7 @@ def get_slots_for_level(level: int) -> int:
 
 
 def get_slots_for_player(level: int, owns_fourth: bool) -> int:
-    return 4 if owns_fourth else HELP_SLOTS
+    return 4 if owns_fourth and level >= FOURTH_SLOT_LEVEL else HELP_SLOTS
 
 # المساعدات الافتراضية في الخانات الثلاث (للبداية — كلها مُفعّلة)
 DEFAULT_LOADOUT = ["extend_time", "change_question", "count_letters"]

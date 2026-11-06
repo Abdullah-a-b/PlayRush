@@ -117,12 +117,16 @@ def progress_event(db: Session, user_id: int, event: str, amount: int = 1,
 
 def claim_quest(db: Session, user_id: int, quest_key: str) -> dict:
     """يستلم مكافأة مهمة مكتملة (مرة واحدة). يرجع المكافآت المطبّقة."""
+    from app.domains.users.models import User
+    user = db.query(User).filter(User.id == user_id).with_for_update().first()
+    if not user:
+        return {"ok": False, "msg": "المستخدم غير موجود"}
     period_candidates = [daily_key(), weekly_key(), season_key()]
     q = (db.query(PlayerQuest)
            .filter(PlayerQuest.user_id == user_id,
                    PlayerQuest.quest_key == quest_key,
                    PlayerQuest.period_key.in_(period_candidates))
-           .first())
+           .populate_existing().with_for_update().first())
     if not q:
         return {"ok": False, "msg": "المهمة غير موجودة"}
     if q.progress < q.target:
@@ -133,10 +137,6 @@ def claim_quest(db: Session, user_id: int, quest_key: str) -> dict:
     t = QC.template_for(quest_key) or {}
     reward = t.get("reward", {})
 
-    from app.domains.users.models import User
-    user = db.query(User).filter(User.id == user_id).with_for_update().first()
-    if not user:
-        return {"ok": False, "msg": "المستخدم غير موجود"}
 
     applied = {"coins": 0, "xp": 0, "gems": 0, "pass_xp": 0}
     if reward.get("coins"):

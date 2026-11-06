@@ -119,6 +119,10 @@ def get_pass_state(db: Session, user_id: int) -> dict:
 def buy_premium(db: Session, user_id: int) -> dict:
     from app.domains.users.models import User
     p = get_or_create_pass(db, user_id)
+    user = db.query(User).filter(User.id == user_id).populate_existing().with_for_update().first()
+    if not user:
+        return {"ok": False, "msg": "المستخدم غير موجود"}
+    db.refresh(p, with_for_update=True)
     if p.is_premium:
         return {"ok": False, "msg": "لديك Premium بالفعل هذا الموسم"}
     user = db.query(User).filter(User.id == user_id).with_for_update().first()
@@ -140,6 +144,10 @@ def claim_tier(db: Session, user_id: int, tier: int, track: str) -> dict:
     if tier < 1 or tier > EC.PASS_TIERS:
         return {"ok": False, "msg": "محطة غير صالحة"}
     p = get_or_create_pass(db, user_id)
+    user = db.query(User).filter(User.id == user_id).populate_existing().with_for_update().first()
+    if not user:
+        return {"ok": False, "msg": "المستخدم غير موجود"}
+    db.refresh(p, with_for_update=True)
     if _tier_from_xp(p.pass_xp) < tier:
         return {"ok": False, "msg": "لم تبلغ هذه المحطة بعد"}
     if track == "premium" and not p.is_premium:

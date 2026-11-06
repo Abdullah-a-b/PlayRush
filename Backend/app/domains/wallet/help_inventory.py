@@ -47,6 +47,8 @@ def grant_starter_helps_once(user_id: int) -> bool:
     _init()
     db = SessionLocal()
     try:
+        if db.execute(text('SELECT id FROM users WHERE id=:uid FOR UPDATE'), {'uid': user_id}).first() is None:
+            return False
         # هل سبق أن استلم الهدية؟ (نستخدم صفّاً علمياً help_id='__starter__')
         row = db.execute(text("""
             SELECT 1 FROM player_help_inventory
@@ -163,6 +165,8 @@ def grant_career_starter(user_id):
     _init()
     db = SessionLocal()
     try:
+        if db.execute(text('SELECT id FROM users WHERE id=:uid FOR UPDATE'), {'uid': user_id}).first() is None:
+            return False
         row = db.execute(text("""SELECT 1 FROM player_help_inventory
             WHERE user_id = :uid AND help_id = '__career_starter__' LIMIT 1"""),
             {"uid": user_id}).fetchone()
@@ -194,6 +198,8 @@ def grant_knowledge_starter(user_id):
     db = SessionLocal()
     granted_any = False
     try:
+        if db.execute(text('SELECT id FROM users WHERE id=:uid FOR UPDATE'), {'uid': user_id}).first() is None:
+            return False
         from app.domains.games.knowledge.helps import DEFAULT_LOADOUT as K_DEFAULTS
         for hid in K_DEFAULTS:
             flag = f'__knowledge_starter_{hid}__'
@@ -228,6 +234,8 @@ def grant_whoami_starter(user_id):
     db = SessionLocal()
     granted_any = False
     try:
+        if db.execute(text('SELECT id FROM users WHERE id=:uid FOR UPDATE'), {'uid': user_id}).first() is None:
+            return False
         from app.domains.games.whoami.helps import DEFAULT_LOADOUT as W_DEFAULTS
         for hid in W_DEFAULTS:
             flag = f'__whoami_starter_{hid}__'
@@ -262,6 +270,8 @@ def grant_bank_starter(user_id):
     db = SessionLocal()
     granted_any = False
     try:
+        if db.execute(text('SELECT id FROM users WHERE id=:uid FOR UPDATE'), {'uid': user_id}).first() is None:
+            return False
         from app.domains.games.bank.helps import DEFAULT_LOADOUT as BANK_DEFAULTS
         for hid in BANK_DEFAULTS:
             flag = f'__bank_starter_{hid}__'

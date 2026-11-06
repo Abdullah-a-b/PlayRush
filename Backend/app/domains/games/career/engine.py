@@ -56,6 +56,8 @@ class CareerGameState(BaseGameState):
         if advance_index:
             self.player_index += 1
         self.current_player = player_data
+        self.shields = {}
+        self.double_locks = {}
         self.revealed_count = 1
         self.career_complete = (len(player_data.get('clubs', [])) <= 1)
         # للاعب نادي واحد: الفترة الأولى (10 ثوانٍ) = نقطتان، بعدها = نقطة

@@ -1,3 +1,4 @@
+from app.domains.games.reconnect import resolve_sid
 """
  لعبة البنك (المتزامنة) — معالجات الأحداث
 
@@ -190,6 +191,7 @@ def register_bank_events(sio):
         while True:
             await asyncio.sleep(0.5)
             room, gs = _room_gs(room_code)
+            sid = resolve_sid(room, sid)
             if not room or room.get('state') != 'playing':
                 return
             if gs.stage != 'playing' or gs.round != round_no:
@@ -206,6 +208,7 @@ def register_bank_events(sio):
 
     async def _next_question(room_code, sid):
         room, gs = _room_gs(room_code)
+        sid = resolve_sid(room, sid)
         if not room or gs.stage != 'playing' or gs.pstate[sid]['done']:
             return
         diff = gs.difficulty_now(sid)
@@ -214,6 +217,7 @@ def register_bank_events(sio):
         q = await asyncio.to_thread(_pick_question, diff, gs.used_question_ids, _uid)
         if not q:
             return
+        sid = resolve_sid(room, sid)
         gs.pstate[sid]['question'] = q
         gs.pstate[sid]['question_diff'] = diff  # الصعوبة المعروضة (النقاط منها!)
         # نتتبع أسئلة هذا اللاعب لتسجيلها بالجملة عند نهاية المباراة
@@ -234,6 +238,7 @@ def register_bank_events(sio):
         """ضغط 'إجابة'  نافذة كتابة + تجميد المؤقّت (الكتابة لا تأكل وقتك)."""
         room_code = (data or {}).get('roomCode')
         room, gs = _room_gs(room_code)
+        sid = resolve_sid(room, sid)
         if not room or room.get('state') != 'playing':
             return
         if gs.stage != 'playing' or not gs.is_player_in_game(sid):
@@ -242,6 +247,7 @@ def register_bank_events(sio):
         if ps['done'] or ps['answering'] or not ps['question']:
             return
         ps['answering'] = True
+        ps['answer_deadline'] = time.time() + gs.ANSWER_WINDOW
         gs.freeze(sid)  # ⏸ الكتابة والتحكيم لا يأكلان وقتك (عدل)
         gs.bump_version()
         await sio.emit('bank_answering', {
@@ -253,12 +259,14 @@ def register_bank_events(sio):
         sio.start_background_task(_answer_timeout, room_code, sid,
                                   ps['question']['id'], gs.round)
 
-    async def _answer_timeout(room_code, sid, qid, round_no):
+    async def _answer_timeout(room_code, sid, qid, round_no, window=None):
         room, gs = _room_gs(room_code)
+        sid = resolve_sid(room, sid)
         if not room:
             return
-        await asyncio.sleep(gs.ANSWER_WINDOW)
+        await asyncio.sleep(gs.ANSWER_WINDOW if window is None else window)
         room, gs = _room_gs(room_code)
+        sid = resolve_sid(room, sid)
         if not room or gs.stage != 'playing' or gs.round != round_no:
             return
         ps = gs.pstate.get(sid)
@@ -270,6 +278,7 @@ def register_bank_events(sio):
         room_code = (data or {}).get('roomCode')
         answer = ((data or {}).get('answer') or '').strip()
         room, gs = _room_gs(room_code)
+        sid = resolve_sid(room, sid)
         if not room or room.get('state') != 'playing' or gs.stage != 'playing':
             return
         ps = gs.pstate.get(sid)
@@ -279,12 +288,14 @@ def register_bank_events(sio):
 
     def _normalize_digits(s):
         """أرقام عربية  لاتينية + إزالة غير الأرقام."""
-        trans = str.maketrans('٠١٢٣٤٥٦٧٨٩', '0123456789')
-        return ''.join(ch for ch in str(s).translate(trans) if ch.isdigit())
+        import re
+        value = str(s).strip().translate(str.maketrans('٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹', '01234567890123456789'))
+        return value if re.fullmatch(r'[0-9]+', value) else ''
 
     async def _handle_answer(room_code, sid, answer, timed_out):
         from app.core.text_processor import check_answer
         room, gs = _room_gs(room_code)
+        sid = resolve_sid(room, sid)
         if not room:
             return
         ps = gs.pstate[sid]
@@ -333,6 +344,7 @@ def register_bank_events(sio):
         if not is_correct and ps.get('second_chance'):
             ps['second_chance'] = False
             ps['answering'] = True
+            ps['answer_deadline'] = time.time() + gs.ANSWER_WINDOW + 5
             gs.freeze(sid)
             gs.bump_version()
             await sio.emit('bank_second_chance', {
@@ -340,12 +352,11 @@ def register_bank_events(sio):
                 'correctAnswer': None,
             }, to=sid)
             sio.start_background_task(_answer_timeout, room_code, sid,
-                                      (ps['question'] or {}).get('id'), gs.round)
+                                      (ps['question'] or {}).get('id'), gs.round, gs.ANSWER_WINDOW + 5)
             return
         # مضاعفة السؤال الحالي (فُعّلت قبله)
-        if is_correct and ps.get('double_active'):
+        if ps.pop('double_active', False) and is_correct:
             pts *= 2
-            ps['double_active'] = False
         if is_correct:
             gs.add_temp(sid, pts)
             await sio.emit('bank_answer_result', {
@@ -378,6 +389,7 @@ def register_bank_events(sio):
         gs.bump_version()
         await asyncio.sleep(1.2)
         room, gs = _room_gs(room_code)
+        sid = resolve_sid(room, sid)
         if not room or gs.stage != 'playing':
             return
         ps = gs.pstate[sid]
@@ -390,6 +402,7 @@ def register_bank_events(sio):
             }, to=sid)
             await asyncio.sleep(5)
             room, gs = _room_gs(room_code)
+            sid = resolve_sid(room, sid)
             if not room or gs.stage != 'playing':
                 return
             ps = gs.pstate[sid]
@@ -405,6 +418,7 @@ def register_bank_events(sio):
         """بنك: يحفظ + يعيد السلّم للسهل + سؤال سهل جديد."""
         room_code = (data or {}).get('roomCode')
         room, gs = _room_gs(room_code)
+        sid = resolve_sid(room, sid)
         if not room or room.get('state') != 'playing' or gs.stage != 'playing':
             return
         ps = gs.pstate.get(sid)
@@ -425,6 +439,7 @@ def register_bank_events(sio):
         # سؤال جديد سهل فوراً
         await asyncio.sleep(0.6)
         room, gs = _room_gs(room_code)
+        sid = resolve_sid(room, sid)
         if room and gs.stage == 'playing' and not gs.pstate[sid]['done'] \
                 and gs.remaining(sid) > 0:
             await _next_question(room_code, sid)
@@ -433,6 +448,7 @@ def register_bank_events(sio):
 
     async def _end_player_turn(room_code, sid, round_no):
         room, gs = _room_gs(room_code)
+        sid = resolve_sid(room, sid)
         if not room or gs.round != round_no or gs.pstate[sid]['done']:
             return
         banked = gs.bank(sid)  # بنك تلقائي
@@ -452,6 +468,7 @@ def register_bank_events(sio):
             try:
                 await asyncio.sleep(1.5)
                 room, gs = _room_gs(room_code)
+                sid = resolve_sid(room, sid)
                 if not room or gs.stage == 'finished':
                     return
                 if gs.round != round_no:
@@ -506,6 +523,7 @@ def register_bank_events(sio):
     async def bank_surrender(sid, data):
         room_code = (data or {}).get('roomCode')
         room, gs = _room_gs(room_code)
+        sid = resolve_sid(room, sid)
         if not room or not gs.is_player_in_game(sid):
             return
         winner_sid = gs.opponent(sid)
@@ -546,6 +564,7 @@ def register_bank_events(sio):
         room_code = (data or {}).get('roomCode')
         help_id = (data or {}).get('helpId')
         room, gs = _room_gs(room_code)
+        sid = resolve_sid(room, sid)
         if not room or room.get('state') != 'playing' or gs.stage != 'playing':
             return
         if not gs.is_player_in_game(sid):
@@ -568,6 +587,11 @@ def register_bank_events(sio):
         timing = h.get('timing')
         if timing == 'question' and (not ps['question'] or ps['answering']):
             await sio.emit('bank_help_result', {'ok': False, 'msg': 'تُستخدم وسؤالك معروض'}, to=sid)
+            return
+        from app.domains.games.help_policy import help_denial
+        denial = help_denial(room, gs, sid, 'bank', help_id)
+        if denial:
+            await sio.emit('bank_help_result', {'ok': False, 'msg': denial}, to=sid)
             return
         # الاستهلاك (وضع التطوير = ∞)
         dev_mode = _allow_same_ip()

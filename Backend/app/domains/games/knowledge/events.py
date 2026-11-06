@@ -483,57 +483,9 @@ def register_knowledge_events(sio):
             await _apply_strike(room_code, sid, 'repeat',
                                 gs.answers_pool[idx]['display'])
             return
-        # ليست بالقائمة حرفياً — سلسلة محسّنة لأسئلة القوائم:
-        # القائمة معروفة ومحدودة، فالتشابه العالي معها موثوق (لا نحتاج AI).
-        # 1) fuzzy ≥0.85 مع مرشح غير مستهلك  قبول مباشر (تنويع/خطأ إملائي)
-        # 2) 0.72-0.85  AI Judge إن توفّر مفتاح؛ وبلا مفتاح نثق بالتشابه
-        #    (lenient_default هنا = قبول، لأن المرشح من قائمة صحيحة أصلاً)
-        # 3) أقل من 0.72  خطأ مباشر
-        from app.core.text_processor import similarity_ratio
-        n_ans = _norm(answer)
-        best_idx, best_ratio = None, 0.0
-        for i, item in enumerate(gs.answers_pool):
-            if i in gs.used_answer_idx:
-                continue
-            for v in item['norm']:
-                r = similarity_ratio(n_ans, v)
-                if r > best_ratio:
-                    best_ratio, best_idx = r, i
-                # مطابقة بعد حذف/إضافة "ال" التعريف (برتغال=البرتغال، نمسا=النمسا)
-                v_no_al = v[2:] if v.startswith('ال') else v
-                n_no_al = n_ans[2:] if n_ans.startswith('ال') else n_ans
-                if n_ans == v_no_al or n_no_al == v:
-                    best_ratio, best_idx = 1.0, i
-                    break
-            if best_ratio >= 1.0:
-                break
-        is_correct = False
-        used_ai = False
-        try:
-            if best_idx is not None and best_ratio >= 0.80:
-                # تشابه عالٍ مع عنصر قائمة صحيح  قبول فوري (لا AI)
-                is_correct = True
-            elif best_idx is not None and best_ratio >= 0.62:
-                # نطاق حدّي فقط  AI إن توفّر مفتاح؛ بلا مفتاح نثق بالتشابه
-                used_ai = True
-                await sio.emit('knowledge_judging', {'sid': sid}, room=room_code)
-                from app.infrastructure.ai_judge import judge_answer
-                judged = await judge_answer(
-                    (gs.current_q or {}).get('q', ''),
-                    gs.answers_pool[best_idx]['display'], answer, timeout=2.0)
-                # المرشح من قائمة صحيحة، فحتى lenient (بلا مفتاح) مقبول
-                is_correct = bool(judged.get('accept', False))
-        except Exception:
-            is_correct = (best_idx is not None and best_ratio >= 0.70)
-        finally:
-            gs.judging = False  # لا يتسرّب أبداً مهما حدث
-        if gs.stage != 'turn' or gs.turn != sid:
-            return  # الجولة تقدمت أثناء الحكم (المهلة سبقتنا) — نتركها لها
-        if is_correct and best_idx is not None:
-            gs.consume_answer(best_idx)
-            await _on_correct(room_code, sid, gs.answers_pool[best_idx]['display'])
-        else:
-            await _apply_strike(room_code, sid, 'wrong', answer)
+        # لا نحول كيانًا مختلفًا إلى إجابة متبقية اعتمادًا على التشابه.
+        gs.judging = False
+        await _apply_strike(room_code, sid, 'wrong', answer)
 
     @sio.event
     async def knowledge_surrender(sid, data):
@@ -621,6 +573,11 @@ def register_knowledge_events(sio):
         if help_id == 'k_double_round' and gs.double_round.get(sid, False):
             await sio.emit('knowledge_help_result',
                            {'ok': False, 'msg': 'المضاعفة مفعّلة لهذه الجولة'}, to=sid)
+            return
+        from app.domains.games.help_policy import help_denial
+        denial = help_denial(room, gs, sid, 'knowledge', help_id)
+        if denial:
+            await sio.emit('knowledge_help_result', {'ok': False, 'msg': denial}, to=sid)
             return
         # الاستهلاك من المخزون (وضع التطوير = بلا استهلاك)
         dev_mode = _allow_same_ip()

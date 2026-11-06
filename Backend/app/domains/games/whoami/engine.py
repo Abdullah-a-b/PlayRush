@@ -160,7 +160,6 @@ class WhoamiGameState:
 
     def mark_help_used(self, sid, help_id):
         self.helps_used.setdefault(sid, set()).add(help_id)
-        self.bump_version()
 
     def in_tiebreak(self):
         return self.tiebreaker
@@ -172,7 +171,6 @@ class WhoamiGameState:
 
     def lock_points_for(self, sid):
         self.locked_points[sid] = self.current_points_value()
-        self.bump_version()
 
     def consume_shield_if_active(self, sid):
         """يمتص السترايك إن كان الدرع مفعّلاً (خارج كسر التعادل).

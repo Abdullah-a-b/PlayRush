@@ -243,15 +243,6 @@ def join_room(room_code, sid, player_name, avatar, user_id=None):
                     p['avatar'] = avatar
                     return True, "reconnected"
 
-        # نقبل الربط بالاسم فقط لو ما لقيناش user_id مطابق (زائر بلا حساب مثلاً)
-        for p in room['players']:
-            if p.get('user_id') is None and p['name'] == player_name:
-                old_sid = p.get('sid')
-                p['old_sid'] = old_sid          # نحفظ القديم للمرجع
-                p['sid'] = sid                  # نربط الجديد
-                p['avatar'] = avatar
-                return True, "reconnected"
-
         return False, "اللعبة جارية بالفعل"
 
     if room['state'] == 'waiting':
@@ -261,7 +252,7 @@ def join_room(room_code, sid, player_name, avatar, user_id=None):
         if len(room['players']) >= room['max_players']:
             return False, "الغرفة ممتلئة"
         room['players'].append({
-            'sid': sid, 'name': player_name, 'avatar': avatar, 'role': 'guest', 'color': 'orange'
+            'sid': sid, 'name': player_name, 'avatar': avatar, 'role': 'guest', 'color': 'orange', 'user_id': user_id
         })
         return True, "joined"
 

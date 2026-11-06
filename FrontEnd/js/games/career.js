@@ -305,6 +305,18 @@ socket.on('room_joined', (data) => {
     const myStrk = (d.strikes && d.strikes[mySid]) || 0;
     buzzBtn.disabled = (myStrk >= 2);
     answerBox.style.display = 'none';
+    if (d.reconnect && d.stage === 'buzzed') {
+      buzzBtn.disabled = true;
+      if (d.buzzedPlayer === mySid) {
+        stopRevealBar();
+        setStatus('🔔 دورك! أكمل إجابتك', 'my-turn');
+        openAnswerBox(Math.max(0, d.answerWindow || 0));
+      } else {
+        setStatus('⏳ الخصم يكتب…', 'opp-turn');
+        startRevealBar(Math.max(0, d.answerWindow || 0));
+      }
+    }
+
   });
 
   socket.on('career_buzzed', (d) => {

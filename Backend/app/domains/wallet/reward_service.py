@@ -7,7 +7,7 @@ from app.core.security import get_user_from_token
 from app.core.config import settings # نحتاج الإعدادات لجلب رابط السيرفر
 import os
 
-GAME_MODES_ALL = ['huroof', 'bank', 'career', 'whoami', 'whatdo']
+GAME_MODES_ALL = ['huroof', 'bank', 'career', 'whoami', 'knowledge']
 
 def get_level_from_xp(xp: int) -> int:
     """منحنى تلفيل متدرّج خطّي (يبدأ من المستوى 0).
@@ -53,15 +53,22 @@ def save_match_sync(winner_player: dict, loser_player: dict, game_mode: str, ext
     db = SessionLocal()
     today = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d')
     try:
+        from sqlalchemy.dialects.postgresql import insert
+        from app.domains.games.models import MatchSettlement
+        match_id = extra.get('match_id') or (winner_player or {}).get('match_id') or (loser_player or {}).get('match_id')
+        if not match_id:
+            print(' [reward] نتيجة بلا معرف مباراة؛ لم نصرف مكافأة')
+            return
+        claimed = db.execute(insert(MatchSettlement).values(match_id=match_id)
+                    .on_conflict_do_nothing(index_elements=['match_id']).returning(MatchSettlement.match_id)).first()
+        if claimed is None:
+            return
         for (is_winner, player) in [(True, winner_player), (False, loser_player)]:
             if not player: continue
             token = player.get('token')
             name = player.get('name')
-            user = get_user_from_token(db, token)
-
-            # إصلاح: نستخدم exact match (==) بدل ilike fuzzy match
-            if not user and name and (name not in ['لاعب', 'مجهول', 'أنت']):
-                user = db.query(User).filter(User.player_name == name.strip()).first()
+            uid = player.get('user_id')
+            user = db.query(User).filter(User.id == uid).first() if uid else get_user_from_token(db, token)
             if not user:
                 print(f" [reward] لم يُعثر على المستخدم: token={token[:10] if token else 'None'}... name={name}")
                 continue
@@ -162,7 +169,7 @@ def save_match_sync(winner_player: dict, loser_player: dict, game_mode: str, ext
                 
             daily_games[game_mode] = True
             user.daily_games = json.dumps(daily_games)
-            completed_modes = [m for m in ['huroof', 'what', 'whoami', 'career', 'bank'] if daily_games.get(m)]
+            completed_modes = [m for m in GAME_MODES_ALL if daily_games.get(m)]
             if len(completed_modes) == 5:
                 if 'daily_completionist' not in daily_games:
                     daily_games['daily_completionist'] = True
@@ -238,9 +245,8 @@ def _apply_progression(db, winner_player, loser_player, game_mode, extra):
             return None
         token = player.get('token')
         name = player.get('name')
-        u = get_user_from_token(db, token) if token else None
-        if not u and name and name not in ('لاعب', 'مجهول', 'أنت'):
-            u = db.query(User).filter(User.player_name == name.strip()).first()
+        uid = player.get('user_id')
+        u = db.query(User).filter(User.id == uid).first() if uid else get_user_from_token(db, token)
         return u
 
     wu = _resolve(winner_player)

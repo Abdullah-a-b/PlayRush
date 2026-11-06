@@ -63,11 +63,35 @@ def register_whoami_events(sio):
     register_social_handlers(sio, get_room_state)
     global _start_first_character
 
-    def _pick_character(used_ids):
+    def _pick_character(used_ids, user_ids=None):
+        from app.infrastructure.database import SessionLocal
+        from app.domains.games.models import WhoamiSeen
+        from sqlalchemy.dialects.postgresql import insert
+        user_ids = [u for u in (user_ids or []) if u]
         pool = [c for c in _load_pool() if c.get('id') not in set(used_ids)]
-        if not pool:
-            return None
-        return dict(random.choice(pool))
+        if not pool or not user_ids:
+            return dict(random.choice(pool)) if pool else None
+        db = SessionLocal()
+        try:
+            seen = db.query(WhoamiSeen).filter(WhoamiSeen.user_id.in_(user_ids)).all()
+            blocked = {r.character_id for r in seen}
+            eligible = [c for c in pool if str(c['id']) not in blocked]
+            if not eligible:
+                for uid in user_ids:
+                    history = sorted((r for r in seen if r.user_id == uid), key=lambda r:r.seen_at)
+                    for old in history[:max(1, len(history)//2)]:
+                        db.delete(old)
+                db.flush()
+                blocked = {x for (x,) in db.query(WhoamiSeen.character_id).filter(WhoamiSeen.user_id.in_(user_ids)).all()}
+                eligible = [c for c in pool if str(c['id']) not in blocked]
+            chosen = dict(random.choice(eligible or pool))
+            for uid in user_ids:
+                db.execute(insert(WhoamiSeen).values(user_id=uid, character_id=str(chosen['id']))
+                           .on_conflict_do_nothing(index_elements=['user_id','character_id']))
+            db.commit()
+            return chosen
+        finally:
+            db.close()
 
     def _name_of(room, sid):
         pl = next((p for p in room.get('players', []) if p.get('sid') == sid), None)
@@ -141,7 +165,7 @@ def register_whoami_events(sio):
         if advance and gs.char_index >= gs.TOTAL_CHARACTERS and not gs.tiebreaker:
             await _resolve_end(room_code)
             return
-        char = _pick_character(gs.used_char_ids)
+        char = await asyncio.to_thread(_pick_character, gs.used_char_ids, [p.get('user_id') for p in room.get('players', [])])
         if not char:
             await _resolve_end(room_code, forced=True)
             return
@@ -261,6 +285,7 @@ def register_whoami_events(sio):
             gs.reveal_remaining = gs.HINT_INTERVAL
         gs.buzz_extra = 0
         gs.register_buzz(sid)
+        gs.answer_deadline = time.time() + gs.ANSWER_WINDOW
         await sio.emit('whoami_buzzed', {
             'sid': sid, 'answerWindow': gs.ANSWER_WINDOW,
             'pointsIfAnswer': gs.score_for_current(sid),
@@ -268,16 +293,18 @@ def register_whoami_events(sio):
         sio.start_background_task(_answer_timeout, room_code, gs.state_version, sid)
 
     async def _answer_timeout(room_code, version, buzzer_sid):
+        from app.domains.games.reconnect import resolve_sid
         room = get_room_state(room_code)
         if not room or not room.get('game_state'):
             return
         gs = room['game_state']
-        await asyncio.sleep(gs.ANSWER_WINDOW + getattr(gs, 'buzz_extra', 0))
+        deadline = getattr(gs, 'answer_deadline', time.time() + gs.ANSWER_WINDOW)
+        await asyncio.sleep(max(0, deadline - time.time()))
         room = get_room_state(room_code)
         if not room or not room.get('game_state'):
             return
         gs = room['game_state']
-        # version يتغيّر عند «تمديد الجرس» فيُلغى هذا المؤقّت ويحلّ محلّه الجديد
+        buzzer_sid = resolve_sid(room, buzzer_sid)
         if gs.stage == 'buzzed' and gs.buzzed_player == buzzer_sid and gs.state_version == version:
             await _handle_strike(room_code, buzzer_sid, timed_out=True)
 
@@ -291,6 +318,7 @@ def register_whoami_events(sio):
         gs = room['game_state']
         if gs.stage != 'buzzed' or gs.buzzed_player != sid:
             return
+        gs.stage = 'judging'
         # الإرسال يلتزم: نبطل مؤقّت النافذة فوراً (بالإصدار) قبل التحكيم
         gs.bump_version()
         correct_name = (gs.current or {}).get('name', '')
@@ -448,6 +476,11 @@ def register_whoami_events(sio):
                            {'ok': False, 'msg': 'النقاط مقفولة بالفعل'}, to=sid)
             return
 
+        from app.domains.games.help_policy import help_denial
+        denial = help_denial(room, gs, sid, 'whoami', help_id)
+        if denial:
+            await sio.emit('whoami_help_result', {'ok': False, 'msg': denial}, to=sid)
+            return
         # الاستهلاك من المخزون (وضع التطوير = بلا استهلاك)
         dev_mode = _allow_same_ip()
         sender = next((p for p in room['players'] if p.get('sid') == sid), None)
@@ -468,8 +501,9 @@ def register_whoami_events(sio):
         if help_id == 'w_extend_buzz':
             extra = int((h.get('params') or {}).get('seconds', 5))
             gs.buzz_extra += extra
-            version = gs.bump_version()   # يُبطل مؤقّت النافذة القديم
-            new_window = gs.ANSWER_WINDOW + gs.buzz_extra
+            gs.answer_deadline = getattr(gs, 'answer_deadline', time.time()) + extra
+            version = gs.bump_version()
+            new_window = max(0, gs.answer_deadline - time.time())
             gs.mark_help_used(sid, help_id)
             await sio.emit('whoami_help_result', {
                 'ok': True, 'helpId': help_id,
@@ -477,18 +511,8 @@ def register_whoami_events(sio):
             await sio.emit('whoami_buzz_extended', {
                 'sid': sid, 'newWindow': new_window, 'added': extra,
             }, room=room_code)
-            # مؤقّت جديد بديل بحارس الإصدار
-            async def _extended():
-                await asyncio.sleep(new_window)
-                r2 = get_room_state(room_code)
-                if not r2 or not r2.get('game_state'):
-                    return
-                g2 = r2['game_state']
-                if g2.stage == 'buzzed' and g2.buzzed_player == sid and g2.state_version == version:
-                    await _handle_strike(room_code, sid, timed_out=True)
-            sio.start_background_task(_extended)
+            sio.start_background_task(_answer_timeout, room_code, version, sid)
             return
-
         if help_id == 'w_reveal_category':
             gs.mark_help_used(sid, help_id)
             await sio.emit('whoami_help_result', {
@@ -561,7 +585,7 @@ def register_whoami_events(sio):
                 await asyncio.to_thread(
                     record_match_result, wp, lp, 'whoami',
                     extra={'friendly': room.get('type') == 'friendly',
-                           'surrender': True,
+                           'reason': 'surrender',
                            'winner_score': gs.scores.get(winner_sid, 0)})
             except Exception as e:
                 print(f" [whoami] خطأ تسجيل انسحاب: {e}")
@@ -622,9 +646,12 @@ async def send_whoami_reconnect_state(sio, room_code: str, sid: str):
     gs = room['game_state']
     if gs.stage in ('waiting', 'finished'):
         return
+    remaining = max(0, getattr(gs, 'reveal_wait', 5) - (time.time() - getattr(gs, 'reveal_started_at', time.time())))
     payload = {
         'reconnect': True,
         'stage': gs.stage,
+        'windowSeconds': remaining,
+        'answerWindow': max(0, getattr(gs, 'answer_deadline', time.time()) - time.time()),
         'hints': gs.revealed_hints(),
         'category': '',  # 🙈 حصرية لمساعدة كشف الفئة
         'hintsDone': gs.hints_done,

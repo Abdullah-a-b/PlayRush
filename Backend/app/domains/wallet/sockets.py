@@ -132,37 +132,15 @@ def register_store_events(sio):
             item = find_item((data or {}).get('itemId'))
             if not item:
                 await sio.emit('purchase_result', {'ok': False, 'msg': 'العنصر غير موجود'}, to=sid); return
-            if (user.level or 0) < item['unlock_level']:
-                await sio.emit('purchase_result', {'ok': False, 'msg': f"يُفتح في المستوى {item['unlock_level']}"}, to=sid); return
-            from app.domains.wallet.cosmetics import owns_cosmetic, grant_cosmetic
-            if item['category'] != 'help':
-                if item['id'] in get_base_owned_cosmetics() or owns_cosmetic(user.id, item['id']):
-                    await sio.emit('purchase_result', {'ok': False, 'msg': 'تملك هذا العنصر مسبقاً'}, to=sid); return
-            price = item['price']; currency = item['currency']
-            balance = (user.coins or 0) if currency == 'coins' else (user.gems or 0)
-            if balance < price:
-                cur = 'كوينز' if currency == 'coins' else 'جوهر'
-                await sio.emit('purchase_result', {'ok': False, 'msg': f'رصيدك من الـ{cur} غير كافٍ'}, to=sid); return
-            from sqlalchemy import text
-            from app.infrastructure.database import engine
-            col = 'coins' if currency == 'coins' else 'gems'
-            with engine.connect() as conn:
-                res = conn.execute(text(f"UPDATE users SET {col} = {col} - :p WHERE id = :u AND {col} >= :p"),
-                                   {"p": price, "u": user.id})
-                conn.commit()
-                if res.rowcount == 0:
-                    await sio.emit('purchase_result', {'ok': False, 'msg': 'فشل الخصم'}, to=sid); return
-            if item['category'] == 'help':
-                from app.domains.wallet.help_inventory import add_help
-                add_help(user.id, item['ref_id'], 1)
-            else:
-                grant_cosmetic(user.id, item['id'], item['category'])
-            nb = balance - price
+            from app.domains.wallet.purchase_service import purchase
+            result = purchase(db, user.id, item)
+            if not result['ok']:
+                await sio.emit('purchase_result', result, to=sid)
+                return
             await sio.emit('purchase_result', {
                 'ok': True, 'msg': f"تم شراء {item['name']} ✅", 'itemId': item['id'],
                 'category': item['category'], 'asset': item.get('asset'),
-                'wallet': {'coins': (nb if currency == 'coins' else (user.coins or 0)),
-                           'gems': (nb if currency == 'gems' else (user.gems or 0))},
+                'wallet': result['wallet'],
             }, to=sid)
         finally:
             db.close()

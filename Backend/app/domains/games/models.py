@@ -74,3 +74,20 @@ class KnowledgeSeen(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "question_id", name="uq_knowledge_seen_user_q"),
     )
+
+
+class WhoamiSeen(Base):
+    """شخصيات من أنا التي عُرضت للمستخدم، دون بيانات شخصية إضافية."""
+    __tablename__ = 'whoami_seen'
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, index=True)
+    character_id = Column(String, index=True)
+    seen_at = Column(DateTime, default=datetime.datetime.utcnow)
+    __table_args__ = (UniqueConstraint('user_id', 'character_id', name='uq_whoami_seen_user_char'),)
+
+
+class MatchSettlement(Base):
+    """حاجز ذري ضد صرف مكافأة نتيجة المباراة مرتين."""
+    __tablename__ = 'match_settlements'
+    match_id = Column(String(64), primary_key=True)
+    settled_at = Column(DateTime, default=datetime.datetime.utcnow)

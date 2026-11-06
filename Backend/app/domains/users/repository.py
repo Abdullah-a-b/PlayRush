@@ -63,6 +63,7 @@ class UserRepository:
             ("bank_seen",      "user_id = :uid"),
             ("career_seen",    "user_id = :uid"),
             ("knowledge_seen", "user_id = :uid"),
+            ("whoami_seen", "user_id = :uid"),
             ("player_reports", "reporter_id = :uid OR target_id = :uid"),
             ("player_penalties", "user_id = :uid"),
         ]

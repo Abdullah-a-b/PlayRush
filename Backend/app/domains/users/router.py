@@ -106,7 +106,11 @@ async def reset_password(
 @limiter.limit("10/minute")  # يمنع redirect spam
 async def google_login(request: Request, client: str = "web"):
     # client=app يأتي من تطبيق Capacitor ليعود التوكن عبر رابط عميق
-    return RedirectResponse(url=service.build_google_auth_url(client))
+    state, nonce = service.make_google_state(client)
+    response = RedirectResponse(url=service.build_google_auth_url(client, state))
+    response.set_cookie('pr_oauth', nonce, max_age=600, httponly=True,
+                        secure=request.url.scheme == 'https', samesite='lax', path='/')
+    return response
 
 
 @router.get("/google/callback")
@@ -118,13 +122,22 @@ async def google_callback(
     state: str = "web",
     repo: UserRepository = Depends(get_user_repo),
 ):
-    target_url = await service.handle_google_callback(repo, background_tasks, code, state)
-    return RedirectResponse(url=target_url)
+    client = service.validate_google_state(state, request.cookies.get('pr_oauth'))
+    target_url = await service.handle_google_callback(repo, background_tasks, code, client)
+    response = RedirectResponse(url=target_url)
+    response.delete_cookie('pr_oauth', path='/')
+    return response
 
 
 @router.post("/logout")
-async def logout(token: str = Form(...)):
-    return {"message": "تم تسجيل الخروج بنجاح وتأمين الحساب"}
+async def logout(background_tasks: BackgroundTasks, token: str = Form(...), repo: UserRepository = Depends(get_user_repo)):
+    from app.core.security import get_user_from_token, revoke_user_sessions, disconnect_user_sessions
+    user = get_user_from_token(repo.db, token)
+    if user:
+        revoke_user_sessions(user)
+        repo.commit()
+        background_tasks.add_task(disconnect_user_sessions, user.id)
+    return {"message": "تم تسجيل الخروج من جلسات الحساب"}
 
 
 @router.post("/setup-profile")

@@ -1,4 +1,5 @@
 import secrets
+import time
 import string
 import asyncio
 from app.sockets.state import connected_players, disconnect_timers
@@ -18,6 +19,7 @@ def register_room_events(sio):
         if not user:
             await sio.emit('error_message', 'يجب تسجيل الدخول لإنشاء غرفة خاصة', to=sid)
             return
+        host_uid = user.id
         host_name = user.player_name or 'لاعب'
         avatar = get_clean_avatar(user.avatar, host_name)
         db.close()
@@ -29,10 +31,12 @@ def register_room_events(sio):
         room_code = ''.join(secrets.choice(alphabet) for _ in range(6))
 
         room = create_room(room_code, sid, host_name, 2, game_mode, "0.0.0.0", avatar, "private")
+        room['players'][0].update(user_id=host_uid, token=token)
+        room['user_ids'] = {sid: host_uid}
         # هذا الـ worker مالك الغرفة الخاصة
         from app.core import cluster
         await cluster.claim_room(room_code)
-        await sio.emit('room_created', {'room_code': room_code, 'players': room['players']}, to=sid)
+        await sio.emit('room_created', {'room_code': room_code, 'players': [{k:v for k,v in p.items() if k not in ('token','user_id')} for p in room['players']]}, to=sid)
 
     @sio.on('join_room')
     async def handle_join_room(sid, data):
@@ -48,8 +52,8 @@ def register_room_events(sio):
             joining_user_id = user.id
             db.close()
         else:
-            player_name = str(data.get('player_name', 'مجهول'))[:30]
-            avatar = get_clean_avatar(data.get('avatar', ''), player_name)
+            await sio.emit('error_message', 'انتهت الجلسة؛ سجل الدخول مجددًا', to=sid)
+            return
 
         success, msg = join_room(room_code, sid, player_name, avatar, user_id=joining_user_id)
         print(f" [join_room] sid={sid} uid={joining_user_id} name={player_name!r} room={room_code}  success={success} msg={msg!r}")
@@ -63,6 +67,12 @@ def register_room_events(sio):
             for p in room_obj['players']:
                 if p['sid'] == sid:
                     p['user_id'] = joining_user_id
+
+        from app.domains.games.reconnect import remap_match_sid
+        if room_obj and msg == 'reconnected':
+            for player in room_obj['players']:
+                if player.get('sid') == sid:
+                    remap_match_sid(room_obj, player.get('old_sid'), sid)
 
         # مزامنة شاملة: نربط sids المحرك بلاعبي الغرفة الحاليين عبر
         # user_id (مصدر الحقيقة الثابت). يعالج جذر KeyError/فشل الدور:
@@ -126,7 +136,7 @@ def register_room_events(sio):
             'avatar': avatar,
             'location': _loc,
             'token': token,
-            'user_id': _existing_uid,
+            'user_id': _existing_uid or joining_user_id,
         }
 
         # نبثّ delta صغيراً (ليظهر "يخوض معركة" لحظياً بلا تحديث الصفحة)
@@ -136,7 +146,7 @@ def register_room_events(sio):
         except Exception:
             pass
 
-        safe_room = {k: v for k, v in room.items() if k != 'game_state'}
+        safe_room = {k: v for k, v in room.items() if k not in ('game_state', 'sid_aliases')}
         fetch_tasks = []
 
         for p in safe_room['players']:
@@ -202,6 +212,8 @@ def register_room_events(sio):
               f"state={room['state']} both_present={both_present} has_gs={gs_check is not None}")
         if both_present and room['state'] == 'starting' and gs_check:
             room['state'] = 'playing'
+            from app.domains.games.help_policy import freeze_match_loadouts
+            await asyncio.to_thread(freeze_match_loadouts, room)
             # نضمن أن p1/p2/turn تشير للـ sids الحالية (لا القديمة من اللوبي)
             # نربط حسب اللون: green=host=p1, orange=guest=p2
             green_player = next((p for p in room['players'] if p.get('color') == 'green'), None)
@@ -329,8 +341,13 @@ def register_room_events(sio):
                         await sio.emit('huroof_new_question', {
                             'questionData': public_question_payload(gs.current_question),
                             'round': 'r1',
-                            'timer': 40
+                            'timer': max(0, (gs.active_timer or {}).get('ends_at', time.time()) - time.time())
                         }, to=sid)
+
+                    if gs.stage.startswith('answer_') and gs.buzzed_player == sid:
+                        import time as _clock
+                        remaining = max(0, (gs.active_timer or {}).get('ends_at', _clock.time()) - _clock.time())
+                        await sio.emit('huroof_chance_transfer', {'to_sid':sid, 'timer':remaining, 'round':gs.stage.replace('answer_', '')}, to=sid)
 
             elif reconnect_game_mode == 'career' and gs:
                 # إعادة إرسال حالة مسيرة لاعب للاعب العائد
@@ -345,9 +362,6 @@ def register_room_events(sio):
                 # إعادة إرسال حالة «من أنا» للاعب العائد
                 if room['state'] == 'playing' and gs.stage != 'waiting':
                     try:
-                        if hasattr(gs, 'remap_sid'):
-                            _old = gs.p1 if (room.get('user_ids') or {}).get(sid) == gs.p1_uid else gs.p2
-                            gs.remap_sid(_old, sid)
                         from app.domains.games.whoami.events import send_whoami_reconnect_state
                         await send_whoami_reconnect_state(sio, room_code, sid)
                     except Exception as _re:
@@ -376,6 +390,12 @@ def register_room_events(sio):
                                 'category': q.get('cat', ''),
                                 'remaining': round(gs.remaining(sid), 1),
                             }, to=sid)
+                        if ps.get('answering'):
+                            import time as _clock
+                            await sio.emit('bank_answering', {
+                                'answerWindow': max(0, ps.get('answer_deadline', _clock.time()) - _clock.time()),
+                                'remaining': round(gs.remaining(sid), 1),
+                            }, to=sid)
                     except Exception as _re:
                         print(f" [bank] خطأ reconnect state: {_re}")
 
@@ -383,6 +403,6 @@ def register_room_events(sio):
     async def handle_start_game(sid, data):
         room_code = data.get('room_code')
         room = get_room_state(room_code)
-        if room and room.get('host') == sid:
+        if room and room.get('host') == sid and room.get('state') == 'waiting':
             room['state'] = 'starting'
             await sio.emit('game_started', {'roomCode': room_code}, room=room_code)

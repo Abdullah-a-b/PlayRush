@@ -195,7 +195,7 @@ def register_career_events(sio):
             return
         # معرّفات المستخدمين (لفلترة الشخصيات المُشاهَدة للطرفين)
         _uids = [p.get('user_id') for p in room.get('players', []) if p.get('user_id')]
-        player = _load_random_player(gs.used_player_ids, user_ids=_uids)
+        player = await asyncio.to_thread(_load_random_player, gs.used_player_ids, user_ids=_uids)
         if not player:
             await _resolve_end(room_code, forced=True)
             return
@@ -306,28 +306,23 @@ def register_career_events(sio):
         else:
             gs.reveal_remaining = gs.REVEAL_INTERVAL
         gs.register_buzz(sid)
+        gs.answer_deadline = time.time() + gs.ANSWER_WINDOW
         await sio.emit('career_buzzed', {'sid': sid, 'answerWindow': gs.ANSWER_WINDOW}, room=room_code)
         sio.start_background_task(_answer_timeout, room_code, gs.state_version, sid)
 
     async def _answer_timeout(room_code, version, buzzer_sid):
+        from app.domains.games.reconnect import resolve_sid
         room = get_room_state(room_code)
         if not room or not room.get('game_state'):
             return
         gs = room['game_state']
-        gs.answer_extended = False
-        await asyncio.sleep(gs.ANSWER_WINDOW)
+        deadline = getattr(gs, 'answer_deadline', time.time() + gs.ANSWER_WINDOW)
+        await asyncio.sleep(max(0, deadline - time.time()))
         room = get_room_state(room_code)
         if not room or not room.get('game_state'):
             return
         gs = room['game_state']
-        # ⏱ تمديد الكتابة: +5 ثوانٍ لو فُعّلت أثناء النافذة
-        if getattr(gs, 'answer_extended', False) and gs.stage == 'buzzed' \
-                and gs.buzzed_player == buzzer_sid and gs.state_version == version:
-            await asyncio.sleep(5)
-        room = get_room_state(room_code)
-        if not room or not room.get('game_state'):
-            return
-        gs = room['game_state']
+        buzzer_sid = resolve_sid(room, buzzer_sid)
         if gs.stage == 'buzzed' and gs.buzzed_player == buzzer_sid and gs.state_version == version:
             await _handle_strike(room_code, buzzer_sid, timed_out=True)
 
@@ -341,6 +336,7 @@ def register_career_events(sio):
         gs = room['game_state']
         if gs.stage != 'buzzed' or gs.buzzed_player != sid:
             return
+        gs.stage = 'judging'
         # الإرسال يلتزم: نبطل مؤقّت نافذة الكتابة فوراً (بالإصدار) —
         # كان قد ينفجر أثناء تحكيم AI (≤2ث) ويضرب سترايك رغم إجابة قيد الحسم.
         gs.bump_version()
@@ -555,6 +551,11 @@ def register_career_events(sio):
         if help_id in ('c_strike_shield', 'c_double_lock') and gs.tiebreaker:
             await sio.emit('career_help_result', {'ok': False, 'msg': 'لا تعمل في جولة كسر التعادل'}, to=sid)
             return
+        from app.domains.games.help_policy import help_denial
+        denial = help_denial(room, gs, sid, 'career', help_id)
+        if denial:
+            await sio.emit('career_help_result', {'ok': False, 'msg': denial}, to=sid)
+            return
         # الاستهلاك من المخزون (وضع التطوير = لا نهائية مثل حروف)
         dev_mode = _allow_same_ip()
         user_id = None
@@ -574,7 +575,9 @@ def register_career_events(sio):
 
         # التأثيرات
         if help_id == 'c_extend_write':
-            gs.answer_extended = True  # مؤقّت المهلة يلتقطها
+            gs.answer_deadline = getattr(gs, 'answer_deadline', time.time()) + 5
+            version = gs.bump_version()
+            sio.start_background_task(_answer_timeout, room_code, version, sid)
             await sio.emit('career_help_result', {'ok': True, 'helpId': help_id,
                 'info': '+5 ثوانٍ لكتابتك ⏱️', 'extendSeconds': 5}, to=sid)
         elif help_id == 'c_nationality':
@@ -841,9 +844,12 @@ async def send_career_reconnect_state(sio, room_code: str, sid: str):
         return
 
     clubs = (gs.current_player or {}).get('clubs', [])
+    remaining = max(0, getattr(gs, 'reveal_wait', 5) - (time.time() - getattr(gs, 'reveal_started_at', time.time())))
     payload = {
         'reconnect': True,
         'stage': gs.stage,
+        'windowSeconds': remaining,
+        'answerWindow': max(0, getattr(gs, 'answer_deadline', time.time()) - time.time()),
         'clubs': clubs[: gs.revealed_count],
         'status': (gs.current_player or {}).get('status', 'retired'),
         'careerComplete': gs.career_complete,

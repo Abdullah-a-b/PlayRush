@@ -139,7 +139,7 @@ def _action_allowed(gs, sid, action_type):
         return True
 
 # معالج النصوص العربية (Normalize  Fuzzy  Token)
-from app.core.huroof_answers import check_answer, answer_letter
+from app.core.huroof_answers import check_answer, answer_letter, _core as hint_core
 
 # Anti-Cheat (server-side validation)
 from app.core.anticheat import (
@@ -766,6 +766,10 @@ def register_huroof_events(sio):
 
         if gs.stage not in ['answer_r1', 'answer_r2', 'answer_r3', 'answer_r4']: return
         if sid != gs.buzzed_player: return
+        attempt = (id(gs.current_question), gs.stage)
+        if getattr(gs, '_submitted_attempt', None) == attempt:
+            return
+        gs._submitted_attempt = attempt
 
         # الإرسال يلتزم: نبطل مؤقّت الإجابة فوراً (بالإصدار) —
         # يمنع انفجار المهلة أثناء تحكيم AI (≤2ث) ومعالجة النتيجة مرتين.
@@ -889,6 +893,20 @@ def register_huroof_events(sio):
             return
 
         # نستهلك من المخزون (إلا في وضع التطوير أو الفردي) — قبل التنفيذ
+        if help_id == 'choose_category':
+            chosen_cat = str(data.get('category') or '').strip()
+            cats = sorted({q['category'] for q in _load_huroof_questions_cached() if q.get('category')})
+            if not chosen_cat:
+                await sio.emit('huroof_choose_category_options', {'helpId':help_id,'categories':cats}, to=sid)
+                return
+            if chosen_cat not in cats:
+                await sio.emit('huroof_help_result', {'ok':False,'msg':'التصنيف غير متاح؛ لم يُخصم شيء'}, to=sid)
+                return
+        from app.domains.games.help_policy import help_denial
+        denial = help_denial(room, gs, sid, 'huroof', help_id)
+        if denial:
+            await sio.emit('huroof_help_result', {'ok': False, 'msg': denial}, to=sid)
+            return
         if not dev_mode and not _is_solo and user_id:
             from app.domains.wallet.help_inventory import consume_help
             if not consume_help(user_id, help_id):
@@ -906,7 +924,7 @@ def register_huroof_events(sio):
             extra = help_def['params'].get('seconds', 10)
             import time as _t
             remaining = max(0, at['ends_at'] - _t.time())
-            new_seconds = int(remaining) + extra
+            new_seconds = remaining + extra
             # نبدّل الإصدار لإلغاء المؤقّت القديم، ونشغّل واحداً جديداً بالوقت الممدّد
             gs.state_version += 1
             new_version = gs.state_version
@@ -943,7 +961,7 @@ def register_huroof_events(sio):
             if not gs.current_question:
                 await sio.emit('huroof_help_result', {'ok': False, 'msg': 'لا يوجد سؤال حالياً'}, to=sid)
                 return
-            answer = gs.current_question.get('answer', '') or ''
+            answer = hint_core(gs.current_question.get('answer', ''))
             # نحسب الحروف العربية فقط (نتجاهل المسافات)
             letter_count = len(answer.replace(' ', ''))
             used.add(help_id)
@@ -958,7 +976,7 @@ def register_huroof_events(sio):
 
         # كاشف الحرف الثاني: الحرف الذي يلي المختار
         if help_id == 'reveal_second_letter':
-            answer = (gs.current_question.get('answer', '') or '').replace(' ', '')
+            answer = hint_core(gs.current_question.get('answer', '')).replace(' ', '')
             if len(answer) < 2:
                 await sio.emit('huroof_help_result', {'ok': False, 'msg': 'الإجابة قصيرة جداً'}, to=sid)
                 return
@@ -973,7 +991,7 @@ def register_huroof_events(sio):
 
         # كاشف آخر حرف
         if help_id == 'reveal_last_letter':
-            answer = (gs.current_question.get('answer', '') or '').replace(' ', '')
+            answer = hint_core(gs.current_question.get('answer', '')).replace(' ', '')
             if not answer:
                 await sio.emit('huroof_help_result', {'ok': False, 'msg': 'لا توجد إجابة'}, to=sid)
                 return
@@ -1000,7 +1018,7 @@ def register_huroof_events(sio):
 
         # كاشف حرف وسطي: نكشف حرفاً واحداً من وسط الإجابة (تلميح خفيف)
         if help_id == 'reveal_middle_letter':
-            answer = (gs.current_question.get('answer', '') or '').replace(' ', '')
+            answer = hint_core(gs.current_question.get('answer', '')).replace(' ', '')
             if not answer:
                 await sio.emit('huroof_help_result', {'ok': False, 'msg': 'لا توجد إجابة'}, to=sid)
                 return
@@ -1026,7 +1044,7 @@ def register_huroof_events(sio):
             extra = help_def['params'].get('seconds', 5)
             import time as _t
             remaining = max(0, at['ends_at'] - _t.time())
-            new_seconds = int(remaining) + extra
+            new_seconds = remaining + extra
             gs.state_version += 1
             new_version = gs.state_version
             used.add(help_id)
@@ -1062,35 +1080,8 @@ def register_huroof_events(sio):
             await sio.emit('huroof_skip_to_select', {'turn': gs.turn}, room=room_code)
             return
 
-        # اختيار التصنيف (قبل الحرف): يحفظ تصنيفاً مفضّلاً لسؤالك القادم
+        # التصنيف فُحص قبل الخصم؛ لا حاجة لمعاملة تعويض قد تفشل.
         if help_id == 'choose_category':
-            chosen_cat = (data.get('category') or '').strip()
-            # قائمة التصنيفات المتاحة (من قاعدة الأسئلة)
-            from app.domains.games.models import Question
-            _db = SessionLocal()
-            try:
-                cats = [r[0] for r in _db.query(Question.category).filter(
-                    Question.game_mode == 'huroof').distinct().all() if r[0]]
-            except Exception:
-                cats = []
-            finally:
-                _db.close()
-            if not chosen_cat:
-                # لم يحدّد بعد — نرسل له قائمة التصنيفات ليختار (لا نستهلك)
-                await sio.emit('huroof_choose_category_options', {
-                    'helpId': help_id, 'categories': cats,
-                }, to=sid)
-                # نُلغي الاستهلاك المبكر بإرجاع نسخة (تعويض)
-                if not dev_mode and user_id:
-                    from app.domains.wallet.help_inventory import add_help
-                    add_help(user_id, help_id, 1)
-                return
-            if cats and chosen_cat not in cats:
-                await sio.emit('huroof_help_result', {'ok': False, 'msg': 'تصنيف غير متاح'}, to=sid)
-                if not dev_mode and user_id:
-                    from app.domains.wallet.help_inventory import add_help
-                    add_help(user_id, help_id, 1)
-                return
             # نحفظ التفضيل
             if not hasattr(gs, 'preferred_category'):
                 gs.preferred_category = {}

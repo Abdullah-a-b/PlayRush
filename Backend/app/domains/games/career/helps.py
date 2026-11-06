@@ -69,7 +69,7 @@ DEFAULT_LOADOUT = ["c_extend_write", "c_nationality", "c_club_count"]
 
 
 def get_slots_for_player(level: int, owns_fourth: bool) -> int:
-    return 4 if owns_fourth else HELP_SLOTS
+    return 4 if owns_fourth and level >= FOURTH_SLOT_LEVEL else HELP_SLOTS
 
 
 ENABLED_HELPS = [h for h in HELP_CATALOG.values() if h.get("enabled")]

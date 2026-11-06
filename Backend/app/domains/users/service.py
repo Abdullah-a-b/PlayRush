@@ -12,7 +12,8 @@ from jose import jwt, JWTError
 
 from app.core.security import (
     get_password_hash, verify_password, create_access_token,
-    sanitize_text, SECRET_KEY, ALGORITHM,
+    sanitize_text, SECRET_KEY, ALGORITHM, issue_user_token, revoke_user_sessions,
+    get_user_from_token, disconnect_user_sessions,
 )
 from app.core.content_filter import is_name_allowed
 from app.core.audit import log_login
@@ -176,7 +177,8 @@ async def login_user(repo: UserRepository, background_tasks: BackgroundTasks,
             "detail": "حسابك غير مفعل. تم إرسال كود تحقق جديد إلى بريدك، جاري التوجيه...",
         }
 
-    access_token = create_access_token(data={"sub": user.email})
+    access_token = issue_user_token(user)
+    repo.commit()
     log_login(user.email, client_ip, success=True)
     return {
         "message": "تم تسجيل الدخول بنجاح",
@@ -220,17 +222,39 @@ async def reset_password(repo: UserRepository, background_tasks: BackgroundTasks
         raise HTTPException(status_code=400, detail="كلمة المرور مطابقة للقديمة")
 
     user.hashed_password = await asyncio.to_thread(get_password_hash, new_password)
+    revoke_user_sessions(user)
+    background_tasks.add_task(disconnect_user_sessions, user.id)
     _clear_otp(user)
     repo.commit()
     background_tasks.add_task(send_password_changed_email, email_clean)
     return {"message": "تم تغيير كلمة المرور بنجاح"}
 
 
-def build_google_auth_url(client: str = "web") -> str:
+def make_google_state(client):
+    nonce = secrets.token_urlsafe(32)
+    state = jwt.encode({'purpose':'oauth', 'nonce':nonce, 'client':'app' if client == 'app' else 'web',
+                        'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=10)},
+                       SECRET_KEY, algorithm=ALGORITHM)
+    return state, nonce
+
+
+def validate_google_state(state, nonce):
+    import hmac
+    try:
+        data = jwt.decode(state, SECRET_KEY, algorithms=[ALGORITHM])
+        if data.get('purpose') != 'oauth' or not nonce or not hmac.compare_digest(data.get('nonce', ''), nonce):
+            raise ValueError('invalid state')
+        return data['client']
+    except (JWTError, ValueError, KeyError, TypeError):
+        raise HTTPException(status_code=400, detail='انتهت محاولة تسجيل الدخول؛ ابدأ من جديد')
+
+
+def build_google_auth_url(client: str = "web", state: str = "") -> str:
     """يبني رابط مصادقة جوجل.
     client="app" يعني أن الطلب صادر من تطبيق Capacitor، فنمرّره داخل state
     ليعرف الـcallback أن يعيد التوجيه إلى رابط عميق بدل موقع الويب."""
-    state = "app" if client == "app" else "web"
+    if not state:
+        raise ValueError('حالة OAuth مطلوبة')
     return (
         f"https://accounts.google.com/o/oauth2/v2/auth"
         f"?response_type=code"
@@ -305,7 +329,8 @@ async def handle_google_callback(repo: UserRepository, background_tasks: Backgro
     elif not user.player_name:
         needs_profile_setup = True
 
-    playrush_token = create_access_token(data={"sub": user.email})
+    playrush_token = issue_user_token(user)
+    repo.commit()
     page = "profile-setup" if needs_profile_setup else "categories"
 
     # 📱 طلب صادر من التطبيق → رابط عميق يعيد التوكن للتطبيق نفسه
@@ -379,7 +404,7 @@ def request_settings_otp(repo: UserRepository, background_tasks: BackgroundTasks
     user_email = _decode_token_email(token)
     if user_email is None:
         raise HTTPException(status_code=401, detail="التوكن غير صالح")
-    user = repo.get_by_email(user_email)
+    user = get_user_from_token(repo.db, token)
 
     if not user or user.auth_provider == "google":
         raise HTTPException(status_code=400, detail="طلب غير صالح")
@@ -394,7 +419,7 @@ def request_settings_otp(repo: UserRepository, background_tasks: BackgroundTasks
 async def update_security(repo: UserRepository, background_tasks: BackgroundTasks,
                           token: str, otp: str, action: str, new_value: str) -> dict:
     user_email = _decode_token_email(token)
-    user = repo.get_by_email(user_email) if user_email else None
+    user = get_user_from_token(repo.db, token) if user_email else None
     if user_email is None:
         raise HTTPException(status_code=401, detail="التوكن غير صالح")
 
@@ -410,7 +435,9 @@ async def update_security(repo: UserRepository, background_tasks: BackgroundTask
             raise HTTPException(status_code=400, detail="البريد مستخدم مسبقاً")
         background_tasks.add_task(send_email_changed, user.email, new_email)
         user.email = new_email
-        new_token = create_access_token(data={"sub": user.email})
+        revoke_user_sessions(user)
+        new_token = issue_user_token(user)
+        background_tasks.add_task(disconnect_user_sessions, user.id)
         _clear_otp(user)
         repo.commit()
         return {"message": "تم تغيير البريد الإلكتروني بنجاح", "new_token": new_token}
@@ -418,10 +445,13 @@ async def update_security(repo: UserRepository, background_tasks: BackgroundTask
     elif action == "password":
         validate_password_strength(new_value)
         user.hashed_password = await asyncio.to_thread(get_password_hash, new_value)
+        revoke_user_sessions(user)
+        new_token = issue_user_token(user)
+        background_tasks.add_task(disconnect_user_sessions, user.id)
         background_tasks.add_task(send_password_changed_email, user.email)
         _clear_otp(user)
         repo.commit()
-        return {"message": "تم تغيير كلمة المرور بنجاح"}
+        return {"message": "تم تغيير كلمة المرور بنجاح", "new_token": new_token}
 
     raise HTTPException(status_code=400, detail="عملية غير مدعومة")
 
@@ -469,7 +499,7 @@ def self_ban(repo: UserRepository, token: str | None) -> dict:
     if user_email is None:
         raise HTTPException(status_code=401, detail="التوكن غير صالح")
 
-    user = repo.get_by_email(user_email)
+    user = get_user_from_token(repo.db, token)
     if not user:
         raise HTTPException(status_code=404, detail="المستخدم غير موجود")
 
@@ -495,7 +525,7 @@ def record_anticheat_report(repo: UserRepository, token: str | None,
     if user_email is None:
         return {"received": False}
 
-    user = repo.get_by_email(user_email)
+    user = get_user_from_token(repo.db, token)
     if not user:
         return {"received": False}
 
@@ -546,7 +576,7 @@ def check_ban_status(repo: UserRepository, token: str | None) -> dict:
     if not user_email:
         return {"banned": False, "reason": "no_email"}
 
-    user = repo.get_by_email(user_email)
+    user = get_user_from_token(repo.db, token)
     if not user:
         return {"banned": False, "reason": "user_not_found"}
 

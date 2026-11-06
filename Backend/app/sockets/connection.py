@@ -103,7 +103,7 @@ def register_connection_events(sio):
         room_code, room = leave_room(sid)
         if room_code and room and room.get('state') == 'playing':
             await sio.emit('opponent_disconnected', {'msg': 'انقطع اتصال الخصم، ننتظر عودته...'}, room=room_code)
-            if room.get('game_state'): room['game_state'].state_version += 1
+            # الانقطاع لا يوقف مؤقت المباراة؛ وقتها يستمر على الخادم.
 
             # إصلاح task leak: نلغي أي timer قديم لنفس الغرفة قبل إنشاء جديد
             old_timer = disconnect_timers.get(room_code)
