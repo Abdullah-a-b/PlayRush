@@ -427,4 +427,50 @@ function attachForceLogoutHandler(socketInstance) {
 
         setTimeout(() => { window.location.replace(banPage); }, 800);
     });
+}/** ينهي جلسات الحساب على الخادم قبل حذف توكن هذا الجهاز. */
+async function revokeCurrentSession() {
+    const current = (typeof getToken === 'function') ? getToken() : localStorage.getItem('token');
+    if (!current) return true;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    try {
+        const body = new FormData();
+        body.append('token', current);
+        const response = await fetch(`${CONFIG.API_URL}/auth/logout`, {
+            method: 'POST', body, signal: controller.signal, keepalive: true
+        });
+        if (!response.ok && response.status !== 401 && response.status !== 403) throw new Error('logout_failed');
+        return true;
+    } catch (error) {
+        if (typeof showToast === 'function') showToast('تعذر إنهاء الجلسة على السيرفر؛ تحقق من الاتصال وحاول مجددًا', 'error');
+        return false;
+    } finally {
+        clearTimeout(timeout);
+    }
+}
+
+/** يميز الجلسة الملغاة عن توكن جديد أعادته عملية تغيير بيانات الأمان. */
+function attachSessionExpiryHandler(socketInstance) {
+    if (!socketInstance) return;
+    socketInstance.on('session_expired', () => {
+        setTimeout(async () => {
+            const current = (typeof getToken === 'function') ? getToken() : localStorage.getItem('token');
+            if (current) {
+                try {
+                    const response = await fetch(`${CONFIG.API_URL}/auth/me`, {
+                        headers: { Authorization: `Bearer ${current}` }
+                    });
+                    if (response.ok) return;
+                    if (response.status !== 401 && response.status !== 403) return;
+                } catch (error) { return; }
+            }
+            try {
+                localStorage.removeItem('token');
+                sessionStorage.removeItem('token');
+                sessionStorage.setItem('pr_logged_out', '1');
+            } catch (error) {}
+            const prefix = window.location.pathname.includes('/games/') ? '../' : '';
+            window.location.replace(prefix + 'login.html');
+        }, 250);
+    });
 }

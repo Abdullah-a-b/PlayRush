@@ -4,6 +4,7 @@
   window.CURRENT_GAME = 'knowledge';
 
   const socket = io(API_URL, { transports: ['websocket', 'polling'], upgrade: true });
+  if (typeof attachSessionExpiryHandler === 'function') attachSessionExpiryHandler(socket);
   window.socket = socket;
   const roomCode     = sessionStorage.getItem('gameRoomCode');
   const token        = localStorage.getItem('token') || sessionStorage.getItem('token');

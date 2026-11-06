@@ -8,6 +8,7 @@
 //  الاتصال والجلسة
 // ============================================================
 const socket = io(API_URL, { transports: ['websocket', 'polling'], upgrade: true });
+  if (typeof attachSessionExpiryHandler === 'function') attachSessionExpiryHandler(socket);
 
 const token        = getToken();
 const playerName   = sessionStorage.getItem('playerName')   || sessionStorage.getItem('username')   || 'لاعب';

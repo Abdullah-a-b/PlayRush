@@ -35,6 +35,7 @@ document.addEventListener('visibilitychange', () => {
 });
 //  ربط معالج الحظر الإجباري — يستجيب لرسائل force_logout من السيرفر
 if (typeof attachForceLogoutHandler === 'function') attachForceLogoutHandler(socket);
+if (typeof attachSessionExpiryHandler === 'function') attachSessionExpiryHandler(socket);
 
 // ============================================================
 //  إعداد الإشعارات (مستوى أعلى — مستقل عن أي كود async قد يفشل)
@@ -482,7 +483,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     document.getElementById('logoutSettingsBtn')?.addEventListener('click', () => {
-        showConfirm('تسجيل الخروج', 'هل أنت متأكد من رغبتك في تسجيل الخروج؟', () => {
+        showConfirm('تسجيل الخروج', 'سيتم إنهاء جلسات حسابك على الأجهزة الأخرى أيضًا. هل تريد المتابعة؟', async () => {
+            if (!(await revokeCurrentSession())) return;
             // خروج حقيقي: نمسح "تذكرني" في localStorage أيضاً
             try {
                 sessionStorage.clear();            // يمسح أعلام الأنيميشن أيضاً
