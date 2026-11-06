@@ -439,21 +439,6 @@ def gen_accepted(ar_name, en_name):
     return sorted(out)
 
 
-def difficulty_for(sitelinks):
-    # 🩹 حد الاستيراد الأدنى (min_sitelinks=45) مرتفع أصلاً — أي لاعب يتجاوزه
-    # معروف عالمياً بشكل معقول، مو عشوائي مغمور. عتبة medium=70 القديمة كانت
-    # تحشر كل نطاق 45-69 (لاعبين معروفين فعلاً لعشاق الكرة) في "hard" —
-    # فصار 83% من القاعدة المستوردة "hard" رغم إنهم مو مغمورين فعلياً بهذا
-    # الحجم. خفّضناها لتنصيف هذا النطاق الواسع بدل تركه كله بخانة واحدة.
-    # ⚠️ استُبدلت فعلياً بـdifficulty_for_ar() أدناه (انظر تعليقها) — أُبقيت
-    # هنا فقط كمرجع/احتياط، غير مستخدمة في مسار الاستيراد الحالي.
-    if sitelinks >= 110:
-        return "easy"
-    if sitelinks >= 55:
-        return "medium"
-    return "hard"
-
-
 def _ar_article_lengths(titles):
     """يُرجع {title: طول_المقال_بالبايت} لعدة عناوين ويكيبيديا عربية دفعة
     واحدة (حتى 50 بالطلب). عناوين بلا مقال عربي إطلاقاً لا تظهر بالنتيجة."""
@@ -480,29 +465,6 @@ def _ar_article_lengths(titles):
     return out
 
 
-def difficulty_for_ar(ar_length):
-    """مؤشّر الشهرة الفعلي المُعتمَد: طول مقال ويكيبيديا **العربية** بالبايت
-    (0 لو ما فيه مقال عربي إطلاقاً)، بدل عدد لغات ويكيبيديا الكلي.
-
-    السبب: عدد اللغات (sitelinks) مؤشر ضعيف لكرة القدم تحديداً — لغات
-    صغيرة كثيرة عندها بوتات تنشئ صفحات تلقائية لأي محترف بأي دوري رئيسي،
-    حتى لو محلي بحت (مثال حقيقي: لاعب قضى مسيرته كلها بالدوري البرازيلي
-    كان يتجاوز حد استيراد sitelinks بسهولة رغم كونه مجهولاً تماماً لجمهور
-    عربي). طول المقال العربي تحديداً يعكس مباشرة "هل لاعب عربي يعرفه؟" —
-    وهذا بالضبط ما يحتاجه بوت لعبة عربية، لا مؤشر عالمي عام.
-
-    عتبات مُعايَرة على عيّنة حقيقية من قاعدة اللاعبين المستوردين فعلاً
-    (أسطورة عالمي ~413,000 بايت، لاعبون معروفون لعشاق الكرة ~6,000-60,000،
-    أي أقل من ذلك أو بلا مقال عربي إطلاقاً = مغمور عربياً فعلياً)."""
-    if not ar_length:
-        return "hard"       # بلا مقال عربي إطلاقاً
-    if ar_length >= 100_000:
-        return "easy"
-    if ar_length >= 3_000:
-        return "medium"
-    return "hard"            # مقال عربي قصير جداً (مسودّة/stub)
-
-
 def run_import(limit=200, min_sitelinks=45, offset=0,
                dry_run=False, skip_logos=False, refresh=False,
                redo_logos=False, log=print, player_qids=None):
@@ -520,6 +482,7 @@ def run_import(limit=200, min_sitelinks=45, offset=0,
 
     db = SessionLocal()
     added = updated = skipped = failed = 0
+    pending_fame_review = 0
     try:
         if not dry_run:
             from app.core.import_support import content_backup
@@ -540,15 +503,6 @@ def run_import(limit=200, min_sitelinks=45, offset=0,
             ents = wd_get_entities(qids)
             if any(q not in ents or ents[q].get("missing") for q in qids):
                 raise RuntimeError("استجابة كيانات اللاعبين غير مكتملة")
-
-            # مؤشّر الشهرة الفعلي: طول مقال ويكيبيديا العربية (انظر
-            # difficulty_for_ar) — نجلبه دفعة واحدة لكل اللاعبين بهذي الدفعة.
-            ar_titles_by_qid = {}
-            for qid in qids:
-                t = (ents.get(qid, {}).get("sitelinks", {}).get("arwiki", {}) or {}).get("title")
-                if t:
-                    ar_titles_by_qid[qid] = t
-            ar_lengths_by_title = _ar_article_lengths(list(ar_titles_by_qid.values()))
 
             club_qids = set()
             careers = {}
@@ -610,16 +564,17 @@ def run_import(limit=200, min_sitelinks=45, offset=0,
                 position = _label(club_ents.get(pos_qid, {})) if pos_qid else None
                 nat_qid = extract_nationality_qid(ent)
                 nationality = _label(club_ents.get(nat_qid, {})) if nat_qid else None
-                ar_title = ar_titles_by_qid.get(qid)
-                ar_length = ar_lengths_by_title.get(ar_title) if ar_title else 0
-                difficulty = difficulty_for_ar(ar_length) if ar_length is not None else (row.difficulty if row else difficulty_for(dict(batch).get(qid) or 0))
+                from app.core.career_fame import reviewed_classification
+                fame = reviewed_classification(qid, row.difficulty if row else None)
+                difficulty = fame['difficulty']
+                if fame['status'] == 'pending_review': pending_fame_review += 1
                 payload = dict(
                     wikidata_id=qid, name=display,
                     status=status,
                     clubs=json.dumps(clubs_json, ensure_ascii=False),
                     accepted_answers=json.dumps(gen_accepted(ar_name, en_name),
                                                 ensure_ascii=False),
-                    difficulty=difficulty, active=row.active if row is not None else True,
+                    difficulty=difficulty, active=(row.active if row is not None else True) and fame["eligible"],
                     era=era, position=position or (row.position if row else None), nationality=nationality or (row.nationality if row else None),
                 )
                 # التصحيح المنسق له أولوية على تسميات خارجية قابلة للتخريب.
@@ -649,56 +604,34 @@ def run_import(limit=200, min_sitelinks=45, offset=0,
         log(f"✅ مضاف {added} | 🔄 محدّث {updated} | ⏭️ {skipped} | ⚠️ {failed} | "
             f"📊 الإجمالي: {total}")
         return {"added": added, "updated": updated, "skipped": skipped,
-                "failed": failed, "total": total, "fetched": len(players)}
+                "failed": failed, "total": total, "fetched": len(players), "pending_fame_review": pending_fame_review}
     finally:
         db.close()
 
 
 def backfill_difficulty(log=print, on_progress=None):
-    """يعيد حساب difficulty لكل اللاعبين المستوردين حالياً بمؤشّر الشهرة
-    الفعلي (طول مقال ويكيبيديا العربية — difficulty_for_ar) بدل عدد لغات
-    ويكيبيديا الكلي (مؤشر ضعيف لكرة القدم، انظر تعليق difficulty_for_ar) —
-    يُستخدم مرة واحدة بعد أي تعديل بمنطق التصنيف كي لا ينتظر اللاعبون
-    القدامى دورة الاستيراد الأسبوعية التالية."""
+    """تطبيق المراجعة المعتمدة دون قياس طول المقال أو تغيير التصنيف عند تعطل الشبكة."""
+    from app.core.career_fame import reviewed_classification
     db = SessionLocal()
     try:
         rows = db.query(CareerPlayer).filter(CareerPlayer.wikidata_id.isnot(None)).all()
-        total = len(rows)
-        log(f"🔎 إعادة حساب difficulty لـ{total} لاعب (بطول المقال العربي)…")
-        before = {}
-        for r in rows:
-            before[r.difficulty] = before.get(r.difficulty, 0) + 1
-
-        changed = 0
-        qids = [r.wikidata_id for r in rows]
-        BATCH = 50
-        for i in range(0, len(qids), BATCH):
-            batch_qids = qids[i:i + BATCH]
-            ents = wd_get_entities(batch_qids, props="sitelinks")
-            ar_titles_by_qid = {}
-            for qid in batch_qids:
-                t = (ents.get(qid, {}).get("sitelinks", {}).get("arwiki", {}) or {}).get("title")
-                if t:
-                    ar_titles_by_qid[qid] = t
-            ar_lengths_by_title = _ar_article_lengths(list(ar_titles_by_qid.values()))
-            for r in rows[i:i + BATCH]:
-                ar_title = ar_titles_by_qid.get(r.wikidata_id)
-                ar_length = ar_lengths_by_title.get(ar_title, 0) if ar_title else 0
-                new_diff = difficulty_for_ar(ar_length)
-                if new_diff != r.difficulty:
-                    changed += 1
-                r.difficulty = new_diff
-            db.commit()
-            done = min(i + BATCH, total)
-            log(f"   ...{done}/{total}")
-            if on_progress:
-                on_progress(done, total)
-
-        after = {}
-        for r in rows:
-            after[r.difficulty] = after.get(r.difficulty, 0) + 1
-        log(f"✅ تغيّر تصنيف {changed} لاعب | قبل={before} | بعد={after}")
-        return {"total": total, "changed": changed, "before": before, "after": after}
+        before = {}; after = {}; changed = pending = 0
+        for i, row in enumerate(rows):
+            before[row.difficulty] = before.get(row.difficulty, 0) + 1
+            result = reviewed_classification(row.wikidata_id, row.difficulty)
+            if result['eligible']:
+                if row.difficulty != result['difficulty']: changed += 1
+                row.difficulty = result['difficulty']
+            else:
+                row.active = False
+                if result['status'] == 'pending_review': pending += 1
+            after[row.difficulty] = after.get(row.difficulty, 0) + 1
+            if on_progress: on_progress(i + 1, len(rows))
+        db.commit()
+        log(f"مراجعة الشهرة: تغيّر {changed} لاعب، وبانتظار مراجعة {pending}")
+        return {'total': len(rows), 'changed': changed, 'before': before, 'after': after, 'pending_review': pending}
+    except Exception:
+        db.rollback(); raise
     finally:
         db.close()
 

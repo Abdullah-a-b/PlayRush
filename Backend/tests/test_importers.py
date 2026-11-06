@@ -33,6 +33,7 @@ class ImportTests(unittest.TestCase):
  def setUp(self):
   self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name);self.ps=[patch.object(paths,'DATA_DIR',self.root),patch.object(support.time,'sleep',lambda _:None)]
   for p in self.ps:p.start()
+  support.atomic_json(self.root/"career_fame_review.json", {"players": {}})
  def tearDown(self):
   for p in reversed(self.ps):p.stop()
   self.tmp.cleanup()
@@ -276,5 +277,16 @@ class ImportTests(unittest.TestCase):
  def test_disputed_capital_uses_declared_scope_not_unique_inverse(self):
   rows=[row(c='http://www.wikidata.org/entity/Q801',cLabelAr='إسرائيل',cap='Q1',capAr='القدس')]
   questions=huroof.build_country_questions(rows);self.assertEqual(len(questions),1);self.assertIn('تعلنها',questions[0]['question_text']);self.assertIn('تعلنها',bank.build_questions(rows)[0]['q'])
+
+
+ def test_import_cannot_override_review_using_article_size(self):
+  player=self._player();player.active=True;entities=self._entities();entities['Q100']['claims'].pop('P570')
+  support.atomic_json(self.root/'career_fame_review.json',{'players':{'Q100':{'status':'reviewed','fame':'hard'}}})
+  with patch.object(career,'SessionLocal',return_value=Session([player])),patch.object(career,'wd_get_entities',side_effect=lambda ids:{q:entities[q] for q in ids}),patch.object(career,'_ar_article_lengths',side_effect=AssertionError('Article size must not classify fame')):career.run_import(refresh=True,player_qids=['Q100'],skip_logos=True,log=lambda _:None)
+  self.assertEqual(player.difficulty,'hard');self.assertTrue(player.active)
+ def test_new_unknown_fame_is_held_until_review(self):
+  player=self._player();player.active=True;entities=self._entities()
+  with patch.object(career,'SessionLocal',return_value=Session([player])),patch.object(career,'wd_get_entities',side_effect=lambda ids:{q:entities[q] for q in ids}):career.run_import(refresh=True,player_qids=['Q100'],skip_logos=True,log=lambda _:None)
+  self.assertFalse(player.active)
 
 if __name__=='__main__':unittest.main()

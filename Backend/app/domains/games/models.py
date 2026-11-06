@@ -30,7 +30,7 @@ class CareerPlayer(Base):
     status = Column(String, default="retired")   # "current" (حالي) | "retired" (معتزل)
     clubs = Column(Text)                          # JSON list [{name, logo}, ...] بالترتيب
     accepted_answers = Column(Text, nullable=True)  # JSON list صيغ مقبولة
-    difficulty = Column(String, default="medium") # easy | medium | hard (للتوازن لاحقاً)
+    difficulty = Column(String, default="medium") # easy | medium | hard: شهرة مراجعة للبوت، وليست سهولة مسيرة الأندية
     nationality = Column(String, nullable=True)   # للمساعدة "كاشف الجنسية"
     era = Column(String, nullable=True)           # فترة المسيرة "1995-2010" (كاشف الجيل)
     position = Column(String, nullable=True)      # المركز بالعربية (كاشف المركز)

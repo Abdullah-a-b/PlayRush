@@ -17,3 +17,5 @@ Evidence includes current Wikidata snapshots; UN M49 and membership identities; 
 `python scripts/apply_game_content_review.py PLAN.json` previews. `--apply` obtains importer locks, verifies unchanged old values, takes a second content backup, updates only allowlisted game tables/files and retains IDs. Stale snapshots and duplicate answer aliases fail closed. Applying requires DATABASE_URL supplied by the deployment environment, not a checked-in credential.
 
 Verification: isolated importer/reader tests plus content-plan precondition tests. Live content and pool checks are performed separately after application; unit tests alone do not establish normal gameplay quality.
+
+A subsequent, separate fame review is documented in [CAREER_FAME_REVIEW.md](CAREER_FAME_REVIEW.md); it supersedes the earlier article-length classification, not the factual content quarantine.

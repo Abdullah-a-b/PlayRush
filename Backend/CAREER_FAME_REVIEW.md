@@ -1,0 +1,15 @@
+# Career fame review — 6 November 2026
+
+This follow-up replaces article-length classification. The audience assumption is a general Arabic-speaking regular football follower, including historical stars and football outside the major European leagues. The tiers describe familiarity with the name: easy = widely familiar, medium = familiar to regular followers, hard = specialist knowledge. They do not directly describe how easy the club clues are.
+
+All 300 playable profiles were reviewed explicitly; the seven previously quarantined records remain inactive. The distribution changes from 69/230/1 to 128/133/39 (easy/medium/hard), with 108 changed database classifications. The distribution is an outcome of editorial review, not a target quota or measured audience percentages.
+
+`data/career_fame_review.json` binds decisions and reasons to Wikidata identities. It contains 307 stored identities plus Hulk (Q62786), a reference anchor named by the user, classified medium; this does not insert a new career record. Pele remains easy irrespective of his mostly non-European club career. No country-only penalty, article-size threshold, or number-of-Wikipedia-languages threshold determines a tier.
+
+Public Arabic Wikipedia user-pageview counts over November 2025–October 2026 supplement the review. Monthly median reduces the effect of short news spikes; pageviews are not unique people or a representative Arab-audience survey. 110 of the 307 requests yielded measurements and 197 hit service rate limits. Missing observations are not zero and do not automatically lower a player's tier. The remaining decisions are editorial judgments using football prominence and target-audience relevance, not fabricated measurements.
+
+Fame and memory of a playing career are separate. Fifteen profiles whose coaching fame is more widespread than their old playing histories carry `career_memory: specialist`. The solo bot consumes this independently of fame. The 0.6 memory factor is an initial game-balance parameter, not a measured human recognition rate. The prior never reads hidden clubs, remaining clubs, or when the final reveal will occur. Existing reaction timing and strike rules remain unchanged.
+
+Import and backfill resolve reviewed tiers from the registry. They cannot overwrite them from article size, absent articles, transient API errors, or sitelinks. New identities without an approved fame review remain inactive/pending and are counted in `pending_fame_review`; reviewed but previously quarantined players are not reactivated. A missing or malformed registry fails the import instead of downgrading the whole pool. The registry is persistent production content, so deploys seed it only if absent; subsequent review revisions need an explicit content update.
+
+Verification includes isolated importer tests, probability monotonicity, the real round-start hook consuming both dimensions, and content-application preconditions. Live SQL classification, the production player loader with no user IDs, and the actual bot hook are checked after deployment. No user data, matches, clubs, accepted answers, or balances are modified by the fame plan.

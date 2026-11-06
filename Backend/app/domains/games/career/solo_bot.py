@@ -109,32 +109,29 @@ def get_difficulty(name):
 # ============================================================
 #  نموذج المعرفة والثقة
 # ============================================================
-# تأثير شهرة الشخصية الفعلية (عمود career_players.difficulty — محسوب وقت
-# الاستيراد من عدد لغات ويكيبيديا المغطّية للاعب، مؤشر شهرة حقيقي) على
-# فرصة "المعرفة" الأساسية — مستقل عن صعوبة البوت، يُطبَّق فوقها. بدون هذا
-# كانت "المعرفة" رمية عملة ثابتة بصعوبة البوت فقط بغض النظر عن شهرة من
-# يُعرض فعلياً — فيعرف بوت المبتدئ نجوماً وغير معروفين بنفس الاحتمال.
+# شهرة الاسم من المراجعة المنسقة؛ لا من حجم المقال ولا عدد لغاته.
+# معرفة اسم المدرب المشهور لا تعني معرفة مسيرته القديمة كلاعب.
 FAME_ADJUST = {
-    "easy":   {"bonus": 0.35},    # مشهور جداً — كل مستويات البوت شبه متأكدة
-    "medium": {"bonus": 0.0},     # افتراضي — نفس know_base الحالي بلا تغيير
-    "hard":   {"factor": 0.35},   # مغمور — حتى الخبير نادراً ما يعرفه فعلياً
+    "easy":   {"bonus": 0.35},    # واسع الشهرة لدى الجمهور المستهدف
+    "medium": {"bonus": 0.0},     # معروف للمتابع المنتظم
+    "hard":   {"factor": 0.35},   # معرفة متخصصة؛ لا يعني ضعف اللاعب
 }
 
 
-def bot_knows_player(difficulty_name, player_difficulty="medium"):
-    """هل يعرف البوت هذه الشخصية أصلاً؟ يُستدعى مرة واحدة عند بدء كل شخصية.
-
-    القرار يُتّخذ مسبقاً ويُخزَّن في حالة الغرفة، فلا يتغيّر أثناء الكشف —
-    كاللاعب البشري: إما يعرف اللاعب أو لا. يمزج بين صعوبة البوت وشهرة
-    الشخصية الفعلية (player_difficulty: easy/medium/hard).
-    """
+def knowledge_probability(difficulty_name, player_difficulty="medium", career_memory="standard"):
+    """احتمال نمذجي قابل للمعايرة، وليس نسبة معرفة مقاسة عند الجمهور."""
     cfg = get_difficulty(difficulty_name)
-    adjust = FAME_ADJUST.get(player_difficulty, FAME_ADJUST["medium"])
-    if "factor" in adjust:
-        p = cfg["know_base"] * adjust["factor"]
-    else:
-        p = cfg["know_base"] + adjust.get("bonus", 0.0)
-    return random.random() < max(0.02, min(0.97, p))
+    adjust = FAME_ADJUST.get(player_difficulty, FAME_ADJUST["hard"])
+    p = cfg["know_base"] * adjust["factor"] if "factor" in adjust else cfg["know_base"] + adjust["bonus"]
+    p = max(0.02, min(0.97, p))
+    if career_memory == "specialist":
+        p *= 0.6  # فصل معرفة الاسم عن معرفة تاريخ اللعب الأقل شهرة.
+    return max(0.02, min(0.97, p))
+
+
+def bot_knows_player(difficulty_name, player_difficulty="medium", career_memory="standard"):
+    """قرار واحد مجمّد لكل شخصية؛ لا يقرأ الأندية المخفية أو عددها."""
+    return random.random() < knowledge_probability(difficulty_name, player_difficulty, career_memory)
 
 
 def confidence(difficulty_name, knows, revealed_count, seed_jitter=0.0,
