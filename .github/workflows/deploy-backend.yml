@@ -1,4 +1,4 @@
-﻿name: ظ†ط´ط± ط§ظ„ط¨ط§ظƒ ط§ظ†ط¯ ط¥ظ„ظ‰ Azure
+name: ظ†ط´ط± ط§ظ„ط¨ط§ظƒ ط§ظ†ط¯ ط¥ظ„ظ‰ Azure
 
 # ظٹظ†ط´ط± طھظ„ظ‚ط§ط¦ظٹط§ظ‹ ط¹ظ†ط¯ ط£ظٹ push ط¹ظ„ظ‰ main ظٹظ…ط³ظ‘ ظ…ط¬ظ„ط¯ Backend ظپظ‚ط·.
 # (طھط¹ط¯ظٹظ„ط§طھ ط§ظ„ظˆط§ط¬ظ‡ط© ظˆط­ط¯ظ‡ط§ ظ„ط§ طھظڈط´ط؛ظ‘ظ„ ظ‡ط°ط§ â€” Cloudflare Pages ظٹطھظƒظپظ‘ظ„ ط¨ظ‡ط§.)
@@ -26,7 +26,7 @@ jobs:
       - name: Verify importer algorithms before deployment
         working-directory: Backend
         run: |
-          python -m pip install sqlalchemy requests
+          python -m pip install sqlalchemy requests fastapi "python-jose[cryptography]"
           python -m unittest discover -s tests -v
 
       - name: ط§ظ„ظ†ط´ط± ط¥ظ„ظ‰ Azure App Service
