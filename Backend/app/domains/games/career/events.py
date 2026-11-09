@@ -806,8 +806,6 @@ def register_career_events(sio):
 
         gs = CareerGameState(p1['sid'], p2['sid'], room_code=room_code,
                              players=[p1, p2], is_solo=True, bot_difficulty=difficulty)
-        use_pilot = (data or {}).get('pilot') is True
-        gs.bot_loadout = [] if use_pilot else _solo.bot_loadout(difficulty)
 
         rooms[room_code] = {
             'code': room_code, 'type': 'solo', 'game_mode': 'career',
@@ -818,7 +816,7 @@ def register_career_events(sio):
                 {'sid': p2['sid'], 'name': p2['name'], 'avatar': p2['avatar'],
                  'user_id': p2.get('user_id'), 'role': 'host' if p2['sid'] == sid else 'bot'},
             ],
-            'career_pilot_order': pilot.round_order() if use_pilot else None,
+            'career_pilot_order': pilot.round_order(),
             'user_ids': {},          # فارغ عمداً: لا تصنيف في الفردي (دفاع إضافي — الحارس الفعلي في بند 7)
             'game_state': gs,
         }
