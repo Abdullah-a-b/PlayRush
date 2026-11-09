@@ -8,7 +8,7 @@ class CareerPilotTests(unittest.TestCase):
         cases = {
             67: ["روي كُوستة", "Rui Costa"],
             164: ["ليـونل ميسي", "  LIONEL   MESSI!  ", "مِیسي"],
-            165: ["CR٧", "CR۷", "كرستيانو رونالدو"],
+            165: ["CR٧", "CR۷", "كرستيانو رونالدو", "رونالدو", "Ronaldo", "رونلدو"],
             189: ["أندريس إنيستا", "Andrés Iniesta"],
             245: ["فيليب لاهم", "Philipp Lahm"],
             274: ["لويس فيجو", "Luis Figo"],
@@ -27,7 +27,7 @@ class CareerPilotTests(unittest.TestCase):
         cases = {
             67: ["كوستا", "دييغو كوستا", "Costa"],
             164: ["ليونيل", "ميسي ولا رونالدو", "Lionel Massi"],
-            165: ["رونالدو", "Ronaldo", "رونالدو البرازيلي", "CR8"],
+            165: ["رونالدو البرازيلي", "رونالدو نازاريو", "Ronaldo Nazário", "CR8"],
             274: ["لويس", "لويس سواريز", "Luis"],
         }
         for pid, answers in cases.items():
