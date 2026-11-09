@@ -15,6 +15,7 @@ from app.domains.games.career import pilot, solo_bot as _solo
 from app.domains.games.career.online import reserve_player
 from app.domains.wallet.reward_service import record_match_result
 from app.core.text_processor import check_answer
+from app.domains.games import trained_bot
 from app.sockets.state import connected_players
 
 
@@ -657,14 +658,32 @@ def register_career_events(sio):
             clue = (gs.player_index, gs.revealed_count, complete)
             if room.get('career_bot_last_attempt') == clue or not gs.can_buzz(bot_sid):
                 return
-            decision = _solo.reviewed_decision(
-                gs.bot_difficulty, pilot.matching_players(gs.revealed_clubs(), complete),
-                gs.revealed_count, complete, gs.strikes.get(bot_sid, 0),
-                f"{room['career_bot_seed']}/{gs.player_index}", gs.ANSWER_WINDOW,
+            started = time.monotonic()
+            visible_clubs = gs.revealed_clubs()
+            model = await trained_bot.decide(
+                'career', gs.bot_difficulty, 'reveal', ['wait', 'buzz'],
+                clubs=[club['name'] for club in visible_clubs],
+                status=(gs.current_player or {}).get('status', 'retired'), complete=complete,
+                seconds=gs.FINAL_WINDOW if complete else gs.REVEAL_INTERVAL,
             )
-            if not decision:
-                return
-            pilot_answer = decision['answer']
+            if model:
+                if model[0] == 'wait':
+                    return
+                pilot_answer = model[1]
+                decision = {
+                    'buzz_delay': random.uniform(*_solo.get_difficulty(gs.bot_difficulty)['buzz_react']),
+                    'answer_delay': _solo.bot_answer_delay(gs.bot_difficulty, gs.ANSWER_WINDOW),
+                }
+            else:
+                decision = _solo.reviewed_decision(
+                    gs.bot_difficulty, pilot.matching_players(visible_clubs, complete),
+                    gs.revealed_count, complete, gs.strikes.get(bot_sid, 0),
+                    f"{room['career_bot_seed']}/{gs.player_index}", gs.ANSWER_WINDOW,
+                )
+                if not decision:
+                    return
+                pilot_answer = decision['answer']
+            decision['buzz_delay'] = max(0, decision['buzz_delay'] - (time.monotonic() - started))
         else:
             decision = await _legacy_bot_decision(room_code, gs, bot_sid)
             if not decision or not decision['will_buzz']:

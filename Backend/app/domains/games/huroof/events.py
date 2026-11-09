@@ -1407,6 +1407,7 @@ def register_huroof_events(sio):
     #  البوت لاعب وهمي (sid=__BOT__) بلا اتصال. حلقات خلفية تراقب
     #  المراحل وتتصرّف نيابةً عنه عبر نفس دوال اللعبة الداخلية.
     # ============================================================
+    from app.domains.games import trained_bot
     from app.domains.games.huroof import solo_bot as _solo
 
     async def _bot_take_turn_select(room_code):
@@ -1421,7 +1422,18 @@ def register_huroof_events(sio):
         # لون البوت يُشتقّ من موضعه (p1=أخضر, p2=برتقالي) — نفس مصدر المحرّك
         # تماماً، فيستحيل أن يبني باتجاه لون آخر.
         bot_color = 'green' if _solo.BOT_SID == gs.p1 else 'orange'
-        idx = _solo.choose_hex(gs.board, bot_color, gs.bot_difficulty)
+        version = gs.state_version
+        colors = {'green': 'g', 'orange': 'o'}
+        model = await trained_bot.decide(
+            'huroof', gs.bot_difficulty, 'select', ['select'], own=bot_color, seconds=15,
+            board=[f"{cell['letter']}:{colors.get(cell.get('color'), '-')}" for cell in gs.board],
+        )
+        if (get_room_state(room_code) is not room or room.get('state') != 'playing'
+                or gs.state_version != version or gs.stage != 'selecting' or gs.turn != _solo.BOT_SID):
+            return
+        idx = model[1] if model else None
+        if idx not in _solo._empty_cells(gs.board):
+            idx = _solo.choose_hex(gs.board, bot_color, gs.bot_difficulty)
         if idx is None: return
         gs.active_hex = gs.board[idx]
         await sio.emit('huroof_hex_locked',
@@ -1443,10 +1455,20 @@ def register_huroof_events(sio):
         decision = _solo.decide_on_question(gs.bot_difficulty, qd, window_seconds, attempt)
         knows = decision['knows']            # محلّي — لا يُداس بحلقة أخرى
 
-        if not decision['will_buzz']:
-            return
-
-        await asyncio.sleep(decision['delay'])
+        started = time.monotonic()
+        model = await trained_bot.decide(
+            'huroof', gs.bot_difficulty, 'reveal', ['wait', 'buzz'],
+            question=q.get('question', ''), letter=q.get('letter', ''), seconds=window_seconds,
+        )
+        if model:
+            if model[0] == 'wait':
+                return
+            delay = 1.5
+        else:
+            if not decision['will_buzz']:
+                return
+            delay = decision['delay']
+        await asyncio.sleep(max(0, delay - (time.monotonic() - started)))
 
         room = get_room_state(room_code)
         if not room or room.get('state') != 'playing': return
@@ -1466,6 +1488,7 @@ def register_huroof_events(sio):
         await sio.emit('huroof_buzzed', {'sid': _solo.BOT_SID, 'time': t}, room=room_code)
         sio.start_background_task(huroof_timer_task, room_code, v2, t, tt)
 
+        answer_model = await _trained_huroof_answer(gs, q, t) if model else None
         await asyncio.sleep(random.uniform(1.5, 3.5))
         room = get_room_state(room_code)
         if not room or room.get('state') != 'playing': return
@@ -1475,9 +1498,24 @@ def register_huroof_events(sio):
         # حراسة: نفس السؤال ما زال معروضاً
         if (gs.current_question or {}).get('answer', '') != q_answer: return
 
+        if model:
+            await _judge_trained_huroof_answer(room_code, gs, q, answer_model)
+        else:
+            gs.state_version += 1
+            ans_text = q_answer if knows else '—'
+            await process_answer_result(room_code, knows, ans_text)
+
+    async def _trained_huroof_answer(gs, question, seconds):
+        return await trained_bot.decide(
+            'huroof', gs.bot_difficulty, 'answer', ['answer'], seconds=seconds,
+            question=question.get('question', ''), letter=question.get('letter', ''),
+        )
+
+    async def _judge_trained_huroof_answer(room_code, gs, question, model):
         gs.state_version += 1
-        ans_text = q_answer if knows else '—'
-        await process_answer_result(room_code, knows, ans_text)
+        answer = html.escape(model[1]) if model else '—'
+        result = check_answer(answer, question['answer'], question['accepted_answers'], question['letter'])
+        await process_answer_result(room_code, result['verdict'] == 'accept', answer, result)
 
     async def _solo_after_turn(room_code):
         """يُستدعى بعد تغيّر الدور: لو صار دور البوت، يبدأ اختياره."""
@@ -1501,7 +1539,10 @@ def register_huroof_events(sio):
         knows = _solo.bot_knows_answer(gs.bot_difficulty, q.get('difficulty', 'medium'),
                                        getattr(gs, 'attempts', 1))
         # تأخير بشري ضمن النافذة (لا يستهلكها كلها)
-        await asyncio.sleep(random.uniform(2.0, min(window_seconds * 0.7, 8.0)))
+        started = time.monotonic()
+        model = await _trained_huroof_answer(gs, q, window_seconds)
+        delay = random.uniform(2.0, min(window_seconds * 0.7, 8.0))
+        await asyncio.sleep(max(0, delay - (time.monotonic() - started)))
 
         room = get_room_state(room_code)
         if not room or room.get('state') != 'playing': return
@@ -1509,9 +1550,12 @@ def register_huroof_events(sio):
         if not gs or gs.state_version != version: return
         if gs.buzzed_player != _solo.BOT_SID: return
 
-        gs.state_version += 1
-        ans_text = gs.current_question.get('answer', '') if knows else '—'
-        await process_answer_result(room_code, knows, ans_text)
+        if model:
+            await _judge_trained_huroof_answer(room_code, gs, q, model)
+        else:
+            gs.state_version += 1
+            ans_text = gs.current_question.get('answer', '') if knows else '—'
+            await process_answer_result(room_code, knows, ans_text)
 
     async def _solo_on_transfer(room_code, version, window_seconds):
         """يُستدعى عند نقل الفرصة: لو المستلِم هو البوت، يردّ."""
