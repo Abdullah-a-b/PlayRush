@@ -3,7 +3,7 @@
 
 يعمل دورياً (افتراضياً كل 7 أيام) بلا أي تدخل يدوي:
   - كل دورة يجلب دفعة جديدة (offset متقدّم محفوظ في ملف حالة)
-     القاعدة تتوسّع تدريجياً نحو آلاف اللاعبين المشهورين تاريخياً.
+     تُحفظ الأسماء الجديدة للمراجعة قبل ظهورها في اللعب.
   - أول تشغيل: يبدأ بعد 3 دقائق من إقلاع الخادم (لا يزاحم الإقلاع).
   - الاستيراد يعمل في thread منفصل (لا يحجب اللعب أبداً).
 
@@ -67,6 +67,9 @@ def _run_once():
         results = {}; failed = []
         for lane in ("refresh", "discover"):
             source = sources.setdefault(lane, {})
+            if lane == "discover" and source.get("query_version") != 2:
+                source.clear()
+                source["query_version"] = 2
             from app.core.import_support import positive_days
             interval = positive_days("CAREER_REFRESH_INTERVAL_DAYS", 1) if lane == "refresh" else _interval_seconds()
             if not due(source, interval): continue
@@ -86,7 +89,7 @@ def _run_once():
                     else:
                         result = run_import(refresh=True, player_qids=qids, log=lambda m: print(f" [auto-import] {m}"))
                 else:
-                    result = run_import(limit=batch, min_sitelinks=45, offset=offset, refresh=True, log=lambda m: print(f" [auto-import] {m}"))
+                    result = run_import(limit=batch, min_sitelinks=45, offset=offset, log=lambda m: print(f" [auto-import] {m}"))
                 source["offset"] = offset + result.get("fetched", 0) if result.get("fetched", 0) >= batch else 0
                 source["last_run"] = time.time();source.pop("retry_after", None)
                 results[lane] = result
@@ -102,7 +105,9 @@ def _run_once():
 
 
 async def career_auto_import_loop():
-    from app.core.import_support import read_json, due
+    from app.domains.games.career.catalogue import sync_reviewed_roster
+    reviewed = await asyncio.to_thread(sync_reviewed_roster)
+    print(f" [career] القائمة المراجعة: {reviewed}")
     if not _enabled(): return
     await asyncio.sleep(180)
     while True:

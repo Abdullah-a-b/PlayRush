@@ -10,6 +10,7 @@ ROSTER = {
     player["id"]: player
     for player in json.loads(Path(__file__).with_name("pilot_roster.json").read_text(encoding="utf-8"))
 }
+ROSTER_BY_QID = {player["wikidata_id"]: player for player in ROSTER.values()}
 _NAME_CHARS = str.maketrans("ٱىیک٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "اييك01234567890123456789")
 _DECORATION = re.compile(r"[ـ\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]")
 

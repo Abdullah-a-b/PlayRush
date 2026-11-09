@@ -34,7 +34,8 @@
     "sources": [
       "https://www.intermiamicf.com/news/inter-miami-cf-signs-seven-time-ballon-d-or-winner-world-cup-champion-lionel-mes"
     ],
-    "recognition": "easy"
+    "recognition": "easy",
+    "wikidata_id": "Q615"
   },
   {
     "id": 189,
@@ -73,7 +74,8 @@
     "sources": [
       "https://www.fcbarcelona.com/en/football/barca-legends/players/4231989/iniesta"
     ],
-    "recognition": "easy"
+    "recognition": "easy",
+    "wikidata_id": "Q43729"
   },
   {
     "id": 165,
@@ -124,7 +126,8 @@
       "https://www.sporting.pt/en/node/102368",
       "https://www.spl.com.sa/en/news/cristiano-ronaldo-football-s-900-goal-great"
     ],
-    "recognition": "easy"
+    "recognition": "easy",
+    "wikidata_id": "Q11571"
   },
   {
     "id": 274,
@@ -167,7 +170,8 @@
     "sources": [
       "https://www.uefa.com/uefachampionsleague/news/024a-0e9cdf0be0e4-36bb996ad10e-1000--champions-league-100-club-luis-figo/"
     ],
-    "recognition": "medium"
+    "recognition": "medium",
+    "wikidata_id": "Q483145"
   },
   {
     "id": 245,
@@ -205,7 +209,8 @@
       "https://fcbayern.com/fcbayerntv/en/videos/2019/11/looking-back-pro-debuts-for-lahm-and-schweinsteiger",
       "https://fcbayern.com/en/photos/2017/05/gallery-philipp-lahms-career"
     ],
-    "recognition": "medium"
+    "recognition": "medium",
+    "wikidata_id": "Q43682"
   },
   {
     "id": 293,
@@ -257,7 +262,8 @@
       "https://www.ogcnice.com/fr/fiche/1349/wesley-sneijder.html",
       "https://www.uefa.com/uefanationsleague/news/0253-0d821289f992-2e8f666fa91e-1000--wesley-sneijder-calls-time-on-netherlands-career/"
     ],
-    "recognition": "medium"
+    "recognition": "medium",
+    "wikidata_id": "Q124086"
   },
   {
     "id": 67,
@@ -300,7 +306,8 @@
       "https://www.slbenfica.pt/pt-pt/agora/noticias/2018-2019/01/17/futebol-benfica-rui-costa-regressa-a-fafe",
       "https://www.slbenfica.pt/pt-pt/agora/noticias/2017_2018/05/11/rui-costa-o-ultimo-jogo-da-carreira-foi-ha-dez-anos-na-luz"
     ],
-    "recognition": "hard"
+    "recognition": "hard",
+    "wikidata_id": "Q190608"
   },
   {
     "id": 204,
@@ -330,7 +337,8 @@
     "sources": [
       "https://www.liverpoolfc.com/past-players/steven-gerrard"
     ],
-    "recognition": "easy"
+    "recognition": "easy",
+    "wikidata_id": "Q459830"
   },
   {
     "id": 193,
@@ -373,7 +381,8 @@
       "https://www.dcunited.com/club/bio/rooney",
       "https://www.dcunited.com/news/numbers-wayne-rooney"
     ],
-    "recognition": "easy"
+    "recognition": "easy",
+    "wikidata_id": "Q266613"
   },
   {
     "id": 192,
@@ -426,7 +435,8 @@
       "https://www.mlssoccer.com/players/thierry-henry/",
       "https://www.newyorkredbulls.com/news/its-official-thierry-henry-returning-arsenal"
     ],
-    "recognition": "easy"
+    "recognition": "easy",
+    "wikidata_id": "Q45901"
   },
   {
     "id": 219,
@@ -487,7 +497,8 @@
       "https://www.mlssoccer.com/players/didier-drogba-x7391/",
       "https://www.mlssoccer.com/news/former-montreal-impact-star-didier-drogba-announces-retirement"
     ],
-    "recognition": "easy"
+    "recognition": "easy",
+    "wikidata_id": "Q48892"
   },
   {
     "id": 215,
@@ -537,7 +548,8 @@
       "https://fcbayern.com/en/news/2026/01/arjen-robbens-analysis-what-to-expect-against-psv",
       "https://fcbayern.com/en/news/2025/03/interview-arjen-robben-franck-ribery-dominance-is-part-of-bayern"
     ],
-    "recognition": "medium"
+    "recognition": "medium",
+    "wikidata_id": "Q43913"
   },
   {
     "id": 198,
@@ -584,7 +596,8 @@
       "https://www.mlssoccer.com/news/hes-here-orlando-city-unveil-brazilian-star-kaka-clubs-first-designated-player",
       "https://www.orlandocitysc.com/news/kak-talks-life-after-soccer-exclusive-interview-lionnation"
     ],
-    "recognition": "easy"
+    "recognition": "easy",
+    "wikidata_id": "Q531814"
   },
   {
     "id": 174,
@@ -610,7 +623,8 @@
     "sources": [
       "https://www.asroma.com/en/news/61162/on-this-day-francesco-totti-says-goodbye"
     ],
-    "recognition": "easy"
+    "recognition": "easy",
+    "wikidata_id": "Q20110"
   },
   {
     "id": 267,
@@ -635,7 +649,8 @@
     "sources": [
       "https://www.acmilan.com/en/club/legends/players/paolo-maldini"
     ],
-    "recognition": "easy"
+    "recognition": "easy",
+    "wikidata_id": "Q483027"
   },
   {
     "id": 284,
@@ -662,7 +677,8 @@
     "sources": [
       "https://www.fcbarcelona.com/en/football/barca-legends/players/3636694/puyol"
     ],
-    "recognition": "easy"
+    "recognition": "easy",
+    "wikidata_id": "Q17158"
   },
   {
     "id": 205,
@@ -694,7 +710,8 @@
       "https://www.fcbarcelona.com/en/football/barca-legends/players/4231987/xavi",
       "https://www.fcbarcelona.com/en/news/1205752/xavi-hernandez-to-retire-at-end-of-season"
     ],
-    "recognition": "easy"
+    "recognition": "easy",
+    "wikidata_id": "Q17500"
   },
   {
     "id": 181,
@@ -739,7 +756,8 @@
       "https://www.juventus.com/en/news/articles/the-story-gianluigi-buffon-final-season-at-juventus",
       "https://www.parmacalcio1913.com/en/main-news/g1gi-is-forever/"
     ],
-    "recognition": "easy"
+    "recognition": "easy",
+    "wikidata_id": "Q68060"
   },
   {
     "id": 248,
@@ -795,7 +813,8 @@
       "https://www.uefa.com/MultimediaFiles/Download/competitions/Draws/02/58/32/85/2583285_DOWNLOAD.pdf",
       "https://www.inter.it/it/archivio_giocatore/G0507"
     ],
-    "recognition": "easy"
+    "recognition": "easy",
+    "wikidata_id": "Q43926"
   },
   {
     "id": 1001,
@@ -837,7 +856,8 @@
       "https://www.uefa.com/uefachampionsleague/news/0250-0e998d1a3195-70cedaa12c03-1000--how-porto-made-a-champion-of-pepe/",
       "https://www.realmadrid.com/en-US/news/club/announcements/co-08-08-2024"
     ],
-    "recognition": "medium"
+    "recognition": "medium",
+    "wikidata_id": "Q485697"
   },
   {
     "id": 1002,
@@ -868,7 +888,8 @@
       "https://www.the-afc.com/en/more/news/mohamed_al_deayea_saudi_arabias_mr_safe_hands.html",
       "https://www.fifa.com/en/articles/al-hilal-club-profile-history-players-qualified"
     ],
-    "recognition": "medium"
+    "recognition": "medium",
+    "wikidata_id": "Q312179"
   },
   {
     "id": 171,
@@ -933,7 +954,8 @@
       "https://www.mlssoccer.com/news/la-galaxy-agree-loan-david-beckham-ac-milan",
       "https://www.davidbeckham.com/about"
     ],
-    "recognition": "easy"
+    "recognition": "easy",
+    "wikidata_id": "Q10520"
   },
   {
     "id": 172,
@@ -969,7 +991,8 @@
     "sources": [
       "https://www.realmadrid.com/en-US/football/squad/kylian-mbappe"
     ],
-    "recognition": "easy"
+    "recognition": "easy",
+    "wikidata_id": "Q21621995"
   },
   {
     "id": 200,
@@ -1015,6 +1038,506 @@
       "https://www.mancity.com/features/erling-haaland/rise/",
       "https://www.mancity.com/news/mens/erling-haaland-250-senior-club-goals-63874186"
     ],
-    "recognition": "easy"
+    "recognition": "easy",
+    "wikidata_id": "Q28967995"
+  },
+  {
+    "id": 170,
+    "wikidata_id": "Q1835",
+    "name": "زين الدين زيدان",
+    "status": "retired",
+    "nationality": "فرنسا",
+    "era": "1989-2006",
+    "position": "لاعب وسط",
+    "difficulty": "easy",
+    "anchor": 3,
+    "recognition": "easy",
+    "clubs": [
+      {
+        "name": "كان",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/6/64/AS_Cannes_logo.svg/330px-AS_Cannes_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "بوردو",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/1/11/FC_Girondins_de_Bordeaux_logo.svg/330px-FC_Girondins_de_Bordeaux_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "يوفنتوس",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ed/Juventus_FC_-_logo_black_%28Italy%2C_2020%29.svg/330px-Juventus_FC_-_logo_black_%28Italy%2C_2020%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ريال مدريد",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/330px-Real_Madrid_CF.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "زيدان",
+      "Zidane",
+      "Zinedine Zidane"
+    ],
+    "sources": [
+      "https://www.realmadrid.com/fr-FR/le-club/histoire/legendes-football/zinedine-zidane"
+    ]
+  },
+  {
+    "id": 211,
+    "wikidata_id": "Q184586",
+    "name": "غاريث بيل",
+    "status": "retired",
+    "nationality": "ويلز",
+    "era": "2006-2022",
+    "position": "نصف الجناح",
+    "difficulty": "medium",
+    "anchor": 2,
+    "recognition": "easy",
+    "clubs": [
+      {
+        "name": "ساوثهامبتون",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/c/c9/FC_Southampton.svg/330px-FC_Southampton.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "توتنهام هوتسبير",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/b/b4/Tottenham_Hotspur.svg/330px-Tottenham_Hotspur.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ريال مدريد",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/330px-Real_Madrid_CF.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "توتنهام هوتسبير (إعارة)",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/b/b4/Tottenham_Hotspur.svg/330px-Tottenham_Hotspur.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ريال مدريد",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/330px-Real_Madrid_CF.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "لوس أنجلوس إف سي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/86/Los_Angeles_Football_Club.svg/330px-Los_Angeles_Football_Club.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Gareth Bale",
+      "Bale",
+      "بيل",
+      "جاريث بيل"
+    ],
+    "sources": [
+      "https://www.realmadrid.com/en-US/the-club/history/football-legends/gareth-bale",
+      "https://www.lafc.com/news/gareth-bale-announces-retirement-from-professional-football"
+    ]
+  },
+  {
+    "id": 212,
+    "wikidata_id": "Q214204",
+    "name": "إدين هازارد",
+    "status": "retired",
+    "nationality": "بلجيكا",
+    "era": "2007-2023",
+    "position": "جناح",
+    "difficulty": "easy",
+    "anchor": 2,
+    "recognition": "easy",
+    "clubs": [
+      {
+        "name": "ليل",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/3/3f/Lille_OSC_2018_logo.svg/330px-Lille_OSC_2018_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "تشيلسي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/c/cc/Chelsea_FC.svg/330px-Chelsea_FC.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ريال مدريد",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/330px-Real_Madrid_CF.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Eden Hazard",
+      "Hazard",
+      "هازارد",
+      "إيدن هازارد",
+      "ايدين هازارد"
+    ],
+    "sources": [
+      "https://www.chelseafc.com/en/news/article/chelsea-legend-eden-hazard-announces-retirement"
+    ]
+  },
+  {
+    "id": 225,
+    "wikidata_id": "Q119562",
+    "name": "سيرخيو أغويرو",
+    "status": "retired",
+    "nationality": "الأرجنتين",
+    "era": "2003-2021",
+    "position": "مهاجم صريح",
+    "difficulty": "medium",
+    "anchor": 2,
+    "recognition": "easy",
+    "clubs": [
+      {
+        "name": "إنديبندينتي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/db/Escudo_del_Club_Atl%C3%A9tico_Independiente.svg/330px-Escudo_del_Club_Atl%C3%A9tico_Independiente.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "أتلتيكو مدريد",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/f/f9/Atletico_Madrid_Logo_2024.svg/330px-Atletico_Madrid_Logo_2024.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "مانشستر سيتي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/e/eb/Manchester_City_FC_badge.svg/330px-Manchester_City_FC_badge.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "برشلونة",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/4/47/FC_Barcelona_%28crest%29.svg/330px-FC_Barcelona_%28crest%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Sergio Aguero",
+      "Aguero",
+      "Kun Aguero",
+      "أغويرو",
+      "أجويرو",
+      "سيرخيو أجويرو",
+      "كون أغويرو"
+    ],
+    "sources": [
+      "https://www.fcbarcelona.com/en/football/first-team/news/2416373/sergio-kun-aguero-retires-a-legendary-goalscorer"
+    ]
+  },
+  {
+    "id": 249,
+    "wikidata_id": "Q131234",
+    "name": "توني كروس",
+    "status": "retired",
+    "nationality": "ألمانيا",
+    "era": "2007-2024",
+    "position": "لاعب وسط",
+    "difficulty": "medium",
+    "anchor": 2,
+    "recognition": "easy",
+    "clubs": [
+      {
+        "name": "بايرن ميونخ",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8d/FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg/330px-FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "باير ليفركوزن (إعارة)",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/59/Bayer_04_Leverkusen_logo.svg/330px-Bayer_04_Leverkusen_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "بايرن ميونخ",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8d/FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg/330px-FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ريال مدريد",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/330px-Real_Madrid_CF.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Toni Kroos",
+      "Kroos",
+      "كروس"
+    ],
+    "sources": [
+      "https://www.realmadrid.com/es-ES/noticias/club/comunicados/comunicado-oficial-toni-kroos-21-05-2024",
+      "https://tv.bayer04.de/de-de/video/toni-kroos-tore-vorlagen-magic-moments/1356102"
+    ]
+  },
+  {
+    "id": 278,
+    "wikidata_id": "Q38136",
+    "name": "مارسيلو",
+    "status": "retired",
+    "nationality": "البرازيل",
+    "era": "2005-2025",
+    "position": "ظهير",
+    "difficulty": "easy",
+    "anchor": 2,
+    "recognition": "easy",
+    "clubs": [
+      {
+        "name": "فلومينينسي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/12/Fluminense_Football_Club.svg/330px-Fluminense_Football_Club.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ريال مدريد",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/330px-Real_Madrid_CF.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "أولمبياكوس",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/a/a2/Olympiacos_FC_crest.svg/330px-Olympiacos_FC_crest.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "فلومينينسي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/12/Fluminense_Football_Club.svg/330px-Fluminense_Football_Club.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Marcelo",
+      "Marcelo Vieira",
+      "مارسيلو فييرا"
+    ],
+    "sources": [
+      "https://www.realmadrid.com/en-US/news/club/announcements/cominicado-oficial-06-02-2025"
+    ]
+  },
+  {
+    "id": 195,
+    "wikidata_id": "Q11584",
+    "name": "إيكر كاسياس",
+    "status": "retired",
+    "nationality": "إسبانيا",
+    "era": "1999-2020",
+    "position": "حارس مرمى",
+    "difficulty": "easy",
+    "anchor": 2,
+    "recognition": "easy",
+    "clubs": [
+      {
+        "name": "ريال مدريد",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/330px-Real_Madrid_CF.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "بورتو",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/f/f1/FC_Porto.svg/330px-FC_Porto.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Iker Casillas",
+      "Casillas",
+      "كاسياس",
+      "ايكر كاسياس"
+    ],
+    "sources": [
+      "https://www.realmadrid.com/es-ES/el-club/historia/leyendas-futbol/iker-casillas-fernandez"
+    ]
+  },
+  {
+    "id": 263,
+    "wikidata_id": "Q11576",
+    "name": "راؤول غونزاليس",
+    "status": "retired",
+    "nationality": "إسبانيا",
+    "era": "1994-2015",
+    "position": "مهاجم",
+    "difficulty": "medium",
+    "anchor": 2,
+    "recognition": "easy",
+    "clubs": [
+      {
+        "name": "ريال مدريد",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/330px-Real_Madrid_CF.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "شالكه 04",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6d/FC_Schalke_04_Logo.svg/330px-FC_Schalke_04_Logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "السد القطري",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/c/c1/Al_Sadd_SC_logo.svg/330px-Al_Sadd_SC_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "نيويورك كوسموس",
+        "logo": "https://upload.wikimedia.org/wikipedia/en/9/93/New_York_Cosmos_77.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled"
+      }
+    ],
+    "accepted_answers": [
+      "Raúl",
+      "Raúl González",
+      "راؤول",
+      "راوول",
+      "راؤول جونزاليس"
+    ],
+    "sources": [
+      "https://www.realmadrid.com/es-ES/el-club/historia/leyendas-futbol/raul-gonzalez-blanco"
+    ]
+  },
+  {
+    "id": 186,
+    "wikidata_id": "Q83488",
+    "name": "مسعود أوزيل",
+    "status": "retired",
+    "nationality": "ألمانيا",
+    "era": "2006-2023",
+    "position": "لاعب وسط هجومي",
+    "difficulty": "medium",
+    "anchor": 3,
+    "recognition": "easy",
+    "clubs": [
+      {
+        "name": "شالكه 04",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6d/FC_Schalke_04_Logo.svg/330px-FC_Schalke_04_Logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "فيردر بريمن",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/be/SV-Werder-Bremen-Logo.svg/330px-SV-Werder-Bremen-Logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ريال مدريد",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/330px-Real_Madrid_CF.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "أرسنال",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/53/Arsenal_FC.svg/330px-Arsenal_FC.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "فنربخشة",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/3/39/Fenerbah%C3%A7e.svg/330px-Fenerbah%C3%A7e.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "إسطنبول باشاك شهير",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/e/e1/%C4%B0stanbul_Ba%C5%9Fak%C5%9Fehir_logo.svg/330px-%C4%B0stanbul_Ba%C5%9Fak%C5%9Fehir_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Mesut Özil",
+      "Ozil",
+      "أوزيل",
+      "مسعود اوزيل",
+      "مسوت أوزيل"
+    ],
+    "sources": [
+      "https://www.uefa.com/uefachampionsleague/news/01e8-0e7522754f78-56035ba16382-1000--madrid-sign-ozil-from-bremen/",
+      "https://www.premierleague.com/ar/news/3118777"
+    ]
+  },
+  {
+    "id": 179,
+    "wikidata_id": "Q39444",
+    "name": "رونالدينيو",
+    "status": "retired",
+    "nationality": "البرازيل",
+    "era": "1998-2015",
+    "position": "جناح",
+    "difficulty": "medium",
+    "anchor": 2,
+    "recognition": "easy",
+    "clubs": [
+      {
+        "name": "غريميو",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/08/Gremio_logo.svg/330px-Gremio_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "باريس سان جيرمان",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/a/a7/Paris_Saint-Germain_F.C..svg/330px-Paris_Saint-Germain_F.C..svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "برشلونة",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/4/47/FC_Barcelona_%28crest%29.svg/330px-FC_Barcelona_%28crest%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ميلان",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d0/Logo_of_AC_Milan.svg/330px-Logo_of_AC_Milan.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "فلامنغو",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/96/Clube_de_Regatas_do_Flamengo_logo.svg/330px-Clube_de_Regatas_do_Flamengo_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "أتلتيكو مينيرو",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/27/Clube_Atl%C3%A9tico_Mineiro_logo.svg/330px-Clube_Atl%C3%A9tico_Mineiro_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "كيريتارو",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/1/11/Quer%C3%A9taro_F.C._logo.svg/330px-Quer%C3%A9taro_F.C._logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "فلومينينسي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/12/Fluminense_Football_Club.svg/330px-Fluminense_Football_Club.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Ronaldinho",
+      "Ronaldinho Gaúcho",
+      "رونالدينهو",
+      "رونالدينيو غاوتشو"
+    ],
+    "sources": [
+      "https://players.fcbarcelona.com/en/player/763-ronaldinho-ronaldo-assis-moreira"
+    ]
+  },
+  {
+    "id": 1003,
+    "wikidata_id": "Q484909",
+    "name": "كلارنس سيدورف",
+    "status": "retired",
+    "nationality": "هولندا",
+    "era": "1992-2014",
+    "position": "لاعب وسط",
+    "difficulty": "hard",
+    "anchor": 4,
+    "recognition": "medium",
+    "clubs": [
+      {
+        "name": "أياكس أمستردام",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0d/Logo_AFC_Ajax_%281928-1991%2C_2025-%29.png/330px-Logo_AFC_Ajax_%281928-1991%2C_2025-%29.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "سامبدوريا",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/d/d2/U.C._Sampdoria_logo.svg/330px-U.C._Sampdoria_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ريال مدريد",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/330px-Real_Madrid_CF.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "إنتر ميلان",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/05/FC_Internazionale_Milano_2021.svg/330px-FC_Internazionale_Milano_2021.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ميلان",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d0/Logo_of_AC_Milan.svg/330px-Logo_of_AC_Milan.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "بوتافوغو"
+      }
+    ],
+    "accepted_answers": [
+      "Clarence Seedorf",
+      "Seedorf",
+      "سيدورف",
+      "كلارنس سيدرف"
+    ],
+    "sources": [
+      "https://www.acmilan.com/en/club/legends/players/seedorf"
+    ]
+  },
+  {
+    "id": 1004,
+    "wikidata_id": "Q44298",
+    "name": "باستيان شفاينشتايغر",
+    "status": "retired",
+    "nationality": "ألمانيا",
+    "era": "2002-2019",
+    "position": "لاعب وسط",
+    "difficulty": "medium",
+    "anchor": 1,
+    "recognition": "easy",
+    "clubs": [
+      {
+        "name": "بايرن ميونخ",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8d/FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg/330px-FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "مانشستر يونايتد",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/7/7a/Manchester_United_FC_crest.svg/330px-Manchester_United_FC_crest.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "شيكاغو فاير",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/03/Chicago_Fire_logo%2C_2021.svg/330px-Chicago_Fire_logo%2C_2021.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Bastian Schweinsteiger",
+      "Schweinsteiger",
+      "شفاينشتايغر",
+      "شفاينشتايجر",
+      "باستيان شفاينشتايجر"
+    ],
+    "sources": [
+      "https://fcbayern.com/en/club/hall-of-fame/bastian-schweinsteiger",
+      "https://www.mlssoccer.com/news/chicago-fires-bastian-schweinsteiger-announces-retirement"
+    ]
   }
 ]

@@ -8,6 +8,7 @@ from app.core import import_support as support, paths
 from scripts import bank_questions_import as bank, huroof_questions_import as huroof, wikidata_import as career
 from app.domains.games.importers import bank_importer, huroof_importer, career_importer, whoami_importer as who, knowledge_importer as knowledge
 from app.domains.games.models import Question, CareerPlayer
+from app.domains.games.career.online import pick_player_id
 
 def row(**kw):return {k:{'value':v} for k,v in kw.items()}
 class Query:
@@ -37,6 +38,39 @@ class ImportTests(unittest.TestCase):
  def tearDown(self):
   for p in reversed(self.ps):p.stop()
   self.tmp.cleanup()
+ def test_career_discovery_filters_and_keeps_candidates_pending(self):
+  entities=self._entities()
+  entities['Q100']['claims']['P21']=[{'mainsnak':{'datavalue':{'value':{'id':'Q6581097'}}}}]
+  entities['Q200']['claims']['P118']=[{'mainsnak':{'datavalue':{'value':{'id':'Q9448'}}}}]
+  support.atomic_json(self.root/'career_fame_review.json',{'players':{'Q100':{'status':'reviewed','fame':'easy'}}})
+  session=Session()
+  with patch.object(career,'SessionLocal',return_value=session),patch.object(career,'wd_get_entities',side_effect=lambda ids:{q:entities[q] for q in ids}):
+   result=career.run_import(player_qids=['Q100'],skip_logos=True,log=lambda _:None)
+  self.assertEqual(result['added'],1)
+  self.assertFalse(session.rows[0].active)
+  entities['Q200']['claims']['P118'][0]['mainsnak']['datavalue']['value']['id']='Q1140341'
+  with patch.object(career,'SessionLocal',return_value=Session()),patch.object(career,'wd_get_entities',side_effect=lambda ids:{q:entities[q] for q in ids}):
+   result=career.run_import(player_qids=['Q100'],skip_logos=True,log=lambda _:None)
+  self.assertEqual(result['added'],0)
+
+ def test_career_ignores_youth_and_preserves_first_team_return(self):
+  clubs={'Q200':{'labels':{'en':{'value':'First FC'}}},'Q201':{'labels':{'en':{'value':'Loan FC'}}},'Q202':{'labels':{'en':{'value':'First FC II'}}}}
+  spells=[dict(club=q,start=f'+{year}',end=None) for q,year in [('Q202',2010),('Q200',2011),('Q200',2011),('Q200',2012),('Q201',2013),('Q200',2014)]]
+  self.assertEqual([club['name'] for club in career.build_clubs_json(spells,clubs,skip_logos=True)], ['First FC','Loan FC','First FC'])
+
+ def test_reviewed_players_are_not_overwritten_by_discovery_or_refresh(self):
+  with patch.object(career,'SessionLocal',return_value=Session()),patch.object(career,'wd_get_entities') as fetch:
+   result=career.run_import(player_qids=['Q615'],refresh=True,skip_logos=True,log=lambda _:None)
+  self.assertEqual((result['fetched'],result['skipped']),(1,1))
+  fetch.assert_not_called()
+
+ def test_online_rotation_prefers_unseen_then_oldest_for_both(self):
+  from datetime import datetime
+  old,recent=datetime(2025,1,1),datetime(2025,5,1)
+  self.assertEqual(pick_player_id([1,2,3],{1:[recent],2:[old]}),3)
+  self.assertEqual(pick_player_id([1,2],{1:[old,recent],2:[old,old]}),2)
+  self.assertIsNone(pick_player_id([],{}))
+
  def countries(self):return [row(c='Q1',cLabelAr='دولة تجريبية',cap='Q2',capAr='عاصمة أولى',cur='Q3',curAr='عملة أولى',cont='Q4',contAr='قارة أولى')]
  def test_bank_ambiguity_order(self):
   rows=self.countries()+[row(c='Q1',cLabelAr='دولة تجريبية',cap='Q9',capAr='عاصمة ثانية',cur='Q8',curAr='عملة ثانية',cont='Q7',contAr='قارة ثانية')]

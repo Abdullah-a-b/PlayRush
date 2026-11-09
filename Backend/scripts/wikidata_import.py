@@ -31,6 +31,7 @@ except ImportError:
 from sqlalchemy import text as _sql_text
 from app.infrastructure.database import SessionLocal, engine
 from app.domains.games.models import CareerPlayer
+from app.domains.games.career.pilot import ROSTER_BY_QID
 
 WDQS_URL = "https://query.wikidata.org/sparql"
 WD_API = "https://www.wikidata.org/w/api.php"
@@ -64,6 +65,11 @@ def _ensure_wikidata_column():
             conn.commit()
     except Exception:
         pass
+
+
+# البرتغال محصورة في بنفيكا وبورتو وسبورتينغ. باقي الدوريات تُقرأ من تاريخ النادي.
+_DISCOVERY_LEAGUES = ("Q9448", "Q324867", "Q15804", "Q82595", "Q13394", "Q255633", "Q485568")
+_PORTUGUESE_CLUBS = ("Q131499", "Q128446", "Q75729")
 
 
 def sparql_top_players(limit, min_sitelinks, offset=0):
@@ -174,17 +180,50 @@ def _year_of(wd_time):
         return None
 
 
-_YOUTH_AR = ("شباب", "أكاديمية", "تحت", "رديف", "ب)")
-_YOUTH_EN = ("youth", "academy", "u17", "u19", "u21", "u23", "under-", " b\u200e",
-             " b team", "reserves", "juvenil", "castilla", "ii", " b)")
-
+_YOUTH_AR = ("شباب", "أكاديمية", "تحت", "رديف", "برشلونة أتلتيك", "ب)")
+_YOUTH_EN = re.compile(
+    r"\b(?:youth|academy|under[- ]?\d{2}|u[- ]?(?:17|18|19|20|21|23)|reserves?|juvenil|castilla)\b"
+    r"|^jong\b|barcelona atl[eéè]tic|\s(?:ii|iii|[bc](?: team)?)[\s)\u200e]*$"
+)
+_YOUTH_AR_SUFFIX = re.compile(r"\s[بج][\s)\u200e]*$")
 
 def is_youth_team(club_ent):
     ar = (_label(club_ent, ("ar",)) or "")
     en = (_label(club_ent, ("en",)) or "").lower()
-    if any(w in ar for w in _YOUTH_AR):
-        return True
-    return any(w in en for w in _YOUTH_EN)
+    return any(word in ar for word in _YOUTH_AR) or bool(_YOUTH_AR_SUFFIX.search(ar) or _YOUTH_EN.search(en))
+
+
+def _senior_spells(career, club_entities):
+    senior = {}
+    for spell in career:
+        club = club_entities.get(spell["club"], {})
+        if _label(club) and not is_youth_team(club) and not is_national_team(club):
+            senior.setdefault((spell["club"], spell["start"], spell["end"]), spell)
+    return list(senior.values())
+
+
+def _eligible_for_review(player, career, club_entities):
+    sex = player.get("claims", {}).get("P21", [])
+    if not any(claim.get("rank") != "deprecated"
+               and claim.get("mainsnak", {}).get("datavalue", {}).get("value", {}).get("id") == "Q6581097"
+               for claim in sex):
+        return False
+    for spell in career:
+        club_id = spell["club"]
+        if club_id in _PORTUGUESE_CLUBS:
+            return True
+        start, end = _year_of(spell["start"]), _year_of(spell["end"])
+        if start == 9999:
+            start = None
+        for membership in club_entities[club_id].get("claims", {}).get("P118", []):
+            league = membership.get("mainsnak", {}).get("datavalue", {}).get("value", {})
+            if membership.get("rank") == "deprecated" or league.get("id") not in _DISCOVERY_LEAGUES:
+                continue
+            entered = _year_of(_qualifier_time(membership, "P580"))
+            exited = _year_of(_qualifier_time(membership, "P582"))
+            if not (end and entered and end < entered or start and exited and start > exited):
+                return True
+    return False
 
 
 def compute_era(career_entries):
@@ -375,53 +414,19 @@ def build_clubs_json(career_list, club_ents, skip_logos=False, redo_logos=False)
     و كيانات الأندية المجلوبة مسبقاً. مستقلة عن run_import كي يُعاد
     استخدامها من الاستيراد الكامل وبكسل تصحيح الشعارات القديمة معاً."""
     clubs_json = []
-    _logo_by_base = {}
-    _starts_youth = bool(career_list and career_list[0].get("_youth"))
-
-    for _idx, e in enumerate(career_list):
-        club_ent = club_ents.get(e["club"], {})
-        if not _label(club_ent):
+    previous_qid = None
+    for spell in _senior_spells(career_list, club_ents):
+        club_qid = spell["club"]
+        if club_qid == previous_qid:
             continue
-        if is_national_team(club_ent):
-            continue
-
-        is_youth = bool(e.get("_youth"))
-        # قاعدة الشباب: نُبقي فقط أكاديمية البداية (لامين يامال)،
-        # ونحذف أي فريق شباب آخر (يعقّد اللعبة).
-        if is_youth and not (_starts_youth and _idx == 0):
-            continue
-
-        en_lbl = (_label(club_ent, ("en",)) or "")
-        _base = re.sub(r"\b(youth|academy|u\d+|under[- ]\d+|b|ii|reserves?|juvenil|castilla)\b",
-                       "", en_lbl.lower()).strip()
-
-        if is_youth:
-            # أكاديمية البداية: نسمّيها "أكاديمية <النادي الأم>"
-            parent = _base.title() if _base else en_lbl
-            club_label = f"أكاديمية {parent}"
-        else:
-            club_label = _label(club_ent) or e["club"]
-
-        logo = None
+        previous_qid = club_qid
+        club_ent = club_ents[club_qid]
+        entry = {"name": _label(club_ent)}
         if not skip_logos:
-            logo = download_logo(e["club"], club_ent,
-                                 _label(club_ent, ("en",)), redo=redo_logos)
-        entry = {"name": club_label}
-        if logo:
-            entry["logo"] = logo
-            if _base:
-                _logo_by_base.setdefault(_base, logo)
-        entry["_base"] = _base
-        entry["_youth"] = is_youth
+            logo = download_logo(club_qid, club_ent, _label(club_ent, ("en",)), redo=redo_logos)
+            if logo:
+                entry["logo"] = logo
         clubs_json.append(entry)
-
-    # أكاديمية البداية بلا شعار  ترث شعار النادي الأم (لو ظهر لاحقاً)
-    for entry in clubs_json:
-        if "logo" not in entry and entry.get("_youth") \
-                and entry.get("_base") in _logo_by_base:
-            entry["logo"] = _logo_by_base[entry["_base"]]
-        entry.pop("_base", None)
-        entry.pop("_youth", None)
     return clubs_json
 
 
@@ -495,12 +500,11 @@ def run_import(limit=200, min_sitelinks=45, offset=0,
 
         for i in range(0, len(players), 25):
             batch = players[i:i + 25]
-            qids = [q for q, _ in batch]
-            if not refresh:
-                qids = [q for q in qids if q not in existing_qids]
-                skipped += len(batch) - len(qids)
-                if not qids:
-                    continue
+            qids = [q for q, _ in batch if q not in ROSTER_BY_QID
+                    and (refresh or q not in existing_qids)]
+            skipped += len(batch) - len(qids)
+            if not qids:
+                continue
             ents = wd_get_entities(qids)
             if any(q not in ents or ents[q].get("missing") for q in qids):
                 raise RuntimeError("استجابة كيانات اللاعبين غير مكتملة")
@@ -521,14 +525,7 @@ def run_import(limit=200, min_sitelinks=45, offset=0,
 
             for qid in qids:
                 ent = ents.get(qid, {})
-                # فرز ثانوي: أكاديميات/شباب النادي قبل الفريق الأول
-                # (غالباً بلا P580 — نضعها في البداية لا النهاية)
-                _career = careers.get(qid, [])
-                for e in _career:
-                    e["_youth"] = is_youth_team(club_ents.get(e["club"], {}))
-                    if e["start"] == "+9999" and e["_youth"]:
-                        e["start"] = "+0000"  # شباب بلا تاريخ  البداية
-                _career.sort(key=lambda e: (e["start"], 0 if e["_youth"] else 1))
+                career = _senior_spells(careers[qid], club_ents)
                 ar_name = _label(ent, ("ar",))
                 en_name = _label(ent, ("en",))
                 display = ar_name or en_name
@@ -538,11 +535,14 @@ def run_import(limit=200, min_sitelinks=45, offset=0,
 
                 row = db.query(CareerPlayer).filter(CareerPlayer.wikidata_id == qid).first()
                 if row is None:
+                    if not _eligible_for_review(ent, career, club_ents):
+                        skipped += 1
+                        continue
                     manual = db.query(CareerPlayer).filter(CareerPlayer.name == display).first()
                     if manual is not None:
                         skipped += 1
                         continue  # الربط اليدوي أو إزالة النسخ المكررة تُراجع في الغربلة.
-                clubs_json = build_clubs_json(careers.get(qid, []), club_ents,
+                clubs_json = build_clubs_json(career, club_ents,
                                               skip_logos=skip_logos or (row is not None and not redo_logos), redo_logos=redo_logos)
                 if not clubs_json:
                     skipped += 1
@@ -553,12 +553,11 @@ def run_import(limit=200, min_sitelinks=45, offset=0,
                         for club in clubs_json:
                             if not club.get("logo") and club["name"] in old_logos: club["logo"] = old_logos[club["name"]]
                     except (ValueError, TypeError): pass
-                club_career = [e for e in careers.get(qid, []) if not is_national_team(club_ents.get(e["club"], {}))]
-                status = detect_status(ent, club_career)
+                status = detect_status(ent, career)
                 # ادعاء نادٍ بلا نهاية لا يثبت الرجوع من اعتزال معروف.
                 if row and row.status == "retired":
                     status = "retired"
-                era = compute_era(club_career)
+                era = compute_era(career)
                 if status == "retired" and era and "-الآن" in era:
                     era = None
                 pos_qid = extract_position_qid(ent)
@@ -575,7 +574,7 @@ def run_import(limit=200, min_sitelinks=45, offset=0,
                     clubs=json.dumps(clubs_json, ensure_ascii=False),
                     accepted_answers=json.dumps(gen_accepted(ar_name, en_name),
                                                 ensure_ascii=False),
-                    difficulty=difficulty, active=(row.active if row is not None else True) and fame["eligible"],
+                    difficulty=difficulty, active=bool(row and row.active and fame["eligible"]),
                     era=era, position=position or (row.position if row else None), nationality=nationality or (row.nationality if row else None),
                 )
                 # التصحيح المنسق له أولوية على تسميات خارجية قابلة للتخريب.
@@ -583,7 +582,7 @@ def run_import(limit=200, min_sitelinks=45, offset=0,
                 from app.core.import_support import read_json
                 reviewed = read_json(DATA_DIR / "career_review_overrides.json", {}).get("players", {}).get(qid, {})
                 for field in ("name", "status", "era", "active", "accepted_answers"):
-                    if field in reviewed:
+                    if field in reviewed and (field != "active" or row is not None):
                         payload[field] = json.dumps(reviewed[field], ensure_ascii=False) if field == "accepted_answers" else reviewed[field]
                 if dry_run:
                     log(f"   [{'تحديث' if row else 'إضافة'}] {display} — "
@@ -618,6 +617,8 @@ def backfill_difficulty(log=print, on_progress=None):
         rows = db.query(CareerPlayer).filter(CareerPlayer.wikidata_id.isnot(None)).all()
         before = {}; after = {}; changed = pending = 0
         for i, row in enumerate(rows):
+            if row.wikidata_id in ROSTER_BY_QID:
+                continue
             before[row.difficulty] = before.get(row.difficulty, 0) + 1
             result = reviewed_classification(row.wikidata_id, row.difficulty)
             if result['eligible']:
@@ -649,6 +650,8 @@ def backfill_missing_club_logos(log=print, on_progress=None):
         rows = db.query(CareerPlayer).filter(CareerPlayer.wikidata_id.isnot(None)).all()
         affected = []
         for r in rows:
+            if r.wikidata_id in ROSTER_BY_QID:
+                continue
             try:
                 clubs = json.loads(r.clubs) if r.clubs else []
             except Exception:
@@ -677,14 +680,7 @@ def backfill_missing_club_logos(log=print, on_progress=None):
 
             for row in batch_rows:
                 qid = row.wikidata_id
-                _career = careers.get(qid, [])
-                for e in _career:
-                    e["_youth"] = is_youth_team(club_ents.get(e["club"], {}))
-                    if e["start"] == "+9999" and e["_youth"]:
-                        e["start"] = "+0000"
-                _career.sort(key=lambda e: (e["start"], 0 if e["_youth"] else 1))
-
-                clubs_json = build_clubs_json(_career, club_ents, redo_logos=True)
+                clubs_json = build_clubs_json(careers.get(qid, []), club_ents, redo_logos=True)
                 if not clubs_json:
                     still_missing += 1
                     continue

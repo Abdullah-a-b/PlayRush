@@ -9,13 +9,12 @@ import string
 import time
 
 from app.infrastructure.database import SessionLocal
-from app.domains.games.models import CareerPlayer
 from app.domains.games.core_manager import get_room_state, rooms
 from app.domains.games.career.engine import CareerGameState
 from app.domains.games.career import pilot, solo_bot as _solo
+from app.domains.games.career.online import reserve_player
 from app.domains.wallet.reward_service import record_match_result
 from app.core.text_processor import check_answer
-from app.core.career_fame import reviewed_classification
 from app.sockets.state import connected_players
 
 
@@ -55,72 +54,19 @@ def register_career_events(sio):
     register_social_handlers(sio, get_room_state)
     global _start_first_player
 
-    def _load_random_player(used_ids, user_ids=None):
-        """اختيار شخصية عادل: غير مُشاهَدة لأيّ من طرفَي المباراة.
-        الطبقات: (1) غير مُشاهَد للطرفين  (2) تدوير ذاتي (حذف أقدم
-        نصف المشاهدات) وإعادة  (3) عشوائي (نادر مع قاعدة كبيرة)."""
-        from app.domains.games.models import CareerSeen
-        db = SessionLocal()
-        try:
-            user_ids = [u for u in (user_ids or []) if u]
-
-            def _pick_id(exclude_seen):
-                # نجلب المعرّفات فقط (لا كامل الصفوف) — أسرع بكثير
-                q = db.query(CareerPlayer.id).filter(CareerPlayer.active == True)
-                if used_ids:
-                    q = q.filter(~CareerPlayer.id.in_(used_ids))
-                if exclude_seen and user_ids:
-                    seen_ids = [pid for (pid,) in db.query(CareerSeen.player_id)
-                                .filter(CareerSeen.user_id.in_(user_ids)).all()]
-                    if seen_ids:
-                        q = q.filter(~CareerPlayer.id.in_(seen_ids))
-                ids = [i for (i,) in q.all()]
-                return random.choice(ids) if ids else None
-
-            pid = _pick_id(exclude_seen=True)
-
-            if pid is None and user_ids:
-                # تدوير ذاتي: نحذف أقدم نصف مشاهدات كل طرف ونعيد
-                for uid in user_ids:
-                    rows = (db.query(CareerSeen)
-                            .filter(CareerSeen.user_id == uid)
-                            .order_by(CareerSeen.seen_at.asc()).all())
-                    for r in rows[: max(1, len(rows) // 2)]:
-                        db.delete(r)
-                db.commit()
-                pid = _pick_id(exclude_seen=True)
-
-            if pid is None:
-                pid = _pick_id(exclude_seen=False)  # آخر ملاذ
-            if pid is None:
+    def _load_online_player(used_ids, user_ids=None):
+        with SessionLocal() as db, db.begin():
+            cp = reserve_player(db, used_ids, user_ids)
+            if cp is None:
                 return None
-
-            cp = db.query(CareerPlayer).filter(CareerPlayer.id == pid).first()
-            if not cp:
-                return None
-
-            # نسجّل المشاهدة للطرفين فوراً
-            for uid in user_ids:
-                exists = db.query(CareerSeen).filter(
-                    CareerSeen.user_id == uid,
-                    CareerSeen.player_id == cp.id).first()
-                if not exists:
-                    db.add(CareerSeen(user_id=uid, player_id=cp.id))
-            db.commit()
-
             return {
                 'id': cp.id, 'name': cp.name, 'status': cp.status,
                 'clubs': json.loads(cp.clubs) if cp.clubs else [],
                 'accepted_answers': json.loads(cp.accepted_answers) if cp.accepted_answers else [],
-                'nationality': cp.nationality,
-                'era': getattr(cp, 'era', None),
-                'position': getattr(cp, 'position', None),
-                # تصنيف تحريري مُراجع؛ معرفة الاسم منفصلة عن معرفة مسيرة اللعب.
-                'difficulty': getattr(cp, 'difficulty', 'hard'),
-                'career_memory': reviewed_classification(cp.wikidata_id, cp.difficulty)['career_memory'],
+                'nationality': cp.nationality, 'era': cp.era, 'position': cp.position,
+                'difficulty': cp.difficulty,
+                'reviewed_answer': cp.wikidata_id in pilot.ROSTER_BY_QID,
             }
-        finally:
-            db.close()
 
     async def _emit_reveal_state(room_code, gs, extra=None):
         payload = {
@@ -199,7 +145,7 @@ def register_career_events(sio):
         if pilot_order:
             player = pilot.ROSTER[pilot_order[gs.player_index]] if gs.player_index < len(pilot_order) else None
         else:
-            player = await asyncio.to_thread(_load_random_player, gs.used_player_ids, user_ids=_uids)
+            player = await asyncio.to_thread(_load_online_player, gs.used_player_ids, user_ids=_uids)
         if not player:
             await _resolve_end(room_code, forced=True)
             return
@@ -357,7 +303,7 @@ def register_career_events(sio):
         # الإرسال يلتزم: نبطل مؤقّت نافذة الكتابة فوراً (بالإصدار) —
         # كان قد ينفجر أثناء تحكيم AI (≤2ث) ويضرب سترايك رغم إجابة قيد الحسم.
         gs.bump_version()
-        if room.get('career_pilot_order'):
+        if room.get('career_pilot_order') or gs.current_player.get('reviewed_answer'):
             await _process_answer_result(room_code, sid, pilot.accepts_name(answer, gs.current_player))
             return
         correct_name = (gs.current_player or {}).get('name', '')
