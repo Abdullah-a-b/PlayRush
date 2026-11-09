@@ -500,6 +500,7 @@ def run_import(limit=200, min_sitelinks=45, offset=0,
 
         for i in range(0, len(players), 25):
             batch = players[i:i + 25]
+            # المسيرات المعتمدة، بما فيها استثناءات الأساطير، تُزامن من القائمة المراجعة.
             qids = [q for q, _ in batch if q not in ROSTER_BY_QID
                     and (refresh or q not in existing_qids)]
             skipped += len(batch) - len(qids)

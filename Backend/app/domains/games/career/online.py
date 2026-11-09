@@ -7,7 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
 
 from app.domains.games.models import CareerPlayer, CareerSeen
-from app.domains.games.career.pilot import normalize_name
+from app.domains.games.career.pilot import ROSTER_BY_QID
 
 
 def pick_player_id(available_ids, histories):
@@ -28,9 +28,11 @@ def reserve_player(db, used_ids, user_ids):
         db.execute(text("SELECT pg_advisory_xact_lock(:namespace, :uid)"),
                    {"namespace": 81241, "uid": uid})
 
-    rows = db.query(CareerPlayer.id, CareerPlayer.wikidata_id, CareerPlayer.name,
-                    CareerPlayer.active).order_by(CareerPlayer.id).all()
-    identities = {row.id: row.wikidata_id or normalize_name(row.name) for row in rows}
+    # العضوية في القائمة المراجعة شرط للظهور حتى لو كان السجل القديم مفعّلًا.
+    rows = (db.query(CareerPlayer.id, CareerPlayer.wikidata_id, CareerPlayer.active)
+            .filter(CareerPlayer.wikidata_id.in_(ROSTER_BY_QID))
+            .order_by(CareerPlayer.id).all())
+    identities = {row.id: row.wikidata_id for row in rows}
     used = {identities.get(pid, pid) for pid in used_ids}
     available = {}
     for row in rows:

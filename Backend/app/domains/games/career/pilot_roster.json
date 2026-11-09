@@ -1539,5 +1539,39 @@
       "https://fcbayern.com/en/club/hall-of-fame/bastian-schweinsteiger",
       "https://www.mlssoccer.com/news/chicago-fires-bastian-schweinsteiger-announces-retirement"
     ]
+  },
+  {
+    "id": 1005,
+    "wikidata_id": "Q34670",
+    "name": "بيليه",
+    "status": "retired",
+    "nationality": "البرازيل",
+    "era": "1956-1977",
+    "position": "مهاجم",
+    "difficulty": "easy",
+    "recognition": "easy",
+    "anchor": 1,
+    "admission": "legend_exception",
+    "clubs": [
+      {
+        "name": "سانتوس",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c7/Santos_Futebol_Clube_logo_%28with_two_stars_and_a_golden_crown%29.svg/330px-Santos_Futebol_Clube_logo_%28with_two_stars_and_a_golden_crown%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "نيويورك كوسموس",
+        "logo": "https://upload.wikimedia.org/wikipedia/en/9/93/New_York_Cosmos_77.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled"
+      }
+    ],
+    "accepted_answers": [
+      "Pelé",
+      "بيلي",
+      "بيلى",
+      "إدسون أرانتيس دو ناسيمنتو",
+      "Edson Arantes do Nascimento"
+    ],
+    "sources": [
+      "https://www.santosfc.com.br/en/idols/",
+      "https://www.nycosmos.com/history/"
+    ]
   }
 ]

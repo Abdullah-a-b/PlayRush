@@ -93,3 +93,12 @@ class CareerPilotTests(unittest.TestCase):
         self.assertTrue(0 < attempts("beginner") < attempts("expert") < 300)
         self.assertIsNone(solo_bot.reviewed_decision("expert", candidates, 1, False, 0, 1, 10))
         self.assertIsNone(solo_bot.reviewed_decision("expert", candidates, 5, True, 2, 1, 10))
+
+
+    def test_legend_exception_is_in_the_playable_roster(self):
+        pele = pilot.ROSTER_BY_QID["Q34670"]
+        self.assertEqual(pele["admission"], "legend_exception")
+        self.assertIn(pele["id"], pilot.round_order())
+        self.assertEqual([club["name"] for club in pele["clubs"]], ["سانتوس", "نيويورك كوسموس"])
+        for alias in ("بيليه", "بيلي", "Pelé", "Pele"):
+            self.assertTrue(pilot.accepts_name(alias, pele))

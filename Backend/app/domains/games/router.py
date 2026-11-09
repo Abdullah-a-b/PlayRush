@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.infrastructure.database import get_db
 from app.domains.games.models import CareerPlayer
+from app.domains.games.career.pilot import ROSTER_BY_QID
 
 router = APIRouter()
 
@@ -30,7 +31,9 @@ async def get_club_logos(db: Session = Depends(get_db)):
         return {"logos": _cache["logos"]}
 
     logos = set()
-    rows = db.query(CareerPlayer.clubs).filter(CareerPlayer.active == True).all()
+    rows = db.query(CareerPlayer.clubs).filter(
+        CareerPlayer.active.is_(True), CareerPlayer.wikidata_id.in_(ROSTER_BY_QID),
+    ).all()
     for (clubs_raw,) in rows:
         if not clubs_raw:
             continue
