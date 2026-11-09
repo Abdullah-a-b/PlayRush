@@ -7,9 +7,7 @@ import time
 
 import httpx
 
-_URL = os.getenv("PLAYRUSH_TRAINED_BOT_URL", (
-    "http://127.0.0.1:18767" if os.getenv("WEBSITE_SITE_NAME", "").lower() == "playrush-server" else ""
-))
+_URL = os.getenv("PLAYRUSH_TRAINED_BOT_URL", "")
 _SYSTEM = (
     "أنت خصم PlayRush. اختر خطوة واحدة قانونية بناء على الحالة الظاهرة فقط. "
     "أخرج JSON فقط بالمفتاحين action وvalue. القيمة نص للإجابة أو رقم الخلية أو null "
