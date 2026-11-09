@@ -705,20 +705,24 @@ def register_career_events(sio):
             return
         bot_sid = _solo.BOT_SID
         current_player_id = (gs.current_player or {}).get('id')
+        pilot_answer = None
         if room.get('career_pilot_order'):
-            candidate = pilot.candidate_from_clubs(gs.revealed_clubs())
-            if not candidate or not gs.can_buzz(bot_sid):
+            complete = gs.career_complete and gs.first_reveal_done
+            clue = (gs.player_index, gs.revealed_count, complete)
+            if room.get('career_bot_last_attempt') == clue or not gs.can_buzz(bot_sid):
                 return
-            decision = {
-                'will_buzz': True,
-                'buzz_delay': random.uniform(*_solo.get_difficulty(gs.bot_difficulty)['buzz_react']),
-                'answer_delay': _solo.bot_answer_delay(gs.bot_difficulty, gs.ANSWER_WINDOW),
-            }
+            decision = _solo.reviewed_decision(
+                gs.bot_difficulty, pilot.matching_players(gs.revealed_clubs(), complete),
+                gs.revealed_count, complete, gs.strikes.get(bot_sid, 0),
+                f"{room['career_bot_seed']}/{gs.player_index}", gs.ANSWER_WINDOW,
+            )
+            if not decision:
+                return
+            pilot_answer = decision['answer']
         else:
-            candidate = None
             decision = await _legacy_bot_decision(room_code, gs, bot_sid)
-        if not decision or not decision['will_buzz']:
-            return
+            if not decision or not decision['will_buzz']:
+                return
 
         await asyncio.sleep(decision['buzz_delay'])
         room = get_room_state(room_code)
@@ -730,6 +734,8 @@ def register_career_events(sio):
                 or (gs.current_player or {}).get('id') != current_player_id):
             return
 
+        if pilot_answer:
+            room['career_bot_last_attempt'] = clue
         try:
             await career_buzz(bot_sid, {'roomCode': room_code})
         except Exception as e:
@@ -752,8 +758,8 @@ def register_career_events(sio):
         if (gs.stage != 'buzzed' or gs.buzzed_player != bot_sid
                 or gs.state_version != post_buzz_version):
             return
-        if candidate:
-            await career_submit_answer(bot_sid, {'roomCode': room_code, 'answer': candidate['name']})
+        if pilot_answer:
+            await career_submit_answer(bot_sid, {'roomCode': room_code, 'answer': pilot_answer})
         else:
             gs.bump_version()
             await _process_answer_result(room_code, bot_sid, decision['correct'])
@@ -817,6 +823,7 @@ def register_career_events(sio):
                  'user_id': p2.get('user_id'), 'role': 'host' if p2['sid'] == sid else 'bot'},
             ],
             'career_pilot_order': pilot.round_order(),
+            'career_bot_seed': secrets.randbits(32),
             'user_ids': {},          # فارغ عمداً: لا تصنيف في الفردي (دفاع إضافي — الحارس الفعلي في بند 7)
             'game_state': gs,
         }

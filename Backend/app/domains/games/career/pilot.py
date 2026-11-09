@@ -30,22 +30,30 @@ def accepts_name(answer, player):
 
 
 def round_order():
-    easy = [pid for pid, player in ROSTER.items() if player["difficulty"] == "easy"]
-    medium = [pid for pid, player in ROSTER.items() if player["difficulty"] == "medium"]
-    hard = [pid for pid, player in ROSTER.items() if player["difficulty"] == "hard"]
-    random.shuffle(easy)
-    random.shuffle(medium)
-    return easy + medium[:2] + hard + medium[2:]
+    tiers = {
+        tier: [pid for pid, player in ROSTER.items() if player["difficulty"] == tier]
+        for tier in ("easy", "medium", "hard")
+    }
+    for players in tiers.values():
+        random.shuffle(players)
+    easy, medium, hard = (tiers[tier] for tier in ("easy", "medium", "hard"))
+    opening = easy[:2] + medium[:2] + hard[:1]
+    reserve = easy[2:] + medium[2:] + hard[1:]
+    random.shuffle(opening)
+    random.shuffle(reserve)
+    return opening + reserve
 
 
-def candidate_from_clubs(visible_clubs):
-    names = [club["name"] for club in visible_clubs]
+def _club_key(club):
+    return normalize_name(club["name"].removesuffix(" (إعارة)"))
+
+
+def matching_players(visible_clubs, complete=False):
+    names = [_club_key(club) for club in visible_clubs]
     if not names:
-        return None
-    matches = [
+        return []
+    return [
         player for player in ROSTER.values()
-        if names == [club["name"] for club in player["clubs"][:len(names)]]
+        if (not complete or len(player["clubs"]) == len(names))
+        and names == [_club_key(club) for club in player["clubs"][:len(names)]]
     ]
-    if len(matches) == 1 and len(names) >= matches[0]["anchor"]:
-        return matches[0]
-    return None

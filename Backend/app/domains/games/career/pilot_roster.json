@@ -33,7 +33,8 @@
     ],
     "sources": [
       "https://www.intermiamicf.com/news/inter-miami-cf-signs-seven-time-ballon-d-or-winner-world-cup-champion-lionel-mes"
-    ]
+    ],
+    "recognition": "easy"
   },
   {
     "id": 189,
@@ -71,7 +72,8 @@
     ],
     "sources": [
       "https://www.fcbarcelona.com/en/football/barca-legends/players/4231989/iniesta"
-    ]
+    ],
+    "recognition": "easy"
   },
   {
     "id": 165,
@@ -121,7 +123,8 @@
     "sources": [
       "https://www.sporting.pt/en/node/102368",
       "https://www.spl.com.sa/en/news/cristiano-ronaldo-football-s-900-goal-great"
-    ]
+    ],
+    "recognition": "easy"
   },
   {
     "id": 274,
@@ -163,7 +166,8 @@
     ],
     "sources": [
       "https://www.uefa.com/uefachampionsleague/news/024a-0e9cdf0be0e4-36bb996ad10e-1000--champions-league-100-club-luis-figo/"
-    ]
+    ],
+    "recognition": "medium"
   },
   {
     "id": 245,
@@ -200,13 +204,14 @@
     "sources": [
       "https://fcbayern.com/fcbayerntv/en/videos/2019/11/looking-back-pro-debuts-for-lahm-and-schweinsteiger",
       "https://fcbayern.com/en/photos/2017/05/gallery-philipp-lahms-career"
-    ]
+    ],
+    "recognition": "medium"
   },
   {
     "id": 293,
     "name": "ويسلي سنايدر",
     "status": "retired",
-    "nationality": "مملكة هولندا",
+    "nationality": "هولندا",
     "era": "2002-2019",
     "position": "لاعب وسط",
     "difficulty": "medium",
@@ -251,7 +256,8 @@
       "https://www.uefa.com/uefachampionsleague/history/video/legends/025a-0e9e6d0e38a0-fb687e2f1604-1000--champions-league-icon-wesley-sneijder/",
       "https://www.ogcnice.com/fr/fiche/1349/wesley-sneijder.html",
       "https://www.uefa.com/uefanationsleague/news/0253-0d821289f992-2e8f666fa91e-1000--wesley-sneijder-calls-time-on-netherlands-career/"
-    ]
+    ],
+    "recognition": "medium"
   },
   {
     "id": 67,
@@ -293,6 +299,722 @@
     "sources": [
       "https://www.slbenfica.pt/pt-pt/agora/noticias/2018-2019/01/17/futebol-benfica-rui-costa-regressa-a-fafe",
       "https://www.slbenfica.pt/pt-pt/agora/noticias/2017_2018/05/11/rui-costa-o-ultimo-jogo-da-carreira-foi-ha-dez-anos-na-luz"
-    ]
+    ],
+    "recognition": "hard"
+  },
+  {
+    "id": 204,
+    "name": "ستيفن جيرارد",
+    "status": "retired",
+    "nationality": "إنجلترا",
+    "era": "1998-2016",
+    "position": "لاعب وسط",
+    "difficulty": "easy",
+    "anchor": 1,
+    "clubs": [
+      {
+        "name": "ليفربول",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/0/0c/Liverpool_FC.svg/330px-Liverpool_FC.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "لوس أنجلوس غلاكسي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/70/Los_Angeles_Galaxy_logo.svg/330px-Los_Angeles_Galaxy_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Gerrard",
+      "Steven Gerrard",
+      "جيرارد",
+      "جيرارد ستيفن"
+    ],
+    "sources": [
+      "https://www.liverpoolfc.com/past-players/steven-gerrard"
+    ],
+    "recognition": "easy"
+  },
+  {
+    "id": 193,
+    "name": "واين روني",
+    "status": "retired",
+    "nationality": "إنجلترا",
+    "era": "2002-2021",
+    "position": "مهاجم",
+    "difficulty": "medium",
+    "anchor": 2,
+    "clubs": [
+      {
+        "name": "إيفرتون",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/7/7c/Everton_FC_logo.svg/330px-Everton_FC_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "مانشستر يونايتد",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/7/7a/Manchester_United_FC_crest.svg/330px-Manchester_United_FC_crest.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "إيفرتون",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/7/7c/Everton_FC_logo.svg/330px-Everton_FC_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "دي.سي. يونايتد",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/3/32/D.C._United_logo_%282016%29.svg/330px-D.C._United_logo_%282016%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ديربي كاونتي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/4/4a/Derby_County_crest.svg/330px-Derby_County_crest.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Rooney",
+      "Wayne Rooney",
+      "روني",
+      "واين رونى"
+    ],
+    "sources": [
+      "https://www.dcunited.com/club/bio/rooney",
+      "https://www.dcunited.com/news/numbers-wayne-rooney"
+    ],
+    "recognition": "easy"
+  },
+  {
+    "id": 192,
+    "name": "تييري هنري",
+    "status": "retired",
+    "nationality": "فرنسا",
+    "era": "1994-2014",
+    "position": "مهاجم",
+    "difficulty": "medium",
+    "anchor": 3,
+    "clubs": [
+      {
+        "name": "موناكو",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/c/cf/LogoASMonacoFC2021.svg/330px-LogoASMonacoFC2021.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "يوفنتوس",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ed/Juventus_FC_-_logo_black_%28Italy%2C_2020%29.svg/330px-Juventus_FC_-_logo_black_%28Italy%2C_2020%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "أرسنال",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/53/Arsenal_FC.svg/330px-Arsenal_FC.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "برشلونة",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/4/47/FC_Barcelona_%28crest%29.svg/330px-FC_Barcelona_%28crest%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "نيويورك ريد بولز",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/51/New_York_Red_Bulls_logo.svg/330px-New_York_Red_Bulls_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "أرسنال (إعارة)",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/53/Arsenal_FC.svg/330px-Arsenal_FC.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "نيويورك ريد بولز",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/51/New_York_Red_Bulls_logo.svg/330px-New_York_Red_Bulls_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Henry",
+      "Thierry Henry",
+      "هنري",
+      "تيري هنري",
+      "تييري أونري",
+      "أونري"
+    ],
+    "sources": [
+      "https://www.mlssoccer.com/players/thierry-henry/",
+      "https://www.newyorkredbulls.com/news/its-official-thierry-henry-returning-arsenal"
+    ],
+    "recognition": "easy"
+  },
+  {
+    "id": 219,
+    "name": "ديدييه دروغبا",
+    "status": "retired",
+    "nationality": "ساحل العاج",
+    "era": "1998-2018",
+    "position": "مهاجم",
+    "difficulty": "hard",
+    "anchor": 4,
+    "clubs": [
+      {
+        "name": "لومان",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/57/Le_Mans_FC_logo.svg/330px-Le_Mans_FC_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "غانغون",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/56/En_Avant_Guingamp_logo.svg/330px-En_Avant_Guingamp_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "مارسيليا",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4f/Olympique_de_Marseille_2026_logo.svg/330px-Olympique_de_Marseille_2026_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "تشيلسي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/c/cc/Chelsea_FC.svg/330px-Chelsea_FC.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "شنغهاي شينهوا",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/d/d3/Shanghai_Shenhua_F.C.svg/330px-Shanghai_Shenhua_F.C.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "غلطة سراي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/07/Galatasaray_S.K._Logo_2026_5-stars.svg/330px-Galatasaray_S.K._Logo_2026_5-stars.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "تشيلسي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/c/cc/Chelsea_FC.svg/330px-Chelsea_FC.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "مونتريال إمباكت",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fe/Logo_of_CF_Montreal_2023.svg/330px-Logo_of_CF_Montreal_2023.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "فينيكس رايزينغ",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/9/93/Phoenix_Rising_FC_logo.svg/330px-Phoenix_Rising_FC_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Didier Drogba",
+      "Drogba",
+      "دروغبا",
+      "ديديه دروجبا",
+      "دروجبا",
+      "ديدييه دروجبا"
+    ],
+    "sources": [
+      "https://www.mlssoccer.com/players/didier-drogba-x7391/",
+      "https://www.mlssoccer.com/news/former-montreal-impact-star-didier-drogba-announces-retirement"
+    ],
+    "recognition": "easy"
+  },
+  {
+    "id": 215,
+    "name": "آريين روبن",
+    "status": "retired",
+    "nationality": "هولندا",
+    "era": "2000-2021",
+    "position": "جناح",
+    "difficulty": "medium",
+    "anchor": 3,
+    "clubs": [
+      {
+        "name": "غرونينغن",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2c/FC_Groningen_logo.svg/330px-FC_Groningen_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "آيندهوفن",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/0/05/PSV_Eindhoven.svg/330px-PSV_Eindhoven.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "تشيلسي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/c/cc/Chelsea_FC.svg/330px-Chelsea_FC.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ريال مدريد",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/330px-Real_Madrid_CF.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "بايرن ميونخ",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8d/FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg/330px-FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "غرونينغن",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2c/FC_Groningen_logo.svg/330px-FC_Groningen_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Arjen Robben",
+      "Robben",
+      "روبن",
+      "أريين روبن",
+      "أرين روبن",
+      "آرين روبن",
+      "روبين"
+    ],
+    "sources": [
+      "https://fcbayern.com/en/news/2026/01/arjen-robbens-analysis-what-to-expect-against-psv",
+      "https://fcbayern.com/en/news/2025/03/interview-arjen-robben-franck-ribery-dominance-is-part-of-bayern"
+    ],
+    "recognition": "medium"
+  },
+  {
+    "id": 198,
+    "name": "كاكا",
+    "status": "retired",
+    "nationality": "البرازيل",
+    "era": "2001-2017",
+    "position": "وسط هجومي",
+    "difficulty": "easy",
+    "anchor": 2,
+    "clubs": [
+      {
+        "name": "ساو باولو",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f4/S%C3%A3o_Paulo_Futebol_Clube_logo_%282022%29.svg/330px-S%C3%A3o_Paulo_Futebol_Clube_logo_%282022%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ميلان",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d0/Logo_of_AC_Milan.svg/330px-Logo_of_AC_Milan.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ريال مدريد",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/330px-Real_Madrid_CF.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ميلان",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d0/Logo_of_AC_Milan.svg/330px-Logo_of_AC_Milan.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ساو باولو (إعارة)",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f4/S%C3%A3o_Paulo_Futebol_Clube_logo_%282022%29.svg/330px-S%C3%A3o_Paulo_Futebol_Clube_logo_%282022%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "أورلاندو سيتي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/6/6a/Orlando_City_2014.svg/330px-Orlando_City_2014.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Kaká",
+      "Ricardo Kaká",
+      "ريكاردو كاكا"
+    ],
+    "sources": [
+      "https://www.acmilan.com/en/hall-of-fame/inductees/ricardo-kaka",
+      "https://www.mlssoccer.com/news/hes-here-orlando-city-unveil-brazilian-star-kaka-clubs-first-designated-player",
+      "https://www.orlandocitysc.com/news/kak-talks-life-after-soccer-exclusive-interview-lionnation"
+    ],
+    "recognition": "easy"
+  },
+  {
+    "id": 174,
+    "name": "فرانشيسكو توتي",
+    "status": "retired",
+    "nationality": "إيطاليا",
+    "era": "1993-2017",
+    "position": "مهاجم",
+    "difficulty": "easy",
+    "anchor": 1,
+    "clubs": [
+      {
+        "name": "روما",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/f/f7/AS_Roma_logo_%282017%29.svg/330px-AS_Roma_logo_%282017%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Francesco Totti",
+      "Totti",
+      "توتي",
+      "فرانشيسكو توتى"
+    ],
+    "sources": [
+      "https://www.asroma.com/en/news/61162/on-this-day-francesco-totti-says-goodbye"
+    ],
+    "recognition": "easy"
+  },
+  {
+    "id": 267,
+    "name": "باولو مالديني",
+    "status": "retired",
+    "nationality": "إيطاليا",
+    "era": "1985-2009",
+    "position": "مدافع",
+    "difficulty": "easy",
+    "anchor": 1,
+    "clubs": [
+      {
+        "name": "ميلان",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d0/Logo_of_AC_Milan.svg/330px-Logo_of_AC_Milan.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Maldini",
+      "Paolo Maldini",
+      "مالديني"
+    ],
+    "sources": [
+      "https://www.acmilan.com/en/club/legends/players/paolo-maldini"
+    ],
+    "recognition": "easy"
+  },
+  {
+    "id": 284,
+    "name": "كارليس بويول",
+    "status": "retired",
+    "nationality": "إسبانيا",
+    "era": "1999-2014",
+    "position": "مدافع",
+    "difficulty": "medium",
+    "anchor": 1,
+    "clubs": [
+      {
+        "name": "برشلونة",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/4/47/FC_Barcelona_%28crest%29.svg/330px-FC_Barcelona_%28crest%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Carles Puyol",
+      "Puyol",
+      "بويول",
+      "كارلوس بويول",
+      "كارليس بويُل"
+    ],
+    "sources": [
+      "https://www.fcbarcelona.com/en/football/barca-legends/players/3636694/puyol"
+    ],
+    "recognition": "easy"
+  },
+  {
+    "id": 205,
+    "name": "تشافي هيرنانديز",
+    "status": "retired",
+    "nationality": "إسبانيا",
+    "era": "1998-2019",
+    "position": "لاعب وسط",
+    "difficulty": "easy",
+    "anchor": 2,
+    "clubs": [
+      {
+        "name": "برشلونة",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/4/47/FC_Barcelona_%28crest%29.svg/330px-FC_Barcelona_%28crest%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "السد القطري",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/c/c1/Al_Sadd_SC_logo.svg/330px-Al_Sadd_SC_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Xavi Hernández",
+      "Xavi",
+      "تشافي",
+      "تشافي هرنانديز",
+      "تشافي إيرنانديز"
+    ],
+    "sources": [
+      "https://www.fcbarcelona.com/en/football/barca-legends/players/4231987/xavi",
+      "https://www.fcbarcelona.com/en/news/1205752/xavi-hernandez-to-retire-at-end-of-season"
+    ],
+    "recognition": "easy"
+  },
+  {
+    "id": 181,
+    "name": "جانلويجي بوفون",
+    "status": "retired",
+    "nationality": "إيطاليا",
+    "era": "1995-2023",
+    "position": "حارس مرمى",
+    "difficulty": "easy",
+    "anchor": 2,
+    "clubs": [
+      {
+        "name": "بارما",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/97/Logo_Parma_Calcio_1913_%28adozione_2016%29.svg/330px-Logo_Parma_Calcio_1913_%28adozione_2016%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "يوفنتوس",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ed/Juventus_FC_-_logo_black_%28Italy%2C_2020%29.svg/330px-Juventus_FC_-_logo_black_%28Italy%2C_2020%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "باريس سان جيرمان",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/a/a7/Paris_Saint-Germain_F.C..svg/330px-Paris_Saint-Germain_F.C..svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "يوفنتوس",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ed/Juventus_FC_-_logo_black_%28Italy%2C_2020%29.svg/330px-Juventus_FC_-_logo_black_%28Italy%2C_2020%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "بارما",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/97/Logo_Parma_Calcio_1913_%28adozione_2016%29.svg/330px-Logo_Parma_Calcio_1913_%28adozione_2016%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Buffon",
+      "Gianluigi Buffon",
+      "بوفون",
+      "جيانلويجي بوفون",
+      "جيان لويجي بوفون",
+      "جيجي بوفون"
+    ],
+    "sources": [
+      "https://www.juventus.com/en/news/articles/the-story-gianluigi-buffon-final-season-at-juventus",
+      "https://www.parmacalcio1913.com/en/main-news/g1gi-is-forever/"
+    ],
+    "recognition": "easy"
+  },
+  {
+    "id": 248,
+    "name": "أندريا بيرلو",
+    "status": "retired",
+    "nationality": "إيطاليا",
+    "era": "1995-2017",
+    "position": "لاعب وسط",
+    "difficulty": "hard",
+    "anchor": 5,
+    "clubs": [
+      {
+        "name": "بريشيا",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/1/17/Brescia_calcio_badge.svg/330px-Brescia_calcio_badge.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "إنتر ميلان",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/05/FC_Internazionale_Milano_2021.svg/330px-FC_Internazionale_Milano_2021.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ريجينا (إعارة)",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/c/cd/AS_Reggina_1914_crest.svg/330px-AS_Reggina_1914_crest.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "إنتر ميلان",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/05/FC_Internazionale_Milano_2021.svg/330px-FC_Internazionale_Milano_2021.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "بريشيا (إعارة)",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/1/17/Brescia_calcio_badge.svg/330px-Brescia_calcio_badge.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ميلان",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d0/Logo_of_AC_Milan.svg/330px-Logo_of_AC_Milan.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "يوفنتوس",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ed/Juventus_FC_-_logo_black_%28Italy%2C_2020%29.svg/330px-Juventus_FC_-_logo_black_%28Italy%2C_2020%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "نيويورك سيتي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/eb/Logo_New_York_City_FC_2025.svg/330px-Logo_New_York_City_FC_2025.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Andrea Pirlo",
+      "Pirlo",
+      "بيرلو",
+      "أندريه بيرلو",
+      "اندريا بيرلو"
+    ],
+    "sources": [
+      "https://www.uefa.com/MultimediaFiles/Download/competitions/Draws/02/58/32/85/2583285_DOWNLOAD.pdf",
+      "https://www.inter.it/it/archivio_giocatore/G0507"
+    ],
+    "recognition": "easy"
+  },
+  {
+    "id": 1001,
+    "name": "بيبي",
+    "status": "retired",
+    "nationality": "البرتغال",
+    "era": "2001-2024",
+    "position": "مدافع",
+    "difficulty": "hard",
+    "anchor": 3,
+    "clubs": [
+      {
+        "name": "ماريتيمو",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/3/30/C.S._Mar%C3%ADtimo_logo.svg/330px-C.S._Mar%C3%ADtimo_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "بورتو",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/f/f1/FC_Porto.svg/330px-FC_Porto.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ريال مدريد",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/330px-Real_Madrid_CF.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "بشكتاش",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/da/BesiktasJK-Logo.svg/330px-BesiktasJK-Logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "بورتو",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/f/f1/FC_Porto.svg/330px-FC_Porto.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Pepe",
+      "بيبيه",
+      "كيبلر بيبي"
+    ],
+    "sources": [
+      "https://www.uefa.com/uefachampionsleague/news/0250-0e998d1a3195-70cedaa12c03-1000--how-porto-made-a-champion-of-pepe/",
+      "https://www.realmadrid.com/en-US/news/club/announcements/co-08-08-2024"
+    ],
+    "recognition": "medium"
+  },
+  {
+    "id": 1002,
+    "name": "محمد الدعيع",
+    "status": "retired",
+    "nationality": "السعودية",
+    "era": "1989-2010",
+    "position": "حارس مرمى",
+    "difficulty": "hard",
+    "anchor": 2,
+    "clubs": [
+      {
+        "name": "الطائي"
+      },
+      {
+        "name": "الهلال السعودي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/55/Al_Hilal_SFC_Logo.svg/330px-Al_Hilal_SFC_Logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "الدعيع",
+      "Mohamed Al-Deayea",
+      "Mohammed Al Deayea",
+      "Al Deayea",
+      "محمد دعيع"
+    ],
+    "sources": [
+      "https://www.the-afc.com/en/more/news/mohamed_al_deayea_saudi_arabias_mr_safe_hands.html",
+      "https://www.fifa.com/en/articles/al-hilal-club-profile-history-players-qualified"
+    ],
+    "recognition": "medium"
+  },
+  {
+    "id": 171,
+    "name": "ديفيد بيكهام",
+    "status": "retired",
+    "nationality": "إنجلترا",
+    "era": "1992-2013",
+    "position": "لاعب وسط",
+    "difficulty": "medium",
+    "anchor": 3,
+    "clubs": [
+      {
+        "name": "مانشستر يونايتد",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/7/7a/Manchester_United_FC_crest.svg/330px-Manchester_United_FC_crest.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "بريستون نورث إيند (إعارة)",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/8/82/Preston_North_End_FC.svg/330px-Preston_North_End_FC.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "مانشستر يونايتد",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/7/7a/Manchester_United_FC_crest.svg/330px-Manchester_United_FC_crest.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ريال مدريد",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/330px-Real_Madrid_CF.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "لوس أنجلوس غلاكسي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/70/Los_Angeles_Galaxy_logo.svg/330px-Los_Angeles_Galaxy_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ميلان (إعارة)",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d0/Logo_of_AC_Milan.svg/330px-Logo_of_AC_Milan.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "لوس أنجلوس غلاكسي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/70/Los_Angeles_Galaxy_logo.svg/330px-Los_Angeles_Galaxy_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ميلان (إعارة)",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d0/Logo_of_AC_Milan.svg/330px-Logo_of_AC_Milan.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "لوس أنجلوس غلاكسي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/70/Los_Angeles_Galaxy_logo.svg/330px-Los_Angeles_Galaxy_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "باريس سان جيرمان",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/a/a7/Paris_Saint-Germain_F.C..svg/330px-Paris_Saint-Germain_F.C..svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Beckham",
+      "David Beckham",
+      "بيكهام",
+      "ديفد بيكهام",
+      "ديفيد بكهام"
+    ],
+    "sources": [
+      "https://www.manutd.com/en/news/david-beckham-united-debut-30-years-on",
+      "https://www.mlssoccer.com/news/la-galaxy-agree-loan-david-beckham-ac-milan",
+      "https://www.davidbeckham.com/about"
+    ],
+    "recognition": "easy"
+  },
+  {
+    "id": 172,
+    "name": "كيليان مبابي",
+    "status": "current",
+    "nationality": "فرنسا",
+    "era": "2015-الآن",
+    "position": "مهاجم",
+    "difficulty": "easy",
+    "anchor": 2,
+    "clubs": [
+      {
+        "name": "موناكو",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/c/cf/LogoASMonacoFC2021.svg/330px-LogoASMonacoFC2021.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "باريس سان جيرمان",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/a/a7/Paris_Saint-Germain_F.C..svg/330px-Paris_Saint-Germain_F.C..svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ريال مدريد",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/330px-Real_Madrid_CF.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Kylian Mbappé",
+      "Mbappé",
+      "مبابي",
+      "كيليان امبابي",
+      "كيلان مبابي",
+      "إمبابي"
+    ],
+    "sources": [
+      "https://www.realmadrid.com/en-US/football/squad/kylian-mbappe"
+    ],
+    "recognition": "easy"
+  },
+  {
+    "id": 200,
+    "name": "إيرلينغ هالاند",
+    "status": "current",
+    "nationality": "النرويج",
+    "era": "2016-الآن",
+    "position": "مهاجم",
+    "difficulty": "medium",
+    "anchor": 3,
+    "clubs": [
+      {
+        "name": "برينه",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/6/6f/Bryne_FK_logo.svg/330px-Bryne_FK_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "مولده",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/57/Molde_Fotball_Logo.svg/330px-Molde_Fotball_Logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ريد بل سالزبورغ",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/7/77/FC_Red_Bull_Salzburg_logo.svg/330px-FC_Red_Bull_Salzburg_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "بوروسيا دورتموند",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/67/Borussia_Dortmund_logo.svg/330px-Borussia_Dortmund_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "مانشستر سيتي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/e/eb/Manchester_City_FC_badge.svg/330px-Manchester_City_FC_badge.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Erling Haaland",
+      "Haaland",
+      "هالاند",
+      "إرلينغ هالاند",
+      "إيرلينج هالاند",
+      "هالند",
+      "هولاند"
+    ],
+    "sources": [
+      "https://www.mancity.com/features/erling-haaland/rise/",
+      "https://www.mancity.com/news/mens/erling-haaland-250-senior-club-goals-63874186"
+    ],
+    "recognition": "easy"
   }
 ]

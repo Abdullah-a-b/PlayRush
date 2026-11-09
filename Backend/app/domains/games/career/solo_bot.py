@@ -239,14 +239,14 @@ def decide_on_reveal(difficulty_name, knows, revealed_count,
 # ============================================================
 #  الإجابة بعد البزّ
 # ============================================================
-def bot_answer_delay(difficulty_name, answer_window):
+def bot_answer_delay(difficulty_name, answer_window, *, rng=random):
     """كم يستغرق البوت في "الكتابة" داخل نافذة الإجابة."""
     cfg = get_difficulty(difficulty_name)
     lo = min(cfg["type_min"], answer_window * 0.25)
     hi = min(cfg["type_max"], answer_window * 0.85)
     if hi <= lo:
         hi = lo + 0.5
-    return round(random.uniform(lo, hi), 2)
+    return round(rng.uniform(lo, hi), 2)
 
 
 def bot_answers_correctly(difficulty_name, knows, confident, accuracy_bonus=0.0):
@@ -425,3 +425,42 @@ def decide_help(difficulty_name, knows, revealed_count, strikes_used,
     if boosters:
         return sorted(boosters, reverse=True)[0][1]
     return None
+
+# قرار البوت في القائمة المراجعة. ذاكرة كل اسم مستقرة خلال الجولة.
+_REVIEWED_RISK = {
+    "beginner": (0.66, 0.85),
+    "medium": (0.78, 0.64),
+    "hard": (0.89, 0.48),
+    "expert": (0.97, 0.35),
+}
+
+
+def reviewed_decision(difficulty, candidates, revealed_count, complete, strikes, seed, answer_window):
+    """تخمين من المرشحين الموافقين للأندية المكشوفة مع تردد وتأخر في الرد."""
+    if not candidates or strikes >= 2:
+        return None
+    chance, ambiguity = _REVIEWED_RISK.get(difficulty, _REVIEWED_RISK[DEFAULT_DIFFICULTY])
+    remembered = [
+        player for player in candidates
+        if revealed_count >= player["anchor"]
+        and random.Random(f"{seed}/{player['id']}").random()
+        < knowledge_probability(difficulty, player["recognition"])
+    ]
+    if not remembered:
+        return None
+
+    rng = random.Random(f"{seed}/{revealed_count}/{int(complete)}")
+    chance *= (1 if complete else 0.85) / (1 + (len(candidates) - 1) * ambiguity)
+    if strikes and not complete:
+        chance *= 0.68
+    if rng.random() >= chance:
+        return None
+
+    # المرشح المألوف الذي تجاوز قرينته أكثر إقناعًا عند تشابه المسارات.
+    weights = [1 + revealed_count - player["anchor"] for player in remembered]
+    pick = rng.choices(remembered, weights=weights, k=1)[0]
+    return {
+        "answer": pick["name"],
+        "buzz_delay": rng.uniform(*get_difficulty(difficulty)["buzz_react"]),
+        "answer_delay": bot_answer_delay(difficulty, answer_window, rng=rng),
+    }
