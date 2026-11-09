@@ -16,6 +16,7 @@ from app.domains.games.career.online import reserve_player
 from app.domains.wallet.reward_service import record_match_result
 from app.core.text_processor import check_answer
 from app.domains.games import trained_bot
+from app.domains.games.career.club_identity import resolve_club
 from app.sockets.state import connected_players
 
 
@@ -62,7 +63,7 @@ def register_career_events(sio):
                 return None
             return {
                 'id': cp.id, 'name': cp.name, 'status': cp.status,
-                'clubs': json.loads(cp.clubs) if cp.clubs else [],
+                'clubs': [resolve_club(club) for club in json.loads(cp.clubs or '[]')],
                 'accepted_answers': json.loads(cp.accepted_answers) if cp.accepted_answers else [],
                 'nationality': cp.nationality, 'era': cp.era, 'position': cp.position,
                 'difficulty': cp.difficulty,
@@ -87,7 +88,8 @@ def register_career_events(sio):
         # 🤖 نقطة ربط واحدة تغطي كل مصادر الكشف (بدء شخصية/تكة دورية/استئناف
         # بعد سترايك) — البوت يعيد النظر بالبزّ في كل مرة تُصدَر هذي الحالة.
         if getattr(gs, 'is_solo', False) and 'consider_buzz' in _SOLO_HOOKS:
-            sio.start_background_task(_SOLO_HOOKS['consider_buzz'], room_code, gs.state_version)
+            window = payload.get('resumeSeconds', payload.get('windowSeconds', gs.REVEAL_INTERVAL))
+            sio.start_background_task(_SOLO_HOOKS['consider_buzz'], room_code, gs.state_version, window)
 
     async def _reveal_loop(room_code, version, resume_seconds=None):
         room = get_room_state(room_code)
@@ -641,7 +643,7 @@ def register_career_events(sio):
                                       gs.ANSWER_WINDOW, jitter, opponent_locked, is_final,
                                       single_club, conf_bonus, has_shield_now, accuracy_bonus)
 
-    async def _bot_consider_buzz(room_code, version):
+    async def _bot_consider_buzz(room_code, version, window):
         room = get_room_state(room_code)
         if not room or not room.get('game_state'):
             return
@@ -658,13 +660,15 @@ def register_career_events(sio):
             clue = (gs.player_index, gs.revealed_count, complete)
             if room.get('career_bot_last_attempt') == clue or not gs.can_buzz(bot_sid):
                 return
+            if gs.bot_difficulty == 'beginner' and (not gs.first_reveal_done or window <= 3.2):
+                return
             started = time.monotonic()
             visible_clubs = gs.revealed_clubs()
             model = await trained_bot.decide(
                 'career', gs.bot_difficulty, 'reveal', ['wait', 'buzz'],
                 clubs=[club['name'] for club in visible_clubs],
                 status=(gs.current_player or {}).get('status', 'retired'), complete=complete,
-                seconds=gs.FINAL_WINDOW if complete else gs.REVEAL_INTERVAL,
+                seconds=window,
             )
             if model:
                 if model[0] == 'wait':
@@ -683,7 +687,13 @@ def register_career_events(sio):
                 if not decision:
                     return
                 pilot_answer = decision['answer']
-            decision['buzz_delay'] = max(0, decision['buzz_delay'] - (time.monotonic() - started))
+            delay = decision['buzz_delay']
+            if gs.bot_difficulty == 'beginner':
+                delay = max(delay, random.uniform(3.2, 4.4))
+            elapsed = time.monotonic() - started
+            if max(elapsed, delay) >= window:
+                return
+            decision['buzz_delay'] = max(0, delay - elapsed)
         else:
             decision = await _legacy_bot_decision(room_code, gs, bot_sid)
             if not decision or not decision['will_buzz']:

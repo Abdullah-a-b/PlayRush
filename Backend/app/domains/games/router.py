@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from app.infrastructure.database import get_db
 from app.domains.games.models import CareerPlayer
 from app.domains.games.career.pilot import ROSTER_BY_QID
+from app.domains.games.career.club_identity import resolve_club
 
 router = APIRouter()
 
@@ -30,7 +31,8 @@ async def get_club_logos(db: Session = Depends(get_db)):
     if _cache["logos"] is not None and (time.time() - _cache["ts"]) < _CACHE_TTL:
         return {"logos": _cache["logos"]}
 
-    logos = set()
+    logos = {club["logo"] for player in ROSTER_BY_QID.values() for club in player["clubs"]
+             if club.get("logo")}
     rows = db.query(CareerPlayer.clubs).filter(
         CareerPlayer.active.is_(True), CareerPlayer.wikidata_id.in_(ROSTER_BY_QID),
     ).all()
@@ -39,8 +41,9 @@ async def get_club_logos(db: Session = Depends(get_db)):
             continue
         try:
             for club in json.loads(clubs_raw):
-                if club.get("logo"):
-                    logos.add(club["logo"])
+                logo = resolve_club(club).get("logo")
+                if logo:
+                    logos.add(logo)
         except Exception:
             continue
 

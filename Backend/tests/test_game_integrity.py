@@ -158,6 +158,47 @@ class IntegrityTests(unittest.TestCase):
             await env['_answer_timeout']('LOCAL','a','q',1,13);self.assertEqual(waits,[13]);self.assertEqual(len(handled),1)
         asyncio.run(exercise())
 
+    def test_beginner_career_gives_player_first_clue_and_keeps_reaction_delay(self):
+        from app.domains.games.career import solo_bot
+        from app.domains.games.career.engine import CareerGameState
+
+        async def exercise():
+            gs = CareerGameState('human', solo_bot.BOT_SID)
+            gs.is_solo = True
+            gs.bot_difficulty = 'beginner'
+            gs.start_new_player({'id': 1, 'clubs': [{'name': 'A'}, {'name': 'B'}]})
+            room = {'game_state': gs, 'career_pilot_order': [1]}
+            clock = [0.0]
+            buzzes = []
+
+            async def decide(*args, **kwargs):
+                clock[0] += 2.4
+                return ('buzz', 'Player')
+
+            async def sleep(seconds):
+                clock[0] += seconds
+
+            async def buzz(*args):
+                buzzes.append(clock[0])
+
+            env = functions('app/domains/games/career/events.py', {'_bot_consider_buzz'}, {
+                'get_room_state': lambda code: room, '_solo': solo_bot,
+                'trained_bot': types.SimpleNamespace(decide=decide),
+                'time': types.SimpleNamespace(monotonic=lambda: clock[0]),
+                'random': types.SimpleNamespace(uniform=lambda low, high: low),
+                'asyncio': types.SimpleNamespace(sleep=sleep), 'career_buzz': buzz,
+            })
+            consider = env['_bot_consider_buzz']
+            await consider('LOCAL', gs.state_version, 5)
+            self.assertEqual(clock[0], 0)
+            gs.reveal_next_club()
+            await consider('LOCAL', gs.state_version, 3)
+            self.assertEqual(clock[0], 0)
+            await consider('LOCAL', gs.state_version, 10)
+            self.assertEqual(buzzes, [3.2])
+
+        asyncio.run(exercise())
+
     def test_career_timer_survives_connection_remap_and_reveals_next_club(self):
         from app.domains.games.career.engine import CareerGameState
         async def exercise():

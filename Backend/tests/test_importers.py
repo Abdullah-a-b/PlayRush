@@ -58,6 +58,22 @@ class ImportTests(unittest.TestCase):
   spells=[dict(club=q,start=f'+{year}',end=None) for q,year in [('Q202',2010),('Q200',2011),('Q200',2011),('Q200',2012),('Q201',2013),('Q200',2014)]]
   self.assertEqual([club['name'] for club in career.build_clubs_json(spells,clubs,skip_logos=True)], ['First FC','Loan FC','First FC'])
 
+ def test_career_distinguishes_egyptian_and_saudi_al_ahli_by_club_id(self):
+  from app.domains.games.career.club_identity import resolve_club
+  from app.domains.games.career.pilot import ROSTER
+  clubs={qid:{'labels':{'ar':{'value':'الأهلي المصري'}}} for qid in ('Q223566','Q44441')}
+  spells=[dict(club=qid,start=f'+{year}',end=None) for qid,year in [('Q223566',2010),('Q44441',2011)]]
+  with patch.object(career,'download_logo') as lookup:
+   egypt, saudi = career.build_clubs_json(spells,clubs)
+   lookup.assert_not_called()
+  self.assertEqual((egypt['name'],saudi['name']),('الأهلي المصري','الأهلي السعودي'))
+  self.assertNotEqual(egypt['logo'],saudi['logo'])
+  self.assertEqual(resolve_club({'name':'الأهلي المصري','logo':saudi['logo']}),egypt)
+  for player_id in (1006,1007):
+   for club in ROSTER[player_id]['clubs']:
+    if club['name'] == egypt['name']:
+     self.assertEqual(club,egypt)
+
  def test_reviewed_players_are_not_overwritten_by_discovery_or_refresh(self):
   with patch.object(career,'SessionLocal',return_value=Session()),patch.object(career,'wd_get_entities') as fetch:
    result=career.run_import(player_qids=['Q615'],refresh=True,skip_logos=True,log=lambda _:None)

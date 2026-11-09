@@ -1591,14 +1591,16 @@
       },
       {
         "name": "الأهلي المصري",
-        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/4/45/Al_Ahli_Saudi_FC_logo.svg/330px-Al_Ahli_Saudi_FC_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        "club_qid": "Q223566",
+        "logo": "https://www.alahlyegypt.com/logo.png"
       },
       {
         "name": "بني ياس (إعارة)"
       },
       {
         "name": "الأهلي المصري",
-        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/4/45/Al_Ahli_Saudi_FC_logo.svg/330px-Al_Ahli_Saudi_FC_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        "club_qid": "Q223566",
+        "logo": "https://www.alahlyegypt.com/logo.png"
       }
     ],
     "accepted_answers": [
@@ -1630,7 +1632,8 @@
     "clubs": [
       {
         "name": "الأهلي المصري",
-        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/4/45/Al_Ahli_Saudi_FC_logo.svg/330px-Al_Ahli_Saudi_FC_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        "club_qid": "Q223566",
+        "logo": "https://www.alahlyegypt.com/logo.png"
       }
     ],
     "accepted_answers": [

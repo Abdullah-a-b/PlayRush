@@ -413,6 +413,8 @@ def build_clubs_json(career_list, club_ents, skip_logos=False, redo_logos=False)
     """يبني قائمة أندية لاعب واحد (بالاسم + الشعار) من مسيرته المفروزة
     و كيانات الأندية المجلوبة مسبقاً. مستقلة عن run_import كي يُعاد
     استخدامها من الاستيراد الكامل وبكسل تصحيح الشعارات القديمة معاً."""
+    from app.domains.games.career.club_identity import resolve_club
+
     clubs_json = []
     previous_qid = None
     for spell in _senior_spells(career_list, club_ents):
@@ -421,8 +423,8 @@ def build_clubs_json(career_list, club_ents, skip_logos=False, redo_logos=False)
             continue
         previous_qid = club_qid
         club_ent = club_ents[club_qid]
-        entry = {"name": _label(club_ent)}
-        if not skip_logos:
+        entry = resolve_club({"name": _label(club_ent), "club_qid": club_qid})
+        if not skip_logos and not entry.get("logo"):
             logo = download_logo(club_qid, club_ent, _label(club_ent, ("en",)), redo=redo_logos)
             if logo:
                 entry["logo"] = logo
