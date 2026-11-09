@@ -9,7 +9,7 @@ class CareerPilotTests(unittest.TestCase):
         cases = {
             67: ["روي كُوستة", "Rui Costa"],
             164: ["ليـونل ميسي", "  LIONEL   MESSI!  ", "مِیسي"],
-            165: ["CR٧", "CR۷", "كرستيانو رونالدو", "رونالدو", "Ronaldo", "رونلدو"],
+            165: ["CR٧", "CR۷", "كرستيانو رونالدو"],
             189: ["أندريس إنيستا", "Andrés Iniesta"],
             245: ["فيليب لاهم", "Philipp Lahm"],
             274: ["لويس فيجو", "Luis Figo"],
@@ -18,6 +18,9 @@ class CareerPilotTests(unittest.TestCase):
             172: ["مبابي", "Kylian Mbappe"],
             219: ["دروجبا", "Didier Drogba"],
             205: ["تشافي", "Xavi Hernandez"],
+            1006: ["أبو تريكة", "ابوتريكة"],
+            1007: ["بيبو", "Mahmoud Al Khatib"],
+            1009: ["القحطاني", "Yasser Al-Qahtani"],
         }
         for pid, spellings in cases.items():
             for spelling in spellings:
@@ -44,7 +47,7 @@ class CareerPilotTests(unittest.TestCase):
 
     def test_deck_rotation_keeps_round_balance_and_uses_full_roster(self):
         first_five = set()
-        self.assertGreaterEqual(len(pilot.ROSTER), 24)
+        self.assertGreaterEqual(len(pilot.ROSTER), 50)
         for _ in range(30):
             order = pilot.round_order()
             self.assertEqual(set(order), set(pilot.ROSTER))
@@ -94,7 +97,6 @@ class CareerPilotTests(unittest.TestCase):
         self.assertIsNone(solo_bot.reviewed_decision("expert", candidates, 1, False, 0, 1, 10))
         self.assertIsNone(solo_bot.reviewed_decision("expert", candidates, 5, True, 2, 1, 10))
 
-
     def test_legend_exception_is_in_the_playable_roster(self):
         pele = pilot.ROSTER_BY_QID["Q34670"]
         self.assertEqual(pele["admission"], "legend_exception")
@@ -102,3 +104,18 @@ class CareerPilotTests(unittest.TestCase):
         self.assertEqual([club["name"] for club in pele["clubs"]], ["سانتوس", "نيويورك كوسموس"])
         for alias in ("بيليه", "بيلي", "Pelé", "Pele"):
             self.assertTrue(pilot.accepts_name(alias, pele))
+
+
+    def test_shared_ronaldo_alias_respects_the_current_round(self):
+        cristiano = pilot.ROSTER_BY_QID["Q11571"]
+        nazario = pilot.ROSTER_BY_QID["Q529207"]
+        for player in (cristiano, nazario):
+            for alias in ("رونالدو", "رونلدو", "Ronaldo"):
+                self.assertTrue(pilot.accepts_name(alias, player))
+        self.assertFalse(pilot.accepts_name("رونالدو البرازيلي", cristiano))
+        self.assertFalse(pilot.accepts_name("كريستيانو رونالدو", nazario))
+        self.assertTrue(pilot.accepts_name("Ronaldo Nazário", nazario))
+
+    def test_reviewed_legend_admissions(self):
+        exceptions = {p["wikidata_id"] for p in pilot.ROSTER.values() if p.get("admission") == "legend_exception"}
+        self.assertTrue({"Q34670", "Q1799274", "Q981909", "Q1249859"} <= exceptions)

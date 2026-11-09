@@ -1573,5 +1573,501 @@
       "https://www.santosfc.com.br/en/idols/",
       "https://www.nycosmos.com/history/"
     ]
+  },
+  {
+    "id": 1006,
+    "wikidata_id": "Q1799274",
+    "name": "محمد أبو تريكة",
+    "status": "retired",
+    "nationality": "مصر",
+    "era": "1997-2013",
+    "position": "لاعب وسط",
+    "difficulty": "easy",
+    "recognition": "easy",
+    "anchor": 2,
+    "clubs": [
+      {
+        "name": "الترسانة"
+      },
+      {
+        "name": "الأهلي المصري",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/4/45/Al_Ahli_Saudi_FC_logo.svg/330px-Al_Ahli_Saudi_FC_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "بني ياس (إعارة)"
+      },
+      {
+        "name": "الأهلي المصري",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/4/45/Al_Ahli_Saudi_FC_logo.svg/330px-Al_Ahli_Saudi_FC_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "أبو تريكة",
+      "ابوتريكة",
+      "أبو تريكه",
+      "محمد ابوتريكة",
+      "Mohamed Aboutrika",
+      "Aboutrika"
+    ],
+    "sources": [
+      "https://www.fifa.com/en/articles/aboutrika-the-legend-of-the-top-club-world-cup-arab-goalscorer-egyp-al-ahly",
+      "https://img.fifa.com/image/upload/ghd0g4e9zyk5pbithtcg.pdf",
+      "https://www.thenationalnews.com/sport/ahly-stretch-record-haul-of-trophies-1.588872"
+    ],
+    "admission": "legend_exception"
+  },
+  {
+    "id": 1007,
+    "wikidata_id": "Q981909",
+    "name": "محمود الخطيب",
+    "status": "retired",
+    "nationality": "مصر",
+    "era": "1972-1988",
+    "position": "مهاجم",
+    "difficulty": "medium",
+    "recognition": "easy",
+    "anchor": 1,
+    "clubs": [
+      {
+        "name": "الأهلي المصري",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/4/45/Al_Ahli_Saudi_FC_logo.svg/330px-Al_Ahli_Saudi_FC_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "الخطيب",
+      "بيبو",
+      "Mahmoud El Khatib",
+      "Mahmoud Al Khatib"
+    ],
+    "sources": [
+      "https://alahlyegypt.com/ar/news/article/%D8%A8%D9%8A%D8%A8%D9%88-%D8%A7%D9%84%D8%A7%D8%B3%D8%B7%D9%88%D8%B1%D8%A9-%D8%AA%D8%A7%D8%B1%D9%8A%D8%AE-%D9%88%D8%A3%D8%B1%D9%82%D8%A7%D9%85"
+    ],
+    "admission": "legend_exception"
+  },
+  {
+    "id": 1008,
+    "wikidata_id": "Q446181",
+    "name": "ماجد عبدالله",
+    "status": "retired",
+    "nationality": "السعودية",
+    "era": "1977-1998",
+    "position": "مهاجم",
+    "difficulty": "easy",
+    "recognition": "easy",
+    "anchor": 1,
+    "clubs": [
+      {
+        "name": "النصر السعودي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3f/Nassr_FC_Logo.svg/330px-Nassr_FC_Logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "ماجد عبد الله",
+      "Majed Abdullah",
+      "Majed Abdallah"
+    ],
+    "sources": [
+      "https://www.the-afc.com/en/more/news/asian_icons_majed_abdullah_saudi_arabia.html"
+    ]
+  },
+  {
+    "id": 1009,
+    "wikidata_id": "Q328750",
+    "name": "ياسر القحطاني",
+    "status": "retired",
+    "nationality": "السعودية",
+    "era": "2000-2018",
+    "position": "مهاجم",
+    "difficulty": "medium",
+    "recognition": "easy",
+    "anchor": 2,
+    "clubs": [
+      {
+        "name": "القادسية السعودي"
+      },
+      {
+        "name": "الهلال السعودي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/55/Al_Hilal_SFC_Logo.svg/330px-Al_Hilal_SFC_Logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "العين الإماراتي (إعارة)",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/e/ee/Al_Ain_FC_logo.svg/330px-Al_Ain_FC_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "الهلال السعودي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/55/Al_Hilal_SFC_Logo.svg/330px-Al_Hilal_SFC_Logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "القحطاني",
+      "ياسر القحطانى",
+      "Yasser Al-Qahtani",
+      "Yasser Al Qahtani"
+    ],
+    "sources": [
+      "https://www.the-afc.com/en/more/news/asian_icons_yasser_al_qahtani_saudi_arabia.html",
+      "https://www.the-afc.com/en/about_afc/member_associations/news/al_qahtani_calls_it_a_day.html"
+    ]
+  },
+  {
+    "id": 1010,
+    "wikidata_id": "Q381686",
+    "name": "سعيد العويران",
+    "status": "retired",
+    "nationality": "السعودية",
+    "era": "1988-2001",
+    "position": "لاعب وسط",
+    "difficulty": "medium",
+    "recognition": "easy",
+    "anchor": 1,
+    "clubs": [
+      {
+        "name": "الشباب السعودي"
+      }
+    ],
+    "accepted_answers": [
+      "العويران",
+      "Saeed Al-Owairan",
+      "Saeed Al Owairan"
+    ],
+    "sources": [
+      "https://www.the-afc.com/ar/national/fifa_world_cup/news/%D8%A3%D9%87%D8%AF%D8%A7%D9%81_%D9%84%D8%A7_%D8%AA%D9%8F%D9%86%D8%B3%D9%89_%D8%B3%D8%B9%D9%8A%D8%AF_%D8%A7%D9%84%D8%B9%D9%88%D9%8A%D8%B1%D8%A7%D9%86.html"
+    ]
+  },
+  {
+    "id": 1011,
+    "wikidata_id": "Q1249859",
+    "name": "روجيريو سيني",
+    "status": "retired",
+    "nationality": "البرازيل",
+    "era": "1990-2015",
+    "position": "حارس مرمى",
+    "difficulty": "hard",
+    "recognition": "medium",
+    "anchor": 2,
+    "clubs": [
+      {
+        "name": "سينوب"
+      },
+      {
+        "name": "ساو باولو",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f4/S%C3%A3o_Paulo_Futebol_Clube_logo_%282022%29.svg/330px-S%C3%A3o_Paulo_Futebol_Clube_logo_%282022%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "روغيريو سيني",
+      "روجيريو سينيه",
+      "Rogério Ceni",
+      "Ceni"
+    ],
+    "sources": [
+      "https://www.saopaulofc.net/26-anos-de-historia-entre-rogerio-ceni-e-sao-paulo-futebol-clube/",
+      "https://www.saopaulofc.net/rogerio-ceni-numeros-que-vao-alem-do-milesimo/"
+    ],
+    "admission": "legend_exception"
+  },
+  {
+    "id": 175,
+    "wikidata_id": "Q529207",
+    "name": "رونالدو نازاريو",
+    "status": "retired",
+    "nationality": "البرازيل",
+    "era": "1993-2011",
+    "position": "مهاجم",
+    "difficulty": "easy",
+    "recognition": "easy",
+    "anchor": 2,
+    "clubs": [
+      {
+        "name": "كروزيرو",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/90/Cruzeiro_Esporte_Clube_%28logo%29.svg/330px-Cruzeiro_Esporte_Clube_%28logo%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "آيندهوفن",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/0/05/PSV_Eindhoven.svg/330px-PSV_Eindhoven.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "برشلونة",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/4/47/FC_Barcelona_%28crest%29.svg/330px-FC_Barcelona_%28crest%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "إنتر ميلان",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/05/FC_Internazionale_Milano_2021.svg/330px-FC_Internazionale_Milano_2021.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ريال مدريد",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/330px-Real_Madrid_CF.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ميلان",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d0/Logo_of_AC_Milan.svg/330px-Logo_of_AC_Milan.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "كورينثيانز",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/5a/Sport_Club_Corinthians_Paulista_crest.svg/330px-Sport_Club_Corinthians_Paulista_crest.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "رونالدو",
+      "رونلدو",
+      "رونالدو البرازيلي",
+      "رونالدو نازاريو دي ليما",
+      "Ronaldo",
+      "Ronaldo Nazário",
+      "R9"
+    ],
+    "sources": [
+      "https://www.realmadrid.com/en-US/the-club/history/football-legends/ronaldo-luis-nazario-de-lima",
+      "https://players.fcbarcelona.com/en/player/764-ronaldo-ronaldo-luis-nazario-da-lima"
+    ]
+  },
+  {
+    "id": 1013,
+    "wikidata_id": "Q52876",
+    "name": "خافيير زانيتي",
+    "status": "retired",
+    "nationality": "الأرجنتين",
+    "era": "1992-2014",
+    "position": "مدافع",
+    "difficulty": "hard",
+    "recognition": "medium",
+    "anchor": 3,
+    "clubs": [
+      {
+        "name": "تاليريس ريميديوس دي إسكالادا"
+      },
+      {
+        "name": "بانفيلد",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/16/CA_Banfield_%282014%29.svg/330px-CA_Banfield_%282014%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "إنتر ميلان",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/05/FC_Internazionale_Milano_2021.svg/330px-FC_Internazionale_Milano_2021.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "زانيتي",
+      "خافيير زانيتّي",
+      "خافيير زانتي",
+      "Javier Zanetti",
+      "Zanetti"
+    ],
+    "sources": [
+      "https://www.inter.it/it/notizie/2021-12-14-inter-podcast-javier-zanetti-hall-of-fame",
+      "https://www.inter.it/en/club/hall-of-fame/javier-zanetti"
+    ]
+  },
+  {
+    "id": 241,
+    "wikidata_id": "Q41244",
+    "name": "أندري شيفتشينكو",
+    "status": "retired",
+    "nationality": "أوكرانيا",
+    "era": "1994-2012",
+    "position": "مهاجم",
+    "difficulty": "medium",
+    "recognition": "easy",
+    "anchor": 2,
+    "clubs": [
+      {
+        "name": "دينامو كييف",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/db/Futbolny_Klub_Dynamo_Kyiv_logo.svg/330px-Futbolny_Klub_Dynamo_Kyiv_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ميلان",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d0/Logo_of_AC_Milan.svg/330px-Logo_of_AC_Milan.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "تشيلسي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/c/cc/Chelsea_FC.svg/330px-Chelsea_FC.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ميلان (إعارة)",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d0/Logo_of_AC_Milan.svg/330px-Logo_of_AC_Milan.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "دينامو كييف",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/db/Futbolny_Klub_Dynamo_Kyiv_logo.svg/330px-Futbolny_Klub_Dynamo_Kyiv_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "شيفتشينكو",
+      "شفتشينكو",
+      "أندريه شيفتشينكو",
+      "Andriy Shevchenko",
+      "Shevchenko"
+    ],
+    "sources": [
+      "https://www.acmilan.com/en/hall-of-fame/inductees/andriy-shevchenko"
+    ]
+  },
+  {
+    "id": 260,
+    "wikidata_id": "Q131261",
+    "name": "أوليفر كان",
+    "status": "retired",
+    "nationality": "ألمانيا",
+    "era": "1987-2008",
+    "position": "حارس مرمى",
+    "difficulty": "medium",
+    "recognition": "easy",
+    "anchor": 2,
+    "clubs": [
+      {
+        "name": "كارلسروه",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c8/Karlsruher_SC_Logo_2.svg/330px-Karlsruher_SC_Logo_2.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "بايرن ميونخ",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8d/FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg/330px-FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "أوليفر كاهن",
+      "أوليفر خان",
+      "Oliver Kahn",
+      "Kahn",
+      "كاهن"
+    ],
+    "sources": [
+      "https://fcbayern.com/en/club/hall-of-fame/oliver-kahn"
+    ]
+  },
+  {
+    "id": 264,
+    "wikidata_id": "Q11948",
+    "name": "مايكل بالاك",
+    "status": "retired",
+    "nationality": "ألمانيا",
+    "era": "1995-2012",
+    "position": "لاعب وسط",
+    "difficulty": "hard",
+    "recognition": "medium",
+    "anchor": 3,
+    "clubs": [
+      {
+        "name": "كيمنتزر",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c5/Chemnitzer_FC_Logo.svg/330px-Chemnitzer_FC_Logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "كايزرسلاوترن",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d3/Logo_1_FC_Kaiserslautern.svg/330px-Logo_1_FC_Kaiserslautern.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "باير ليفركوزن",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/59/Bayer_04_Leverkusen_logo.svg/330px-Bayer_04_Leverkusen_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "بايرن ميونخ",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8d/FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg/330px-FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "تشيلسي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/c/cc/Chelsea_FC.svg/330px-Chelsea_FC.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "باير ليفركوزن",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/59/Bayer_04_Leverkusen_logo.svg/330px-Bayer_04_Leverkusen_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "بالاك",
+      "ميشائيل بالاك",
+      "ميكايل بالاك",
+      "Michael Ballack",
+      "Ballack"
+    ],
+    "sources": [
+      "https://www.bundesliga.com/en/bundesliga/news/michael-ballack-bayern-munich-leverkusen-germany-legend-24473",
+      "https://www.uefa.com/uefaeuropaleague/news/0254-0d7cba3cd7d0-1152bf947dc6-1000--ballack-happy-to-be-back-at-leverkusen/"
+    ]
+  },
+  {
+    "id": 1017,
+    "wikidata_id": "Q46347",
+    "name": "باتريك فييرا",
+    "status": "retired",
+    "nationality": "فرنسا",
+    "era": "1993-2011",
+    "position": "لاعب وسط",
+    "difficulty": "medium",
+    "recognition": "medium",
+    "anchor": 3,
+    "clubs": [
+      {
+        "name": "كان",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/6/64/AS_Cannes_logo.svg/330px-AS_Cannes_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ميلان",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d0/Logo_of_AC_Milan.svg/330px-Logo_of_AC_Milan.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "أرسنال",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/53/Arsenal_FC.svg/330px-Arsenal_FC.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "يوفنتوس",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ed/Juventus_FC_-_logo_black_%28Italy%2C_2020%29.svg/330px-Juventus_FC_-_logo_black_%28Italy%2C_2020%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "إنتر ميلان",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/05/FC_Internazionale_Milano_2021.svg/330px-FC_Internazionale_Milano_2021.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "مانشستر سيتي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/e/eb/Manchester_City_FC_badge.svg/330px-Manchester_City_FC_badge.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "فييرا",
+      "باتريك فيرا",
+      "Patrick Vieira",
+      "Vieira"
+    ],
+    "sources": [
+      "https://www.mancity.com/news/first-team/first-team-news/archive/2010/january/vieira-joins-blues-on-loan",
+      "https://www.mancity.com/news/mens/premier-league-hall-of-fame-manchester-city-players-63783630"
+    ]
+  },
+  {
+    "id": 246,
+    "wikidata_id": "Q624",
+    "name": "أليساندرو ديل بييرو",
+    "status": "retired",
+    "nationality": "إيطاليا",
+    "era": "1991-2014",
+    "position": "مهاجم",
+    "difficulty": "medium",
+    "recognition": "easy",
+    "anchor": 2,
+    "clubs": [
+      {
+        "name": "بادوفا",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9c/Calcio_Padova_logo.svg/330px-Calcio_Padova_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "يوفنتوس",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ed/Juventus_FC_-_logo_black_%28Italy%2C_2020%29.svg/330px-Juventus_FC_-_logo_black_%28Italy%2C_2020%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "سيدني إف سي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/e/e0/Sydney_FC_Logo.svg/330px-Sydney_FC_Logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "دلهي ديناموز"
+      }
+    ],
+    "accepted_answers": [
+      "ديل بييرو",
+      "دل بييرو",
+      "ديل بيرو",
+      "Alessandro Del Piero",
+      "Del Piero"
+    ],
+    "sources": [
+      "https://halloffame.juventus.com/en/hall-of-fame/alessandro-del-piero",
+      "https://www.indiansuperleague.com/press-releases/del-piero-chooses-india-joins-delhi-dynamos"
+    ]
   }
 ]
