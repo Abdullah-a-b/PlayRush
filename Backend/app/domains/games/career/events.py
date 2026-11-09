@@ -12,7 +12,7 @@ from app.infrastructure.database import SessionLocal
 from app.domains.games.models import CareerPlayer
 from app.domains.games.core_manager import get_room_state, rooms
 from app.domains.games.career.engine import CareerGameState
-from app.domains.games.career import solo_bot as _solo
+from app.domains.games.career import pilot, solo_bot as _solo
 from app.domains.wallet.reward_service import record_match_result
 from app.core.text_processor import check_answer
 from app.core.career_fame import reviewed_classification
@@ -195,13 +195,17 @@ def register_career_events(sio):
             return
         # معرّفات المستخدمين (لفلترة الشخصيات المُشاهَدة للطرفين)
         _uids = [p.get('user_id') for p in room.get('players', []) if p.get('user_id')]
-        player = await asyncio.to_thread(_load_random_player, gs.used_player_ids, user_ids=_uids)
+        pilot_order = room.get('career_pilot_order')
+        if pilot_order:
+            player = pilot.ROSTER[pilot_order[gs.player_index]] if gs.player_index < len(pilot_order) else None
+        else:
+            player = await asyncio.to_thread(_load_random_player, gs.used_player_ids, user_ids=_uids)
         if not player:
             await _resolve_end(room_code, forced=True)
             return
         gs.start_new_player(player, advance_index=advance)
         # 🤖 يجمّد معرفة/تذبذب البوت لهذه الشخصية تحديداً (متزامن، بلا I/O)
-        if getattr(gs, 'is_solo', False) and 'on_new_player' in _SOLO_HOOKS:
+        if not pilot_order and getattr(gs, 'is_solo', False) and 'on_new_player' in _SOLO_HOOKS:
             _SOLO_HOOKS['on_new_player'](gs)
         await sio.emit('career_new_player', {
             'status': player['status'], 'totalClubs': len(player['clubs']),
@@ -219,14 +223,20 @@ def register_career_events(sio):
             return  # استبدال آخر جارٍ — لا نكرر
         _replacing.add(room_code)
         try:
-            await sio.emit('career_player_skipped', {}, room=room_code)
             room = get_room_state(room_code)
-            if room and room.get('game_state'):
-                gs = room['game_state']
-                correct = (gs.current_player or {}).get('name', '')
-                await sio.emit('career_reveal_answer', {'playerName': correct}, room=room_code)
-                await asyncio.sleep(1.5)
-            await _start_player(room_code, advance=False, replace=True)
+            if not room or not room.get('game_state') or room.get('state') == 'finished':
+                return
+            gs = room['game_state']
+            gs.stage = 'judging'
+            gs.bump_version()
+            correct = (gs.current_player or {}).get('name', '')
+            await sio.emit('career_player_skipped', {}, room=room_code)
+            await sio.emit('career_reveal_answer', {'playerName': correct}, room=room_code)
+            await asyncio.sleep(1.5)
+            if room.get('career_pilot_order'):
+                await _start_player(room_code, advance=True)
+            else:
+                await _start_player(room_code, advance=False, replace=True)
         finally:
             _replacing.discard(room_code)
 
@@ -329,17 +339,27 @@ def register_career_events(sio):
     @sio.event
     async def career_submit_answer(sid, data):
         room_code = data.get('roomCode')
-        answer = (data.get('answer') or '').strip()
+        answer = data.get('answer')
+        if not isinstance(answer, str):
+            return
+        answer = answer.strip()
         room = get_room_state(room_code)
         if not room or room.get('state') != 'playing' or not room.get('game_state'):
             return
         gs = room['game_state']
         if gs.stage != 'buzzed' or gs.buzzed_player != sid:
             return
+        if room.get('career_pilot_order') and time.time() >= gs.answer_deadline:
+            gs.bump_version()
+            await _handle_strike(room_code, sid, timed_out=True)
+            return
         gs.stage = 'judging'
         # الإرسال يلتزم: نبطل مؤقّت نافذة الكتابة فوراً (بالإصدار) —
         # كان قد ينفجر أثناء تحكيم AI (≤2ث) ويضرب سترايك رغم إجابة قيد الحسم.
         gs.bump_version()
+        if room.get('career_pilot_order'):
+            await _process_answer_result(room_code, sid, pilot.accepts_name(answer, gs.current_player))
+            return
         correct_name = (gs.current_player or {}).get('name', '')
         accepted = (gs.current_player or {}).get('accepted_answers', [])
         result = check_answer(answer, correct_name, accepted, None)
@@ -634,19 +654,9 @@ def register_career_events(sio):
         gs.bot_jitter_current = _solo.new_player_jitter()
         gs.bot_used_this_player = set()
 
-    async def _bot_consider_buzz(room_code, version):
-        room = get_room_state(room_code)
-        if not room or not room.get('game_state'):
-            return
-        gs = room['game_state']
-        if not getattr(gs, 'is_solo', False) or gs.state_version != version:
-            return
-        if gs.stage != 'revealing':
-            return
-        bot_sid = _solo.BOT_SID
+    async def _legacy_bot_decision(room_code, gs, bot_sid):
         human_sid = gs.opponent(bot_sid)
         cp = gs.current_player or {}
-        current_player_id = cp.get('id')
         revealed_count = gs.revealed_count
         strikes_used = gs.strikes.get(bot_sid, 0)
         opponent_locked = gs.strikes.get(human_sid, 0) >= gs.MAX_STRIKES
@@ -670,20 +680,44 @@ def register_career_events(sio):
 
         room = get_room_state(room_code)
         if not room or not room.get('game_state'):
-            return
+            return None
         gs = room['game_state']
         if gs.stage != 'revealing' or gs.buzzed_player is not None:
-            return
+            return None
 
         used_ids = gs.helps_used.get(bot_sid, set())
         conf_bonus = _solo.help_conf_bonus(used_ids)
         accuracy_bonus = _solo.help_accuracy_bonus(used_ids)
         has_shield_now = _solo.has_shield(used_ids)
 
-        decision = _solo.decide_full(gs.bot_difficulty, knows, revealed_count, strikes_used,
+        return _solo.decide_full(gs.bot_difficulty, knows, revealed_count, strikes_used,
                                       gs.ANSWER_WINDOW, jitter, opponent_locked, is_final,
                                       single_club, conf_bonus, has_shield_now, accuracy_bonus)
-        if not decision['will_buzz']:
+
+    async def _bot_consider_buzz(room_code, version):
+        room = get_room_state(room_code)
+        if not room or not room.get('game_state'):
+            return
+        gs = room['game_state']
+        if not getattr(gs, 'is_solo', False) or gs.state_version != version:
+            return
+        if gs.stage != 'revealing':
+            return
+        bot_sid = _solo.BOT_SID
+        current_player_id = (gs.current_player or {}).get('id')
+        if room.get('career_pilot_order'):
+            candidate = pilot.candidate_from_clubs(gs.revealed_clubs())
+            if not candidate or not gs.can_buzz(bot_sid):
+                return
+            decision = {
+                'will_buzz': True,
+                'buzz_delay': random.uniform(*_solo.get_difficulty(gs.bot_difficulty)['buzz_react']),
+                'answer_delay': _solo.bot_answer_delay(gs.bot_difficulty, gs.ANSWER_WINDOW),
+            }
+        else:
+            candidate = None
+            decision = await _legacy_bot_decision(room_code, gs, bot_sid)
+        if not decision or not decision['will_buzz']:
             return
 
         await asyncio.sleep(decision['buzz_delay'])
@@ -718,8 +752,11 @@ def register_career_events(sio):
         if (gs.stage != 'buzzed' or gs.buzzed_player != bot_sid
                 or gs.state_version != post_buzz_version):
             return
-        gs.bump_version()
-        await _process_answer_result(room_code, bot_sid, decision['correct'])
+        if candidate:
+            await career_submit_answer(bot_sid, {'roomCode': room_code, 'answer': candidate['name']})
+        else:
+            gs.bump_version()
+            await _process_answer_result(room_code, bot_sid, decision['correct'])
 
     _SOLO_HOOKS['consider_buzz'] = _bot_consider_buzz
     _SOLO_HOOKS['on_new_player'] = _bot_on_new_player
@@ -769,7 +806,8 @@ def register_career_events(sio):
 
         gs = CareerGameState(p1['sid'], p2['sid'], room_code=room_code,
                              players=[p1, p2], is_solo=True, bot_difficulty=difficulty)
-        gs.bot_loadout = _solo.bot_loadout(difficulty)
+        use_pilot = (data or {}).get('pilot') is True
+        gs.bot_loadout = [] if use_pilot else _solo.bot_loadout(difficulty)
 
         rooms[room_code] = {
             'code': room_code, 'type': 'solo', 'game_mode': 'career',
@@ -780,6 +818,7 @@ def register_career_events(sio):
                 {'sid': p2['sid'], 'name': p2['name'], 'avatar': p2['avatar'],
                  'user_id': p2.get('user_id'), 'role': 'host' if p2['sid'] == sid else 'bot'},
             ],
+            'career_pilot_order': pilot.round_order() if use_pilot else None,
             'user_ids': {},          # فارغ عمداً: لا تصنيف في الفردي (دفاع إضافي — الحارس الفعلي في بند 7)
             'game_state': gs,
         }

@@ -1,0 +1,295 @@
+[
+  {
+    "id": 164,
+    "name": "ليونيل ميسي",
+    "status": "current",
+    "nationality": "الأرجنتين",
+    "era": "2003-الآن",
+    "position": "مهاجم",
+    "difficulty": "easy",
+    "anchor": 2,
+    "clubs": [
+      {
+        "name": "برشلونة",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/4/47/FC_Barcelona_%28crest%29.svg/330px-FC_Barcelona_%28crest%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "باريس سان جيرمان",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/a/a7/Paris_Saint-Germain_F.C..svg/330px-Paris_Saint-Germain_F.C..svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "إنتر ميامي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/5c/Inter_Miami_CF_logo.svg/330px-Inter_Miami_CF_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Lionel Messi",
+      "Messi",
+      "ميسي",
+      "ليونل ميسي",
+      "ليو ميسي",
+      "مسي",
+      "Leo Messi"
+    ],
+    "sources": [
+      "https://www.intermiamicf.com/news/inter-miami-cf-signs-seven-time-ballon-d-or-winner-world-cup-champion-lionel-mes"
+    ]
+  },
+  {
+    "id": 189,
+    "name": "أندريس إنييستا",
+    "status": "retired",
+    "nationality": "إسبانيا",
+    "era": "2001-2024",
+    "position": "لاعب وسط",
+    "difficulty": "easy",
+    "anchor": 2,
+    "clubs": [
+      {
+        "name": "برشلونة",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/4/47/FC_Barcelona_%28crest%29.svg/330px-FC_Barcelona_%28crest%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "فيسيل كوبي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8a/Vissel_Kobe_logo.svg/330px-Vissel_Kobe_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "نادي الإمارات",
+        "logo": "https://upload.wikimedia.org/wikipedia/en/c/c3/Al_Emirate.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled"
+      }
+    ],
+    "accepted_answers": [
+      "Andrés Iniesta",
+      "Iniesta",
+      "إنييستا",
+      "انيستا",
+      "إنيستا",
+      "اينيستا",
+      "أندريس إنيستا",
+      "أندريس اينيستا",
+      "اندرياس انييستا"
+    ],
+    "sources": [
+      "https://www.fcbarcelona.com/en/football/barca-legends/players/4231989/iniesta"
+    ]
+  },
+  {
+    "id": 165,
+    "name": "كريستيانو رونالدو",
+    "status": "current",
+    "nationality": "البرتغال",
+    "era": "2002-الآن",
+    "position": "نصف الجناح",
+    "difficulty": "medium",
+    "anchor": 2,
+    "clubs": [
+      {
+        "name": "سبورتينغ لشبونة",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/9/97/Sporting_Clube_de_Portugal_logo_%282026%29.svg/330px-Sporting_Clube_de_Portugal_logo_%282026%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "مانشستر يونايتد",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/7/7a/Manchester_United_FC_crest.svg/330px-Manchester_United_FC_crest.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ريال مدريد",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/330px-Real_Madrid_CF.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "يوفنتوس",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ed/Juventus_FC_-_logo_black_%28Italy%2C_2020%29.svg/330px-Juventus_FC_-_logo_black_%28Italy%2C_2020%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "مانشستر يونايتد",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/7/7a/Manchester_United_FC_crest.svg/330px-Manchester_United_FC_crest.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "النصر السعودي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3f/Nassr_FC_Logo.svg/330px-Nassr_FC_Logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Cristiano Ronaldo",
+      "كريستيانو",
+      "كرستيانو رونالدو",
+      "كريستيانو رونلدو",
+      "CR7"
+    ],
+    "sources": [
+      "https://www.sporting.pt/en/node/102368",
+      "https://www.spl.com.sa/en/news/cristiano-ronaldo-football-s-900-goal-great"
+    ]
+  },
+  {
+    "id": 274,
+    "name": "لويس فيغو",
+    "status": "retired",
+    "nationality": "البرتغال",
+    "era": "1989-2009",
+    "position": "نصف الجناح",
+    "difficulty": "medium",
+    "anchor": 2,
+    "clubs": [
+      {
+        "name": "سبورتينغ لشبونة",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/9/97/Sporting_Clube_de_Portugal_logo_%282026%29.svg/330px-Sporting_Clube_de_Portugal_logo_%282026%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "برشلونة",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/4/47/FC_Barcelona_%28crest%29.svg/330px-FC_Barcelona_%28crest%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ريال مدريد",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/330px-Real_Madrid_CF.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "إنتر ميلان",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/05/FC_Internazionale_Milano_2021.svg/330px-FC_Internazionale_Milano_2021.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Figo",
+      "Luís Figo",
+      "فيغو",
+      "فيجو",
+      "فيقو",
+      "فيگو",
+      "لويس فيجو",
+      "لويس فيقو",
+      "لويس فيگو"
+    ],
+    "sources": [
+      "https://www.uefa.com/uefachampionsleague/news/024a-0e9cdf0be0e4-36bb996ad10e-1000--champions-league-100-club-luis-figo/"
+    ]
+  },
+  {
+    "id": 245,
+    "name": "فيليب لام",
+    "status": "retired",
+    "nationality": "ألمانيا",
+    "era": "2001-2017",
+    "position": "ظهير",
+    "difficulty": "medium",
+    "anchor": 2,
+    "clubs": [
+      {
+        "name": "بايرن ميونخ",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8d/FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg/330px-FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "شتوتغارت (إعارة)",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/eb/VfB_Stuttgart_1893_Logo.svg/330px-VfB_Stuttgart_1893_Logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "بايرن ميونخ",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8d/FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg/330px-FC_Bayern_M%C3%BCnchen_logo_%282024%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Lahm",
+      "Philipp Lahm",
+      "لام",
+      "فيليب لاهم",
+      "فيليب لاهام",
+      "لاهم",
+      "Philip Lahm"
+    ],
+    "sources": [
+      "https://fcbayern.com/fcbayerntv/en/videos/2019/11/looking-back-pro-debuts-for-lahm-and-schweinsteiger",
+      "https://fcbayern.com/en/photos/2017/05/gallery-philipp-lahms-career"
+    ]
+  },
+  {
+    "id": 293,
+    "name": "ويسلي سنايدر",
+    "status": "retired",
+    "nationality": "مملكة هولندا",
+    "era": "2002-2019",
+    "position": "لاعب وسط",
+    "difficulty": "medium",
+    "anchor": 3,
+    "clubs": [
+      {
+        "name": "أياكس أمستردام",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0d/Logo_AFC_Ajax_%281928-1991%2C_2025-%29.png/330px-Logo_AFC_Ajax_%281928-1991%2C_2025-%29.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ريال مدريد",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/330px-Real_Madrid_CF.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "إنتر ميلان",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/05/FC_Internazionale_Milano_2021.svg/330px-FC_Internazionale_Milano_2021.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "غلطة سراي",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/07/Galatasaray_S.K._Logo_2026_5-stars.svg/330px-Galatasaray_S.K._Logo_2026_5-stars.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "نيس",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/2/2e/OGC_Nice_logo.svg/330px-OGC_Nice_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "الغرافة",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/7/79/Al-Gharafa_SC_logo.svg/330px-Al-Gharafa_SC_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Sneijder",
+      "Wesley Sneijder",
+      "سنايدر",
+      "شنايدر",
+      "شنيدر",
+      "ويسلي شنايدر",
+      "ويزلي سنايدر",
+      "ويسلي شنيدر"
+    ],
+    "sources": [
+      "https://www.uefa.com/uefachampionsleague/history/video/legends/025a-0e9e6d0e38a0-fb687e2f1604-1000--champions-league-icon-wesley-sneijder/",
+      "https://www.ogcnice.com/fr/fiche/1349/wesley-sneijder.html",
+      "https://www.uefa.com/uefanationsleague/news/0253-0d821289f992-2e8f666fa91e-1000--wesley-sneijder-calls-time-on-netherlands-career/"
+    ]
+  },
+  {
+    "id": 67,
+    "name": "روي كوستا",
+    "status": "retired",
+    "nationality": "البرتغال",
+    "era": "1990-2008",
+    "position": "لاعب وسط",
+    "difficulty": "hard",
+    "anchor": 4,
+    "clubs": [
+      {
+        "name": "فافي (إعارة)",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/9/9b/AD_Fafe_logo.svg/330px-AD_Fafe_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "بنفيكا",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/a/a2/SL_Benfica_logo.svg/330px-SL_Benfica_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "فيورنتينا",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8c/ACF_Fiorentina_-_logo_%28Italy%2C_2022%29.svg/330px-ACF_Fiorentina_-_logo_%28Italy%2C_2022%29.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "ميلان",
+        "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d0/Logo_of_AC_Milan.svg/330px-Logo_of_AC_Milan.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      },
+      {
+        "name": "بنفيكا",
+        "logo": "https://thumb.wikimedia.org/wikipedia/en/thumb/a/a2/SL_Benfica_logo.svg/330px-SL_Benfica_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+      }
+    ],
+    "accepted_answers": [
+      "Rui Costa",
+      "روي كوسته",
+      "روي كوستة",
+      "روي كُستا"
+    ],
+    "sources": [
+      "https://www.slbenfica.pt/pt-pt/agora/noticias/2018-2019/01/17/futebol-benfica-rui-costa-regressa-a-fafe",
+      "https://www.slbenfica.pt/pt-pt/agora/noticias/2017_2018/05/11/rui-costa-o-ultimo-jogo-da-carreira-foi-ha-dez-anos-na-luz"
+    ]
+  }
+]

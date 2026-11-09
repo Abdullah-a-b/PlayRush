@@ -16,6 +16,7 @@
   const _soloParams  = new URLSearchParams(window.location.search);
   const IS_SOLO       = _soloParams.get('solo') === '1';
   const SOLO_DIFF      = _soloParams.get('difficulty') || 'medium';
+  const CAREER_PILOT   = IS_SOLO && _soloParams.get('pilot') === '1';
   let   soloRoomCode  = null;   // يُملأ من solo_started
   function activeRoom() { return soloRoomCode || roomCode; }
 
@@ -188,7 +189,7 @@
     if (IS_SOLO) {
       // الوضع الفردي: نطلب من الخادم إنشاء مباراة ضد البوت
       socket.emit('career_start_solo', {
-        difficulty: SOLO_DIFF, token, name: playerName, avatar: playerAvatar
+        difficulty: SOLO_DIFF, pilot: CAREER_PILOT, token, name: playerName, avatar: playerAvatar
       });
     } else {
       socket.emit('join_room', { room_code: roomCode, token, player_name: playerName, avatar: playerAvatar });
