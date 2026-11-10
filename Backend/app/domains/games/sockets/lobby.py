@@ -19,6 +19,19 @@ def _public_player(sid):
     return d
 
 
+def _lobby_identity(token, data):
+    user, db = verify_socket_token(token)
+    try:
+        if user:
+            name = user.player_name or 'لاعب'
+            return name, get_clean_avatar(user.avatar, name), user.id
+        name = str(data.get('name', 'لاعب'))[:30]
+        return name, get_clean_avatar(data.get('avatar', ''), name), None
+    finally:
+        if db is not None:
+            db.close()
+
+
 def _dedup_players(players):
     """🔁 منسحب عاد للوبي بsid جديد وسجلّه القديم (داخل اللعبة) لم ينتهِ
     TTL بعد → نسختان. نُبقي الأحدث (ts الأكبر) لكل اسم."""
@@ -62,26 +75,27 @@ async def _presence_redis():
     return get_redis()
 
 
-async def send_presence_snapshot(sio, to_sid):
-    """يرسل القائمة الكاملة للاعب واحد فقط (عند انضمامه/إعادة اتصاله).
-    مع Redis: القائمة عالمية (كل الـ workers)؛ بدونه: محلية."""
+_presence_snapshot_task = None
+
+
+async def _read_presence_snapshot():
     players = None
     r = await _presence_redis()
     if r is not None:
         try:
-            keys, cursor = [], 0
+            players, cursor = [], 0
             while True:
                 cursor, batch = await r.scan(cursor=cursor, match=_PRESENCE_KEY + '*', count=1000)
-                keys.extend(batch)
+                if batch:
+                    for value in await r.mget(batch):
+                        if value:
+                            try:
+                                players.append(json.loads(value))
+                            except ValueError:
+                                continue
                 if cursor == 0:
                     break
-            players = []
-            if keys:
-                for v in await r.mget(keys):
-                    if v:
-                        try:
-                            players.append(json.loads(v))
-                        except Exception:
+        except Exception:
                             pass
         except Exception as e:
             print(f" [presence] قراءة Redis فشلت — snapshot محلي: {e}")
@@ -90,6 +104,21 @@ async def send_presence_snapshot(sio, to_sid):
         players = _public_players()
     else:
         players = _dedup_players(players)
+    return players
+
+
+async def _load_presence_snapshot():
+    try:
+        return await asyncio.wait_for(_read_presence_snapshot(), timeout=2)
+    except TimeoutError:
+        return _public_players()
+
+
+async def send_presence_snapshot(sio, to_sid):
+    global _presence_snapshot_task
+    if _presence_snapshot_task is None or _presence_snapshot_task.done():
+        _presence_snapshot_task = asyncio.create_task(_load_presence_snapshot())
+    players = await asyncio.shield(_presence_snapshot_task)
     # 🧢 سقف الحمولة: مع آلاف المتصلين لا نرسل القائمة كاملة —
     # أول SNAPSHOT_CAP سجلاً + العدد الإجمالي للعداد
     SNAPSHOT_CAP = 300
@@ -183,16 +212,9 @@ def register_lobby_events(sio):
     async def join_global_lobby(sid, data):
         # نحاول التحقق من التوكن إن وُجد — إن لم يكن موجوداً نقبل بالاسم كـ guest
         token = data.get('token')
-        user, db = verify_socket_token(token)
-        _uid = None
-        if user:
-            player_name = user.player_name or 'لاعب'
-            avatar = get_clean_avatar(user.avatar, player_name)
-            _uid = user.id
-            db.close()
-        else:
-            player_name = str(data.get('name', 'لاعب'))[:30]
-            avatar = get_clean_avatar(data.get('avatar', ''), player_name)
+        player_name, avatar, _uid = await asyncio.to_thread(_lobby_identity, token, data)
+        if not sio.manager.is_connected(sid, '/'):
+            return
 
         # نخزّن user_id + token (للإشعارات الحية + الكتم) — كان مفقوداً هنا
         connected_players[sid] = {
@@ -210,17 +232,9 @@ def register_lobby_events(sio):
         game_mode = data.get('gameMode')
 
         # اللوبي يتطلب توكن صالح
-        user, db = verify_socket_token(token)
-        _uid = None
-        if user:
-            player_name = user.player_name or 'لاعب'
-            avatar = get_clean_avatar(user.avatar, player_name)
-            _uid = user.id   # نحفظ user_id للكتم والبلاغات
-            db.close()
-        else:
-            # نقبل guest بدون توكن لكن بدون وصول للطابور
-            player_name = str(data.get('name', 'لاعب'))[:30]
-            avatar = get_clean_avatar(data.get('avatar', ''), player_name)
+        player_name, avatar, _uid = await asyncio.to_thread(_lobby_identity, token, data)
+        if not sio.manager.is_connected(sid, '/'):
+            return
 
         if game_mode not in game_lobby_players:
             game_lobby_players[game_mode] = {}

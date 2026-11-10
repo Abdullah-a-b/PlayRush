@@ -257,3 +257,11 @@
     .pr-app .game-lobby-page #lobbyMainContent .lobby-action-copy > span { font-size: .95rem; }
     .pr-app .game-lobby-page #lobbyMainContent .action-btn small { color: var(--app-secondary); }
 }
+
+.pr-app .game-lobby-page #appSocialSlot:not(:empty) {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px;
+}
