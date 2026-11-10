@@ -159,7 +159,7 @@ async def setup_profile(
 
 @router.get("/me")
 @limiter.limit("60/minute")  # يمنع profile scraping
-async def get_my_profile(
+def get_my_profile(
     request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),

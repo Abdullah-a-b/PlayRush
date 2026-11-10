@@ -5,6 +5,7 @@ import html
 from datetime import datetime, timedelta, timezone
 from fastapi import Request, HTTPException, Depends
 from jose import jwt, JWTError
+from starlette.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 
@@ -96,7 +97,7 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)):
     except JWTError:
         raise HTTPException(status_code=401, detail="التوكن منتهي الصلاحية أو مزور")
         
-    user = db.query(User).filter(User.email == user_email).first()
+    user = await run_in_threadpool(db.query(User).filter(User.email == user_email).first)
     if user is None:
         raise HTTPException(status_code=401, detail="حساب اللاعب لم يعد موجوداً")
 

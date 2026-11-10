@@ -387,7 +387,7 @@ async def app_version():
 
 
 @app.get("/health", tags=["System"])
-async def health_check():
+def health_check():
     from app.infrastructure.database import SessionLocal
     from app.sockets.state import connected_players
     from app.domains.games.core_manager import rooms
