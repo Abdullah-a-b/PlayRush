@@ -167,7 +167,7 @@ class IntegrityTests(unittest.TestCase):
             gs.is_solo = True
             gs.bot_difficulty = 'beginner'
             gs.start_new_player({'id': 1, 'clubs': [{'name': 'A'}, {'name': 'B'}]})
-            room = {'game_state': gs, 'career_pilot_order': [1]}
+            room = {'game_state': gs, 'career_pilot_order': [1], 'career_bot_seed': 'test'}
             clock = [0.0]
             buzzes = []
 
@@ -183,7 +183,7 @@ class IntegrityTests(unittest.TestCase):
 
             env = functions('app/domains/games/career/events.py', {'_bot_consider_buzz'}, {
                 'get_room_state': lambda code: room, '_solo': solo_bot,
-                'trained_bot': types.SimpleNamespace(decide=decide),
+                'trained_bot': types.SimpleNamespace(decide=decide), '_EXPERT_PREVIEW': False,
                 'time': types.SimpleNamespace(monotonic=lambda: clock[0]),
                 'random': types.SimpleNamespace(uniform=lambda low, high: low),
                 'asyncio': types.SimpleNamespace(sleep=sleep), 'career_buzz': buzz,

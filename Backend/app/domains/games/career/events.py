@@ -3,6 +3,7 @@
 """
 import asyncio
 import json
+import os
 import random
 import secrets
 import string
@@ -26,6 +27,7 @@ _start_first_player = None
 # 🤖 خطّافات الوضع الفردي (تُملأ داخل register_career_events، تُقرأ من
 # _emit_reveal_state/_start_player بأمان لو موجودة) — نفس نمط حروف.
 _SOLO_HOOKS = {}
+_EXPERT_PREVIEW = os.getenv("PLAYRUSH_CAREER_EXPERT_PREVIEW") == "1"
 
 
 async def trigger_career_start(sio, room_code):
@@ -660,33 +662,41 @@ def register_career_events(sio):
             clue = (gs.player_index, gs.revealed_count, complete)
             if room.get('career_bot_last_attempt') == clue or not gs.can_buzz(bot_sid):
                 return
-            if gs.bot_difficulty == 'beginner' and (not gs.first_reveal_done or window <= 3.2):
+            if gs.bot_difficulty in ('beginner', 'medium') and not gs.first_reveal_done:
+                return
+            if gs.bot_difficulty == 'beginner' and window <= 3.2:
                 return
             started = time.monotonic()
             visible_clubs = gs.revealed_clubs()
-            model = await trained_bot.decide(
-                'career', gs.bot_difficulty, 'reveal', ['wait', 'buzz'],
-                clubs=[club['name'] for club in visible_clubs],
-                status=(gs.current_player or {}).get('status', 'retired'), complete=complete,
-                seconds=window,
-            )
-            if model:
-                if model[0] == 'wait':
-                    return
-                pilot_answer = model[1]
-                decision = {
-                    'buzz_delay': random.uniform(*_solo.get_difficulty(gs.bot_difficulty)['buzz_react']),
-                    'answer_delay': _solo.bot_answer_delay(gs.bot_difficulty, gs.ANSWER_WINDOW),
-                }
-            else:
-                decision = _solo.reviewed_decision(
-                    gs.bot_difficulty, pilot.matching_players(visible_clubs, complete),
-                    gs.revealed_count, complete, gs.strikes.get(bot_sid, 0),
-                    f"{room['career_bot_seed']}/{gs.player_index}", gs.ANSWER_WINDOW,
+            status = (gs.current_player or {}).get('status', 'retired')
+            seed = f"{room['career_bot_seed']}/{gs.player_index}"
+            if _EXPERT_PREVIEW and gs.bot_difficulty == 'expert':
+                decision = _solo.expert_preview_decision(
+                    pilot.matching_players(visible_clubs, complete), status,
+                    gs.revealed_count, complete, seed, gs.ANSWER_WINDOW,
                 )
-                if not decision:
-                    return
-                pilot_answer = decision['answer']
+            else:
+                model = await trained_bot.decide(
+                    'career', gs.bot_difficulty, 'reveal', ['wait', 'buzz'],
+                    clubs=[club['name'] for club in visible_clubs], status=status,
+                    complete=complete, seconds=window,
+                )
+                if model:
+                    if model[0] == 'wait':
+                        return
+                    decision = {
+                        'answer': model[1],
+                        'buzz_delay': random.uniform(*_solo.get_difficulty(gs.bot_difficulty)['buzz_react']),
+                        'answer_delay': _solo.bot_answer_delay(gs.bot_difficulty, gs.ANSWER_WINDOW),
+                    }
+                else:
+                    decision = _solo.reviewed_decision(
+                        gs.bot_difficulty, pilot.matching_players(visible_clubs, complete),
+                        gs.revealed_count, complete, gs.strikes.get(bot_sid, 0), seed, gs.ANSWER_WINDOW,
+                    )
+            if not decision:
+                return
+            pilot_answer = decision['answer']
             delay = decision['buzz_delay']
             if gs.bot_difficulty == 'beginner':
                 delay = max(delay, random.uniform(3.2, 4.4))

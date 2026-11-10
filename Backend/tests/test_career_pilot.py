@@ -75,18 +75,37 @@ class CareerPilotTests(unittest.TestCase):
         self.assertEqual({p["id"] for p in pilot.matching_players(clues)}, {164, 189, 205, 284})
         self.assertEqual([p["id"] for p in pilot.matching_players(clues, complete=True)], [284])
 
-    def test_bot_waits_or_guesses_a_plausible_name_and_is_stable(self):
-        candidates = pilot.matching_players([{"name": "برشلونة"}])
+    def test_medium_waits_then_guesses_with_a_longer_reaction_delay(self):
+        clubs = pilot.ROSTER[164]["clubs"]
+        opening = pilot.matching_players(clubs[:1])
+        candidates = pilot.matching_players(clubs[:2])
         guesses = []
         for seed in range(120):
-            decision = solo_bot.reviewed_decision("medium", candidates, 1, False, 0, seed, 10)
-            self.assertEqual(decision, solo_bot.reviewed_decision("medium", candidates, 1, False, 0, seed, 10))
+            self.assertIsNone(solo_bot.reviewed_decision("medium", opening, 1, False, 0, seed, 10))
+            decision = solo_bot.reviewed_decision("medium", candidates, 2, False, 0, seed, 10)
+            self.assertEqual(decision, solo_bot.reviewed_decision("medium", candidates, 2, False, 0, seed, 10))
             if decision:
                 guesses.append(decision)
-                self.assertEqual(decision["answer"], pilot.ROSTER[284]["name"])
-                self.assertTrue(1.5 <= decision["buzz_delay"] <= 3)
+                self.assertEqual(decision["answer"], pilot.ROSTER[164]["name"])
+                self.assertTrue(2.7 <= decision["buzz_delay"] <= 4.1)
                 self.assertTrue(0 < decision["answer_delay"] < 10)
-        self.assertTrue(0 < len(guesses) < 60)
+        self.assertTrue(0 < len(guesses) < 90)
+
+    def test_expert_preview_waits_for_evidence_and_uses_a_human_delay(self):
+        candidates = pilot.matching_players([{"name": "برشلونة"}])
+        decide = solo_bot.expert_preview_decision
+        self.assertIsNone(decide(candidates, "retired", 1, False, 3, 10))
+        self.assertIsNone(decide(candidates, "retired", 2, False, 3, 10))
+        self.assertIsNone(decide([pilot.ROSTER[164]], "retired", 3, True, 3, 10))
+
+        decisions = [decide([pilot.ROSTER[164]], "current", 2, False, seed, 10)
+                     for seed in range(100)]
+        moves = [move for move in decisions if move]
+        self.assertTrue(moves)
+        for move in moves:
+            self.assertTrue(pilot.accepts_name(move["answer"], pilot.ROSTER[164]))
+            self.assertTrue(1.65 <= move["buzz_delay"] <= 2.35)
+            self.assertTrue(0 < move["answer_delay"] < 10)
 
     def test_expert_knows_more_but_can_miss_a_round(self):
         candidates = [pilot.ROSTER[67]]

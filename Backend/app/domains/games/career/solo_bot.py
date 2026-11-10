@@ -62,7 +62,7 @@ DIFFICULTIES = {
         "growth": 0.30,
         "thresh_first": 0.58,
         "thresh_second": 0.78,
-        "buzz_react": (1.5, 3.0),
+        "buzz_react": (2.7, 4.1),
         "type_min": 4.5, "type_max": 7.0,
         "accuracy": 0.88,
         "blind_buzz": 0.05,
@@ -429,7 +429,7 @@ def decide_help(difficulty_name, knows, revealed_count, strikes_used,
 # قرار البوت في القائمة المراجعة. ذاكرة كل اسم مستقرة خلال الجولة.
 _REVIEWED_RISK = {
     "beginner": (0.66, 0.85),
-    "medium": (0.78, 0.64),
+    "medium": (0.68, 0.82),
     "hard": (0.89, 0.48),
     "expert": (0.97, 0.35),
 }
@@ -438,6 +438,8 @@ _REVIEWED_RISK = {
 def reviewed_decision(difficulty, candidates, revealed_count, complete, strikes, seed, answer_window):
     """تخمين من المرشحين الموافقين للأندية المكشوفة مع تردد وتأخر في الرد."""
     if not candidates or strikes >= 2:
+        return None
+    if difficulty == "medium" and revealed_count == 1 and not complete:
         return None
     chance, ambiguity = _REVIEWED_RISK.get(difficulty, _REVIEWED_RISK[DEFAULT_DIFFICULTY])
     remembered = [
@@ -463,4 +465,25 @@ def reviewed_decision(difficulty, candidates, revealed_count, complete, strikes,
         "answer": pick["name"],
         "buzz_delay": rng.uniform(*get_difficulty(difficulty)["buzz_react"]),
         "answer_delay": bot_answer_delay(difficulty, answer_window, rng=rng),
+    }
+
+
+def expert_preview_decision(candidates, status, revealed_count, complete, seed, answer_window):
+    """تخمين خبير بمعلمات مضبوطة على محاكاة، بناءً على القرائن المكشوفة."""
+    if revealed_count < MIN_CLUBS_BEFORE_BUZZ and not complete:
+        return None
+    matches = [player for player in candidates if player["status"] == status]
+    if len(matches) != 1:
+        return None
+    player, = matches
+    recall = random.Random(f"{seed}/{player['id']}/expert-preview").random()
+    familiarity = min(.99, knowledge_probability("expert", player["recognition"]) + .22)
+    if recall > familiarity:
+        return None
+
+    rng = random.Random(f"{seed}/{revealed_count}/{int(complete)}/expert-reaction")
+    return {
+        "answer": player["name"],
+        "buzz_delay": rng.uniform(1.65, 2.35),
+        "answer_delay": bot_answer_delay("expert", answer_window, rng=rng),
     }
