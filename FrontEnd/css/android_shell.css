@@ -1,0 +1,259 @@
+/* واجهة أندرويد تستخدم أزرار ومسارات اللعب المشتركة. */
+.app-home-heading, .app-entry-label, .app-launch-icon { display: none; }
+.game-entry-actions { display: contents; }
+
+.pr-app :is(.game-lobby-page, .app-start-page, .app-auth-page) #appSoundSlot { display: inline-flex; }
+.pr-app :is(.game-lobby-page, .app-start-page, .app-auth-page) #appSoundSlot #prSoundBtn { min-width: 36px; min-height: 36px; }
+.pr-app :is(.app-start-page, .app-auth-page) #appSoundSlot {
+    position: fixed;
+    inset: 12px auto auto 14px;
+    z-index: 1000;
+}
+
+
+@media (max-width: 900px) {
+    .pr-app :is(.app-start-page, .app-auth-page) { background: #0b1018; }
+    .pr-app :is(.app-start-page, .app-auth-page) :is(.stars, .circle, .background-animation) { display: none; }
+    .pr-app .app-start-page .landing-container {
+        width: min(100% - 28px, 420px);
+        padding: 22px 18px;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+        backdrop-filter: none;
+        animation: none;
+    }
+    .pr-app .app-start-page .app-launch-icon {
+        display: block;
+        margin: 0 auto 10px;
+        border-radius: 17px;
+    }
+    .pr-app .app-start-page .logo {
+        font-size: clamp(33px, 12vw, 58px);
+        line-height: 1.1;
+        text-shadow: none !important;
+        filter: none;
+        animation: none;
+    }
+    .pr-app .app-start-page .slogan { font-size: .95rem; }
+    .pr-app .app-start-page .buttons-group { gap: 8px; }
+    .pr-app .app-start-page .btn {
+        width: 100%;
+        min-height: 50px;
+        padding: 11px 15px;
+        border: 1px solid #3c5570;
+        border-radius: 14px;
+        background: #172537;
+        color: #f1f5fb;
+        box-shadow: none;
+    }
+    .pr-app .app-start-page .btn-login {
+        border-color: #facc15;
+        background: #facc15;
+        color: #111821;
+    }
+    .pr-app .app-start-page .pr-copyright {
+        bottom: 12px !important;
+        max-width: calc(100vw - 32px);
+        white-space: normal !important;
+        line-height: 1.5;
+    }
+    .pr-app .app-auth-page .login-container {
+        border: 1px solid #263649;
+        background: #141e2b;
+        border-radius: 20px;
+        box-shadow: none;
+        backdrop-filter: none;
+        animation: none;
+    }
+
+    .pr-app :is(.categories-page, .game-lobby-page) {
+        --app-background: #0b1018;
+        --app-surface: #141e2b;
+        --app-border: #263649;
+        --app-text: #f1f5fb;
+        --app-secondary: #a8b8cc;
+        background: var(--app-background);
+    }
+    .pr-app :is(.categories-page, .game-lobby-page) .background-animation {
+        display: none !important;
+    }
+    .pr-app :is(.categories-page, .game-lobby-page) .top-bar {
+        background: var(--app-surface);
+        border: 1px solid var(--app-border);
+        box-shadow: none;
+    }
+    .pr-app .categories-page .app-tab-bar {
+        background: #101822;
+        border-color: var(--app-border);
+    }
+    .pr-app .categories-page .app-tab-bar button[aria-current="page"] i {
+        color: #facc15;
+    }
+    .pr-app .categories-page .main-content {
+        background: transparent;
+        border: 0;
+        padding: 5px 10px 10px !important;
+        box-shadow: none;
+    }
+    .pr-app .categories-page #games-section > .welcome-panel { display: none; }
+    .pr-app .categories-page .app-home-heading {
+        display: block;
+        padding: 20px;
+        border: 1px solid #324259;
+        border-radius: 22px;
+        background: linear-gradient(125deg, #1e3046, #131c2b 75%);
+        color: var(--app-text);
+    }
+    .app-home-mark { display: inline-block; letter-spacing: .13em; font-size: 12px; font-weight: 800; }
+    .app-home-mark > span { color: #facc15; }
+    .app-home-heading h1 { margin: 5px 0 4px; font-size: clamp(25px, 7vw, 34px); line-height: 1.2; }
+    .app-home-heading p { margin: 0; font-size: .87rem; color: var(--app-secondary); }
+    .pr-app .categories-page .games-grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 8px !important;
+        margin-top: 12px;
+    }
+    .pr-app .categories-page .game-card {
+        display: grid !important;
+        grid-template: "icon title actions" auto "icon detail actions" auto / 47px minmax(0, 1fr) auto;
+        column-gap: 10px;
+        row-gap: 2px;
+        align-items: center;
+        padding: 9px 10px !important;
+        min-width: 0;
+        min-height: 79px;
+        border: 1px solid var(--app-border);
+        border-radius: 16px;
+        background: var(--app-surface);
+        color: var(--app-text);
+        text-align: start;
+        box-shadow: none !important;
+        transform: none !important;
+        overflow: visible;
+    }
+    .pr-app .categories-page .game-card::before,
+    .pr-app .categories-page .game-card::after { display: none; }
+    .pr-app .categories-page .game-icon {
+        grid-area: icon;
+        display: grid;
+        place-items: center;
+        width: 47px;
+        height: 47px;
+        margin: 0 !important;
+        border-radius: 14px;
+        background: var(--game-tile, #293a51);
+        font-size: 25px !important;
+        line-height: 1;
+        filter: none;
+        animation: none !important;
+    }
+    .game-card[data-game="huroof"] { --game-tile: #204139; }
+    .game-card[data-game="career"] { --game-tile: #263e4c; }
+    .game-card[data-game="bank"] { --game-tile: #4d3e23; }
+    .game-card[data-game="whoami"] { --game-tile: #3d3150; }
+    .game-card[data-game="knowledge"] { --game-tile: #45354b; }
+    .pr-app .categories-page .game-title {
+        grid-area: title;
+        align-self: end;
+        margin: 0 !important;
+        color: var(--app-text);
+        font-size: 1rem !important;
+    }
+    .pr-app .categories-page .game-desc {
+        grid-area: detail;
+        align-self: start;
+        display: -webkit-box;
+        margin: 0 !important;
+        color: var(--app-secondary);
+        font-size: .75rem !important;
+        line-height: 1.45;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
+    }
+    .pr-app .categories-page .game-entry-actions {
+        grid-area: actions;
+        display: grid;
+        justify-items: stretch;
+        min-width: 60px;
+        gap: 4px;
+    }
+    .pr-app .categories-page .game-entry-actions button {
+        width: auto !important;
+        min-height: 44px;
+        margin: 0 !important;
+        padding: 5px 8px !important;
+        border: 1px solid #3c5570;
+        border-radius: 10px;
+        background: #263a50;
+        box-shadow: none;
+        color: #f0f7ff;
+        font-size: .78rem !important;
+        white-space: nowrap;
+    }
+    .pr-app .categories-page .game-entry-actions .solo-btn {
+        background: transparent;
+        border-color: #52614a;
+        color: #ffe18a;
+    }
+    .pr-app .categories-page .web-entry-label { display: none; }
+    .pr-app .categories-page .app-entry-label { display: inline; }
+    .pr-app .categories-page .game-entry-actions i { display: none; }
+
+    .pr-app .game-lobby-page #lobbyMainContent {
+        background: transparent;
+        border: 0;
+        padding: 10px !important;
+    }
+    .pr-app .game-lobby-page #lobbyMainContent .content-section.active { gap: 15px; }
+    .pr-app .game-lobby-page #lobbyMainContent .lobby-hero {
+        grid-template-columns: minmax(0, 1fr) auto;
+        min-height: 142px;
+        gap: 12px;
+        padding: 16px !important;
+        border: 1px solid var(--app-border) !important;
+        border-radius: 20px;
+        background: var(--app-surface);
+        text-align: start;
+    }
+    .pr-app .game-lobby-page #lobbyMainContent .lobby-copy h1 {
+        margin: 7px 0 !important;
+        font-size: clamp(22px, 6vw, 29px) !important;
+    }
+    .pr-app .game-lobby-page .lobby-copy p { font-size: .85rem; }
+    .pr-app .game-lobby-page .lobby-eyebrow { justify-content: flex-end; font-size: .63rem; }
+    .pr-app .game-lobby-page :is(.stage-orbit,.stage-tiles,.stage-caption,.lobby-identity) { display: none; }
+    .pr-app .game-lobby-page .lobby-art { height: auto; }
+    .pr-app .game-lobby-page .stage-core {
+        width: 67px;
+        height: 67px;
+        border-radius: 17px;
+        box-shadow: none;
+        transform: none;
+    }
+    .pr-app .game-lobby-page #gameIconDisplay { font-size: 37px; transform: none; filter: none; }
+    .pr-app .game-lobby-page #lobbyMainContent .quick-actions { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+    .pr-app .game-lobby-page #lobbyMainContent .action-btn {
+        min-height: 65px;
+        flex-direction: row !important;
+        align-items: center;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 10px 13px;
+        border-radius: 14px;
+        border-color: var(--app-border);
+        background: var(--app-surface) !important;
+        box-shadow: none !important;
+        text-align: start;
+    }
+    .pr-app .game-lobby-page #lobbyMainContent .action-btn > div { align-items: flex-start !important; }
+    .pr-app .game-lobby-page .lobby-action-copy {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .pr-app .game-lobby-page #lobbyMainContent .lobby-action-copy > span { font-size: .95rem; }
+    .pr-app .game-lobby-page #lobbyMainContent .action-btn small { color: var(--app-secondary); }
+}

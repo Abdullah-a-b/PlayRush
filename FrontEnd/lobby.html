@@ -31,8 +31,9 @@
   <link rel="stylesheet" href="css/guide_hint.css">
   <link rel="stylesheet" href="css/app_perf.css">
   <link rel="stylesheet" href="css/lobby_stage.css">
+  <link rel="stylesheet" href="css/android_shell.css">
 </head>
-<body>
+<body class="game-lobby-page">
   <div id="toastContainer" class="toast-container"></div>
   
   <div class="confirm-overlay" id="customConfirm">
@@ -69,6 +70,7 @@
         <div class="currency-item"><i class="fa-solid fa-gem" style="color:#00d2ff"></i> <span id="gems">0</span></div>
       </div>
       <div class="controls-section">
+        <span id="appSoundSlot"></span>
         <button class="control-btn" id="notificationsBtn" title="التنبيهات" style="position:relative;"><i class="fa-solid fa-bell"></i><span id="notifBadge" style="display:none;position:absolute;top:-4px;left:-4px;background:#f44336;color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:11px;align-items:center;justify-content:center;padding:0 4px;">0</span></button>
         <button class="control-btn" id="globalSettingsBtn" title="الإعدادات"><i class="fa-solid fa-gear"></i></button>
         <button class="control-btn" id="backToCategoriesBtn" title="العودة للساحة"><i class="fa-solid fa-arrow-right-from-bracket" style="transform: rotate(180deg);"></i></button>
@@ -105,7 +107,7 @@
         <div class="quick-actions">
           <button class="action-btn primary" id="quickPlayBtn" style="background: linear-gradient(45deg, #a855f7, #9333ea); color: #fff; box-shadow: 0 10px 20px rgba(168, 85, 247, 0.4);">
               <i class="fa-solid fa-bolt" style="font-size: 26px;"></i> 
-              <span>اللعب السريع</span><small>ابحث عن منافس وابدأ المباراة</small>
+              <div class="lobby-action-copy"><span>اللعب السريع</span><small>ابحث عن منافس وابدأ المباراة</small></div>
           </button>
 
           <button class="action-btn primary" id="localPartyBtn" style="display: none; background: linear-gradient(45deg, #f59e0b, #ea580c); color: #fff; box-shadow: 0 10px 20px rgba(245, 158, 11, 0.4);">
@@ -126,7 +128,7 @@
 
           <button class="action-btn primary" id="playWithFriendBtn" style="background: linear-gradient(45deg, #4a90e2, #357abd); color: #fff; box-shadow: 0 10px 20px rgba(74, 144, 226, 0.4);">
               <i class="fa-solid fa-user-group" style="font-size: 26px;"></i>
-              <span>العب مع صديق</span><small>اختر صديقك وأرسل له دعوة</small>
+              <div class="lobby-action-copy"><span>العب مع صديق</span><small>اختر صديقك وأرسل له دعوة</small></div>
           </button>
         </div>
 

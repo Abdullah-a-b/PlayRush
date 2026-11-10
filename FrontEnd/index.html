@@ -2,6 +2,8 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <style>.pr-app-resuming body { visibility: hidden; }</style>
+    <script src="js/app_startup.js" data-entry></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f172a">
@@ -29,8 +31,10 @@
     <script src="js/brand.js" defer></script>
   <link rel="stylesheet" href="css/responsive.css">
   <link rel="stylesheet" href="css/app_perf.css">
+  <link rel="stylesheet" href="css/android_shell.css">
 </head>
-<body>
+<body class="app-start-page">
+    <span id="appSoundSlot"></span>
     <div class="stars" id="stars"></div>
 
     <div class="background-animation"></div>
@@ -39,6 +43,7 @@
 
     <div class="landing-container">
         
+        <img class="app-launch-icon" src="assets/icons/icon-192.png" width="70" height="70" alt="">
         <div class="logo">
             <span class="play">Play</span><span class="rush">Rush</span>
         </div>

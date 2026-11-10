@@ -5,7 +5,8 @@ function createStars() {
   // 📱 على الجوال/التطبيق نقلّل عدد النجوم: 150 عنصراً متحركاً
   // تُثقل أول إطار داخل WebView وتبدو كتعليق.
   const isApp    = window.PR_IS_APP === true || (typeof window.Capacitor !== 'undefined');
-  const isMobile = isApp || window.innerWidth <= 820
+  if (isApp) return;
+  const isMobile = window.innerWidth <= 820
                 || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
   const COUNT = isMobile ? 45 : 150;
 

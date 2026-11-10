@@ -2,6 +2,8 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
+  <script src="js/config.js"></script>
+  <script src="js/app_startup.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f172a">
@@ -30,6 +32,7 @@
   <link rel="stylesheet" href="css/responsive.css">
   <link rel="stylesheet" href="css/guide_hint.css">
   <link rel="stylesheet" href="css/app_perf.css">
+  <link rel="stylesheet" href="css/android_shell.css">
   <style>
     .solo-btn { margin-top:8px; width:100%; padding:9px; border:1px solid rgba(250,204,21,.4);
       border-radius:10px; background:linear-gradient(135deg,rgba(250,204,21,.15),rgba(250,204,21,.05));
@@ -37,7 +40,19 @@
     .solo-btn:hover { background:rgba(250,204,21,.25); }
   </style>
 </head>
-<body>
+<body class="categories-page">
+  <div id="appResume" class="app-resume">
+    <img src="assets/icons/icon-192.png" width="76" height="76" alt="">
+    <strong dir="ltr">Play<span>Rush</span></strong>
+    <p id="appResumeStatus" role="status">جارٍ استئناف جلستك…</p>
+    <button type="button" id="appResumeRetry" hidden>إعادة المحاولة</button>
+  </div>
+  <nav class="app-tab-bar" aria-label="أقسام PlayRush">
+    <button type="button" data-app-section="games" aria-current="page"><i class="fa-solid fa-gamepad" aria-hidden="true"></i>الألعاب</button>
+    <button type="button" data-app-section="friends"><i class="fa-solid fa-user-group" aria-hidden="true"></i>الأصدقاء</button>
+    <button type="button" data-app-section="leaderboard"><i class="fa-solid fa-ranking-star" aria-hidden="true"></i>الصدارة</button>
+    <button type="button" id="appMoreTab" aria-controls="categoryNavigation" aria-expanded="false"><i class="fa-solid fa-ellipsis" aria-hidden="true"></i>المزيد</button>
+  </nav>
   <div id="toastContainer" class="toast-container"></div>
 
   <div class="confirm-overlay" id="customConfirm">
@@ -85,12 +100,13 @@
       </div>
 
       <div class="controls-section">
+        <span id="appSoundSlot"></span>
         <button class="control-btn" id="notificationsBtn" title="التنبيهات" style="position:relative;"><i class="fa-solid fa-bell"></i><span id="notifBadge" style="display:none;position:absolute;top:-4px;left:-4px;background:#f44336;color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:11px;align-items:center;justify-content:center;padding:0 4px;">0</span></button>
         <button class="control-btn" id="globalSettingsBtn" title="الإعدادات"><i class="fa-solid fa-gear"></i></button>
       </div>
     </header>
 
-    <nav class="main-navigation">
+    <nav class="main-navigation" id="categoryNavigation">
       <button class="nav-btn active" data-section="games"><i class="fa-solid fa-gamepad"></i> <span>ساحة الألعاب</span></button>
       <button class="nav-btn nav-btn-guide" id="guideNavBtn" onclick="if(window.openPlatformGuide)window.openPlatformGuide()"><i class="fa-solid fa-circle-question"></i> <span>كيف ألعب؟</span></button>
       <button class="nav-btn" data-section="quests"><i class="fa-solid fa-list-check"></i> <span>المهام</span></button>
@@ -98,6 +114,7 @@
       <button class="nav-btn" data-section="leaderboard"><i class="fa-solid fa-ranking-star"></i> <span>الصدارة</span></button>
       <button class="nav-btn" data-section="store"><i class="fa-solid fa-store"></i> <span>المتجر</span></button>
       <button class="nav-btn" data-section="friends" style="position:relative;"><i class="fa-solid fa-user-group"></i> <span>الأصدقاء</span><span id="friendsBadge" style="display:none;position:absolute;top:2px;left:8px;background:#f44336;color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:11px;align-items:center;justify-content:center;padding:0 4px;">0</span></button>
+      <div id="appSocialSlot" aria-label="حسابات التواصل الاجتماعي"></div>
     </nav>
 
     <main class="main-content">
@@ -107,43 +124,59 @@
           <p style="color: #aaa; margin-top: 5px;">تحدى لاعبين آخرين وارفع مستواك في مختلف الألعاب</p>
         </div>
 
+        <div class="app-home-heading">
+          <span class="app-home-mark" dir="ltr">PLAY<span>RUSH</span></span>
+          <h1>ساحة الألعاب</h1>
+          <p>اختر لعبتك وابدأ التحدي</p>
+        </div>
+
         <div class="games-grid">
           
           <div class="game-card" data-game="huroof">
             <div class="game-icon">🔠</div>
             <h3 class="game-title">خلية الحروف</h3>
             <p class="game-desc">لعبة السيطرة الاستراتيجية على لوحة الحروف السداسية.</p>
-            <button type="button" class="play-btn"><i class="fa-solid fa-play"></i> الذهاب الى اللوبي</button>
-            <button type="button" class="solo-btn" data-solo="huroof"><i class="fa-solid fa-robot"></i> الوضع الفردي</button>
+            <div class="game-entry-actions">
+              <button type="button" class="play-btn"><i class="fa-solid fa-play"></i> <span class="web-entry-label">الذهاب الى اللوبي</span><span class="app-entry-label">العب</span></button>
+            <button type="button" class="solo-btn" data-solo="huroof"><i class="fa-solid fa-robot"></i> <span class="web-entry-label">الوضع الفردي</span><span class="app-entry-label">فردي</span></button>
+            </div>
           </div>
 
           <div class="game-card" data-game="bank">
             <div class="game-icon">🏦</div>
             <h3 class="game-title">بنك</h3>
             <p class="game-desc">سلسلة إجابات متتالية تبني رصيدك، قل "بنك" لحفظ النقاط قبل أن تخطئ وتخسر كل شيء.</p>
-            <button type="button" class="play-btn"><i class="fa-solid fa-play"></i> الذهاب الى اللوبي</button>
+            <div class="game-entry-actions">
+              <button type="button" class="play-btn"><i class="fa-solid fa-play"></i> <span class="web-entry-label">الذهاب الى اللوبي</span><span class="app-entry-label">العب</span></button>
+            </div>
           </div>
 
           <div class="game-card" data-game="career">
             <div class="game-icon">⚽</div>
             <h3 class="game-title">مسيرة لاعب</h3>
             <p class="game-desc">خمن اسم اللاعب من خلال الأندية التي لعب لها بالترتيب.</p>
-            <button type="button" class="play-btn"><i class="fa-solid fa-play"></i> الذهاب الى اللوبي</button>
-            <button type="button" class="solo-btn" data-solo="career"><i class="fa-solid fa-robot"></i> الوضع الفردي</button>
+            <div class="game-entry-actions">
+              <button type="button" class="play-btn"><i class="fa-solid fa-play"></i> <span class="web-entry-label">الذهاب الى اللوبي</span><span class="app-entry-label">العب</span></button>
+            <button type="button" class="solo-btn" data-solo="career"><i class="fa-solid fa-robot"></i> <span class="web-entry-label">الوضع الفردي</span><span class="app-entry-label">فردي</span></button>
+            </div>
           </div>
 
           <div class="game-card" data-game="whoami">
             <div class="game-icon">🕵️‍♂️</div>
             <h3 class="game-title">من أنا؟</h3>
             <p class="game-desc">تلميحات تدريجية لمعرفة الشخصية المطلوبة، خمن أسرع لتحصل على نقاط أعلى.</p>
-            <button type="button" class="play-btn"><i class="fa-solid fa-play"></i> الذهاب الى اللوبي</button>
+            <div class="game-entry-actions">
+              <button type="button" class="play-btn"><i class="fa-solid fa-play"></i> <span class="web-entry-label">الذهاب الى اللوبي</span><span class="app-entry-label">العب</span></button>
+            </div>
           </div>
 
 <div class="game-card" data-game="knowledge">
             <div class="game-icon">🧠</div>
             <h3 class="game-title">ماذا تعرف</h3>
             <p class="game-desc">سؤال قوائم بالأدوار: اذكر إجابات صحيحة بدون تكرار — 3 أخطاء وتخسر السؤال. 5 أسئلة تحسم المباراة.</p>
-            <button type="button" class="play-btn"><i class="fa-solid fa-play"></i> الذهاب الى اللوبي</button>
+            <div class="game-entry-actions">
+              <button type="button" class="play-btn"><i class="fa-solid fa-play"></i> <span class="web-entry-label">الذهاب الى اللوبي</span><span class="app-entry-label">العب</span></button>
+            </div>
           </div>
 
           
@@ -417,7 +450,6 @@
   </div>
 
   <script src="js/splash.js"></script>
-  <script src="js/config.js" defer></script>
   <script src="js/whats_new.js" defer></script>
   <script src="js/app_update.js" defer></script>
   <script src="js/progression_api.js" defer></script>

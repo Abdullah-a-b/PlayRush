@@ -80,3 +80,114 @@
     .particle, .star { animation: none !important; }
     * { transition-duration: 0.01s !important; }
 }
+
+/* شاشة استئناف محلية تظهر قبل نتيجة طلب الحساب. */
+.app-resume, .app-tab-bar, #appSoundSlot, #appSocialSlot { display: none; }
+.pr-app-resuming .app-resume {
+    position: fixed;
+    inset: 0;
+    z-index: 100000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 24px;
+    background: #0b0e14;
+    color: #e9edf6;
+    text-align: center;
+}
+.app-resume img { border-radius: 20px; }
+.app-resume strong { font-size: 2rem; line-height: 1; letter-spacing: -.04em; }
+.app-resume strong span { color: #facc15; }
+.app-resume p { margin: 8px 0; }
+.app-resume button {
+    min-height: 44px;
+    padding: 8px 16px;
+    border: 1px solid #42516a;
+    border-radius: 10px;
+    background: #182235;
+    color: #fff;
+    font: inherit;
+}
+.pr-app-resuming .categories-page > :not(.app-resume) { visibility: hidden; }
+
+.pr-app .categories-page .background-animation,
+.pr-app .categories-page .pr-unified-bar,
+.pr-app .categories-page .brand-footer,
+.pr-app .categories-page .pr-social-bar { display: none !important; }
+.pr-app .categories-page .sidebar { content-visibility: auto; contain-intrinsic-size: auto 310px; }
+
+.pr-app .categories-page {
+    --app-bar-height: 62px;
+    --app-bar-bottom: calc(var(--app-bar-height) + env(safe-area-inset-bottom, 0px));
+}
+.pr-app .categories-page .lobby-container { margin-bottom: var(--app-bar-bottom); }
+.pr-app .categories-page .app-tab-bar {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 1050;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding: 4px 8px env(safe-area-inset-bottom, 0px);
+    min-height: var(--app-bar-bottom);
+    box-sizing: border-box;
+    background: #101827;
+    border-top: 1px solid #263650;
+}
+.app-tab-bar button {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    gap: 5px;
+    min-width: 0;
+    min-height: 50px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: #b8c4d8;
+    font: inherit;
+    font-size: .75rem;
+}
+.app-tab-bar button i { font-size: 1.1rem; }
+.app-tab-bar button[aria-current="page"],
+.app-tab-bar button[aria-expanded="true"] { color: #facc15; background: #1a263a; }
+.pr-app .categories-page .main-navigation:not(.app-menu-open) { display: none !important; }
+.pr-app .categories-page .main-navigation.app-menu-open {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    position: fixed;
+    z-index: 1060;
+    inset: auto 12px calc(var(--app-bar-bottom) + 8px);
+    gap: 6px !important;
+    padding: 8px !important;
+    background: #141e30;
+    border: 1px solid #324563;
+}
+.pr-app .categories-page .main-navigation .nav-btn:is([data-section="games"], [data-section="friends"], [data-section="leaderboard"]) { display: none !important; }
+.pr-app .categories-page #appSoundSlot { display: inline-flex; }
+.pr-app .categories-page #appSoundSlot #prSoundBtn {
+    position: static !important;
+    min-width: 36px;
+    min-height: 36px;
+}
+.pr-app .categories-page #appSocialSlot:not(:empty) {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    padding-top: 6px;
+}
+@media (min-width: 901px) {
+    .pr-app .categories-page .lobby-container {
+        grid-template-areas: "header header" "main sidebar";
+        grid-template-columns: minmax(0, 1fr) minmax(220px, 28vw);
+    }
+}
+@media (max-width: 900px) {
+    .pr-app .categories-page .lobby-container {
+        grid-template-areas: "header" "main" "sidebar" !important;
+        grid-template-rows: auto auto auto !important;
+    }
+}

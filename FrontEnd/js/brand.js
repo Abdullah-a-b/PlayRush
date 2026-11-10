@@ -61,6 +61,7 @@
     }
 
     function init() {
+        if ((window.PR_IS_APP || window.Capacitor?.isNativePlatform?.()) && document.getElementById("appSoundSlot")) return;
         if (IS_MOBILE()) {
             injectMobileBar();
         } else {

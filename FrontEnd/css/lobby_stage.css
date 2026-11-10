@@ -25,13 +25,15 @@
 #lobbyMainContent #quickPlayBtn { background:linear-gradient(120deg,rgba(var(--lobby-rgb),.28),rgba(var(--lobby-rgb),.1)) !important; box-shadow:inset 0 1px 0 #ffffff18 !important; }
 #lobbyMainContent #playWithFriendBtn { background:#ffffff06 !important; box-shadow:none !important; }
 #lobbyMainContent .action-btn>i { font-size:24px !important; color:var(--lobby-accent); }
-#lobbyMainContent .action-btn>span { font-size:19px; font-weight:700; }
+#lobbyMainContent .action-btn>span, #lobbyMainContent .lobby-action-copy>span { font-size:19px; font-weight:700; }
 #lobbyMainContent .action-btn small { font-size:12px; font-weight:400; color:#cbd5e1; }
 #lobbyMainContent .action-btn:focus-visible { outline:2px solid var(--lobby-accent); outline-offset:4px; }
 @media(max-width:1100px) { #lobbyMainContent .lobby-hero { grid-template-columns:1fr; min-height:0; text-align:center; } .lobby-eyebrow { justify-content:center; } .lobby-art { height:250px; } .stage-orbit { width:220px;height:220px; } .stage-orbit.orbit-two{width:270px;height:155px} .stage-core{width:130px;height:130px;border-radius:32px} #gameIconDisplay{font-size:60px} }
-@media(max-width:600px) { #lobbyMainContent { padding:24px 16px; } #lobbyMainContent .content-section.active { gap:26px; } #lobbyMainContent .lobby-hero{gap:8px} #lobbyMainContent .lobby-copy h1{font-size:34px;margin:12px 0 8px} .lobby-identity{margin-top:12px} .lobby-art{height:230px} #lobbyMainContent .quick-actions{gap:10px} #lobbyMainContent .action-btn{padding:18px 12px;min-height:135px;align-items:center;text-align:center} #lobbyMainContent .action-btn>span{font-size:16px} #lobbyMainContent .action-btn small{font-size:11px;line-height:1.5} .stage-tiles span{width:42px;height:42px;font-size:20px} }
+@media(max-width:600px) { #lobbyMainContent { padding:24px 16px; } #lobbyMainContent .content-section.active { gap:26px; } #lobbyMainContent .lobby-hero{gap:8px} #lobbyMainContent .lobby-copy h1{font-size:34px;margin:12px 0 8px} .lobby-identity{margin-top:12px} .lobby-art{height:230px} #lobbyMainContent .quick-actions{gap:10px} #lobbyMainContent .action-btn{padding:18px 12px;min-height:135px;align-items:center;text-align:center} #lobbyMainContent .action-btn>span,#lobbyMainContent .lobby-action-copy>span{font-size:16px} #lobbyMainContent .action-btn small{font-size:11px;line-height:1.5} .stage-tiles span{width:42px;height:42px;font-size:20px} }
 @media(prefers-reduced-motion:reduce) { #lobbyMainContent .action-btn{transition:none} }
 
 #lobbyMainContent .action-btn { display:flex; flex-direction:column !important; color:#f8fafc; }
 #lobbyMainContent .lobby-copy h1 { padding:0 !important; }
 @media(max-width:600px) { #lobbyMainContent .lobby-copy h1 { font-size:34px !important; } }
+
+.lobby-action-copy { display: contents; }

@@ -267,9 +267,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     // ----------------------------------------
     //  جلب بيانات الحساب
     // ----------------------------------------
+    const startup = window.PRAppStartup;
     try {
-        const res= await fetch(`${API_URL}/auth/me`, { headers: { 'Authorization': `Bearer ${token}` } });
-        if (!res.ok) {
+        const result = startup ? await startup.account : null;
+        const res = result || await fetch(`${API_URL}/auth/me`, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (result ? !result.user : !res.ok) {
             // 401/403 = التوكن فعلاً غير صالح → نمسح الجلسة ونعيد لتسجيل الدخول.
             // أي شيء آخر (429 تجاوز حدّ، 5xx ازدحام، تعثّر لحظي) = عطل مؤقت،
             // فلا نمسح "تذكّرني" — وإلا خرج المستخدم من حسابه بلا سبب حقيقي.
@@ -279,13 +281,15 @@ window.addEventListener('DOMContentLoaded', async () => {
                 return window.location.replace('login.html');
             }
 
+            if (startup) return startup.retry();
             if (typeof showToast === 'function') {
                 showToast('تعذّر تحميل بياناتك مؤقتاً. أعد تحميل الصفحة بعد قليل.', 'error');
             }
             return;
         }
 
-        userDataCache = await res.json();
+        userDataCache = result ? result.user : await res.json();
+        if (startup && !userDataCache.player_name) return window.location.replace('profile-setup.html');
 
         // 📆 مكافأة تتابع الدخول اليومي (5→50🪙)
         if (userDataCache.login_streak_reward) {
@@ -347,8 +351,10 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (socket.connected) joinGlobalLobby();
 
     } catch {
+        if (startup) return startup.retry();
         showToast('خطأ في الاتصال بالسيرفر', 'error');
     }
+    if (startup) startup.finish();
 
     // ----------------------------------------
     //  التنقل بين الأقسام (ألعاب، متجر، أصدقاء)
@@ -364,8 +370,42 @@ window.addEventListener('DOMContentLoaded', async () => {
         }, 300);
     }
 
+    const appMore = document.getElementById('appMoreTab');
+    const appTabs = document.querySelectorAll('[data-app-section]');
+    const appNav = document.getElementById('categoryNavigation');
+    function setAppMenu(open) {
+        appMore.setAttribute('aria-expanded', String(open));
+        appNav.classList.toggle('app-menu-open', open);
+    }
+    if (window.PR_IS_APP) {
+        document.querySelector('[data-app-section="friends"]').append(document.getElementById('friendsBadge'));
+        appMore.addEventListener('click', () => setAppMenu(appMore.getAttribute('aria-expanded') !== 'true'));
+        appTabs.forEach(tab => tab.addEventListener('click', () => {
+            appNav.querySelector('[data-section="' + tab.dataset.appSection + '"]').click();
+        }));
+        document.addEventListener('click', event => {
+            if (!appMore.contains(event.target) && !appNav.contains(event.target)) setAppMenu(false);
+        });
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape') setAppMenu(false);
+        });
+    }
+
     navBtns.forEach(btn => {
         btn.addEventListener('click', () => {
+            if (window.PR_IS_APP) {
+                setAppMenu(false);
+                if (btn.dataset.section) {
+                    const primary = Array.from(appTabs).some(tab => tab.dataset.appSection === btn.dataset.section);
+                    if (primary) appMore.removeAttribute('aria-current');
+                    else appMore.setAttribute('aria-current', 'page');
+                    appTabs.forEach(tab => {
+                        if (tab.dataset.appSection === btn.dataset.section) tab.setAttribute('aria-current', 'page');
+                        else tab.removeAttribute('aria-current');
+                    });
+                }
+            }
+            if (!btn.dataset.section) return;
             navBtns.forEach(b => b.classList.remove('active'));
             sections.forEach(s => s.classList.remove('active'));
             btn.classList.add('active');

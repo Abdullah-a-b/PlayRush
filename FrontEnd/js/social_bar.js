@@ -42,6 +42,12 @@
     }
 
     function build() {
+        const appSlot = window.PR_IS_APP && document.getElementById('appSocialSlot');
+        if (appSlot) {
+            buildIcons(appSlot);
+            return;
+        }
+        if (window.PR_IS_APP && document.body.matches(".game-lobby-page, .app-start-page, .app-auth-page")) return;
         var IS_MOBILE = window.innerWidth <= 640;
 
         if (IS_MOBILE) {

@@ -268,6 +268,7 @@
         show: show,
         // يُستدعى من login/profile-setup/session_resume قبل الانتقال
         playPlatformThen: function (redirect) {
+            if (window.Capacitor?.isNativePlatform?.()) return redirect();
             // التذكرة تُستهلك عند العرض الفعلي فقط؛ لو تعذّر العرض هنا تبقى
             // فيظهر الأنيميشن في categories بدل ضياعه.
             try { sessionStorage.setItem('pr_splash_ticket', '1'); } catch (e) {}
@@ -290,6 +291,7 @@
     // ============================================================
     // التشغيل التلقائي حسب الصفحة (شبكة أمان: OAuth، فتح مباشر…)
     // ============================================================
+    if (window.Capacitor?.isNativePlatform?.()) return;
     const page = (location.pathname.split('/').pop() || '')
         .toLowerCase().replace(/\.html$/, '') || 'index';
     let mode = null;

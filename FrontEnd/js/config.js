@@ -52,8 +52,8 @@ if (PR_IS_APP) {
             } catch (e) {}
         }
         // ط¨ط¹ط¯ ط§ظƒطھظ…ط§ظ„ ط§ظ„طھط­ظ…ظٹظ„ ط¨ظ‚ظ„ظٹظ„طŒ ظ…ط¹ ظ…ظ‡ظ„ط© ظ‚طµظˆظ‰ ظƒظٹ ظ„ط§ طھط¹ظ„ظ‚ ط§ظ„ط´ط§ط´ط© ط£ط¨ط¯ط§ظ‹
-        if (document.readyState === 'complete') setTimeout(hideSplash, 200);
-        else window.addEventListener('load', function () { setTimeout(hideSplash, 200); });
+        if (document.readyState !== 'loading') requestAnimationFrame(hideSplash);
+        else document.addEventListener('DOMContentLoaded', () => requestAnimationFrame(hideSplash), { once: true });
         setTimeout(hideSplash, 5000);
     })();
 }

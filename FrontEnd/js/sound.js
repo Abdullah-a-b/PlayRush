@@ -350,7 +350,7 @@
             return;
         }
 
-        if (IS_MOBILE) {
+        if (IS_MOBILE || (window.PR_IS_APP && document.getElementById('appSoundSlot'))) {
             // جوال (خارج الألعاب): يدخل داخل الشريط الموحّد (slot من brand.js)
             btn.style.cssText = 'background:none;border:none;font-size:1.1rem;'
                 + 'cursor:pointer;opacity:0.85;padding:0;line-height:1;color:#fff;';
@@ -358,7 +358,8 @@
             _updBtn();
             // انتظر الـ slot من brand.js
             function trySlot(n) {
-                const slot = document.getElementById('prSoundSlot');
+                const slot = (window.PR_IS_APP && document.getElementById('appSoundSlot'))
+                    || document.getElementById('prSoundSlot');
                 if (slot) { slot.appendChild(btn); }
                 else if (n > 0) { setTimeout(() => trySlot(n - 1), 80); }
             }
