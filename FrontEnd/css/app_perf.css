@@ -216,3 +216,35 @@
 
 .pr-app #appBrandSlot .pub-brand { display: inline-flex; align-items: center; gap: .3em; }
 .pr-app :is(.app-start-page, .app-auth-page) :is(button, .btn):active { filter: brightness(1.2); }
+
+.pr-app .categories-page #appBrandSlot { grid-column: 1 / -1; }
+
+/* Feedback works for pointer, touch and keyboard, including controls added during a match. */
+:root {
+    --pr-control-fill: #24384d;
+    --pr-control-border: #425972;
+    --pr-control-text: #f1f5fb;
+}
+html:not(.pr-app) :is(.categories-page, .game-lobby-page) :is(.play-btn, .solo-btn, #lobbyMainContent .action-btn) {
+    background: var(--pr-control-fill);
+    color: var(--pr-control-text);
+    border: 1px solid var(--pr-control-border);
+    box-shadow: none;
+}
+:is(button, [role="button"], .game-card, a.btn):focus-visible {
+    outline: 2px solid #facc15;
+    outline-offset: 2px;
+}
+@media (hover: hover) {
+    :is(button, [role="button"], a.btn):not(:disabled, [aria-disabled="true"]):hover {
+        filter: brightness(1.13);
+    }
+}
+@media (prefers-reduced-motion: no-preference) {
+    :is(button, [role="button"], .game-card, a.btn):not(:disabled, [aria-disabled="true"]):active {
+        animation: pr-control-press 140ms ease-out both;
+    }
+    @keyframes pr-control-press {
+        to { scale: .96; filter: brightness(1.22); }
+    }
+}

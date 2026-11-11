@@ -1453,13 +1453,11 @@ socket.on('leaver_penalty', (data) => {
                 board.style.removeProperty('margin-bottom');
                 return;
             }
-            const layout = document.querySelector('.game-layout');
-            const topPad = layout ? parseFloat(getComputedStyle(layout).paddingTop) || 64 : 64;
-            const avail  = sidebar.getBoundingClientRect().top - topPad - 6;
-            const natural = board.offsetHeight;   // لا يتأثّر بالـtransform
-            if (!natural || avail <= 40) return;
-            // حد أدنى 0.55: بلا هذا الحدّ قد يخرج مقياس ضئيل فتختفي اللوحة تماماً
-            const scale = Math.max(0.55, Math.min(1, avail / natural));
+            const boardTop = board.getBoundingClientRect().top;
+            const availableHeight = sidebar.getBoundingClientRect().top - boardTop - 6;
+            const natural = board.offsetHeight;
+            if (!natural) return;
+            const scale = Math.min(1, Math.max(1, availableHeight) / natural);
             if (scale >= 0.995) { fitBoard(null); return; }
             board.style.transition      = 'transform .15s ease';
             board.style.transformOrigin = 'top center';
@@ -1514,7 +1512,7 @@ socket.on('leaver_penalty', (data) => {
 
                 // الإزاحة فقط لو كان الكيبورد يغطّي الصندوق فعلاً
                 sidebar.style.setProperty('top', 'auto', 'important');
-                sidebar.style.setProperty('bottom', (kb > 100 ? kb : 0) + 'px', 'important');
+                sidebar.style.setProperty('bottom', kb + 'px', 'important');
                 // ارتفاع مضغوط: يكفي للسؤال والحقل والزر، ويُبقي اللوحة ظاهرة
                 // فوقه (كان يتمدّد للمساحة كلها فيحجب خلية الحروف).
                 // الوضع المضغوط صار قصيراً فعلاً (سؤال بسطر + صفّ إجابة +
@@ -1582,6 +1580,7 @@ socket.on('leaver_penalty', (data) => {
         } catch (e) {}
 
         vv.addEventListener('resize', schedule);
+        vv.addEventListener('scroll', schedule);
         document.addEventListener('focusin', (e) => {
             if (e.target.id === 'playerAnswerInput') {
                 setTimeout(schedule, 120);
