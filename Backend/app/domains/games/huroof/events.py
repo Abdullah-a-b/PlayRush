@@ -508,6 +508,10 @@ def register_huroof_events(sio):
         sid = gs.buzzed_player
         player_color = 'green' if sid == gs.p1 else 'orange'
         
+        if room.get('is_solo'):
+            elapsed = time.time() - getattr(gs, 'question_shown_at', time.time())
+            record_human_answer(room, sid, _solo.BOT_SID, is_correct, quick=elapsed <= 12)
+
         if is_correct:
             gs.active_hex['color'] = player_color
             await sio.emit('huroof_answer_result', {'correct': True, 'answer': player_ans, 'hexIndex': gs.active_hex['index'], 'color': player_color}, room=room_code)
@@ -1408,6 +1412,7 @@ def register_huroof_events(sio):
     #  المراحل وتتصرّف نيابةً عنه عبر نفس دوال اللعبة الداخلية.
     # ============================================================
     from app.domains.games import trained_bot
+    from app.domains.games.solo_adaptation import adapt_reaction_delay, record_human_answer
     from app.domains.games.huroof import solo_bot as _solo
 
     async def _bot_take_turn_select(room_code):
@@ -1467,7 +1472,9 @@ def register_huroof_events(sio):
         else:
             if not decision['will_buzz']:
                 return
-            delay = decision['delay']
+            cfg = _solo.get_difficulty(gs.bot_difficulty)
+            delay = adapt_reaction_delay(room, decision['delay'], cfg['buzz_min'], cfg['buzz_max'])
+            delay = min(delay, window_seconds * 0.85)
         await asyncio.sleep(max(0, delay - (time.monotonic() - started)))
 
         room = get_room_state(room_code)

@@ -184,6 +184,7 @@ class IntegrityTests(unittest.TestCase):
             env = functions('app/domains/games/career/events.py', {'_bot_consider_buzz'}, {
                 'get_room_state': lambda code: room, '_solo': solo_bot,
                 'trained_bot': types.SimpleNamespace(decide=decide), '_EXPERT_PREVIEW': False,
+                'adapt_reaction_delay': lambda room, delay, minimum, maximum: delay,
                 'time': types.SimpleNamespace(monotonic=lambda: clock[0]),
                 'random': types.SimpleNamespace(uniform=lambda low, high: low),
                 'asyncio': types.SimpleNamespace(sleep=sleep), 'career_buzz': buzz,

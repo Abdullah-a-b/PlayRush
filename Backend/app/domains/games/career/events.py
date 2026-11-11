@@ -17,6 +17,7 @@ from app.domains.games.career.online import reserve_player
 from app.domains.wallet.reward_service import record_match_result
 from app.core.text_processor import check_answer
 from app.domains.games import trained_bot
+from app.domains.games.solo_adaptation import adapt_reaction_delay, record_human_answer
 from app.domains.games.career.club_identity import resolve_club
 from app.sockets.state import connected_players
 
@@ -338,6 +339,7 @@ def register_career_events(sio):
         correct_name = (gs.current_player or {}).get('name', '')
         if is_correct:
             points = gs.score_for_current()
+            record_human_answer(room, sid, _solo.BOT_SID, True, quick=points == 2)
             # قفل النقطتين: إجابة صحيحة بعد الاكتمال = نقطتان (يُستهلك)
             locks = getattr(gs, 'double_locks', {})
             if points == 1 and locks.get(sid):
@@ -362,6 +364,7 @@ def register_career_events(sio):
         if not room or not room.get('game_state'):
             return
         gs = room['game_state']
+        record_human_answer(room, sid, _solo.BOT_SID, False)
         # درع السترايك: أول خطأ لا يُحسب (يُستهلك)
         shields = getattr(gs, 'shields', {})
         if shields.get(sid):
@@ -698,8 +701,13 @@ def register_career_events(sio):
                 return
             pilot_answer = decision['answer']
             delay = decision['buzz_delay']
+            minimum, maximum = _solo.get_difficulty(gs.bot_difficulty)['buzz_react']
             if gs.bot_difficulty == 'beginner':
-                delay = max(delay, random.uniform(3.2, 4.4))
+                minimum, maximum = 3.2, 4.4
+                delay = max(delay, random.uniform(minimum, maximum))
+            elif _EXPERT_PREVIEW and gs.bot_difficulty == 'expert':
+                minimum, maximum = 1.65, 2.35
+            delay = adapt_reaction_delay(room, delay, minimum, maximum)
             elapsed = time.monotonic() - started
             if max(elapsed, delay) >= window:
                 return
