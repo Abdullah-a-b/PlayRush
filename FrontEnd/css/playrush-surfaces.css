@@ -1,0 +1,81 @@
+html {
+    --pr-shell-background: #0b1018;
+    --pr-shell-panel: #141e2b;
+    --pr-shell-line: #263649;
+    --pr-shell-accent: #facc15;
+}
+
+html:not(.pr-app) :is(.categories-page, .game-lobby-page) {
+    background: var(--pr-shell-background);
+}
+html:not(.pr-app) :is(.categories-page, .game-lobby-page) :is(.top-bar, .main-navigation, .chat-panel, .online-players) {
+    background: var(--pr-shell-panel);
+    border-color: var(--pr-shell-line);
+}
+html:not(.pr-app) .categories-page .game-card {
+    background: linear-gradient(150deg, #1c2c3e, var(--pr-shell-panel) 65%);
+    border-color: var(--pr-shell-line);
+}
+html:not(.pr-app) .categories-page .game-card .game-title { color: #f1f5fb; }
+html:not(.pr-app) .categories-page .game-card:focus-within { border-color: var(--pr-shell-accent); }
+
+@media (max-width: 900px) {
+    html:not(.pr-app) :is(.categories-page, .game-lobby-page) .main-navigation {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        white-space: normal;
+        overflow: visible !important;
+    }
+    html:not(.pr-app) :is(.categories-page, .game-lobby-page) .main-navigation .nav-btn {
+        min-width: 0 !important;
+        min-height: 49px;
+        padding-inline: 3px !important;
+    }
+    html:not(.pr-app) .main-navigation .nav-btn > span:not([id]) { display: block !important; }
+    html:not(.pr-app) .categories-page .games-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+    }
+    html:not(.pr-app) .categories-page .game-card {
+        display: flex !important;
+        flex-direction: column !important;
+        padding: 12px 8px !important;
+        transform: none;
+    }
+    html:not(.pr-app) .categories-page .game-card .game-icon { font-size: 28px; }
+    html:not(.pr-app) .categories-page .game-card button { min-height: 44px; }
+}
+@media (max-width: 359px) {
+    html:not(.pr-app) .main-navigation .nav-btn > span:not([id]) { display: block !important; }
+    html:not(.pr-app) .categories-page .games-grid { grid-template-columns: minmax(0, 1fr) !important; }
+}
+
+.pr-app :is(.categories-page, .game-lobby-page) button {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+.pr-app :is(.app-tab-bar button, .game-entry-actions button, #lobbyMainContent .action-btn, .controls-section button):active {
+    scale: .96;
+    filter: brightness(1.18);
+}
+.pr-app :is(.app-tab-bar button, .game-entry-actions button, #lobbyMainContent .action-btn, .controls-section button) {
+    transition: scale 120ms ease-out, filter 120ms ease-out, background-color 150ms ease-out !important;
+}
+@media (prefers-reduced-motion: no-preference) {
+    .pr-app :is(.categories-page, .game-lobby-page) .content-section.active {
+        animation: pr-section-enter 180ms ease-out both;
+    }
+    .pr-app .main-navigation.app-menu-open {
+        animation: pr-section-enter 140ms ease-out both;
+    }
+}
+@keyframes pr-section-enter {
+    from { opacity: .66; translate: 0 6px; }
+    to { opacity: 1; translate: 0 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .pr-app :is(.app-tab-bar button, .game-entry-actions button, #lobbyMainContent .action-btn, .controls-section button) {
+        transition: none !important;
+    }
+    .pr-app :is(.app-tab-bar button, .game-entry-actions button, #lobbyMainContent .action-btn, .controls-section button):active { scale: 1; }
+}
