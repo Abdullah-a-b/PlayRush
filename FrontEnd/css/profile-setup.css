@@ -51,7 +51,7 @@ h2 { text-align: center; margin-bottom: 5px; color: var(--brand-gold, #facc15); 
   width: 120px; height: 120px; margin: 0 auto 30px auto; position: relative; border-radius: 50%;
   cursor: pointer; border: 3px solid rgba(255, 255, 255, 0.2); transition: 0.3s;
 }
-.profile-picture-container:hover { border-color: var(--brand-gold, #facc15); box-shadow: 0 0 20px rgba(250, 204, 21, 0.4); transform: scale(1.05); }
+.profile-picture-container:hover { border-color: var(--brand-gold, #facc15); box-shadow: 0 0 20px rgba(250, 204, 21, 0.4);  }
 .profile-picture-container img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background: rgba(0,0,0,0.3); }
 .edit-badge {
   position: absolute; bottom: 0; right: 0; background: var(--brand-gold, #facc15); color: #2a0a3d; width: 35px; height: 35px;
@@ -67,7 +67,7 @@ h2 { text-align: center; margin-bottom: 5px; color: var(--brand-gold, #facc15); 
 .input-group input:focus + label, .input-group input:valid + label { top: 0; right: 35px; font-size: 13px; color: var(--brand-gold, #facc15); background-color: #3b1554; border-radius: 4px; padding: 2px 8px; }
 .icon { position: absolute; top: 50%; right: 15px; transform: translateY(-50%); color: #ba68c8; font-size: 18px; }
 button[type="submit"] { width: 100%; padding: 14px; background: linear-gradient(45deg, var(--brand-pink, #f43f5e), #e11d48); border: none; color: white; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; font-family: inherit; transition: 0.2s; }
-button[type="submit"]:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(225, 29, 72, 0.4); }
+button[type="submit"]:hover {  box-shadow: 0 5px 15px rgba(225, 29, 72, 0.4); }
 
 /* النافذة المنبثقة (Modal) */
 .modal-overlay {
@@ -81,7 +81,7 @@ button[type="submit"]:hover { transform: translateY(-2px); box-shadow: 0 5px 15p
 }
 .modal-overlay.active .modal-content { transform: translateY(0); }
 .close-modal { position: absolute; top: 15px; right: 20px; font-size: 22px; cursor: pointer; color: #cbd5e1; transition: 0.2s; }
-.close-modal:hover { color: var(--brand-pink, #f43f5e); transform: scale(1.1); }
+.close-modal:hover { color: var(--brand-pink, #f43f5e);  }
 
 /* شبكة الصور */
 .avatars-grid {
@@ -94,7 +94,6 @@ button[type="submit"]:hover { transform: translateY(-2px); box-shadow: 0 5px 15p
   width: 100%; aspect-ratio: 1; border-radius: 50%; cursor: pointer; border: 3px solid transparent;
   transition: 0.2s; object-fit: cover; background: rgba(255,255,255,0.05);
 }
-.avatar-item:hover { transform: scale(1.1); }
 .avatar-item.selected { border-color: #00ff88; box-shadow: 0 0 15px rgba(0, 255, 136, 0.4); transform: scale(1.1); }
 
 /* أزرار النافذة المنبثقة */

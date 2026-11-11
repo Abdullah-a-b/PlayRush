@@ -237,7 +237,7 @@ body {
     color: #000 !important; font-size: 3.6vmin; font-weight: 900;
     cursor: pointer; margin: 0 -0.2vmin; transition: all 0.2s ease; z-index: 1;
 }
-.hex:hover { background: #e0e0e0; transform: scale(1.05); z-index: 10; }
+.hex:hover { background: #e0e0e0;  z-index: 10; }
 .hex.selected { background: #ffeb3b !important; box-shadow: 0 0 15px #ffeb3b; }
 .hex.green { background: #006400 !important; color: white !important; }
 .hex.orange { background: #ff8c00 !important; color: white !important; }
@@ -339,8 +339,6 @@ body {
     box-shadow: 0 4px 15px rgba(255,152,0,0.4);
     transition: transform 0.1s;
 }
-.question-sidebar #buzzerBtn:hover { transform: scale(1.03); }
-.question-sidebar #buzzerBtn:active { transform: scale(0.97); }
 
 .question-sidebar #playerAnswerInput {
     width: 100%;
@@ -373,7 +371,6 @@ body {
     margin-top: 8px;
     transition: transform 0.1s;
 }
-.question-sidebar #submitAnswerBtn:hover { transform: scale(1.02); }
 
 .question-sidebar #voteSkipBtn {
     background: rgba(96,125,139,0.6) !important;
@@ -414,7 +411,7 @@ body {
     cursor: pointer; font-size: 20px; transition: all 0.3s;
     display: flex; align-items: center; justify-content: center; z-index: 200;
 }
-.surrender-btn:hover { background: #ff4757; color: white; transform: scale(1.1); }
+.surrender-btn:hover { background: #ff4757; color: white;  }
 
 /* المودالات */
 .win-message-overlay {
@@ -628,7 +625,7 @@ body {
     position: absolute; top: 15px; left: 15px; background: none; border: none;
     color: #ff4757; font-size: 24px; cursor: pointer; transition: 0.2s;
 }
-.close-modal-btn:hover { transform: scale(1.1); color: #ff6b81; }
+.close-modal-btn:hover {  color: #ff6b81; }
 
 .profile-header { text-align: center; margin-bottom: 25px; }
 .modal-avatar { width: 90px; height: 90px; border-radius: 50%; border: 3px solid #ffeb3b; margin-bottom: 10px; box-shadow: 0 0 15px rgba(255, 235, 59, 0.5); object-fit: cover;}
@@ -650,12 +647,12 @@ body {
 .modal-actions { display: flex; justify-content: center; gap: 10px; margin-top: 25px; }
 .action-btn { flex: 1; padding: 12px 10px; border-radius: 8px; border: none; color: #fff; font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; font-size: 0.9em;}
 .action-btn.add-friend { background: linear-gradient(135deg, #3498db, #2980b9); box-shadow: 0 4px 10px rgba(52, 152, 219, 0.4);}
-.action-btn.add-friend:hover { transform: translateY(-2px); filter: brightness(1.1); }
+.action-btn.add-friend:hover {  filter: brightness(1.1); }
 .action-btn.add-friend.remove-friend { background: linear-gradient(135deg, #e74c3c, #c0392b); box-shadow: 0 4px 10px rgba(231, 76, 60, 0.4); }
 .action-btn.block-user { background: linear-gradient(135deg, #e67e22, #d35400); box-shadow: 0 4px 10px rgba(230, 126, 34, 0.4);}
-.action-btn.block-user:hover { transform: translateY(-2px); filter: brightness(1.1); }
+.action-btn.block-user:hover {  filter: brightness(1.1); }
 .action-btn.report-user { background: linear-gradient(135deg, #c0392b, #a93226); box-shadow: 0 4px 10px rgba(192, 57, 43, 0.4);}
-.action-btn.report-user:hover { transform: translateY(-2px); filter: brightness(1.1); }
+.action-btn.report-user:hover {  filter: brightness(1.1); }
 
 /* ==========================================
     نظام الجولات (Rounds Display)
@@ -862,7 +859,7 @@ body {
 ------------------------------------------- */
 .qc-emoji-row { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 4px; }
 .qc-emoji-btn { background: transparent; border: none; font-size: 26px; cursor: pointer; padding: 4px 6px; border-radius: 8px; transition: all 0.15s; }
-.qc-emoji-btn:hover { background: rgba(255,255,255,0.12); transform: scale(1.2); }
+.qc-emoji-btn:hover { background: rgba(255,255,255,0.12);  }
 .emoji-bubble { position: fixed; z-index: 3000; pointer-events: none; opacity: 0; transform: scale(0.5) translateY(10px); transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .emoji-bubble.show { opacity: 1; transform: scale(1) translateY(0); }
 .emoji-fallback { font-size: 60px; display: inline-block; animation: emojiFloat 2s ease-in-out infinite; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4)); }

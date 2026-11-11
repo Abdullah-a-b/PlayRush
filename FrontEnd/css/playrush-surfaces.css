@@ -54,11 +54,10 @@ html:not(.pr-app) .categories-page .game-card .game-title { color: #f1f5fb; }
     -webkit-tap-highlight-color: transparent;
 }
 .pr-app :is(.app-tab-bar button, .game-entry-actions button, #lobbyMainContent .action-btn, .controls-section button):active {
-    scale: .96;
     filter: brightness(1.18);
 }
 .pr-app :is(.app-tab-bar button, .game-entry-actions button, #lobbyMainContent .action-btn, .controls-section button) {
-    transition: scale 120ms ease-out, filter 120ms ease-out, background-color 150ms ease-out !important;
+    transition: filter 120ms ease-out, background-color 150ms ease-out !important;
 }
 @media (prefers-reduced-motion: no-preference) {
     .pr-app :is(.categories-page, .game-lobby-page) .content-section.active {
@@ -76,7 +75,6 @@ html:not(.pr-app) .categories-page .game-card .game-title { color: #f1f5fb; }
     .pr-app :is(.app-tab-bar button, .game-entry-actions button, #lobbyMainContent .action-btn, .controls-section button) {
         transition: none !important;
     }
-    .pr-app :is(.app-tab-bar button, .game-entry-actions button, #lobbyMainContent .action-btn, .controls-section button):active { scale: 1; }
 }
 
 @media (max-width: 900px) {

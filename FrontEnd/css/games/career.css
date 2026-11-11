@@ -68,8 +68,6 @@ body{
   box-shadow:0 8px 24px rgba(231,76,60,.5),inset 0 -3px 6px rgba(0,0,0,.2);transition:transform .12s}
 .career-buzz-btn i{font-size:2.2rem}
 .career-buzz-btn span{font-size:.95rem;font-weight:700}
-.career-buzz-btn:not(:disabled):hover{transform:scale(1.06)}
-.career-buzz-btn:not(:disabled):active{transform:scale(.94)}
 .career-buzz-btn:disabled{opacity:.4;cursor:not-allowed;background:radial-gradient(circle at 40% 35%,#555,#333);box-shadow:none}
 .strikes-display{display:flex;gap:8px}
 /*  السترايكات بجانب اسم كل لاعب — واضحة على الخلفية الداكنة:
@@ -145,7 +143,7 @@ body{
 /*  الإيموجيات المتحركة (نفس حروف) */
 .qc-emoji-row { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 4px; }
 .qc-emoji-btn { background: transparent; border: none; font-size: 26px; cursor: pointer; padding: 4px 6px; border-radius: 8px; transition: all 0.15s; }
-.qc-emoji-btn:hover { background: rgba(255,255,255,0.12); transform: scale(1.2); }
+.qc-emoji-btn:hover { background: rgba(255,255,255,0.12);  }
 .emoji-bubble { position: fixed; z-index: 3000; pointer-events: none; opacity: 0; transform: scale(0.5) translateY(10px); transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .emoji-bubble.show { opacity: 1; transform: scale(1) translateY(0); }
 .emoji-fallback { font-size: 60px; display: inline-block; animation: emojiFloat 2s ease-in-out infinite; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4)); }
@@ -196,7 +194,6 @@ body{
   font-family: inherit; font-weight: 700; font-size: .82rem; color: #fff;
   background: linear-gradient(135deg,#3498db,#2980b9); transition: transform .15s;
 }
-.action-btn:hover { transform: scale(1.05); }
 .action-btn.block-user { background: linear-gradient(135deg,#7f8c8d,#616a6b); }
 .action-btn.report-user { background: linear-gradient(135deg,#e67e22,#d35400); }
 
@@ -206,7 +203,7 @@ body{
 .career-help-btn { width: 46px; height: 46px; border-radius: 12px; border: 1px solid rgba(255,255,255,.15);
   background: rgba(30,30,50,.85); cursor: pointer; transition: transform .15s, border-color .2s; }
 .career-help-btn .hicon { font-size: 1.3rem; }
-.career-help-btn:hover:not(.used) { transform: scale(1.1); border-color: var(--ca-accent); }
+.career-help-btn:hover:not(.used) {  border-color: var(--ca-accent); }
 .career-help-btn.used { opacity: .35; cursor: not-allowed; filter: grayscale(1); }
 
 /* عدّاد المخزون على زر المساعدة */

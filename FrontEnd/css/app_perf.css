@@ -241,11 +241,11 @@ html:not(.pr-app) :is(.categories-page, .game-lobby-page) :is(.play-btn, #lobbyM
     }
 }
 @media (prefers-reduced-motion: no-preference) {
-    :is(button, [role="button"], a.btn):not(:disabled, [aria-disabled="true"]):active {
+    :is(button, [role="button"], a[href], summary):not(:disabled, [aria-disabled="true"]):active:not(:has(:is(button, [role="button"], a[href], summary):active)) {
         animation: pr-control-press 140ms ease-out both;
     }
     @keyframes pr-control-press {
-        to { scale: .96; filter: brightness(1.22); }
+        to { filter: brightness(1.22); }
     }
 }
 
@@ -266,7 +266,7 @@ html:not(.pr-app) .categories-page .game-card .solo-btn {
         animation: pr-opening-game 180ms ease-out both;
     }
     @keyframes pr-opening-game {
-        45% { scale: .98; box-shadow: inset 0 0 0 2px #facc15; }
+        45% { box-shadow: inset 0 0 0 2px #facc15; }
         to { scale: 1; box-shadow: inset 0 0 0 1px #facc15; }
     }
     @keyframes pr-solo-reveal {
@@ -332,14 +332,10 @@ html:not(.pr-app) .categories-page .game-card .solo-btn {
 .pr-room-share { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 @media (prefers-reduced-motion: no-preference) {
     .pr-app .pr-room-dialog[open] { animation: pr-solo-reveal 170ms ease-out both; }
-    .pr-app :is(a[href], [role="button"], summary):active {
-        animation: pr-control-press 140ms ease-out both;
-    }
 }
 
 
-.categories-page .game-card,
-.categories-page .game-entry-actions button {
+html {
     -webkit-tap-highlight-color: transparent;
 }
 @media (prefers-reduced-motion: no-preference) {
@@ -351,7 +347,7 @@ html:not(.pr-app) .categories-page .game-card .solo-btn {
         animation: pr-control-press 140ms ease-out both;
     }
     @keyframes pr-card-press {
-        45% { scale: .985; }
-        to { scale: 1; }
+        45% { filter: brightness(1.12); }
+        to { filter: brightness(1); }
     }
 }

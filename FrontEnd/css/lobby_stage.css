@@ -21,7 +21,7 @@
 .stage-caption { position:absolute; bottom:0; font-size:10px; letter-spacing:2px; color:#94a3b8; }
 #lobbyMainContent .quick-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin:0; }
 #lobbyMainContent .action-btn { width:100%; min-width:0; min-height:130px; align-items:flex-start; justify-content:center; text-align:right; padding:24px; gap:9px; border:1px solid #ffffff1a; border-radius:20px; transition:transform .18s,border-color .18s; }
-#lobbyMainContent .action-btn:hover { transform:translateY(-3px); border-color:var(--lobby-accent); }
+#lobbyMainContent .action-btn:hover {  border-color:var(--lobby-accent); }
 #lobbyMainContent #quickPlayBtn { background:linear-gradient(120deg,rgba(var(--lobby-rgb),.28),rgba(var(--lobby-rgb),.1)) !important; box-shadow:inset 0 1px 0 #ffffff18 !important; }
 #lobbyMainContent #playWithFriendBtn { background:#ffffff06 !important; box-shadow:none !important; }
 #lobbyMainContent .action-btn>i { font-size:24px !important; color:var(--lobby-accent); }

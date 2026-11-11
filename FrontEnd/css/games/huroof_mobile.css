@@ -24,8 +24,7 @@ html.kb-open, html.kb-open body {
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
     transition: transform 0.15s ease, opacity 0.15s ease;
 }
-.pr-sound-float:hover { opacity: 1; transform: scale(1.08); }
-.pr-sound-float:active { transform: scale(0.94); }
+.pr-sound-float:hover { opacity: 1;  }
 
 /* ============================================================================
    ≤ 900px — أجهزة لوحية وجوالات (تعديلات الجوال فقط)

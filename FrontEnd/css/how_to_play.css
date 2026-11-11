@@ -220,7 +220,6 @@
   box-shadow: 0 8px 22px rgba(250, 204, 21, 0.3);
   transition: transform 0.15s;
 }
-.htp-ok:hover { transform: translateY(-2px); }
 
 @media (max-width: 560px) {
   .htp-modal { max-height: 92vh; }
