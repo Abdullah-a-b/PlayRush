@@ -125,3 +125,31 @@ window.prSaveToken = function (t) {
         }
     } catch (e) { /* ظ…طھطµظپط­ ظٹظ…ظ†ط¹ ط§ظ„طھط®ط²ظٹظ† */ }
 })();
+
+/* Pointer events keep the pressed state visible in Android WebView during a hold. */
+(() => {
+    const controls = 'button, input[type="button"], input[type="submit"], input[type="reset"], [role="button"], a[href], summary, .game-card[data-game]';
+    let pressed;
+    let pointerId;
+
+    function release(event) {
+        if (event && 'pointerId' in event && event.pointerId !== pointerId) return;
+        pressed?.removeAttribute('data-pr-pressed');
+        pressed = null;
+    }
+
+    document.addEventListener('pointerdown', event => {
+        if (!event.isPrimary || event.button !== 0) return;
+        release();
+        const control = event.target.closest?.(controls);
+        if (!control || control.matches(':disabled, [aria-disabled="true"]')) return;
+        pressed = control;
+        pointerId = event.pointerId;
+        control.setAttribute('data-pr-pressed', '');
+    }, true);
+
+    for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+        window.addEventListener(event, release, true);
+    }
+    window.addEventListener('blur', release);
+})();

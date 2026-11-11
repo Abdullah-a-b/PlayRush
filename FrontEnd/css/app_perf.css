@@ -351,3 +351,9 @@ html {
 }
 
 .categories-page .game-card:active:not(:has(button:active)) { filter: brightness(1.12); }
+
+[data-pr-pressed] {
+    outline: 2px solid #facc15 !important;
+    outline-offset: -3px !important;
+    filter: brightness(1.24) !important;
+}
