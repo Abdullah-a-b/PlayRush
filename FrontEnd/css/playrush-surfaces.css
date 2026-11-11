@@ -17,7 +17,6 @@ html:not(.pr-app) .categories-page .game-card {
     border-color: var(--pr-shell-line);
 }
 html:not(.pr-app) .categories-page .game-card .game-title { color: #f1f5fb; }
-html:not(.pr-app) .categories-page .game-card:focus-within { border-color: var(--pr-shell-accent); }
 
 @media (max-width: 900px) {
     html:not(.pr-app) :is(.categories-page, .game-lobby-page) .main-navigation {

@@ -421,7 +421,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             const button = event.target.closest('button');
             if (button && !button.classList.contains('play-btn')) return;
             const destination = `lobby.html?game=${card.dataset.game}`;
-            if (window.PR_IS_APP && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
                 const control = button || card;
                 if (card.dataset.opening) return;
                 card.dataset.opening = '1';

@@ -1,7 +1,7 @@
 /* --- تنسيقات اللوبي الكبير --- */
 .games-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; margin-top: 20px; }
 .game-card { background: linear-gradient(145deg, rgba(255,255,255,0.05), rgba(0,0,0,0.4)); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 25px; text-align: center; cursor: pointer; transition: 0.3s; position: relative; overflow: hidden; }
-.game-card:hover { transform: translateY(-10px); border-color: var(--brand-gold, #facc15); box-shadow: 0 10px 30px rgba(250, 204, 21, 0.2); }
+@media (hover: hover) { .game-card:hover:not(:has(button:hover)) { filter: brightness(1.06); } }
 .game-icon { font-size: 60px; margin-bottom: 15px; text-shadow: 0 0 15px rgba(255,255,255,0.2); }
 .game-title { color: #fff; font-size: 22px; margin-bottom: 10px; font-weight: 900; }
 .game-desc { color: #aaa; font-size: 14px; margin-bottom: 20px; line-height: 1.5; }
