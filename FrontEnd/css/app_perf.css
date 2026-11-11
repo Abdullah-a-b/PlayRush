@@ -240,13 +240,12 @@ html:not(.pr-app) :is(.categories-page, .game-lobby-page) :is(.play-btn, #lobbyM
         filter: brightness(1.13);
     }
 }
-@media (prefers-reduced-motion: no-preference) {
-    :is(button, [role="button"], a[href], summary):not(:disabled, [aria-disabled="true"]):active:not(:has(:is(button, [role="button"], a[href], summary):active)) {
-        animation: pr-control-press 140ms ease-out both;
-    }
-    @keyframes pr-control-press {
-        to { filter: brightness(1.22); }
-    }
+:is(button, input[type="button"], input[type="submit"], input[type="reset"], [role="button"], a[href], summary):not(:disabled, [aria-disabled="true"]):active:not(:has(:is(button, input[type="button"], input[type="submit"], input[type="reset"], [role="button"], a[href], summary):active)) {
+    filter: brightness(1.22);
+}
+
+@keyframes pr-control-press {
+    to { filter: brightness(1.22); }
 }
 
 html:not(.pr-app) .categories-page .game-card .solo-btn {
@@ -339,7 +338,6 @@ html {
     -webkit-tap-highlight-color: transparent;
 }
 @media (prefers-reduced-motion: no-preference) {
-    .categories-page .game-card:active:not(:has(button:active)),
     .categories-page .game-card.pr-opening-game {
         animation: pr-card-press 170ms ease-out both;
     }
@@ -351,3 +349,5 @@ html {
         to { filter: brightness(1); }
     }
 }
+
+.categories-page .game-card:active:not(:has(button:active)) { filter: brightness(1.12); }
