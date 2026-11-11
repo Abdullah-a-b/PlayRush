@@ -361,3 +361,16 @@ html {
     outline: 2px solid #facc15 !important;
     outline-offset: 2px !important;
 }
+
+@media (prefers-reduced-motion: no-preference) {
+    [data-pr-pressed] {
+        animation: pr-touch-press 130ms ease-out both;
+    }
+    .game-card[data-pr-pressed] {
+        animation: pr-touch-press 150ms ease-out both;
+        --pr-press-scale: .99;
+    }
+    @keyframes pr-touch-press {
+        to { scale: var(--pr-press-scale, .975); }
+    }
+}
