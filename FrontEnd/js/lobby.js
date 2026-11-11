@@ -6,7 +6,16 @@
 
 // حماية المسار
 const token = (typeof getToken === 'function') ? getToken() : (localStorage.getItem('token') || sessionStorage.getItem('token'));
-if (!token) window.location.replace('login.html');
+function redirectLobbyLogin() {
+    const params = new URLSearchParams(location.search);
+    const game = params.get('game');
+    const room = params.get('room')?.toUpperCase();
+    if (['huroof', 'bank', 'career', 'whoami', 'knowledge'].includes(game) && /^[A-Z0-9]{6}$/.test(room || '')) {
+        sessionStorage.setItem('pr_room_invite', new URLSearchParams({game, room}).toString());
+    }
+    window.location.replace('login.html');
+}
+if (!token) redirectLobbyLogin();
 
 // الاتصال بالسوكيت
 const socket = io(API_URL, { transports: ['websocket', 'polling'], upgrade: true });
@@ -358,7 +367,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             if (res.status === 401 || res.status === 403) {
                 sessionStorage.removeItem('token');
                 try { localStorage.removeItem('token'); } catch (e) {}
-                return window.location.replace('login.html');
+                return redirectLobbyLogin();
             }
             if (typeof showToast === 'function') {
                 showToast('تعذّر تحميل بياناتك مؤقتاً. أعد المحاولة بعد قليل.', 'error');
@@ -714,6 +723,8 @@ window.addEventListener('DOMContentLoaded', async () => {
             // لو كانت لوحة الأصدقاء مفتوحة (دعوة صديق) نغلقها ونُظهر شاشة التطابق
             const fm = document.getElementById('friendsModal');
             if (fm) fm.style.display = 'none';
+            document.getElementById('waitingScreen').style.display = 'none';
+            document.getElementById('joinRoomModal').style.display = 'none';
             lobbyMainContent.style.display  = 'none';
             matchmakingScreen.style.display = 'flex';
             document.body.classList.add('mm-active');
@@ -767,14 +778,49 @@ window.addEventListener('DOMContentLoaded', async () => {
     // ----------------------------------------
     let currentRoomCode    = null;
     const waitingScreen    = document.getElementById('waitingScreen');
+    const friendOptions = document.getElementById('friendPlayOptions');
+    const inviteCode = new URLSearchParams(location.search).get('room')?.toUpperCase();
+    if (/^[A-Z0-9]{6}$/.test(inviteCode || '')) {
+        document.getElementById('roomCodeInput').value = inviteCode;
+        document.getElementById('joinRoomModal').style.display = 'flex';
+    }
+
+    async function copyRoomValue(value, message) {
+        try {
+            await navigator.clipboard.writeText(value);
+            showToast(message, 'success');
+        } catch {
+            window.prompt(message.replace('تم النسخ', 'انسخ'), value);
+        }
+    }
+
+    document.getElementById('copyRoomCodeBtn').onclick = () => {
+        if (currentRoomCode) copyRoomValue(currentRoomCode, 'تم النسخ: كود الغرفة');
+    };
+    document.getElementById('shareRoomLinkBtn').onclick = async () => {
+        if (!currentRoomCode) return;
+        const url = new URL('https://playrush.pages.dev/lobby.html');
+        url.search = new URLSearchParams({game: selectedGameMode, room: currentRoomCode});
+        if (navigator.share) {
+            try {
+                await navigator.share({title: 'دعوة PlayRush', url: url.href});
+                return;
+            } catch (error) {
+                if (error.name === 'AbortError') return;
+            }
+        }
+        await copyRoomValue(url.href, 'تم النسخ: رابط الغرفة');
+    };
 
     document.getElementById('openCreateRoomBtn')?.addEventListener('click', () => {
+        friendOptions.close();
         document.getElementById('createRoomModal').style.display = 'flex';
     });
     document.getElementById('closeCreateRoom')?.addEventListener('click', () => {
         document.getElementById('createRoomModal').style.display = 'none';
     });
     document.getElementById('openJoinRoomBtn')?.addEventListener('click', () => {
+        friendOptions.close();
         document.getElementById('joinRoomModal').style.display = 'flex';
     });
     document.getElementById('closeJoinRoom')?.addEventListener('click', () => {
@@ -783,6 +829,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('confirmCreateRoom')?.addEventListener('click', () => {
         socket.emit('create_room', {
+            token,
             host_name: userDataCache.player_name,
             game_mode: selectedGameMode,
             avatar:    userDataCache.avatar,
@@ -800,9 +847,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     document.getElementById('confirmJoinRoom')?.addEventListener('click', () => {
-        const code = document.getElementById('roomCodeInput').value.toUpperCase();
-        if (code.length === 6) {
-            socket.emit('join_room', { room_code: code, player_name: userDataCache.player_name, avatar: userDataCache.avatar });
+        const code = document.getElementById('roomCodeInput').value.trim().toUpperCase();
+        if (/^[A-Z0-9]{6}$/.test(code)) {
+            socket.emit('join_room', { token, room_code: code, player_name: userDataCache.player_name, avatar: userDataCache.avatar });
         } else {
             showToast('يرجى إدخال كود من 6 أحرف', 'error');
         }
@@ -893,6 +940,10 @@ window.addEventListener('DOMContentLoaded', async () => {
             waitingScreen.style.display    = 'none';
             lobbyMainContent.style.display = 'block';
             currentRoomCode                = null;
+            sessionStorage.removeItem('gameRoomCode');
+            sessionStorage.removeItem('myRole');
+            socket.disconnect();
+            socket.connect();
         });
     });
 
@@ -920,7 +971,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     //  العب مع صديق → يفتح لوحة الأصدقاء (نظام الدعوة الآمن)
-    document.getElementById('playWithFriendBtn')?.addEventListener('click', () => {
+    document.getElementById('playWithFriendBtn')?.addEventListener('click', () => friendOptions.showModal());
+    document.getElementById('inviteExistingFriendBtn')?.addEventListener('click', () => {
+        friendOptions.close();
         const navBtn = document.getElementById('friendsNavBtn');
         if (navBtn) {
             navBtn.click();  // يفتح اللوحة ويحمّل بيانات الأصدقاء

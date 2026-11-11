@@ -420,13 +420,15 @@ window.addEventListener('DOMContentLoaded', async () => {
         card.addEventListener('click', event => {
             const button = event.target.closest('button');
             if (button && !button.classList.contains('play-btn')) return;
-            if (window.PR_IS_APP && !button) return;
             const destination = `lobby.html?game=${card.dataset.game}`;
             if (window.PR_IS_APP && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-                if (card.classList.contains('pr-opening-game')) return;
-                card.classList.add('pr-opening-game');
+                const control = button || card;
+                if (card.dataset.opening) return;
+                card.dataset.opening = '1';
+                control.classList.add('pr-opening-game');
                 window.setTimeout(() => {
-                    card.classList.remove('pr-opening-game');
+                    delete card.dataset.opening;
+                    control.classList.remove('pr-opening-game');
                     window.location.href = destination;
                 }, 170);
                 return;

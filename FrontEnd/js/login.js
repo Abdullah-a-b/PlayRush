@@ -96,15 +96,18 @@ window.addEventListener('load', () => {
 
                     //  التوجيه الذكي والفوري! (بدون انتظار لتخطي مشكلة التحديث)
                     if (data.has_profile) {
+                        const invite = sessionStorage.getItem('pr_room_invite');
+                        sessionStorage.removeItem('pr_room_invite');
+                        const destination = invite ? 'lobby.html?' + invite : 'categories.html';
                         // 🎬 نعرض أنيميشن المنصة *هنا* لا في categories:
                         // نقرة الدخول منحت هذا المستند إذن الصوت، أما
                         // categories فمستند جديد بكر يمنعه المتصفح من الصوت.
                         if (window.PRSplash) {
                             window.PRSplash.playPlatformThen(function () {
-                                window.location.replace('categories.html');
+                                window.location.replace(destination);
                             });
                         } else {
-                            window.location.replace('categories.html');
+                            window.location.replace(destination);
                         }
                     } else {
                         window.location.replace('profile-setup.html');

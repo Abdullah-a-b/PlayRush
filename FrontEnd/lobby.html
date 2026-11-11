@@ -129,12 +129,20 @@
 
           <button class="action-btn primary" id="playWithFriendBtn" style="background: linear-gradient(45deg, #4a90e2, #357abd); color: #fff; box-shadow: 0 10px 20px rgba(74, 144, 226, 0.4);">
               <i class="fa-solid fa-user-group" style="font-size: 26px;"></i>
-              <div class="lobby-action-copy"><span>العب مع صديق</span><small>اختر صديقك وأرسل له دعوة</small></div>
+              <div class="lobby-action-copy"><span>العب مع صديق</span><small>أرسل دعوة أو شارك كود غرفة</small></div>
           </button>
         </div>
 
       </section>
     </main>
+
+    <dialog id="friendPlayOptions" class="pr-room-dialog">
+      <h2>العب مع صديق</h2>
+      <button type="button" id="inviteExistingFriendBtn">دعوة من قائمة الأصدقاء</button>
+      <button type="button" id="openCreateRoomBtn">إنشاء غرفة خاصة</button>
+      <button type="button" id="openJoinRoomBtn">الانضمام بكود</button>
+      <form method="dialog"><button>إغلاق</button></form>
+    </dialog>
 
     <div id="matchmakingScreen" class="matchmaking-screen">
         <h2 style="color: #fff; font-size: 30px; margin-bottom: 10px;" id="mmStatusTitle">البحث عن منافس...</h2>
@@ -172,6 +180,10 @@
       <div class="waiting-card" style="max-width: 800px; width:90%; background: linear-gradient(145deg, rgba(0,0,0,0.6), rgba(0,0,0,0.8)); padding: 30px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); text-align: center;">
           <h2 class="waiting-title" style="color: #fff; margin-top: 0;">غرفة التحدي</h2>
           <p class="room-name-display" style="font-size: 24px; color: #facc15; margin-bottom: 10px; font-weight: bold; letter-spacing: 5px;" id="roomCodeDisplay">CODE</p>
+          <div class="pr-room-share">
+            <button type="button" id="copyRoomCodeBtn">نسخ الكود</button>
+            <button type="button" id="shareRoomLinkBtn">مشاركة الرابط</button>
+          </div>
           <div class="slots-area" id="slotsAreaContainer" style="margin: 30px 0;">
               <h3 style="text-align: center; margin-bottom: 20px; color:#aaa;">اللاعبون المنضمون (<span id="roomPlayersCount">1</span>)</h3>
               <div class="slots-grid" id="ffaSlots" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px;"></div>

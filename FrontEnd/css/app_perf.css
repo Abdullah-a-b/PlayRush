@@ -277,3 +277,38 @@ html:not(.pr-app) .categories-page .game-card .solo-btn {
         to { opacity: 1; translate: 0 0; }
     }
 }
+
+.app-bot-preview { display: none !important; }
+.pr-app .game-card .app-bot-preview {
+    display: block !important;
+    opacity: .65;
+    cursor: default;
+}
+.pr-room-dialog {
+    width: min(90vw, 370px);
+    border: 1px solid #425972;
+    border-radius: 18px;
+    background: #141e2b;
+    color: #f1f5fb;
+    padding: 18px;
+}
+.pr-room-dialog::backdrop { background: #070b13bb; }
+.pr-room-dialog button, .pr-room-share button {
+    background: #24384d;
+    border: 1px solid #425972;
+    border-radius: 12px;
+    padding: 10px 14px;
+    min-height: 44px;
+    color: #f1f5fb;
+    font: inherit;
+    cursor: pointer;
+}
+.pr-room-dialog button { width: 100%; margin-block: 4px; }
+.pr-room-share { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+@media (prefers-reduced-motion: no-preference) {
+    .pr-app .game-card .pr-opening-game,
+    .pr-app .pr-room-dialog[open] { animation: pr-solo-reveal 170ms ease-out both; }
+    .pr-app :is(a[href], [role="button"], summary):active {
+        animation: pr-control-press 140ms ease-out both;
+    }
+}

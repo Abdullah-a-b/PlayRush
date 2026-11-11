@@ -3,7 +3,7 @@ import time
 import string
 import asyncio
 from app.sockets.state import connected_players, disconnect_timers
-from app.domains.games.core_manager import create_room, join_room, get_room_state
+from app.domains.games.core_manager import _create_game_state, create_room, join_room, get_room_state
 from app.domains.wallet.reward_service import get_player_full_stats, get_clean_avatar
 from app.sockets.auth_helper import verify_socket_token
 
@@ -25,6 +25,9 @@ def register_room_events(sio):
         db.close()
 
         game_mode = data.get('game_mode')
+        if game_mode not in ('huroof', 'bank', 'career', 'whoami', 'knowledge'):
+            await sio.emit('error_message', 'اللعبة غير متاحة', to=sid)
+            return
 
         # room_code بـ secrets بدل random — يمنع تخمين كود الغرفة الخاصة
         alphabet = string.ascii_uppercase + string.digits
@@ -55,6 +58,13 @@ def register_room_events(sio):
             await sio.emit('error_message', 'انتهت الجلسة؛ سجل الدخول مجددًا', to=sid)
             return
 
+        waiting_room = get_room_state(room_code)
+        if waiting_room and waiting_room['state'] == 'waiting' and any(
+            player.get('user_id') == joining_user_id for player in waiting_room['players']
+        ):
+            await sio.emit('error_message', 'أنت موجود بالفعل في هذه الغرفة', to=sid)
+            return
+
         success, msg = join_room(room_code, sid, player_name, avatar, user_id=joining_user_id)
         print(f" [join_room] sid={sid} uid={joining_user_id} name={player_name!r} room={room_code}  success={success} msg={msg!r}")
         if not success:
@@ -63,6 +73,24 @@ def register_room_events(sio):
 
         # نخزّن user_id مباشرة على اللاعب (مصدر حقيقة ثابت لا يتأثر بتغيّر sid)
         room_obj = get_room_state(room_code)
+        if room_obj and room_obj['type'] == 'private' and room_obj['state'] == 'waiting':
+            host, guest = room_obj['players'] if len(room_obj['players']) == 2 else (None, None)
+            if guest and guest['sid'] == sid:
+                guest['token'] = token
+                mode = room_obj['game_mode']
+                room_obj['game_state'] = _create_game_state(mode, room_code, host, guest)
+                room_obj['state'] = 'starting'
+                room_obj['type'] = 'friendly'
+                room_obj['user_ids'][sid] = joining_user_id
+                players = [{k: player[k] for k in ('name', 'avatar', 'color', 'role')}
+                           for player in (host, guest)]
+                for player in (host, guest):
+                    await sio.emit('match_found', {
+                        'room_code': room_code, 'role': player['role'], 'players': players,
+                        'friendly': True, 'gameMode': mode,
+                    }, to=player['sid'])
+                return
+
         if room_obj and joining_user_id:
             for p in room_obj['players']:
                 if p['sid'] == sid:
