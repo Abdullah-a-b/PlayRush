@@ -253,16 +253,18 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     function joinGlobalLobby() {
-        if (userDataCache) {
+        if (token) {
             socket.emit('join_global_lobby', {
                 token:  token,
-                name:   userDataCache.player_name,
-                avatar: userDataCache.avatar,
+                authenticatedOnly: true,
+                name:   userDataCache?.player_name,
+                avatar: userDataCache?.avatar,
             });
         }
     }
 
     socket.on('connect', joinGlobalLobby);
+    if (socket.connected) joinGlobalLobby();
 
     // ----------------------------------------
     //  جلب بيانات الحساب
@@ -348,7 +350,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('googleAuthBadge').style.display = isGoogle ? 'block' : 'none';
         document.getElementById('localAuthFields').style.display = isGoogle ? 'none'  : 'block';
 
-        if (socket.connected) joinGlobalLobby();
 
     } catch {
         if (startup) return startup.retry();

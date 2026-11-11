@@ -45,7 +45,9 @@ function initPresence(sock, renderFn) {
         window.__presenceTotal = Array.isArray(data) ? null : (data && data.total) || null;
         __presenceMap.clear();
         list.forEach(p => { if (p && p.pid) __presenceMap.set(p.pid, p); });
-        __schedulePresenceRender();
+        clearTimeout(__presenceTimer);
+        __presenceTimer = null;
+        renderFn(presencePlayers());
     });
 
     // فرق صغير — لاعب واحد تغيّر

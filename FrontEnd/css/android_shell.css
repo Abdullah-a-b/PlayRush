@@ -265,3 +265,14 @@
     gap: 8px;
     padding: 8px;
 }
+
+.pr-app {
+    scrollbar-width: none;
+    overscroll-behavior-y: none;
+}
+.pr-app :is(.categories-page, .game-lobby-page, .main-content, .players-list, .chat-messages) {
+    scrollbar-width: none;
+}
+.pr-app :is(.categories-page, .game-lobby-page, .main-content, .players-list, .chat-messages)::-webkit-scrollbar {
+    display: none;
+}

@@ -443,42 +443,43 @@ def fetch_stats_by_user_id(target_id: int, game_mode: str = None):
         db.close()
 
 
-_STREAK_COLS_READY = False  # ⚡ ALTER مرة واحدة لكل عملية — لا بكل نداء
-# (ALTER بكل /me كان يطلب قفلاً حصرياً على users مع نداءات متوازية = تعليق!)
-
-
 def claim_login_streak(db, user):
     """📆 تتابع الدخول اليومي: 5→50🪙 تصاعدياً، ينقطع بيوم غياب.
     تُستدعى عند جلب البروفايل (/me) — تمنح مرة واحدة يومياً.
     ترجع dict بالمكافأة أو None إن سبق منحها اليوم."""
-    global _STREAK_COLS_READY
     import datetime as _dt
     from sqlalchemy import text as _text
     from app.domains.wallet import economy_config as EC
     today = _dt.date.today().isoformat()
     yesterday = (_dt.date.today() - _dt.timedelta(days=1)).isoformat()
-    if not _STREAK_COLS_READY:
-        try:
-            db.execute(_text("ALTER TABLE users ADD COLUMN IF NOT EXISTS login_streak INTEGER DEFAULT 0"))
-            db.execute(_text("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_day VARCHAR DEFAULT ''"))
-            db.commit()
-            _STREAK_COLS_READY = True
-        except Exception:
-            db.rollback()
-            _STREAK_COLS_READY = True  # حتى الفشل لا يعيد المحاولة بكل نداء
-    row = db.execute(_text(
-        "SELECT login_streak, last_login_day FROM users WHERE id = :uid"),
-        {"uid": user.id}).fetchone()
+    from sqlalchemy.exc import ProgrammingError
+
+    lookup = _text("SELECT login_streak, last_login_day FROM users WHERE id = :uid")
+    try:
+        row = db.execute(lookup, {"uid": user.id}).fetchone()
+    except ProgrammingError as exc:
+        if getattr(exc.orig, "pgcode", None) != "42703":
+            raise
+        db.rollback()
+        db.execute(_text("ALTER TABLE users ADD COLUMN IF NOT EXISTS login_streak INTEGER DEFAULT 0"))
+        db.execute(_text("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_day VARCHAR DEFAULT ''"))
+        db.commit()
+        row = db.execute(lookup, {"uid": user.id}).fetchone()
+    if row is None:
+        return None
     streak, last_day = (row[0] or 0), (row[1] or '')
     if last_day == today:
         return None  # مُنحت اليوم
     streak = streak + 1 if last_day == yesterday else 1
     ladder = getattr(EC, "LOGIN_STREAK_COINS", [5, 10, 15, 20, 30, 40, 50])
     coins = ladder[min(streak, len(ladder)) - 1]
-    db.execute(_text(
+    result = db.execute(_text(
         "UPDATE users SET login_streak = :s, last_login_day = :d, "
-        "coins = COALESCE(coins, 0) + :c WHERE id = :uid"),
+        "coins = COALESCE(coins, 0) + :c WHERE id = :uid "
+        "AND COALESCE(last_login_day, '') <> :d"),
         {"s": streak, "d": today, "c": coins, "uid": user.id})
     db.commit()
+    if not result.rowcount:
+        return None
     return {"streak": streak, "coins": coins,
             "msg": f"📆 يوم {streak} على التوالي: +{coins}🪙"}

@@ -304,18 +304,20 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     function joinLobby() {
-        if (userDataCache && selectedGameMode) {
+        if (token && selectedGameMode) {
             socket.emit('join_game_lobby', {
                 gameMode: selectedGameMode,
-                name:     userDataCache.player_name,
-                avatar:   userDataCache.avatar,
+                authenticatedOnly: true,
+                name:     userDataCache?.player_name,
+                avatar:   userDataCache?.avatar,
                 token,
             });
             document.title = `لوبي ${GAME_THEMES[selectedGameMode]?.title || 'اللعبة'}`;
         }
     }
 
-    socket.on('connect', () => { if (userDataCache) joinLobby(); });
+    socket.on('connect', joinLobby);
+    if (socket.connected) joinLobby();
 
     // ----------------------------------------
     //  زر الجمعات (الـ Party)
@@ -410,8 +412,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('googleAuthBadge').style.display = isGoogle ? 'block' : 'none';
         document.getElementById('localAuthFields').style.display = isGoogle ? 'none'  : 'block';
 
-        if (socket.connected) joinLobby();
-        else socket.once('connect', joinLobby);
 
     } catch {
         showToast('خطأ في الاتصال بالسيرفر', 'error');

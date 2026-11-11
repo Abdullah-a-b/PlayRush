@@ -213,7 +213,7 @@ def register_lobby_events(sio):
         # نحاول التحقق من التوكن إن وُجد — إن لم يكن موجوداً نقبل بالاسم كـ guest
         token = data.get('token')
         player_name, avatar, _uid = await asyncio.to_thread(_lobby_identity, token, data)
-        if not sio.manager.is_connected(sid, '/'):
+        if (data.get('authenticatedOnly') and _uid is None) or not sio.manager.is_connected(sid, '/'):
             return
 
         # نخزّن user_id + token (للإشعارات الحية + الكتم) — كان مفقوداً هنا
@@ -233,7 +233,7 @@ def register_lobby_events(sio):
 
         # اللوبي يتطلب توكن صالح
         player_name, avatar, _uid = await asyncio.to_thread(_lobby_identity, token, data)
-        if not sio.manager.is_connected(sid, '/'):
+        if (data.get('authenticatedOnly') and _uid is None) or not sio.manager.is_connected(sid, '/'):
             return
 
         if game_mode not in game_lobby_players:
