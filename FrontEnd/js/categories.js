@@ -407,9 +407,11 @@ window.addEventListener('DOMContentLoaded', async () => {
                 }
             }
             if (!btn.dataset.section) return;
+            const changedSection = !btn.classList.contains('active');
             navBtns.forEach(b => b.classList.remove('active'));
             sections.forEach(s => s.classList.remove('active'));
             btn.classList.add('active');
+            if (window.PR_IS_APP && changedSection) requestAnimationFrame(() => window.scrollTo(0, 0));
             document.getElementById(`${btn.dataset.section}-section`)?.classList.add('active');
         });
     });

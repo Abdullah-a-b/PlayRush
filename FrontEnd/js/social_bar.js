@@ -42,7 +42,7 @@
     }
 
     function build() {
-        const appSlot = window.PR_IS_APP && document.getElementById('appSocialSlot');
+        const appSlot = (window.PR_IS_APP || window.Capacitor?.isNativePlatform?.()) && document.getElementById('appSocialSlot');
         if (appSlot) {
             buildIcons(appSlot);
             return;

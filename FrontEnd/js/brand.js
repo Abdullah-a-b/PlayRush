@@ -61,7 +61,18 @@
     }
 
     function init() {
-        if ((window.PR_IS_APP || window.Capacitor?.isNativePlatform?.()) && document.getElementById("appSoundSlot")) return;
+        if (window.PR_IS_APP || window.Capacitor?.isNativePlatform?.()) {
+            const footer = document.getElementById('appBrandSlot');
+            if (footer) {
+                const credit = document.createElement('span');
+                credit.className = 'pub-brand';
+                credit.dir = 'ltr';
+                credit.innerHTML = '<span class="pub-by">Powered by</span> <span class="pub-name">Isolated Person</span>';
+                footer.prepend(credit);
+                return;
+            }
+            if (document.getElementById('appSoundSlot')) return;
+        }
         if (IS_MOBILE()) {
             injectMobileBar();
         } else {
