@@ -285,7 +285,13 @@ html:not(.pr-app) .categories-page .game-card .solo-btn {
     cursor: default;
 }
 .pr-room-dialog {
-    width: min(90vw, 370px);
+    position: fixed;
+    inset: 0;
+    margin: auto;
+    box-sizing: border-box;
+    width: min(calc(100% - 32px), 400px);
+    max-height: calc(100dvh - 32px);
+    overflow: auto;
     border: 1px solid #425972;
     border-radius: 18px;
     background: #141e2b;
@@ -303,7 +309,29 @@ html:not(.pr-app) .categories-page .game-card .solo-btn {
     font: inherit;
     cursor: pointer;
 }
-.pr-room-dialog button { width: 100%; margin-block: 4px; }
+.pr-room-dialog > button {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    margin-block-start: 8px;
+    text-align: start;
+}
+.pr-room-dialog > button i { width: 20px; color: #facc15; text-align: center; }
+.pr-room-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.pr-room-dialog h2 { margin: 0; font-size: 1.25rem; }
+.pr-room-dialog .pr-room-close {
+    width: 44px;
+    padding: 0;
+    border-radius: 50%;
+    font-size: 1.4rem;
+}
+@media (max-width: 600px) {
+    .pr-room-dialog {
+        inset: auto 0 max(12px, env(safe-area-inset-bottom));
+        margin: 0 auto;
+    }
+}
 .pr-room-share { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 @media (prefers-reduced-motion: no-preference) {
     .pr-app .game-card .pr-opening-game,

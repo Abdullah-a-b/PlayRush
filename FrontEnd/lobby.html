@@ -136,12 +136,14 @@
       </section>
     </main>
 
-    <dialog id="friendPlayOptions" class="pr-room-dialog">
-      <h2>العب مع صديق</h2>
-      <button type="button" id="inviteExistingFriendBtn">دعوة من قائمة الأصدقاء</button>
-      <button type="button" id="openCreateRoomBtn">إنشاء غرفة خاصة</button>
-      <button type="button" id="openJoinRoomBtn">الانضمام بكود</button>
-      <form method="dialog"><button>إغلاق</button></form>
+    <dialog id="friendPlayOptions" class="pr-room-dialog" aria-labelledby="friendPlayTitle">
+      <header>
+        <h2 id="friendPlayTitle">العب مع صديق</h2>
+        <form method="dialog"><button class="pr-room-close" aria-label="إغلاق">×</button></form>
+      </header>
+      <button type="button" id="inviteExistingFriendBtn"><i class="fa-solid fa-user-group" aria-hidden="true"></i> دعوة من قائمة الأصدقاء</button>
+      <button type="button" id="openCreateRoomBtn"><i class="fa-solid fa-link" aria-hidden="true"></i> إنشاء غرفة خاصة</button>
+      <button type="button" id="openJoinRoomBtn"><i class="fa-solid fa-key" aria-hidden="true"></i> الانضمام بكود</button>
     </dialog>
 
     <div id="matchmakingScreen" class="matchmaking-screen">
