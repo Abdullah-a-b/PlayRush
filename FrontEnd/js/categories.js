@@ -416,11 +416,22 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    document.querySelectorAll('.game-card').forEach(card => {
-        card.addEventListener('click', () => {
-            const mode = card.getAttribute('data-game');
-            if (mode) window.location.href = `lobby.html?game=${mode}`;
-            else showToast('حدث خطأ، يرجى المحاولة لاحقاً.', 'error');
+    document.querySelectorAll('.game-card[data-game]').forEach(card => {
+        card.addEventListener('click', event => {
+            const button = event.target.closest('button');
+            if (button && !button.classList.contains('play-btn')) return;
+            if (window.PR_IS_APP && !button) return;
+            const destination = `lobby.html?game=${card.dataset.game}`;
+            if (window.PR_IS_APP && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                if (card.classList.contains('pr-opening-game')) return;
+                card.classList.add('pr-opening-game');
+                window.setTimeout(() => {
+                    card.classList.remove('pr-opening-game');
+                    window.location.href = destination;
+                }, 170);
+                return;
+            }
+            window.location.href = destination;
         });
     });
 

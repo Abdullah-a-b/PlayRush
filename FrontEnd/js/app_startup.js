@@ -23,9 +23,8 @@
     function showRecovery() {
         const status = document.getElementById('appResumeStatus');
         if (!status || complete) return;
-        status.textContent = 'تعذّر استئناف الجلسة. حاول مرة ثانية أو افتح صفحة تسجيل الدخول.';
+        status.textContent = 'تعذّر الاتصال. جلستك محفوظة، حاول الاستئناف مرة أخرى.';
         document.getElementById('appResumeRetry').hidden = false;
-        document.getElementById('appResumeLogin').hidden = false;
     }
 
     let deadline;

@@ -36,6 +36,10 @@
             '<h3 style="margin:0 0 4px;color:#ffe14d;">الوضع الفردي</h3>' +
             '<p style="margin:0 0 16px;font-size:.9rem;color:#cbb8e6;">' +
             'العب خلية الحروف ضد الكمبيوتر — اختر مستوى التحدّي</p>';
+        title.querySelector('p').textContent = gameMode === 'career'
+            ? 'العب مسيرة لاعب ضد الكمبيوتر واختر مستوى التحدّي'
+            : 'العب خلية الحروف ضد الكمبيوتر واختر مستوى التحدّي';
+        box.className = 'pr-solo-picker';
         box.appendChild(title);
 
         LEVELS.forEach(function (lv) {
@@ -52,7 +56,16 @@
                 '<span style="font-size:1.5rem;">' + lv.icon + '</span>' +
                 '<span style="flex:1;"><b style="display:block;font-size:1rem;">' + lv.label + '</b>' +
                 '<span style="font-size:.78rem;color:#bda9d6;">' + lv.desc + '</span></span>';
-            btn.onclick = function () { launch(gameMode, lv.id); };
+            btn.onclick = function () {
+                if (box.classList.contains('pr-solo-launching')) return;
+                box.classList.add('pr-solo-launching');
+                btn.classList.add('pr-solo-selected');
+                if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                    launch(gameMode, lv.id);
+                } else {
+                    window.setTimeout(() => launch(gameMode, lv.id), 180);
+                }
+            };
             box.appendChild(btn);
         });
 
