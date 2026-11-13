@@ -273,9 +273,7 @@ def build_extra_questions(rows, kind):
         text = f"من مؤلف كتاب «{g['label']}»؟" if kind == "book" else f"لغة رمزها الدولي ({g['label']})"
         letter = _answer_letter(answer)
         if letter:
-            if kind == "cap" and f["country_id"].rsplit("/", 1)[-1] == "Q801":
-                text = "المدينة التي تعلنها إسرائيل عاصمة لها"
-            qs.append({"question_text": text, "correct_answer": answer, "category": "ثقافة", "letter": letter, "accepted_answers": sorted(set(_variants(answer, g["en"]) + [original_answer])), "source_id": stable_id(kind, key)})
+            qs.append({"question_text": text, "correct_answer": answer, "category": "أدب" if kind == "book" else "لغات", "letter": letter, "accepted_answers": sorted(set(_variants(answer, g["en"]) + [original_answer])), "source_id": stable_id(kind, key)})
     return qs
 
 
@@ -443,7 +441,7 @@ def run_import():
     stats = save_to_db(questions, complete_groups)
     atomic_json(cache_path, cache)
     from collections import Counter
-    stats.update(status="partial" if failed else "success", failed_sources=failed, generated=len(questions), coverage=dict(Counter(q["letter"] for q in questions)))
+    stats.update(status="partial" if failed else "success", failed_sources=failed, generated=len(questions), coverage=dict(Counter(q["letter"] for q in questions)), categories=dict(Counter(q["category"] for q in questions)))
     print(f" [huroof-import] {stats}")
     return stats
 
