@@ -1442,10 +1442,13 @@ def register_huroof_events(sio):
         bot_color = 'green' if _solo.BOT_SID == gs.p1 else 'orange'
         version = gs.state_version
         colors = {'green': 'g', 'orange': 'o'}
-        model = await trained_bot.decide(
-            'huroof', gs.bot_difficulty, 'select', ['select'], own=bot_color, seconds=15,
-            board=[f"{cell['letter']}:{colors.get(cell.get('color'), '-')}" for cell in gs.board],
-        )
+        model = None
+        # Beginner and medium use their calibrated board policies.
+        if gs.bot_difficulty in ('hard', 'expert'):
+            model = await trained_bot.decide(
+                'huroof', gs.bot_difficulty, 'select', ['select'], own=bot_color, seconds=15,
+                board=[f"{cell['letter']}:{colors.get(cell.get('color'), '-')}" for cell in gs.board],
+            )
         if (get_room_state(room_code) is not room or room.get('state') != 'playing'
                 or gs.state_version != version or gs.stage != 'selecting' or gs.turn != _solo.BOT_SID):
             return
