@@ -16,6 +16,7 @@
 
 نتائج الوضع الفردي لا تمسّ التصنيف إطلاقاً (يُضمن في طبقة الربط).
 """
+from heapq import heappop, heappush
 import random
 import re
 
@@ -307,7 +308,33 @@ def _completes_win(board_colors, idx, color):
     return False
 
 
-def choose_hex(board, bot_color, difficulty_name):
+def _cells_to_connect(colors, color):
+    """Minimum number of empty cells needed to connect the two goal edges."""
+    axis = (lambda idx: idx // 5) if color == "green" else (lambda idx: idx % 5)
+    distances = [26] * 25
+    queue = []
+    for idx, owner in enumerate(colors):
+        if axis(idx) == 0 and owner in (None, color):
+            distances[idx] = int(owner is None)
+            heappush(queue, (distances[idx], idx))
+    while queue:
+        cost, idx = heappop(queue)
+        if cost != distances[idx]:
+            continue
+        if axis(idx) == 4:
+            return cost
+        for neighbor in _hex_neighbors(*divmod(idx, 5)):
+            owner = colors[neighbor]
+            if owner not in (None, color):
+                continue
+            next_cost = cost + int(owner is None)
+            if next_cost < distances[neighbor]:
+                distances[neighbor] = next_cost
+                heappush(queue, (next_cost, neighbor))
+    return 26
+
+
+def choose_hex(board, bot_color, difficulty_name, preferred=None):
     """يختار البوت خلية في دوره.
 
     مبتدئ: عشوائي بحت.
@@ -326,7 +353,7 @@ def choose_hex(board, bot_color, difficulty_name):
         return random.choice(empties)
 
     opp_color = "orange" if bot_color == "green" else "green"
-    colors = [h.get('color') for h in board]
+    colors = [None if i in empties else h['color'] for i, h in enumerate(board)]
 
     # (1) خلية تُكمل فوز البوت → أولوية قصوى مطلقة
     for idx in empties:
@@ -339,6 +366,24 @@ def choose_hex(board, bot_color, difficulty_name):
         for idx in empties:
             if _completes_win(colors, idx, opp_color):
                 return idx
+
+    if strat >= 0.6:
+        own_before = _cells_to_connect(colors, bot_color)
+        opponent_before = _cells_to_connect(colors, opp_color)
+        scores = {}
+        for idx in empties:
+            colors[idx] = bot_color
+            progress = max(0, own_before - _cells_to_connect(colors, bot_color))
+            block = _cells_to_connect(colors, opp_color) - opponent_before
+            colors[idx] = opp_color
+            risk = opponent_before - _cells_to_connect(colors, opp_color)
+            own_loss = min(3, _cells_to_connect(colors, bot_color) - own_before)
+            colors[idx] = None
+            connected = any(colors[n] == bot_color for n in _hex_neighbors(*divmod(idx, 5)))
+            scores[idx] = 4 * progress + min(3, block) - 3 * risk - own_loss + int(connected)
+        best_score = max(scores.values())
+        best = [idx for idx in empties if scores[idx] == best_score]
+        return preferred if preferred in best else random.choice(best)
 
     # (3) بناء الجسر العادي
     scored = []
@@ -353,19 +398,7 @@ def choose_hex(board, bot_color, difficulty_name):
 
     scored.sort(reverse=True)
 
-    # كلما ارتفع المستوى قلّ العشوائية:
-    #   خبير: من أفضل خيار (شبه حتمي) — لا خلايا غريبة
-    #   صعب:  من أفضل خيارين
-    #   متوسط: من أفضل ثلاثة
-    if strat >= 0.9:
-        pool = scored[:1] if len(scored) >= 1 else scored
-        # نادراً (10%) يوسّع لأفضل خيارين ليبقى بشرياً غير متوقّع تماماً
-        if len(scored) >= 2 and random.random() < 0.10:
-            pool = scored[:2]
-    elif strat >= 0.6:
-        pool = scored[:min(2, len(scored))]
-    else:
-        pool = scored[:min(3, len(scored))]
+    pool = scored[:3]
 
     # كسر التعادل بين المتساويين فعلياً فقط
     best_score = pool[0][0]

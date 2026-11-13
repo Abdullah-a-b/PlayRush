@@ -1457,9 +1457,8 @@ def register_huroof_events(sio):
         if (get_room_state(room_code) is not room or room.get('state') != 'playing'
                 or gs.state_version != version or gs.stage != 'selecting' or gs.turn != _solo.BOT_SID):
             return
-        idx = model[1] if model else None
-        if idx not in _solo._empty_cells(gs.board):
-            idx = _solo.choose_hex(gs.board, bot_color, gs.bot_difficulty)
+        idx = _solo.choose_hex(gs.board, bot_color, gs.bot_difficulty,
+                               preferred=model[1] if model else None)
         if idx is None: return
         gs.active_hex = gs.board[idx]
         await sio.emit('huroof_hex_locked',
