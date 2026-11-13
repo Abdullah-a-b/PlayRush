@@ -148,6 +148,8 @@ socket.on('connect', () => {
 // 🤖 بدء المباراة الفردية: نخزّن رمز الغرفة ونعرض الخصم "الكمبيوتر"
 socket.on('solo_started', (data) => {
     soloRoomCode = data.room_code;
+    const badge = document.getElementById('turn-status-badge');
+    if (badge) badge.textContent = 'قرعة الحرف الأول';
     // نضبط لوني مباشرة من الخادم (مصدر موثوق) قبل أي حدث آخر
     if (data.your_color) {
         myColor = data.your_color;
