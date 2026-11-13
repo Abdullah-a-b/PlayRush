@@ -659,7 +659,7 @@ def register_huroof_events(sio):
         # تحقق موحّد (BaseGame) + التحقق الموجود
         if not _action_allowed(gs, sid, 'select_hex'):
             return
-        if gs.stage != 'selecting' or not is_players_turn(room, gs, sid):
+        if room.get('solo_opening_draw') or gs.stage != 'selecting' or not is_players_turn(room, gs, sid):
             return 
             
         gs.active_hex = gs.board[hex_index]
@@ -1632,7 +1632,7 @@ def register_huroof_events(sio):
 
         rooms[room_code] = {
             'code': room_code, 'type': 'solo', 'game_mode': 'huroof',
-            'state': 'playing', 'created_at': time.time(), 'is_solo': True,
+            'state': 'playing', 'created_at': time.time(), 'is_solo': True, 'solo_opening_draw': True,
             'players': [
                 {'sid': p1['sid'], 'name': p1['name'], 'avatar': p1['avatar'],
                  'user_id': p1.get('user_id'), 'color': 'green',
@@ -1684,21 +1684,21 @@ def register_huroof_events(sio):
         }, to=sid)
         await sio.emit('update_players_stats', players_pub, to=sid)
 
-        # نطابق تسلسل بدء الأونلاين: board_init ثم turn_changed
+        room = get_room_state(room_code)
+        if not room:
+            return
         await sio.emit('huroof_board_init', {'board': gs.board}, room=room_code)
-        await sio.emit('huroof_turn_changed', {
-            'turn_sid': gs.turn,
-            'turn_color': ('green' if gs.turn == gs.p1 else 'orange')
-        }, room=room_code)
-
-        # لو الدور الأول للبوت، يبدأ اختياره — لكن بعد ما تنتهي مقدّمة
-        # العميل أولاً (شاشة «وجدنا لك خصماً» ثم عدّاد «استعد» 3-2-1، حوالي
-        # 7 ثوانٍ إجمالاً — huroof.js). بدون هذا الانتظار، تأخير البوت
-        # الطبيعي (1.2-2.5 ثانية فقط) أقصر بكثير من المقدّمة، فيختار البوت
-        # خليته والمستخدم لسا يشاهد العدّاد.
-        if gs.turn == _solo.BOT_SID:
-            await asyncio.sleep(7.5)
-        await _solo_after_turn(room_code)
+        # Wait for the solo match introduction before revealing the opening question.
+        await asyncio.sleep(7.5)
+        if get_room_state(room_code) is not room or room.get('state') != 'playing':
+            return
+        idx = random.choice(_solo._empty_cells(gs.board))
+        gs.active_hex = gs.board[idx]
+        await sio.emit('huroof_hex_locked',
+                       {'hexIndex': idx, 'letter': gs.active_hex['letter']},
+                       room=room_code)
+        await trigger_new_question(room_code)
+        room.pop('solo_opening_draw', None)
 
     # ==========================================
     # الصداقة والحظر (من بروفايل الخصم) — عبر الوحدة المشتركة
