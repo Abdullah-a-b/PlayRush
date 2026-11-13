@@ -320,6 +320,10 @@ socket.on('huroof_turn_changed', (data) => {
 });
 
 socket.on('huroof_hex_locked', (data) => {
+    if (data.opening_draw) {
+        const turnBadge = document.getElementById('turn-status-badge');
+        if (turnBadge) turnBadge.textContent = 'الحرف الأول بالقرعة';
+    }
     activeHexIndex = data.hexIndex;
     cells[activeHexIndex].classList.add('active');
     currentLetterDisplay.textContent = `حرف ( ${data.letter} )`;
@@ -1320,8 +1324,8 @@ socket.on('leaver_penalty', (data) => {
         // ===== تطبيق التأثير =====
         if (data.effect === 'extend_time') {
             // نزامن العدّاد مع القيمة الجديدة من الخادم (فعّالة حقاً)
-            const newTotal = data.new_total;
-            if (typeof newTotal === 'number') {
+            if (Number.isFinite(data.new_total)) {
+                const newTotal = Math.ceil(data.new_total);
                 if (typeof _globalTimerLeft !== 'undefined' && _globalTimerLeft > 0) {
                     _globalTimerLeft = newTotal;
                     if (globalTimerDisplay) globalTimerDisplay.textContent = `⏳ ${newTotal}`;

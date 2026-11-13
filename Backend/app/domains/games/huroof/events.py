@@ -1,6 +1,7 @@
 import asyncio
 import html
 import random
+import math
 import json
 import time
 import secrets
@@ -937,7 +938,7 @@ def register_huroof_events(sio):
                                      new_seconds, at['timeout_type'])
             await sio.emit('huroof_help_result', {
                 'ok': True, 'helpId': help_id, 'effect': 'extend_time',
-                'seconds': extra, 'new_total': new_seconds,
+                'seconds': extra, 'new_total': math.ceil(new_seconds),
                 'msg': f'تم تمديد وقتك +{extra} ثانية'
             }, to=sid)
             opp = gs.p2 if sid == gs.p1 else gs.p1
@@ -1056,7 +1057,7 @@ def register_huroof_events(sio):
                                      new_seconds, at['timeout_type'])
             await sio.emit('huroof_help_result', {
                 'ok': True, 'helpId': help_id, 'effect': 'extend_time',
-                'seconds': extra, 'new_total': new_seconds,
+                'seconds': extra, 'new_total': math.ceil(new_seconds),
                 'msg': f'تم تجميد المؤقّت +{extra} ثوانٍ'
             }, to=sid)
             opp = gs.p2 if sid == gs.p1 else gs.p1
@@ -1695,7 +1696,7 @@ def register_huroof_events(sio):
         idx = random.choice(_solo._empty_cells(gs.board))
         gs.active_hex = gs.board[idx]
         await sio.emit('huroof_hex_locked',
-                       {'hexIndex': idx, 'letter': gs.active_hex['letter']},
+                       {'hexIndex': idx, 'letter': gs.active_hex['letter'], 'opening_draw': True},
                        room=room_code)
         await trigger_new_question(room_code)
         room.pop('solo_opening_draw', None)
