@@ -1464,23 +1464,27 @@ def register_huroof_events(sio):
         q_answer = q.get('answer', '')       # نثبّت إجابة *هذا* السؤال
         attempt = getattr(gs, 'attempts', 1)
         decision = _solo.decide_on_question(gs.bot_difficulty, qd, window_seconds, attempt)
+        if not decision['will_buzz']:
+            return
         knows = decision['knows']            # محلّي — لا يُداس بحلقة أخرى
 
         started = time.monotonic()
         model = await trained_bot.decide(
             'huroof', gs.bot_difficulty, 'reveal', ['wait', 'buzz'],
             question=q.get('question', ''), letter=q.get('letter', ''), seconds=window_seconds,
+            question_difficulty=qd, attempt=attempt,
         )
+        cfg = _solo.get_difficulty(gs.bot_difficulty)
         if model:
             if model[0] == 'wait':
                 return
-            delay = 1.5
+            delay = random.uniform(cfg['buzz_min'], cfg['buzz_max'])
         else:
             if not decision['will_buzz']:
                 return
-            cfg = _solo.get_difficulty(gs.bot_difficulty)
-            delay = adapt_reaction_delay(room, decision['delay'], cfg['buzz_min'], cfg['buzz_max'])
-            delay = min(delay, window_seconds * 0.85)
+            delay = decision['delay']
+        delay = adapt_reaction_delay(room, delay, cfg['buzz_min'], cfg['buzz_max'])
+        delay = min(delay, window_seconds * 0.85)
         await asyncio.sleep(max(0, delay - (time.monotonic() - started)))
 
         room = get_room_state(room_code)
@@ -1511,7 +1515,7 @@ def register_huroof_events(sio):
         # حراسة: نفس السؤال ما زال معروضاً
         if (gs.current_question or {}).get('answer', '') != q_answer: return
 
-        if model:
+        if answer_model:
             await _judge_trained_huroof_answer(room_code, gs, q, answer_model)
         else:
             gs.state_version += 1
@@ -1553,7 +1557,7 @@ def register_huroof_events(sio):
                                        getattr(gs, 'attempts', 1))
         # تأخير بشري ضمن النافذة (لا يستهلكها كلها)
         started = time.monotonic()
-        model = await _trained_huroof_answer(gs, q, window_seconds)
+        model = await _trained_huroof_answer(gs, q, window_seconds) if knows else None
         delay = random.uniform(2.0, min(window_seconds * 0.7, 8.0))
         await asyncio.sleep(max(0, delay - (time.monotonic() - started)))
 

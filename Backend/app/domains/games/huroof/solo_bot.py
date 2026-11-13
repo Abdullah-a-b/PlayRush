@@ -96,6 +96,8 @@ def bot_knows_answer(difficulty_name, question_difficulty, attempt=1):
     p = cfg["know_base"] * _difficulty_factor(question_difficulty)
     if attempt >= 2:
         p += cfg["retry_boost"]        # رأى محاولة خاطئة، فرصته أعلى
+    if difficulty_name == "beginner" and question_difficulty == "hard":
+        p = min(p, 0.06)
     p = max(0.0, min(0.98, p))         # لا يعرف 100% أبداً — يبقى لك مجال
     return random.random() < p
 
