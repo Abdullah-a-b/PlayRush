@@ -1,6 +1,7 @@
 import asyncio
 import html
 import random
+from collections import Counter
 import math
 import json
 import time
@@ -461,6 +462,10 @@ def register_huroof_events(sio):
             if filtered:
                 valid_qs = filtered
             pref_map.pop(turn_sid, None)
+        else:
+            category_counts = Counter(q['category'] for q in all_qs if q['id'] in used)
+            least_used = min(category_counts[q['category']] for q in valid_qs)
+            valid_qs = [q for q in valid_qs if category_counts[q['category']] == least_used]
 
         chosen = random.choice(valid_qs)
 
