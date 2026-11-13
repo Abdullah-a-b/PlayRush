@@ -303,6 +303,10 @@ def choose_hex(board, bot_color, difficulty_name):
     scored = []
     for idx in empties:
         mine = _goal_distance(idx, bot_color, board)
+        if difficulty_name == "medium":
+            neighbors = _hex_neighbors(*divmod(idx, 5))
+            if sum(colors[n] == bot_color for n in neighbors) >= 2:
+                mine += 8
         block = _goal_distance(idx, opp_color, board) * 0.5
         scored.append((mine + block, idx))
 
