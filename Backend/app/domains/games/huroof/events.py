@@ -1,3 +1,4 @@
+from app.domains.games.huroof.solo_bot import question_difficulty
 import asyncio
 import html
 import random
@@ -65,7 +66,7 @@ def _load_huroof_questions_cached():
                 'question_text': q.question_text,
                 'correct_answer': q.correct_answer,
                 'category': q.category,
-                'difficulty': (extra.get('difficulty') if extra.get('difficulty') in ('easy','medium','hard') else 'medium'),
+                'difficulty': question_difficulty(q.question_text or '', extra),
                 'accepted_answers': extra.get('accepted_answers', []),
                 'letter_extra': normalize_letter(extra.get('letter', '') or ''),
                 'letter_ans': main_letter,
@@ -482,6 +483,7 @@ def register_huroof_events(sio):
             "answer": chosen['correct_answer'],
             "accepted_answers": chosen['accepted_answers'],
             "category": chosen['category'],
+            "difficulty": chosen['difficulty'],
             "letter": norm_letter
         }
 

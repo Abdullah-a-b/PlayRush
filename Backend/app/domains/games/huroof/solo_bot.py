@@ -41,7 +41,7 @@ DIFFICULTIES = {
         "know_base": 0.65,
         "buzz_min": 6.0, "buzz_max": 12.0,
         "hesitate": 0.12,
-        "strategy": 0.35,
+        "strategy": 0.42,
         "retry_boost": 0.10,
     },
     "hard": {
@@ -87,6 +87,22 @@ def _difficulty_factor(question_difficulty):
     }.get((question_difficulty or "medium"), 1.0)
 
 
+RARE_KNOWLEDGE_LIMITS = {
+    "beginner": 0.02, "medium": 0.06, "hard": 0.13, "expert": 0.24,
+}
+
+
+def question_difficulty(question_text, metadata):
+    """Recognize obscure recall templates already stored without difficulty tags."""
+    difficulty = metadata.get("difficulty")
+    if difficulty in ("easy", "hard", "rare"):
+        return difficulty
+    source = str(metadata.get("source_id") or "")
+    if source.startswith("wd_element_number_") or question_text.startswith("السورة رقم ("):
+        return "rare"
+    return "medium"
+
+
 def bot_knows_answer(difficulty_name, question_difficulty, attempt=1):
     """هل يعرف البوت إجابة هذا السؤال؟ قرار احتمالي.
 
@@ -96,6 +112,8 @@ def bot_knows_answer(difficulty_name, question_difficulty, attempt=1):
     p = cfg["know_base"] * _difficulty_factor(question_difficulty)
     if attempt >= 2:
         p += cfg["retry_boost"]        # رأى محاولة خاطئة، فرصته أعلى
+    if question_difficulty == "rare":
+        p = min(p, RARE_KNOWLEDGE_LIMITS.get(difficulty_name, RARE_KNOWLEDGE_LIMITS["medium"]))
     if difficulty_name == "beginner" and question_difficulty == "hard":
         p = min(p, 0.06)
     p = max(0.0, min(0.98, p))         # لا يعرف 100% أبداً — يبقى لك مجال
