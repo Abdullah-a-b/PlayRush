@@ -17,6 +17,7 @@
 نتائج الوضع الفردي لا تمسّ التصنيف إطلاقاً (يُضمن في طبقة الربط).
 """
 import random
+import re
 
 
 # ============================================================
@@ -92,16 +93,47 @@ RARE_KNOWLEDGE_LIMITS = {
 }
 
 
+_COMMON_COUNTRIES = {
+    "مصر", "السعودية", "الأردن", "العراق", "المغرب", "فرنسا",
+    "إيطاليا", "ألمانيا", "اليابان", "الصين", "تركيا",
+}
+_RARE_COUNTRIES = {"لاوس", "بوتان", "ناورو", "توفالو", "كيريباتي", "فانواتو"}
+_COMMON_ELEMENT_SYMBOLS = {"h", "o", "c", "n", "fe", "au", "ag", "na", "cl", "ca"}
+_COMMON_LANGUAGE_CODES = {"ar", "en", "fr", "es", "de", "it"}
+
+
 def question_difficulty(question_text, metadata):
-    """Recognize obscure recall templates already stored without difficulty tags."""
+    """Classify imported prompts by the recall they require."""
+    text = question_text.strip().rstrip(" ؟?")
     difficulty = metadata.get("difficulty")
     source = str(metadata.get("source_id") or "")
-    if (source.startswith("wd_element_number_") or "العدد الذري" in question_text
-            or question_text.startswith("السورة رقم (")):
+    if (source.startswith("wd_element_number_") or "العدد الذري" in text
+            or text.startswith("السورة رقم (")):
         return "rare"
+
+    symbol = re.search(r"رمزه\s*\(?([A-Za-z]{1,2})", text)
+    if symbol and (source.startswith("wd_element_symbol_") or "عنصر" in text):
+        if symbol[1].lower() not in _COMMON_ELEMENT_SYMBOLS:
+            return "rare"
+
+    for prefix in ("عاصمة دولة ", "العملة الرسمية لدولة "):
+        if text.startswith(prefix):
+            country = text[len(prefix):]
+            if country in _RARE_COUNTRIES:
+                return "rare"
+            if country not in _COMMON_COUNTRIES and difficulty != "easy":
+                return "hard" if difficulty != "rare" else difficulty
+            break
+
     if difficulty in ("easy", "hard", "rare"):
         return difficulty
-    if is_chemistry_question(question_text, source) or "عملة" in question_text:
+    if source.startswith("wd_language_") or text.startswith("لغة رمزها الدولي"):
+        code = re.search(r"\(([a-z]{2})\)", text, re.IGNORECASE)
+        return "hard" if code and code[1].lower() in _COMMON_LANGUAGE_CODES else "rare"
+    if (source.startswith(("wd_country_by_cap_", "wd_book_"))
+            or text.startswith(("دولة عاصمتها ", "من مؤلف كتاب "))):
+        return "hard"
+    if is_chemistry_question(text, source) or "عملة" in text:
         return "hard"
     return "medium"
 
