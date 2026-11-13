@@ -111,7 +111,7 @@ def question_difficulty(question_text, metadata):
             or text.startswith("السورة رقم (")):
         return "rare"
 
-    symbol = re.search(r"رمزه\s*\(?([A-Za-z]{1,2})", text)
+    symbol = re.search(r"رمزه\s*\(?([A-Za-z]{1,2})\b", text)
     if symbol and (source.startswith("wd_element_symbol_") or "عنصر" in text):
         if symbol[1].lower() not in _COMMON_ELEMENT_SYMBOLS:
             return "rare"
