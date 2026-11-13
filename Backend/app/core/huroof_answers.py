@@ -26,12 +26,17 @@ def _forms(value):
     return {re.sub(r'\s+', '', normalize_arabic(v)) for v in (_clean(value), _core(value))} - {''}
 
 
+_HELSINKI_FORMS = {"هلسنكي", "هيلسينكي", "هيلسنكي", "هلسينكي"}
+
+
 def check_answer(player_ans, correct_ans, accepted_list=None, required_letter=None):
     submitted = _forms(player_ans)
     candidates = [correct_ans] + (accepted_list if isinstance(accepted_list, list) else [])
     required = answer_letter(required_letter) if required_letter else None
     for candidate in candidates:
-        if submitted & _forms(candidate):
+        candidate_forms = _forms(candidate)
+        if (submitted & candidate_forms
+                or (submitted & _HELSINKI_FORMS and candidate_forms & _HELSINKI_FORMS)):
             if required and answer_letter(candidate) != required:
                 continue
             return {'verdict': 'accept', 'source': 'reviewed_alias'}

@@ -1,4 +1,4 @@
-from app.domains.games.huroof.solo_bot import question_difficulty
+from app.domains.games.huroof.solo_bot import is_chemistry_question, question_difficulty
 import asyncio
 import html
 import random
@@ -67,6 +67,7 @@ def _load_huroof_questions_cached():
                 'correct_answer': q.correct_answer,
                 'category': q.category,
                 'difficulty': question_difficulty(q.question_text or '', extra),
+                'chemistry': is_chemistry_question(q.question_text or '', str(extra.get('source_id') or '')),
                 'accepted_answers': extra.get('accepted_answers', []),
                 'letter_extra': normalize_letter(extra.get('letter', '') or ''),
                 'letter_ans': main_letter,
@@ -464,6 +465,10 @@ def register_huroof_events(sio):
                 valid_qs = filtered
             pref_map.pop(turn_sid, None)
         else:
+            if any(q.get('chemistry') and q['id'] in used for q in all_qs):
+                alternatives = [q for q in letter_qs if not q.get('chemistry') and q['id'] not in used]
+                if alternatives:
+                    valid_qs = [q for q in alternatives if q['id'] not in combined_seen] or alternatives
             category_counts = Counter(q['category'] for q in all_qs if q['id'] in used)
             least_used = min(category_counts[q['category']] for q in valid_qs)
             valid_qs = [q for q in valid_qs if category_counts[q['category']] == least_used]

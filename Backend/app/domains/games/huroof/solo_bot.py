@@ -30,7 +30,7 @@ import random
 DIFFICULTIES = {
     "beginner": {
         "label": "مبتدئ",
-        "know_base": 0.40,
+        "know_base": 0.26,
         "buzz_min": 8.0, "buzz_max": 16.0,
         "hesitate": 0.20,
         "strategy": 0.0,
@@ -88,19 +88,28 @@ def _difficulty_factor(question_difficulty):
 
 
 RARE_KNOWLEDGE_LIMITS = {
-    "beginner": 0.02, "medium": 0.06, "hard": 0.13, "expert": 0.24,
+    "beginner": 0.005, "medium": 0.06, "hard": 0.13, "expert": 0.24,
 }
 
 
 def question_difficulty(question_text, metadata):
     """Recognize obscure recall templates already stored without difficulty tags."""
     difficulty = metadata.get("difficulty")
+    source = str(metadata.get("source_id") or "")
+    if (source.startswith("wd_element_number_") or "العدد الذري" in question_text
+            or question_text.startswith("السورة رقم (")):
+        return "rare"
     if difficulty in ("easy", "hard", "rare"):
         return difficulty
-    source = str(metadata.get("source_id") or "")
-    if source.startswith("wd_element_number_") or question_text.startswith("السورة رقم ("):
-        return "rare"
+    if is_chemistry_question(question_text, source) or "عملة" in question_text:
+        return "hard"
     return "medium"
+
+
+def is_chemistry_question(question_text, source_id=""):
+    return (source_id.startswith(("wd_element_symbol_", "wd_element_number_"))
+            or "العدد الذري" in question_text or "عنصر كيميائي" in question_text
+            or "العنصر الكيميائي" in question_text)
 
 
 def bot_knows_answer(difficulty_name, question_difficulty, attempt=1):
@@ -115,7 +124,7 @@ def bot_knows_answer(difficulty_name, question_difficulty, attempt=1):
     if question_difficulty == "rare":
         p = min(p, RARE_KNOWLEDGE_LIMITS.get(difficulty_name, RARE_KNOWLEDGE_LIMITS["medium"]))
     if difficulty_name == "beginner" and question_difficulty == "hard":
-        p = min(p, 0.06)
+        p = min(p, 0.025)
     p = max(0.0, min(0.98, p))         # لا يعرف 100% أبداً — يبقى لك مجال
     return random.random() < p
 
