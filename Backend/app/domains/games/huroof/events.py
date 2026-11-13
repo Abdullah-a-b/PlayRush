@@ -56,7 +56,7 @@ def _load_huroof_questions_cached():
                 extra = {}
             if not isinstance(extra, dict):
                 continue
-            if extra.get('active') is False:
+            if extra.get('active') is False or is_language_code_question(q.question_text, extra):
                 continue
             ans = (q.correct_answer or '').strip()
             main_letter = answer_letter(ans)
@@ -143,7 +143,7 @@ def _action_allowed(gs, sid, action_type):
         return True
 
 # معالج النصوص العربية (Normalize  Fuzzy  Token)
-from app.core.huroof_answers import check_answer, answer_letter, _core as hint_core
+from app.core.huroof_answers import check_answer, answer_letter, is_language_code_question, _core as hint_core
 
 # Anti-Cheat (server-side validation)
 from app.core.anticheat import (
@@ -1326,7 +1326,8 @@ def register_huroof_events(sio):
                     if ans.startswith("ال"):
                         ans = ans[2:]
                     extra = json.loads(q.extra_data) if q.extra_data else {}
-                    if not isinstance(extra, dict) or extra.get("active") is False:
+                    if (not isinstance(extra, dict) or extra.get("active") is False
+                            or is_language_code_question(q.question_text, extra)):
                         continue
                     letter_from_ans = answer_letter(q.correct_answer)
                     if letter_from_ans == norm_letter:

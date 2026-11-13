@@ -41,3 +41,8 @@ def check_answer(player_ans, correct_ans, accepted_list=None, required_letter=No
                 continue
             return {'verdict': 'accept', 'source': 'reviewed_alias'}
     return {'verdict': 'reject', 'source': 'full_answer_required'}
+
+
+def is_language_code_question(question_text, metadata):
+    source = str(metadata.get("source_id") or "")
+    return source.startswith("wd_language_") or str(question_text or "").strip().startswith("لغة رمزها الدولي")

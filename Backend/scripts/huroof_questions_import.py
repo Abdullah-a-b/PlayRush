@@ -306,11 +306,6 @@ def build_extra_questions(rows, kind):
 
 
 EXTRA_QUERIES = {
-    "language": """SELECT ?item ?itemAr ?answerAr ?answerEn WHERE {
-      ?item wdt:P218 ?itemAr .
-      ?item rdfs:label ?answerAr FILTER(LANG(?answerAr)='ar')
-      OPTIONAL { ?item rdfs:label ?answerEn FILTER(LANG(?answerEn)='en') }
-    } ORDER BY ?item""",
     "book": """SELECT ?item ?itemAr ?answerAr ?answerEn WHERE {
       { SELECT DISTINCT ?item WHERE { ?item wdt:P31 wd:Q571; wikibase:sitelinks ?n; wdt:P50 ?a . FILTER(?n>=20) ?item rdfs:label ?titleAr . FILTER(LANG(?titleAr)="ar") ?a rdfs:label ?authorAr . FILTER(LANG(?authorAr)="ar") } ORDER BY ?item LIMIT 250 }
       ?item wdt:P50 ?author; rdfs:label ?itemAr . FILTER(LANG(?itemAr)='ar')
@@ -327,7 +322,7 @@ def save_to_db(questions, complete_groups=()):
     from app.core.import_support import canonical, stable_id
     # مراجعة الهوية تسبق الحفظ حتى لا تعيد المصادر أخطاءً عُزلت سابقاً.
     from pathlib import Path
-    from app.core.huroof_answers import answer_letter
+    from app.core.huroof_answers import answer_letter, is_language_code_question
     rules = json.loads((Path(__file__).resolve().parents[1] / 'data/huroof_review_rules.json').read_text(encoding='utf-8'))['rules']
     reviewed = []
     for question in questions:
@@ -399,7 +394,8 @@ def save_to_db(questions, complete_groups=()):
                 text = old.question_text or ""
                 legacy_group = "countries" if text.startswith(("دولة عاصمتها ", "عاصمة دولة ", "العملة الرسمية لدولة ")) else ("elements" if text.startswith(("عنصر كيميائي رمزه ", "العنصر الكيميائي ذو العدد الذري ")) else None)
                 stale = legacy_group in complete_groups and canonical(text) not in active_texts
-            if stale and extra.get("source") in ("auto_wikidata", "auto_curated") and extra.get("active", True):
+            retired = is_language_code_question(old.question_text, extra)
+            if (retired or (stale and extra.get("source") in ("auto_wikidata", "auto_curated"))) and extra.get("active", True):
                 extra["active"] = False
                 old.extra_data = json.dumps(extra, ensure_ascii=False, sort_keys=True)
                 stats["deactivated"] += 1
