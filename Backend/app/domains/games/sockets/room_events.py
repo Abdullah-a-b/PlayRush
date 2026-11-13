@@ -286,11 +286,9 @@ def register_room_events(sio):
 
             game_mode = room.get('game_mode', 'huroof')
             if game_mode == 'huroof':
-                await sio.emit('huroof_board_init', {'board': gs_check.board}, room=room_code)
-                await sio.emit('huroof_turn_changed', {
-                    'turn_sid': gs_check.turn,
-                    'turn_color': ('green' if gs_check.turn == gs_check.p1 else 'orange')
-                }, room=room_code)
+                from app.domains.games.huroof.events import start_huroof_opening
+                room['opening_draw_pending'] = True
+                sio.start_background_task(start_huroof_opening, room_code)
             elif game_mode == 'career':
                 # مسيرة لاعب: نُعلم الطرفين أن اللعبة جاهزة، ثم نبدأها
                 # gs_check.stage == 'waiting' يضمن أننا لا نبدأ مرتين
@@ -354,8 +352,8 @@ def register_room_events(sio):
 
             if reconnect_game_mode == 'huroof' and gs and hasattr(gs, 'board'):
                 # إعادة إرسال حالة حروف للاعب العائد
-                await sio.emit('huroof_board_init', {'board': gs.board}, to=sid)
-                if room['state'] == 'playing':
+                await sio.emit('huroof_board_init', {'board': gs.board, 'opening_draw': bool(room.get('opening_draw_pending'))}, to=sid)
+                if room['state'] == 'playing' and not room.get('opening_draw_pending'):
                     await sio.emit('huroof_turn_changed', {
                         'turn_sid': gs.turn,
                         'turn_color': ('green' if gs.turn == gs.p1 else 'orange')

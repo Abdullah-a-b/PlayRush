@@ -283,6 +283,8 @@ function playReadyAnimation(cb) {
 }
 
 socket.on('huroof_board_init', (data) => {
+    const badge = document.getElementById('turn-status-badge');
+    if (data.opening_draw && badge) badge.textContent = 'قرعة الحرف الأول';
     if (!_readyShown) {
         _readyShown = true;
         // نؤجّل عدّاد "استعد" حتى تنتهي شاشة "وجدنا لك خصماً" — كانا يظهران

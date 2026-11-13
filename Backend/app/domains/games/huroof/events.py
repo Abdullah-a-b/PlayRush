@@ -276,6 +276,10 @@ def check_answer_fast_track(player_ans, correct_ans, accepted_list, required_let
 _SOLO_HOOKS = {}
 
 
+async def start_huroof_opening(room_code):
+    await _SOLO_HOOKS['opening_draw'](room_code)
+
+
 def register_huroof_events(sio):
     """تغليف الدوال والأحداث لكي تتمكن من استخدام كائن sio"""
 
@@ -672,7 +676,7 @@ def register_huroof_events(sio):
         # تحقق موحّد (BaseGame) + التحقق الموجود
         if not _action_allowed(gs, sid, 'select_hex'):
             return
-        if room.get('solo_opening_draw') or gs.stage != 'selecting' or not is_players_turn(room, gs, sid):
+        if room.get('opening_draw_pending') or gs.stage != 'selecting' or not is_players_turn(room, gs, sid):
             return 
             
         gs.active_hex = gs.board[hex_index]
@@ -1653,7 +1657,7 @@ def register_huroof_events(sio):
 
         rooms[room_code] = {
             'code': room_code, 'type': 'solo', 'game_mode': 'huroof',
-            'state': 'playing', 'created_at': time.time(), 'is_solo': True, 'solo_opening_draw': True,
+            'state': 'playing', 'created_at': time.time(), 'is_solo': True, 'opening_draw_pending': True,
             'players': [
                 {'sid': p1['sid'], 'name': p1['name'], 'avatar': p1['avatar'],
                  'user_id': p1.get('user_id'), 'color': 'green',
@@ -1705,13 +1709,17 @@ def register_huroof_events(sio):
         }, to=sid)
         await sio.emit('update_players_stats', players_pub, to=sid)
 
+        await start_huroof_opening(room_code)
+
+    async def _draw_opening(room_code):
         room = get_room_state(room_code)
-        if not room:
+        if not room or not room.get('opening_draw_pending'):
             return
-        await sio.emit('huroof_board_init', {'board': gs.board}, room=room_code)
-        # Wait for the solo match introduction before revealing the opening question.
+        gs = room['game_state']
+        await sio.emit('huroof_board_init', {'board': gs.board, 'opening_draw': True}, room=room_code)
         await asyncio.sleep(7.5)
-        if get_room_state(room_code) is not room or room.get('state') != 'playing':
+        if (get_room_state(room_code) is not room or room.get('state') != 'playing'
+                or not room.get('opening_draw_pending') or gs.stage != 'selecting'):
             return
         idx = random.choice(_solo._empty_cells(gs.board))
         gs.active_hex = gs.board[idx]
@@ -1719,7 +1727,10 @@ def register_huroof_events(sio):
                        {'hexIndex': idx, 'letter': gs.active_hex['letter'], 'opening_draw': True},
                        room=room_code)
         await trigger_new_question(room_code)
-        room.pop('solo_opening_draw', None)
+        room['opening_hex'] = gs.active_hex['index']
+        room.pop('opening_draw_pending', None)
+
+    _SOLO_HOOKS['opening_draw'] = _draw_opening
 
     # ==========================================
     # الصداقة والحظر (من بروفايل الخصم) — عبر الوحدة المشتركة
