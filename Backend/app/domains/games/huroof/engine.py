@@ -74,6 +74,10 @@ class HuroofGameState:
             'buzzed_player': self.buzzed_player, 'failed_attempts': self.failed_attempts,
             'skip_votes': list(self.skip_votes), 'state_version': self.state_version,
             'preferred_category': getattr(self, 'preferred_category', {}),
+            'is_solo': getattr(self, 'is_solo', False),
+            'bot_difficulty': getattr(self, 'bot_difficulty', 'medium'),
+            'bot_question_memory': getattr(self, 'bot_question_memory', None),
+            'attempts': getattr(self, 'attempts', 1),
         }
 
     @classmethod
@@ -101,9 +105,14 @@ class HuroofGameState:
         obj.skip_votes = set(data.get('skip_votes', []))
         obj.state_version = data.get('state_version', 0)
         obj.preferred_category = data.get('preferred_category', {})
+        obj.is_solo = data.get('is_solo', False)
+        obj.bot_difficulty = data.get('bot_difficulty', 'medium')
+        obj.bot_question_memory = data.get('bot_question_memory')
+        obj.attempts = data.get('attempts', 1)
         return obj
 
     def reset_board(self):
+        self.bot_question_memory = None
         letters = random.sample(ARABIC_LETTERS, 25)
         self.board = [{'index': i, 'letter': letters[i], 'color': None} for i in range(25)]
         self.turn = random.choice([self.p1, self.p2]) 
@@ -115,6 +124,7 @@ class HuroofGameState:
         self.skip_votes = set()   
 
     def reset_round_state(self, starting_turn=None):
+        self.bot_question_memory = None
         letters = random.sample(ARABIC_LETTERS, 25)
         self.board = [{'index': i, 'letter': letters[i], 'color': None} for i in range(25)]
         if starting_turn == 'green': self.turn = self.p1

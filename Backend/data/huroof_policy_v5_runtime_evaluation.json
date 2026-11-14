@@ -1,0 +1,177 @@
+{
+  "pure_python_feature_parity_max_abs": 2.8610229518832853e-08,
+  "runtime_metrics": {
+    "beginner": {
+      "mean_total_variation_from_design": 0.00018264433310832828,
+      "illegal_mass": 0.0,
+      "normalized_entropy": 0.9999999571966474,
+      "immediate_win": {
+        "boards": 1098,
+        "candidate_probability": 0.23839454352855682,
+        "design_probability": 0.2383386194705963
+      },
+      "immediate_block": {
+        "boards": 830,
+        "candidate_probability": 0.23659682273864746,
+        "design_probability": 0.23657043278217316
+      },
+      "safe_remote": {
+        "boards": 1156,
+        "candidate_probability": 0.18514509499073029,
+        "design_probability": 0.18512719869613647
+      }
+    },
+    "medium": {
+      "mean_total_variation_from_design": 0.17883341014385223,
+      "illegal_mass": 0.0,
+      "normalized_entropy": 0.8641622692301543,
+      "immediate_win": {
+        "boards": 1098,
+        "candidate_probability": 0.5494725704193115,
+        "design_probability": 0.5582364201545715
+      },
+      "immediate_block": {
+        "boards": 830,
+        "candidate_probability": 0.254438579082489,
+        "design_probability": 0.2534277141094208
+      },
+      "safe_remote": {
+        "boards": 1156,
+        "candidate_probability": 0.1459905505180359,
+        "design_probability": 0.14219211041927338
+      }
+    },
+    "hard": {
+      "mean_total_variation_from_design": 0.11592324823141098,
+      "illegal_mass": 0.0,
+      "normalized_entropy": 0.6867172742411312,
+      "immediate_win": {
+        "boards": 1098,
+        "candidate_probability": 0.7731297612190247,
+        "design_probability": 0.7715015411376953
+      },
+      "immediate_block": {
+        "boards": 830,
+        "candidate_probability": 0.7723878622055054,
+        "design_probability": 0.7709711194038391
+      },
+      "safe_remote": {
+        "boards": 1156,
+        "candidate_probability": 0.7228350043296814,
+        "design_probability": 0.7270779013633728
+      }
+    },
+    "expert": {
+      "mean_total_variation_from_design": 0.01007871050387621,
+      "illegal_mass": 0.0,
+      "normalized_entropy": 0.26267843169547433,
+      "immediate_win": {
+        "boards": 1098,
+        "candidate_probability": 1.0,
+        "design_probability": 1.0
+      },
+      "immediate_block": {
+        "boards": 830,
+        "candidate_probability": 1.0,
+        "design_probability": 1.0
+      },
+      "safe_remote": {
+        "boards": 1156,
+        "candidate_probability": 0.9608669877052307,
+        "design_probability": 0.9593425393104553
+      }
+    }
+  },
+  "matches": [
+    {
+      "level": "beginner",
+      "capture_probability": 0.5,
+      "candidate_wins": 42,
+      "matches": 80,
+      "paired_seeds": 40
+    },
+    {
+      "level": "beginner",
+      "capture_probability": 0.65,
+      "candidate_wins": 37,
+      "matches": 80,
+      "paired_seeds": 40
+    },
+    {
+      "level": "beginner",
+      "capture_probability": 0.8,
+      "candidate_wins": 39,
+      "matches": 80,
+      "paired_seeds": 40
+    },
+    {
+      "level": "medium",
+      "capture_probability": 0.5,
+      "candidate_wins": 41,
+      "matches": 80,
+      "paired_seeds": 40
+    },
+    {
+      "level": "medium",
+      "capture_probability": 0.65,
+      "candidate_wins": 36,
+      "matches": 80,
+      "paired_seeds": 40
+    },
+    {
+      "level": "medium",
+      "capture_probability": 0.8,
+      "candidate_wins": 37,
+      "matches": 80,
+      "paired_seeds": 40
+    },
+    {
+      "level": "hard",
+      "capture_probability": 0.5,
+      "candidate_wins": 43,
+      "matches": 80,
+      "paired_seeds": 40
+    },
+    {
+      "level": "hard",
+      "capture_probability": 0.65,
+      "candidate_wins": 44,
+      "matches": 80,
+      "paired_seeds": 40
+    },
+    {
+      "level": "hard",
+      "capture_probability": 0.8,
+      "candidate_wins": 44,
+      "matches": 80,
+      "paired_seeds": 40
+    },
+    {
+      "level": "expert",
+      "capture_probability": 0.5,
+      "candidate_wins": 40,
+      "matches": 80,
+      "paired_seeds": 40
+    },
+    {
+      "level": "expert",
+      "capture_probability": 0.65,
+      "candidate_wins": 39,
+      "matches": 80,
+      "paired_seeds": 40
+    },
+    {
+      "level": "expert",
+      "capture_probability": 0.8,
+      "candidate_wins": 39,
+      "matches": 80,
+      "paired_seeds": 40
+    }
+  ],
+  "limitations": "Synthetic rounds use fixed shared selector capture probability, no knowledge/timing/real human opponents. This tests strategy behavior only.",
+  "four_concurrent_cpu_calls_ms": {
+    "median": 4.528799996478483,
+    "p95": 9.624300000723451,
+    "max": 10.963699984131381
+  }
+}

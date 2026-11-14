@@ -1,0 +1,421 @@
+{
+  "reaction": {
+    "provenance": "synthetic reference policy; no human timing labels",
+    "holdout": "disjoint integer word counts, same four difficulty classes",
+    "word_counts": {
+      "train": [
+        0,
+        2,
+        3,
+        5,
+        6,
+        7,
+        8,
+        9,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        22,
+        26,
+        27,
+        29,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        38,
+        39,
+        40
+      ],
+      "validation": [
+        4,
+        10,
+        20,
+        21,
+        25,
+        28
+      ],
+      "test": [
+        1,
+        11,
+        23,
+        24,
+        30,
+        37
+      ]
+    },
+    "cases_per_level": {
+      "train": 232,
+      "validation": 48,
+      "test": 48
+    },
+    "train_seeds": [
+      18301,
+      27019,
+      41777,
+      66319
+    ],
+    "levels": {
+      "beginner": {
+        "selected_seed": 18301,
+        "validation_trials": [
+          {
+            "seed": 18301,
+            "validation_loss": 2.7899941414943896e-06
+          },
+          {
+            "seed": 27019,
+            "validation_loss": 5.927001893724082e-06
+          },
+          {
+            "seed": 41777,
+            "validation_loss": 3.404636117920745e-06
+          },
+          {
+            "seed": 66319,
+            "validation_loss": 3.8810271689726505e-06
+          }
+        ],
+        "heldout": {
+          "cases": 48,
+          "timing_center_mae_seconds": 0.01251902254265245,
+          "timing_center_max_error_seconds": 0.0442537749563785,
+          "hesitation_mae_percentage_points": 0.04133193634100463,
+          "hesitation_max_error_percentage_points": 0.11616395026246007
+        },
+        "twelve_word_first_attempt_profiles": {
+          "easy": {
+            "center_seconds": 10.234192590150101,
+            "hesitation_probability": 0.20583892128065628,
+            "delay_p10_seconds": 9.424065048593578,
+            "delay_p90_seconds": 11.029786068252411
+          },
+          "medium": {
+            "center_seconds": 11.342408612249688,
+            "hesitation_probability": 0.22843104967007236,
+            "delay_p10_seconds": 10.532281070693164,
+            "delay_p90_seconds": 12.138002090351998
+          },
+          "hard": {
+            "center_seconds": 12.488091441335548,
+            "hesitation_probability": 0.2522200446973561,
+            "delay_p10_seconds": 11.677963899779025,
+            "delay_p90_seconds": 13.283684919437858
+          },
+          "rare": {
+            "center_seconds": 13.3676989836402,
+            "hesitation_probability": 0.2705167476678706,
+            "delay_p10_seconds": 12.557571442083676,
+            "delay_p90_seconds": 14.16329246174251
+          }
+        }
+      },
+      "medium": {
+        "selected_seed": 18301,
+        "validation_trials": [
+          {
+            "seed": 18301,
+            "validation_loss": 2.622620968395495e-06
+          },
+          {
+            "seed": 27019,
+            "validation_loss": 7.80934624344809e-06
+          },
+          {
+            "seed": 41777,
+            "validation_loss": 4.173978595645167e-06
+          },
+          {
+            "seed": 66319,
+            "validation_loss": 4.677284323406639e-06
+          }
+        ],
+        "heldout": {
+          "cases": 48,
+          "timing_center_mae_seconds": 0.009353069022045357,
+          "timing_center_max_error_seconds": 0.03467440130605426,
+          "hesitation_mae_percentage_points": 0.034626390787752086,
+          "hesitation_max_error_percentage_points": 0.13292528486029132
+        },
+        "twelve_word_first_attempt_profiles": {
+          "easy": {
+            "center_seconds": 7.6762175870926335,
+            "hesitation_probability": 0.1258516343643767,
+            "delay_p10_seconds": 7.06862193092524,
+            "delay_p90_seconds": 8.272912695669365
+          },
+          "medium": {
+            "center_seconds": 8.50728751638483,
+            "hesitation_probability": 0.14839071578102336,
+            "delay_p10_seconds": 7.899691860217437,
+            "delay_p90_seconds": 9.103982624961562
+          },
+          "hard": {
+            "center_seconds": 9.372344595863456,
+            "hesitation_probability": 0.17281885011172599,
+            "delay_p10_seconds": 8.764748939696062,
+            "delay_p90_seconds": 9.969039704440188
+          },
+          "rare": {
+            "center_seconds": 10.025808122589293,
+            "hesitation_probability": 0.19030820545625435,
+            "delay_p10_seconds": 9.418212466421899,
+            "delay_p90_seconds": 10.622503231166025
+          }
+        }
+      },
+      "hard": {
+        "selected_seed": 18301,
+        "validation_trials": [
+          {
+            "seed": 18301,
+            "validation_loss": 4.266183623258257e-06
+          },
+          {
+            "seed": 27019,
+            "validation_loss": 7.876896233938169e-06
+          },
+          {
+            "seed": 41777,
+            "validation_loss": 6.459262294811197e-06
+          },
+          {
+            "seed": 66319,
+            "validation_loss": 6.424979346775217e-06
+          }
+        ],
+        "heldout": {
+          "cases": 48,
+          "timing_center_mae_seconds": 0.011088886395041126,
+          "timing_center_max_error_seconds": 0.03412978086282353,
+          "hesitation_mae_percentage_points": 0.0413553119890835,
+          "hesitation_max_error_percentage_points": 0.17899235422608462
+        },
+        "twelve_word_first_attempt_profiles": {
+          "easy": {
+            "center_seconds": 5.391169171061863,
+            "hesitation_probability": 0.0657900002687258,
+            "delay_p10_seconds": 4.884839457589035,
+            "delay_p90_seconds": 5.888415094875807
+          },
+          "medium": {
+            "center_seconds": 6.091884334666586,
+            "hesitation_probability": 0.08867282528606193,
+            "delay_p10_seconds": 5.585554621193758,
+            "delay_p90_seconds": 6.58913025848053
+          },
+          "hard": {
+            "center_seconds": 6.821761575497152,
+            "hesitation_probability": 0.11277902366789237,
+            "delay_p10_seconds": 6.315431862024324,
+            "delay_p90_seconds": 7.319007499311095
+          },
+          "rare": {
+            "center_seconds": 7.357395217271796,
+            "hesitation_probability": 0.1300326436110458,
+            "delay_p10_seconds": 6.851065503798967,
+            "delay_p90_seconds": 7.8546411410857395
+          }
+        }
+      },
+      "expert": {
+        "selected_seed": 41777,
+        "validation_trials": [
+          {
+            "seed": 18301,
+            "validation_loss": 6.6018760662700515e-06
+          },
+          {
+            "seed": 27019,
+            "validation_loss": 5.09845494889305e-06
+          },
+          {
+            "seed": 41777,
+            "validation_loss": 4.671135229727952e-06
+          },
+          {
+            "seed": 66319,
+            "validation_loss": 8.546899152861442e-06
+          }
+        ],
+        "heldout": {
+          "cases": 48,
+          "timing_center_mae_seconds": 0.009281245270687013,
+          "timing_center_max_error_seconds": 0.029556988235972637,
+          "hesitation_mae_percentage_points": 0.046071104021777456,
+          "hesitation_max_error_percentage_points": 0.19370967579192405
+        },
+        "twelve_word_first_attempt_profiles": {
+          "easy": {
+            "center_seconds": 4.113251976191133,
+            "hesitation_probability": 0.03581330506504136,
+            "delay_p10_seconds": 3.708188205412871,
+            "delay_p90_seconds": 4.511048715242288
+          },
+          "medium": {
+            "center_seconds": 4.669123259014876,
+            "hesitation_probability": 0.05909615774103639,
+            "delay_p10_seconds": 4.264059488236614,
+            "delay_p90_seconds": 5.066919998066031
+          },
+          "hard": {
+            "center_seconds": 5.256235652061512,
+            "hesitation_probability": 0.0831017082549294,
+            "delay_p10_seconds": 4.85117188128325,
+            "delay_p90_seconds": 5.654032391112667
+          },
+          "rare": {
+            "center_seconds": 5.687475311518833,
+            "hesitation_probability": 0.10004191472710373,
+            "delay_p10_seconds": 5.282411540740571,
+            "delay_p90_seconds": 6.085272050569988
+          }
+        }
+      }
+    },
+    "artifact_bytes": 9573,
+    "artifact_sha256": "03704abe17bf77cc81f3cf1be038fdd6bb487f07bd3d2a8b3fc47e4c23a4ce3d",
+    "training_seconds": 23.08924329999718,
+    "cached_python_mean_inference_us": 12.952719999884721
+  },
+  "strategy": {
+    "version": 5,
+    "source_sha256": "b715cceb8a34fcb61275c591a623bbe90563d4317b8c9550e9683fd3aeadcad5",
+    "data_source": "synthetic legal histories, distribution distillation; no video-derived decision or latency labels",
+    "counts": {
+      "train": 16000,
+      "validation": 2500,
+      "test": 4000
+    },
+    "split": "board + valid top-bottom reflection canonical groups, globally disjoint",
+    "architecture": [
+      20,
+      32,
+      1
+    ],
+    "features": [
+      "own_distance",
+      "opponent_distance",
+      "own_progress",
+      "blocking_gain",
+      "opponent_gain_if_lost",
+      "own_loss_if_lost",
+      "own_neighbors",
+      "opponent_neighbors",
+      "immediate_win",
+      "immediate_block",
+      "goal_score",
+      "opponent_goal_score",
+      "medium_score",
+      "advanced_score",
+      "safe_remote",
+      "axis_center_distance",
+      "cross_axis_center_distance",
+      "occupied_fraction",
+      "own_fraction",
+      "opponent_fraction"
+    ],
+    "levels": {
+      "beginner": {
+        "validation_cross_entropy": 2.4358110427856445,
+        "evaluation": {
+          "mean_total_variation_from_design": 0.00018264452228322625,
+          "illegal_mass": 0.0,
+          "normalized_entropy": 0.9999999537331139,
+          "immediate_win": {
+            "boards": 1098,
+            "candidate_probability": 0.23839454352855682,
+            "design_probability": 0.2383386194705963
+          },
+          "immediate_block": {
+            "boards": 830,
+            "candidate_probability": 0.23659682273864746,
+            "design_probability": 0.23657043278217316
+          },
+          "safe_remote": {
+            "boards": 1156,
+            "candidate_probability": 0.18514509499073029,
+            "design_probability": 0.18512719869613647
+          }
+        }
+      },
+      "medium": {
+        "validation_cross_entropy": 2.096010446548462,
+        "evaluation": {
+          "mean_total_variation_from_design": 0.17883339524269104,
+          "illegal_mass": 0.0,
+          "normalized_entropy": 0.8641622750795247,
+          "immediate_win": {
+            "boards": 1098,
+            "candidate_probability": 0.5494726300239563,
+            "design_probability": 0.5582364201545715
+          },
+          "immediate_block": {
+            "boards": 830,
+            "candidate_probability": 0.2544385492801666,
+            "design_probability": 0.2534277141094208
+          },
+          "safe_remote": {
+            "boards": 1156,
+            "candidate_probability": 0.1459905505180359,
+            "design_probability": 0.14219211041927338
+          }
+        }
+      },
+      "hard": {
+        "validation_cross_entropy": 1.6858876943588257,
+        "evaluation": {
+          "mean_total_variation_from_design": 0.11592324823141098,
+          "illegal_mass": 0.0,
+          "normalized_entropy": 0.6867172717389742,
+          "immediate_win": {
+            "boards": 1098,
+            "candidate_probability": 0.7731297612190247,
+            "design_probability": 0.7715015411376953
+          },
+          "immediate_block": {
+            "boards": 830,
+            "candidate_probability": 0.7723879218101501,
+            "design_probability": 0.7709711194038391
+          },
+          "safe_remote": {
+            "boards": 1156,
+            "candidate_probability": 0.7228350043296814,
+            "design_probability": 0.7270779013633728
+          }
+        }
+      },
+      "expert": {
+        "validation_cross_entropy": 0.6627591252326965,
+        "evaluation": {
+          "mean_total_variation_from_design": 0.01083408948034048,
+          "illegal_mass": 0.0,
+          "normalized_entropy": 0.26500553871827415,
+          "immediate_win": {
+            "boards": 1098,
+            "candidate_probability": 1.0,
+            "design_probability": 1.0
+          },
+          "immediate_block": {
+            "boards": 830,
+            "candidate_probability": 0.9997973442077637,
+            "design_probability": 1.0
+          },
+          "safe_remote": {
+            "boards": 1156,
+            "candidate_probability": 0.9588658809661865,
+            "design_probability": 0.9593425393104553
+          }
+        }
+      }
+    },
+    "seconds": 54.34
+  }
+}

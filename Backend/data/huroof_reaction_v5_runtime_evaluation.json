@@ -1,0 +1,10 @@
+{
+  "artifact_sha256": "03704abe17bf77cc81f3cf1be038fdd6bb487f07bd3d2a8b3fc47e4c23a4ce3d",
+  "runtime_source_sha256": "8cbf0b4ab3ae74319b3fe4d37fe450cbe4195b77917e4bc2f5cee569da0bfa44",
+  "parameter_vectors_checked": 1312,
+  "max_absolute_torch_export_error": 8.005901841467988e-08,
+  "runtime_window_boundary_cases": 5760,
+  "symmetric_triangle_median_checks": 928,
+  "max_runtime_vs_stdlib_triangle_error_seconds": 0.0,
+  "scope": "Installed local artifact and actual runtime adapter; not evidence of production deployment"
+}

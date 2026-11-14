@@ -17,8 +17,13 @@
 نتائج الوضع الفردي لا تمسّ التصنيف إطلاقاً (يُضمن في طبقة الربط).
 """
 from heapq import heappop, heappush
+import hashlib
+import json
+import math
 import random
 import re
+
+from .learned_policy import reaction_parameters
 
 
 # ============================================================
@@ -28,7 +33,6 @@ import re
 # buzz_min/max:  نطاق زمن التفكير قبل البزّ (ثوانٍ) — عشوائي، بشري
 # hesitate:      احتمال أن "يتردّد" فيتراجع رغم معرفته (واقعية)
 # strategy:      وزن الذكاء في اختيار الخلية (0=عشوائي, 1=مثالي)
-# retry_boost:   زيادة المعرفة في المحاولة الثانية (رأى محاولة خاطئة قبله)
 DIFFICULTIES = {
     "beginner": {
         "label": "مبتدئ",
@@ -36,7 +40,6 @@ DIFFICULTIES = {
         "buzz_min": 8.0, "buzz_max": 16.0,
         "hesitate": 0.20,
         "strategy": 0.0,
-        "retry_boost": 0.05,
     },
     "medium": {
         "label": "متوسط",
@@ -44,7 +47,6 @@ DIFFICULTIES = {
         "buzz_min": 6.0, "buzz_max": 12.0,
         "hesitate": 0.12,
         "strategy": 0.42,
-        "retry_boost": 0.10,
     },
     "hard": {
         "label": "صعب",
@@ -52,7 +54,6 @@ DIFFICULTIES = {
         "buzz_min": 4.0, "buzz_max": 9.0,
         "hesitate": 0.06,
         "strategy": 0.70,
-        "retry_boost": 0.12,
     },
     "expert": {
         "label": "خبير",
@@ -60,7 +61,6 @@ DIFFICULTIES = {
         "buzz_min": 3.0, "buzz_max": 7.0,
         "hesitate": 0.03,
         "strategy": 1.0,
-        "retry_boost": 0.15,
     },
 }
 
@@ -148,12 +148,10 @@ def is_chemistry_question(question_text, source_id=""):
 def bot_knows_answer(difficulty_name, question_difficulty, attempt=1):
     """هل يعرف البوت إجابة هذا السؤال؟ قرار احتمالي.
 
-    يجمع: احتمال المستوى الأساسي × معامل صعوبة السؤال (+ تعزيز المحاولة 2).
+    يجمع احتمال المستوى وصعوبة السؤال. انتقال الدور وحده ليس معلومة جديدة.
     """
     cfg = get_difficulty(difficulty_name)
     p = cfg["know_base"] * _difficulty_factor(question_difficulty)
-    if attempt >= 2:
-        p += cfg["retry_boost"]        # رأى محاولة خاطئة، فرصته أعلى
     if question_difficulty == "rare":
         p = min(p, RARE_KNOWLEDGE_LIMITS.get(difficulty_name, RARE_KNOWLEDGE_LIMITS["medium"]))
     if difficulty_name == "beginner" and question_difficulty == "hard":
@@ -172,22 +170,59 @@ def bot_will_buzz(difficulty_name, knows):
     return True
 
 
-def bot_buzz_delay(difficulty_name, window_seconds):
+def bot_buzz_delay(difficulty_name, window_seconds, question_difficulty="medium",
+                   words=0, attempt=1, quantile=None):
     """زمن التفكير قبل البزّ — عشوائي ضمن نطاق المستوى، مقيّد بالنافذة.
 
     window_seconds: 40 للمحاولة الأولى، 30 للثانية.
     يُضغط النطاق تناسبياً لو كانت النافذة أقصر من المعتاد.
     """
     cfg = get_difficulty(difficulty_name)
-    lo, hi = cfg["buzz_min"], cfg["buzz_max"]
-
-    # لا نتجاوز نسبة آمنة من النافذة (حتى لا يبزّ في الثانية الأخيرة)
-    cap = window_seconds * _WINDOW_SAFETY
-    lo = min(lo, cap * 0.5)
-    hi = min(hi, cap)
+    cap = max(0.0, float(window_seconds)) * _WINDOW_SAFETY
+    lo, hi = min(cfg["buzz_min"], cap * 0.5), min(cfg["buzz_max"], cap)
     if hi <= lo:
-        hi = lo + 0.5
-    return round(random.uniform(lo, hi), 2)
+        return hi
+    learned = reaction_parameters(difficulty_name, question_difficulty, words, attempt)
+    center = learned[0] if learned else {
+        "easy": .25, "medium": .45, "hard": .65, "rare": .8,
+    }.get(question_difficulty, .45)
+    center = max(.05, min(.95, center))
+    if learned:
+        mode = lo + (hi - lo) * center
+        spread = (hi - lo) * .18
+        lo, hi = max(lo, mode - spread), min(hi, mode + spread)
+        center = (mode - lo) / (hi - lo)
+    # توزيع مثلثي حول زمن التذكر؛ نحفظ quantile للسؤال عند انتقال الفرصة.
+    unit = random.random() if quantile is None else max(0.0, min(1.0, quantile))
+    fraction = (math.sqrt(unit * center) if unit < center
+                else 1 - math.sqrt((1 - unit) * (1 - center)))
+    return min(cap, round(lo + (hi - lo) * fraction, 3))
+
+
+def question_plan(gs, window_seconds, attempt=1, *, transfer=False):
+    """معرفة ثابتة للسؤال نفسه، وتردد وتوقيت ضمن مستوى اللاعب المختار."""
+    question = gs.current_question or {}
+    level = getattr(gs, "bot_difficulty", DEFAULT_DIFFICULTY)
+    if level not in DIFFICULTIES:
+        level = DEFAULT_DIFFICULTY
+    difficulty = question_difficulty(question.get("question", ""), question)
+    key = hashlib.sha256(json.dumps([
+        level, question.get("id"), question.get("question"), question.get("letter"), difficulty,
+    ], ensure_ascii=False).encode("utf-8")).hexdigest()
+    memory = getattr(gs, "bot_question_memory", None)
+    if not isinstance(memory, dict) or memory.get("key") != key:
+        memory = {
+            "key": key, "knows": bot_knows_answer(level, difficulty, 1),
+            "hesitation": random.random(), "timing": random.random(),
+        }
+        gs.bot_question_memory = memory
+    words = len(question.get("question", "").split())
+    learned = reaction_parameters(level, difficulty, words, attempt)
+    hesitation = learned[1] if learned else get_difficulty(level)["hesitate"]
+    will = bool(memory["knows"] and (transfer or memory["hesitation"] >= hesitation))
+    delay = bot_buzz_delay(level, window_seconds, difficulty, words, attempt,
+                           quantile=memory["timing"]) if will else None
+    return {"will_buzz": will, "delay": delay, "knows": bool(memory["knows"])}
 
 
 # ============================================================
@@ -342,6 +377,12 @@ def choose_hex(board, bot_color, difficulty_name, preferred=None):
                   (2) لو خلية تمنع فوز الخصم الوشيك يأخذها،
                   (3) وإلا يبني جسره متّصلاً نحو حافته.
     """
+    # السياسة المدربة تحتوي توزيع المستوى كاملاً؛ الخوارزمية احتياط عند تعذرها.
+    from .strategy_policy import choose
+    decision = choose(board, bot_color, difficulty_name, preferred)
+    if decision is not None:
+        return decision
+
     empties = _empty_cells(board)
     if not empties:
         return None
@@ -419,6 +460,8 @@ def decide_on_question(difficulty_name, question_difficulty,
       knows:     هل يعرف الإجابة (يحدّد صحّة إجابته لو بزّ)
     """
     knows = bot_knows_answer(difficulty_name, question_difficulty, attempt)
-    will = bot_will_buzz(difficulty_name, knows)
-    delay = bot_buzz_delay(difficulty_name, window_seconds) if will else None
+    learned = reaction_parameters(difficulty_name, question_difficulty, 0, attempt)
+    will = bool(knows and random.random() >= (learned[1] if learned else get_difficulty(difficulty_name)["hesitate"]))
+    delay = bot_buzz_delay(difficulty_name, window_seconds, question_difficulty,
+                          attempt=attempt) if will else None
     return {"will_buzz": will, "delay": delay, "knows": knows}

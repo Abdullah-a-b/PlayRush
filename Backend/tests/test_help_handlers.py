@@ -1,5 +1,5 @@
 """فحص المساعدات المفعلة في الألعاب الخمس عبر المعالجات الفعلية."""
-import asyncio, importlib, sys, time, types, unittest
+import asyncio, importlib, math, sys, time, types, unittest
 from unittest.mock import patch
 from test_game_integrity import functions
 from app.core.huroof_answers import _core
@@ -27,6 +27,7 @@ class HelpHandlerTests(unittest.TestCase):
    def start_background_task(self,f,*args):tasks.append((f,args))
   async def noop(*args,**kw):return None
   sio=Sio();env={'resolve_sid':resolve_sid,'get_room_state':lambda c:room,'_room_gs':lambda c:(room,gs),'sio':sio,'_sio_ref':sio,'time':time,'asyncio':types.SimpleNamespace(sleep=noop),'_answer_timeout':noop,'huroof_timer_task':noop,'trigger_new_question':noop,'_next_question':noop,'_begin_turn':noop,'_notify_opponent_help':noop,'_name_of':lambda r,s:s,'_safe_by_name':lambda r,g:{},'_load_huroof_questions_cached':lambda:[{'category':'جغرافيا'}],'hint_core':_core}
+  env['math'] = math
   functions(f'app/domains/games/{game}/events.py',{game+'_use_help'},env)
   core=types.ModuleType('app.domains.games.core_manager');core._allow_same_ip=lambda:False
   inv=types.ModuleType('app.domains.wallet.help_inventory')
