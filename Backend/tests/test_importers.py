@@ -31,6 +31,28 @@ class Session:
  def rollback(self):self.rolled_back=True
  def close(self):pass
 class ImportTests(unittest.TestCase):
+ def test_huroof_curated_sync_runs_immediately_once_per_content_revision(self):
+  state=self.root/'curated.json'
+  with patch.object(huroof_importer,'DATA_DIR',self.root),patch.object(huroof_importer,'STATE_FILE',str(state)),patch.object(huroof,'save_to_db',return_value={'added':168}) as save:
+   first=huroof_importer.sync_curated_questions();second=huroof_importer.sync_curated_questions()
+   self.assertEqual(first['status'],'success');self.assertEqual(second['status'],'unchanged');save.assert_called_once()
+ def test_huroof_offline_sources_do_not_block_local_questions(self):
+  with patch.object(huroof,'fetch_rows',side_effect=RuntimeError('offline')),patch.object(huroof,'save_to_db',return_value={'added':168}) as save:
+   result=huroof.run_import()
+   self.assertEqual(result['status'],'partial');self.assertTrue(result['failed_sources'])
+   self.assertEqual(save.call_args.args[1],['curated']);self.assertGreaterEqual(len(save.call_args.args[0]),168)
+ def test_huroof_import_preserves_explicit_difficulty(self):
+  session=Session()
+  q={'question_text':'سؤال يومي سهل','correct_answer':'قط','letter':'ق','category':'حيوانات','accepted_answers':['قط'],'difficulty':'easy'}
+  with patch.object(fake_database,'SessionLocal',return_value=session):
+   huroof.save_to_db([q]);huroof.save_to_db([q])
+  self.assertEqual(len(session.rows),1);self.assertEqual(json.loads(session.rows[0].extra_data)['difficulty'],'easy')
+ def test_local_huroof_sync_preserves_other_curated_families(self):
+  existing=Question(id=1,game_mode='huroof',question_text='سورة محفوظة',correct_answer='الفاتحة',category='دين',extra_data=json.dumps({'source':'auto_curated','source_id':'wd_curated_quran_example','active':True}))
+  session=Session([existing]);q={'question_text':'سؤال محلي جديد','correct_answer':'قط','letter':'ق','category':'حيوانات','accepted_answers':['قط'],'difficulty':'easy'}
+  with patch.object(huroof_importer,'DATA_DIR',self.root),patch.object(huroof_importer,'STATE_FILE',str(self.root/'sync.json')),patch.object(huroof,'build_curated_questions',return_value=[q]),patch.object(fake_database,'SessionLocal',return_value=session):
+   huroof_importer.sync_curated_questions()
+  self.assertTrue(json.loads(existing.extra_data)['active']);self.assertEqual(len(session.rows),2)
  def setUp(self):
   self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name);self.ps=[patch.object(paths,'DATA_DIR',self.root),patch.object(support.time,'sleep',lambda _:None)]
   for p in self.ps:p.start()

@@ -156,7 +156,9 @@ CURATED_FACTS = [
 def build_curated_questions():
     """حقائق الحروف النادرة — منسّقة يدوياً، الحرف يُشتق آلياً من الإجابة."""
     qs = []
-    for f in CURATED_FACTS:
+    from pathlib import Path
+    starter = json.loads((Path(__file__).resolve().parents[1] / 'data/huroof_starter_questions.json').read_text(encoding='utf-8'))
+    for f in CURATED_FACTS + starter['questions']:
         letter = _answer_letter(f["a"])
         if not letter:
             continue
@@ -165,7 +167,8 @@ def build_curated_questions():
             "correct_answer": f["a"],
             "category": f["cat"],
             "letter": letter,
-            "accepted_answers": _variants(f["a"], None),
+            "accepted_answers": sorted(set(_variants(f["a"], None) + f.get('accepted_answers', []))),
+            "difficulty": f.get('difficulty', 'medium'),
         })
     return qs
 
@@ -369,6 +372,8 @@ def save_to_db(questions, complete_groups=()):
                 stats["manual_protected"] += 1
                 continue
             data = {"letter": q["letter"], "accepted_answers": q["accepted_answers"], "source": "auto_wikidata" if q.get("source_id") else "auto_curated", "source_id": sid, "active": True}
+            if q.get('difficulty') in ('easy', 'medium', 'hard', 'rare'):
+                data['difficulty'] = q['difficulty']
             encoded = json.dumps(data, ensure_ascii=False, sort_keys=True)
             if row is None:
                 row = Question(game_mode="huroof", question_text=q["question_text"], correct_answer=q["correct_answer"], category=q["category"], extra_data=encoded)
@@ -458,8 +463,8 @@ def run_import():
             questions += build_element_questions(rows)
         else:
             questions += build_extra_questions(rows, name)
-    if len(failed) == len(sources):
-        raise RuntimeError("فشلت جميع مصادر حروف؛ لم نغير قاعدة الأسئلة")
+    # الأسئلة المحلية المراجعة لا تعتمد على توافر Wikidata. المصادر التي فشلت
+    # ليست complete_groups، لذلك لا نعطّل أسئلتها عند حفظ التوسعة المحلية.
     from app.core.import_support import unambiguous_questions
     questions = unambiguous_questions(questions, "question_text", "correct_answer")
     stats = save_to_db(questions, complete_groups)

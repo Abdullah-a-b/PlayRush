@@ -1,4 +1,5 @@
 from app.domains.games.huroof.solo_bot import is_chemistry_question, question_difficulty
+from app.domains.games.huroof.question_pool import choose_question
 import asyncio
 import html
 import random
@@ -319,6 +320,10 @@ def register_huroof_events(sio):
     async def huroof_timer_task(room_code, version, seconds, timeout_type):
         # نسجّل بيانات المؤقّت النشط (لمساعدة تمديد الوقت)
         _room0 = get_room_state(room_code)
+        if (not _room0 or _room0.get('state') != 'playing'
+                or not _room0.get('game_state')
+                or _room0['game_state'].state_version != version):
+            return
         if _room0 and _room0.get('game_state'):
             import time as _t
             _room0['game_state'].active_timer = {
@@ -340,13 +345,7 @@ def register_huroof_events(sio):
             
             if timeout_type == 'timeout_buzz_r1':
                 # 0 لم يضغط أحد الجرس في الـ 40 ثانية -> فرصة أخيرة مباشرة
-                gs.attempts = 2
-                version = advance_state(gs, 'question')
-                gs.buzzed_player = None
-                await sio.emit('huroof_last_chance', {'timer': 30}, room=room_code)
-                sio.start_background_task(huroof_timer_task, room_code, version, 30, 'timeout_buzz_r3')
-                if getattr(gs, 'is_solo', False) and 'consider_buzz' in _SOLO_HOOKS:
-                    sio.start_background_task(_SOLO_HOOKS['consider_buzz'], room_code, version, 30)
+                await enter_last_chance(room_code, gs)
 
             elif timeout_type == 'timeout_answer_r1':
                 # 1 اللاعب الأول أضاع الـ 15 ثانية -> ينتقل للخصم بـ 20 ثانية (المحاولة الأولى)
@@ -359,13 +358,7 @@ def register_huroof_events(sio):
                 
             elif timeout_type == 'timeout_answer_r2':
                 # 2 الخصم أضاع الـ 20 ثانية -> فشل الكل في الأولى، نفتح المحاولة الثانية
-                gs.attempts = 2 
-                version = advance_state(gs, 'question') 
-                gs.buzzed_player = None
-                await sio.emit('huroof_last_chance', {'timer': 30}, room=room_code)
-                sio.start_background_task(huroof_timer_task, room_code, version, 30, 'timeout_buzz_r3')
-                if getattr(gs, 'is_solo', False) and 'consider_buzz' in _SOLO_HOOKS:
-                    sio.start_background_task(_SOLO_HOOKS['consider_buzz'], room_code, version, 30)
+                await enter_last_chance(room_code, gs)
                 
             elif timeout_type == 'timeout_answer_r3':
                 # 3 اللاعب أضاع الـ 12 ثانية (في المحاولة الثانية) -> ينتقل للخصم بـ 12 ثانية
@@ -379,15 +372,35 @@ def register_huroof_events(sio):
             elif timeout_type == 'timeout_answer_r4' or timeout_type == 'timeout_buzz_r3':
                 # 4 انتهت كل الفرص أو لم يضغط أحد في الفرصة الثانية
                 # 🆕 نكشف الإجابة الصحيحة للطرفين (استُنفدت كل المحاولات)
-                _ca = gs.current_question.get('answer', '') if gs.current_question else ''
-                if _ca:
-                    await sio.emit('huroof_reveal_answer', {'correct_answer': _ca}, room=room_code)
-                    await asyncio.sleep(2)
-                # 🆕 نفس الحرف المختار: سؤال جديد لنفس الحرف (لا نعيد الاختيار)
-                await sio.emit('huroof_timeout_info', {'msg': 'لم تتم الإجابة! سؤال جديد لنفس الحرف...'}, room=room_code)
-                await asyncio.sleep(1)
-                gs.state_version += 1
-                await trigger_new_question(room_code, is_change=True)
+                await finish_unanswered_question(room_code, gs)
+
+    async def enter_last_chance(room_code, gs):
+        """كل طرق الفرصة الأخيرة تستخدم مؤقت السيرفر نفسه، حتى بعد الإجابة الخاطئة."""
+        gs.attempts = 2
+        version = advance_state(gs, 'question')
+        gs.buzzed_player = None
+        sio.start_background_task(huroof_timer_task, room_code, version, 30, 'timeout_buzz_r3')
+        await sio.emit('huroof_last_chance', {'timer': 30}, room=room_code)
+        if getattr(gs, 'is_solo', False) and 'consider_buzz' in _SOLO_HOOKS:
+            sio.start_background_task(_SOLO_HOOKS['consider_buzz'], room_code, version, 30)
+
+    async def finish_unanswered_question(room_code, gs):
+        """نغلق السؤال قبل كشف الإجابة؛ مؤقت قديم لا يستبدل سؤالاً أحدث."""
+        room = get_room_state(room_code)
+        question = gs.current_question
+        version = advance_state(gs, 'revealing')
+        gs.active_timer = None
+        gs.buzzed_player = None
+        answer = (question or {}).get('answer', '')
+        if answer:
+            await sio.emit('huroof_reveal_answer', {'correct_answer': answer}, room=room_code)
+        await sio.emit('huroof_timeout_info', {'msg': 'انتهت الفرص! سؤال جديد لنفس الحرف...'}, room=room_code)
+        await asyncio.sleep(3)
+        if (get_room_state(room_code) is not room or not room or room.get('state') != 'playing'
+                or room.get('game_state') is not gs or gs.state_version != version
+                or gs.stage != 'revealing' or gs.current_question is not question):
+            return
+        await trigger_new_question(room_code, is_change=True)
 
     async def trigger_new_question(room_code, is_change=False):
         room = get_room_state(room_code)
@@ -412,72 +425,32 @@ def register_huroof_events(sio):
         combined_seen = await asyncio.to_thread(_fetch_combined_seen, uids)
         all_qs = await asyncio.to_thread(_load_huroof_questions_cached)
 
-        used = set(gs.used_questions) if hasattr(gs, 'used_questions') else set()
-        # قائمة الحرف كاملةً (كل أسئلة هذا الحرف بغضّ النظر عن الرؤية)
-        letter_qs = [
-            q for q in all_qs
-            if norm_letter in q.get('valid_letters', set())
-        ]
-        # ملاحظة: نعتمد على الحرف المحسوب من الإجابة (بعد إزالة ال)،
-        # لا على extra.letter اليدوي في القاعدة — فقد يكون مصنّفاً خطأ
-        # (مثل "البحرين" تحت الألف بدل الباء).
-        valid_qs = [q for q in letter_qs
-                    if q['id'] not in used and q['id'] not in combined_seen]
-
-        # التدرّج حتى لا يبقى الحرف بلا سؤال أبداً (لكل الأنظمة):
-        #   1) جديد غير مرئي  →  2) غير مستخدم بالمباراة (ولو رآه سابقاً)
-        #   →  3) توليد AI جديد (يقلّل التكرار)  →  4) إعادة استخدام قديم
-        source = 'fresh'
-        if not valid_qs:
-            valid_qs = [q for q in letter_qs if q['id'] not in used]
-            source = 'seen_ok'
-
-        # لا تدخل أسئلة AI غير المراجعة إلى مباراة فعلية. التوسع من مستورد الحقائق.
-        # 4) إعادة استخدام أي سؤال للحرف (الملاذ قبل الأخير)
-        if not valid_qs:
-            valid_qs = letter_qs[:]
-            source = 'reused'
-            if hasattr(gs, 'used_questions'):
-                gs.used_questions = [qid for qid in gs.used_questions
-                                     if qid not in {q['id'] for q in letter_qs}]
-
-        if not valid_qs:
-            # لا يوجد ولا سؤال واحد لهذا الحرف في القاعدة إطلاقاً (نادر جداً).
-            # التوليد الفوري بالـAI ميزة مستقبلية؛ حالياً الملاذ الأخير:
-            # نختار خلية أخرى تلقائياً بدل ترك الشاشة معلّقة.
-            print(f" لا يوجد أي سؤال لحرف '{norm_letter}' في القاعدة. اختيار حرف آخر.")
-            empties = [i for i, h in enumerate(gs.board)
-                       if h.get('color') not in ('green', 'orange')]
-            if empties:
-                new_idx = random.choice(empties)
-                gs.active_hex = gs.board[new_idx]
-                await sio.emit('huroof_hex_locked',
-                               {'hexIndex': new_idx, 'letter': gs.active_hex['letter']},
-                               room=room_code)
-                gs.state_version += 1
-                await asyncio.sleep(0.5)
-                await trigger_new_question(room_code, is_change=True)
-            return
-
-        # اختيار التصنيف: لو اللاعب صاحب الدور اختار تصنيفاً مسبقاً، نُفضّله
-        pref_map = getattr(gs, 'preferred_category', None)
-        turn_sid = gs.turn  # gs.turn هو sid اللاعب صاحب الدور مباشرة
-        if pref_map and pref_map.get(turn_sid):
-            wanted = pref_map.get(turn_sid)
-            filtered = [q for q in valid_qs if q['category'] == wanted]
-            if filtered:
-                valid_qs = filtered
-            pref_map.pop(turn_sid, None)
-        else:
-            if any(q.get('chemistry') and q['id'] in used for q in all_qs):
-                alternatives = [q for q in letter_qs if not q.get('chemistry') and q['id'] not in used]
-                if alternatives:
-                    valid_qs = [q for q in alternatives if q['id'] not in combined_seen] or alternatives
-            category_counts = Counter(q['category'] for q in all_qs if q['id'] in used)
-            least_used = min(category_counts[q['category']] for q in valid_qs)
-            valid_qs = [q for q in valid_qs if category_counts[q['category']] == least_used]
-
-        chosen = random.choice(valid_qs)
+        # حدود المستوى تسبق منع التكرار: السهل المرئي أفضل من معلومة نادرة جديدة.
+        level = getattr(gs, 'bot_difficulty', 'medium') if getattr(gs, 'is_solo', False) else 'online'
+        pref_map = getattr(gs, 'preferred_category', None) or {}
+        wanted = pref_map.pop(gs.turn, None)
+        chosen = choose_question(all_qs, norm_letter, getattr(gs, 'used_questions', []),
+                                 combined_seen, level=level, preferred_category=wanted,
+                                 used_answers=getattr(gs, 'used_answers', []))
+        if chosen is None:
+            # نجرّب خلايا مغطّاة فقط وبعدد محدود؛ لا استدعاء ذاتي قد يعلق للأبد.
+            alternatives = [h for h in gs.board if h.get('color') not in ('green', 'orange')]
+            random.shuffle(alternatives)
+            for cell in alternatives:
+                candidate_letter = normalize_letter(cell['letter'])
+                chosen = choose_question(all_qs, candidate_letter, getattr(gs, 'used_questions', []),
+                                         combined_seen, level=level,
+                                         used_answers=getattr(gs, 'used_answers', []))
+                if chosen is not None:
+                    gs.active_hex = cell
+                    norm_letter = candidate_letter
+                    await sio.emit('huroof_hex_locked', {'hexIndex': cell['index'], 'letter': cell['letter']}, room=room_code)
+                    break
+            if chosen is None:
+                advance_state(gs, 'selecting')
+                await sio.emit('huroof_timeout_info', {'msg': 'الأسئلة قيد التجهيز. حاول اختيار حرف بعد قليل.'}, room=room_code)
+                await emit_turn_changed(room_code, gs, gs.turn)
+                return
 
         if hasattr(gs, 'used_questions'):
             gs.used_questions.append(chosen['id'])
@@ -641,12 +614,7 @@ def register_huroof_events(sio):
                 
             elif gs.stage == 'answer_r2':
                 # نهاية المرحلة الأولى  الفرصة الأخيرة (نفس السؤال). لا نكشف الإجابة بعد.
-                gs.attempts = 2
-                version = advance_state(gs, 'question') 
-                gs.buzzed_player = None
-                await sio.emit('huroof_last_chance', {'timer': 30}, room=room_code) 
-                if getattr(gs, 'is_solo', False) and 'consider_buzz' in _SOLO_HOOKS:
-                    sio.start_background_task(_SOLO_HOOKS['consider_buzz'], room_code, version, 30)
+                await enter_last_chance(room_code, gs)
                 
             elif gs.stage == 'answer_r3':
                 version = advance_state(gs, 'answer_r4')
@@ -658,12 +626,7 @@ def register_huroof_events(sio):
                 
             elif gs.stage == 'answer_r4':
                 # 🆕 نكشف الإجابة للطرفين (كلاهما أخطأ في كل المحاولات)
-                await sio.emit('huroof_reveal_answer', {'correct_answer': correct_answer}, room=room_code)
-                await sio.emit('huroof_timeout_info', {'msg': 'كلاكما أخطأ! سؤال جديد لنفس الحرف...'}, room=room_code)
-                await asyncio.sleep(2)
-                # 🆕 نفس الحرف المختار: سؤال جديد لنفس الحرف (لا نعيد الاختيار)
-                gs.state_version += 1
-                await trigger_new_question(room_code, is_change=True)
+                await finish_unanswered_question(room_code, gs)
 
     @sio.event
     async def huroof_select_hex(sid, data):

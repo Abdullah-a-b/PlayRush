@@ -7,6 +7,26 @@ from app.core.import_support import atomic_json, read_json, import_lock, positiv
 STATE_FILE = str(DATA_DIR / "huroof_import_state.json")
 
 
+def sync_curated_questions():
+    """توسعات الحزمة تصل فور النشر، لا تنتظر سبعة أيام أو خدمة خارجية."""
+    import hashlib
+    import json
+    from scripts.huroof_questions_import import build_curated_questions, save_to_db
+    questions = build_curated_questions()
+    version = hashlib.sha256(json.dumps(questions, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+    state_file = DATA_DIR / 'huroof_curated_state.json'
+    with import_lock(STATE_FILE) as acquired:
+        if not acquired:
+            return {'status': 'busy'}
+        if read_json(state_file, {}).get('version') == version:
+            return {'status': 'unchanged'}
+        # هذه قائمة جزئية؛ بعض أسئلة القرآن القديمة تحمل هوية curated أيضاً.
+        # تعطيل الغائبين يخص الاستيراد الكامل فقط، لا مزامنة التوسعة المحلية.
+        result = save_to_db(questions)
+        atomic_json(state_file, {'version': version, 'synced_at': time.time(), 'result': result})
+        return {'status': 'success', **result}
+
+
 def _run_once():
     with import_lock(STATE_FILE) as acquired:
         if not acquired:
@@ -32,6 +52,17 @@ def _run_once():
 
 
 async def huroof_auto_import_loop():
+    # مستقل عن زر تعطيل الاستيراد الخارجي وعن موعده؛ يعاد حتى تنجح المزامنة.
+    while True:
+        try:
+            result = await asyncio.to_thread(sync_curated_questions)
+            if result.get('status') != 'busy':
+                from app.domains.games.huroof import events as huroof_events
+                huroof_events._HUROOF_QCACHE['ts'] = 0.0
+                break
+        except Exception as exc:
+            print(f" [huroof-curated] إعادة مزامنة الأسئلة المحلية: {type(exc).__name__}")
+        await asyncio.sleep(30)
     if os.getenv("HUROOF_AUTO_IMPORT", "1").strip() == "0":
         return
     await asyncio.sleep(420)
