@@ -30,9 +30,18 @@ def accepts_name(answer, player):
     return bool(guess) and any(guess == normalize_name(name) for name in variants)
 
 
+def playable_qids():
+    from app.core.career_fame import profiles
+    reviews = profiles()
+    return {qid for qid, player in ROSTER_BY_QID.items()
+            if player.get('arab_audience_approved') is True
+            and reviews.get(qid, {}).get('status') != 'excluded'}
+
+
 def round_order():
+    approved = playable_qids()
     tiers = {
-        tier: [pid for pid, player in ROSTER.items() if player["difficulty"] == tier]
+        tier: [pid for pid, player in ROSTER.items() if player["difficulty"] == tier and player["wikidata_id"] in approved]
         for tier in ("easy", "medium", "hard")
     }
     for players in tiers.values():

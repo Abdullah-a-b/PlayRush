@@ -50,8 +50,9 @@ class CareerPilotTests(unittest.TestCase):
         self.assertGreaterEqual(len(pilot.ROSTER), 50)
         for _ in range(30):
             order = pilot.round_order()
-            self.assertEqual(set(order), set(pilot.ROSTER))
-            self.assertEqual(len(order), len(pilot.ROSTER))
+            self.assertNotIn("Q1249859", pilot.playable_qids())
+            self.assertEqual({pilot.ROSTER[i]["wikidata_id"] for i in order}, pilot.playable_qids())
+            self.assertEqual(len(order), len(pilot.playable_qids()))
             self.assertEqual(Counter(pilot.ROSTER[pid]["difficulty"] for pid in order[:5]),
                              {"easy": 2, "medium": 2, "hard": 1})
             first_five.update(order[:5])

@@ -7,7 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
 
 from app.domains.games.models import CareerPlayer, CareerSeen
-from app.domains.games.career.pilot import ROSTER_BY_QID
+from app.domains.games.career.pilot import playable_qids
 
 
 def pick_player_id(available_ids, histories):
@@ -30,7 +30,7 @@ def reserve_player(db, used_ids, user_ids):
 
     # العضوية في القائمة المراجعة شرط للظهور حتى لو كان السجل القديم مفعّلًا.
     rows = (db.query(CareerPlayer.id, CareerPlayer.wikidata_id, CareerPlayer.active)
-            .filter(CareerPlayer.wikidata_id.in_(ROSTER_BY_QID))
+            .filter(CareerPlayer.wikidata_id.in_(playable_qids()))
             .order_by(CareerPlayer.id).all())
     identities = {row.id: row.wikidata_id for row in rows}
     used = {identities.get(pid, pid) for pid in used_ids}

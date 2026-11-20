@@ -10,7 +10,8 @@ def profiles():
     path = paths.DATA_DIR / 'career_fame_review.json'
     if not path.exists():
         raise RuntimeError('ملف مراجعة الشهرة غير متاح؛ لم نغير تصنيفات اللاعبين')
-    key = (str(path), path.stat().st_mtime_ns)
+    stat = path.stat()
+    key = (str(path), stat.st_mtime_ns, stat.st_size, stat.st_ino)
     if _CACHE['key'] != key:
         document = read_json(path, {'players': {}})
         players = document.get('players', {})
