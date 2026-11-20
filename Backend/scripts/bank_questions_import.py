@@ -91,6 +91,8 @@ def run_import():
     if len(qs) < 30:
         raise RuntimeError(f"نتائج قليلة ({len(qs)})؛ لم يُمس الملف الحالي")
     old = read_json(out_path, [])
+    if old and len(qs) < .8 * len(old):
+        raise RuntimeError("تراجع كبير في تغطية المصدر؛ احتفظنا بالنسخة السابقة")
     by_text = {canonical(q.get("q")): q for q in old}
     by_identity = {q["source_id"]: q for q in old if q.get("source_id")}
     added = updated = unchanged = 0
@@ -105,6 +107,10 @@ def run_import():
             q.clear();q.update(previous)
         elif previous and previous.get("active") is False:
             q["active"] = False
+        if previous and canonical(previous.get("a")) == canonical(q["a"]) and not previous.get("_curation", {}).get("hold_import"):
+            q["accepted"] = list(dict.fromkeys(q.get("accepted", []) + previous.get("accepted", [])))
+            if "_curation" in previous:
+                q["_curation"] = previous["_curation"]
         used_ids.add(q["id"])
         if previous is None:
             added += 1

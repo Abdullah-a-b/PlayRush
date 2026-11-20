@@ -191,6 +191,7 @@ def _run_once():
         state = read_json(STATE_FILE, {})
         doc = read_json(_DATA_FILE, {"questions": []})
         by_id = {q["id"]: q for q in doc.setdefault("questions", [])}
+        existing_ids = set(by_id)
         sources = state.setdefault("sources", {})
         stats = {"status": "success", "added": 0, "updated": 0, "answers_added": 0, "failed_sources": [], "ineligible_sources": [], "held_sources": []}
         all_queries = dict(QUERIES)
@@ -208,6 +209,9 @@ def _run_once():
             try:
                 fetched = _run_query(query)
                 if not fetched: raise RuntimeError("المصدر فارغ")
+                previous_auto = by_id.get(qid, {}).get("auto_answers", [])
+                if previous_auto and len(fetched) < .8 * len(previous_auto):
+                    raise ValueError("تراجع عدد الإجابات؛ احتفظنا بالقائمة السابقة")
                 if len(fetched) < 15:
                     # قائمة كاملة وصحيحة قد تكون أصغر من الحد الذي يتطلبه المحرك.
                     source["last_run"] = time.time();source.pop("retry_after", None)
@@ -228,7 +232,7 @@ def _run_once():
                 old = question.get("answers", [])
                 merged = _merge_answers(manual, fetched)
                 question["manual_answers"] = manual;question["auto_answers"] = fetched;question["answers"] = merged
-                if before != json.dumps(question, ensure_ascii=False, sort_keys=True): stats["updated"] += 1
+                if question.get("id") in existing_ids and before != json.dumps(question, ensure_ascii=False, sort_keys=True): stats["updated"] += 1
                 stats["answers_added"] += len({canonical(a.split('|')[0]) for a in merged} - {canonical(a.split('|')[0]) for a in old})
                 source["last_run"] = time.time();source.pop("retry_after", None)
             except Exception as exc:

@@ -161,6 +161,7 @@ def _run_once():
                 if not due(source, interval): continue
                 if lane == "refresh" and not known:
                     source["last_run"] = time.time()
+                    source.pop("retry_after", None)
                     continue
                 try:
                     if lane == "refresh":
@@ -169,6 +170,8 @@ def _run_once():
                     else:
                         rows = _run_query(_query_for(occ, source.get("offset", 0)))
                     candidates = _character_rows(rows, occ, category)
+                    if not candidates and (rows or lane == "refresh"):
+                        raise ValueError("لم تصل شخصيات صالحة؛ سنعيد جلب الصفحة")
                     for new in candidates:
                         old = by_qid.get(new["wikidata_id"]) or by_name.get(canonical(new["name"]))
                         if old:
@@ -182,7 +185,9 @@ def _run_once():
                             if not old.get("wikidata_id") and not str(old.get("id", "")).startswith("wd_"):
                                 stats["manual_protected"] += 1; continue
                             new["id"] = old["id"]  # الحفاظ على مشاهدات الشخصية القديمة
-                            if old != new:
+                            if canonical(old.get("name")) == canonical(new["name"]):
+                                new["accepted_answers"] = sorted(set(new["accepted_answers"]) | set(old.get("accepted_answers", [])))
+                            if any(old.get(field) != value for field, value in new.items()):
                                 old.update(new); stats["updated"] += 1
                             else: stats["unchanged"] += 1
                             by_qid[new["wikidata_id"]] = old
