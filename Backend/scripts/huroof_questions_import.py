@@ -23,7 +23,7 @@
 
 الإخراج: جدول questions مباشرة (game_mode='huroof') لأن حروف يقرأ
 من DB — مع extra_data={'letter','accepted_answers','source':'auto_wikidata'}
-وdedup بنص السؤال (append-only، لا يمس اليدوي).
+ومنع التكرار بهوية المصدر ونص السؤال، مع حماية المراجعات والمحتوى اليدوي.
 
 التشغيل اليدوي:  python scripts/huroof_questions_import.py
 """
@@ -318,6 +318,53 @@ EXTRA_QUERIES = {
 }
 
 
+def prepare_questions(questions, rules=None):
+    """رفض المدخلات المعيبة والتعارضات قبل لمس قاعدة البيانات."""
+    from app.core.huroof_answers import answer_letter, is_language_code_question
+    from app.core.import_support import canonical, stable_id, unambiguous_questions
+    prepared = []
+    for original in questions:
+        if not isinstance(original, dict):
+            continue
+        sid = original.get('source_id') or stable_id('curated', original.get('question_text', ''))
+        rule = (rules or {}).get(sid, {})
+        if rule.get('active') is False:
+            continue
+        q = {**original, **{k: v for k, v in rule.items() if k != 'active'}}
+        if not all(isinstance(q.get(k), str) and q[k].strip()
+                   for k in ('question_text', 'correct_answer', 'category')):
+            continue
+        for key in ('question_text', 'correct_answer', 'category'):
+            q[key] = q[key].strip()
+        answer = q['correct_answer']
+        letter = answer_letter(answer)
+        if (letter not in 'أبتثجحخدذرزسشصضطظعغفقكلمنهوي' or not letter
+                or len(answer) > 80 or len(q['question_text']) > 500
+                or not _is_arabic(q['question_text'])
+                or is_language_code_question(q['question_text'], q)):
+            continue
+        aliases = q.get('accepted_answers', [])
+        if not isinstance(aliases, list):
+            aliases = []
+        q['accepted_answers'] = sorted({answer} | {
+            a.strip() for a in aliases if isinstance(a, str) and 0 < len(a.strip()) <= 80
+        })
+        q['letter'] = letter
+        prepared.append(q)
+    # هوية مصدر واحدة لا تقبل حقيقتين، حتى لو اختلف نص السؤال.
+    by_source = {}
+    for q in prepared:
+        sid = q.get('source_id') or stable_id('curated', q['question_text'])
+        by_source.setdefault(sid, []).append(q)
+    clean = []
+    for sid, group in sorted(by_source.items()):
+        if len({(canonical(q['question_text']), canonical(q['correct_answer'])) for q in group}) == 1:
+            chosen = dict(sorted(group, key=lambda q: json.dumps(q, ensure_ascii=False, sort_keys=True))[0])
+            chosen['accepted_answers'] = sorted({a for q in group for a in q['accepted_answers']})
+            clean.append(chosen)
+    return unambiguous_questions(clean, 'question_text', 'correct_answer')
+
+
 def save_to_db(questions, complete_groups=()):
     """تحديث الآلي بهوية المصدر؛ لا نستبدل أي سجل يدوي."""
     from app.infrastructure.database import SessionLocal
@@ -327,17 +374,11 @@ def save_to_db(questions, complete_groups=()):
     from pathlib import Path
     from app.core.huroof_answers import answer_letter, is_language_code_question
     rules = json.loads((Path(__file__).resolve().parents[1] / 'data/huroof_review_rules.json').read_text(encoding='utf-8'))['rules']
-    reviewed = []
-    for question in questions:
-        rule = rules.get(question.get('source_id'), {})
-        if rule.get('active') is False:
-            continue
-        question = {**question, **{k: v for k, v in rule.items() if k != 'active'}}
-        question['letter'] = answer_letter(question['correct_answer'])
-        reviewed.append(question)
-    questions = reviewed
+    count_before = len(questions)
+    questions = prepare_questions(questions, rules)
     db = SessionLocal()
-    stats = {"added": 0, "updated": 0, "unchanged": 0, "manual_protected": 0, "deactivated": 0}
+    stats = {"added": 0, "updated": 0, "unchanged": 0, "manual_protected": 0, "deactivated": 0,
+             "rejected": count_before - len(questions), "identity_conflicts": 0}
     try:
         existing = db.query(Question).filter(Question.game_mode == "huroof").all()
         from app.core.import_support import content_backup
@@ -361,19 +402,36 @@ def save_to_db(questions, complete_groups=()):
                 if not isinstance(extra, dict): extra = {}
             except (ValueError, TypeError):
                 extra = {}
-            if row and extra.get("_curation", {}).get("hold_import"):
+            curation = extra.get('_curation') if isinstance(extra.get('_curation'), dict) else {}
+            if row and curation.get("hold_import"):
                 stats["manual_protected"] += 1
                 continue
             if row and extra.get("source") not in ("auto_wikidata", "auto_curated"):
                 stats["manual_protected"] += 1
                 continue
+            if row and extra.get('source_id') not in (None, '', sid):
+                # تطابق النص لا ينقل سجلّاً معروف الهوية إلى مصدر آخر.
+                stats['identity_conflicts'] += 1
+                continue
             # تحديث النص لا يصطدم بسجل آخر حتى لو كان يدوياً.
             if row and by_text.get(key) not in (None, row):
                 stats["manual_protected"] += 1
                 continue
-            data = {"letter": q["letter"], "accepted_answers": q["accepted_answers"], "source": "auto_wikidata" if q.get("source_id") else "auto_curated", "source_id": sid, "active": True}
+            aliases = set(q['accepted_answers'])
+            if row and canonical(row.correct_answer) == canonical(q['correct_answer']):
+                previous_aliases = extra.get('accepted_answers', [])
+                if isinstance(previous_aliases, list):
+                    aliases.update(a for a in previous_aliases if isinstance(a, str) and a.strip())
+            # نحفظ المراجعات السابقة؛ تبديل المصدر لا يمحو صعوبة أو كتابة اسم معتمدة.
+            data = {**extra, "letter": q["letter"], "accepted_answers": sorted(aliases), "source": "auto_wikidata" if q.get("source_id") else "auto_curated", "source_id": sid, "active": True}
             if q.get('difficulty') in ('easy', 'medium', 'hard', 'rare'):
                 data['difficulty'] = q['difficulty']
+            elif data.get('difficulty') not in ('easy', 'medium', 'hard', 'rare'):
+                from app.domains.games.huroof.solo_bot import question_difficulty
+                data['difficulty'] = question_difficulty(q['question_text'], data)
+            for provenance_key in ('source_url', 'source_property', 'source_answer_id', 'source_revision'):
+                if q.get(provenance_key):
+                    data[provenance_key] = q[provenance_key]
             encoded = json.dumps(data, ensure_ascii=False, sort_keys=True)
             if row is None:
                 row = Question(game_mode="huroof", question_text=q["question_text"], correct_answer=q["correct_answer"], category=q["category"], extra_data=encoded)
@@ -394,12 +452,17 @@ def save_to_db(questions, complete_groups=()):
             except (ValueError, TypeError): continue
             if not isinstance(extra, dict): continue
             sid = extra.get("source_id") or ""
+            curation = extra.get('_curation') if isinstance(extra.get('_curation'), dict) else {}
+            if curation.get('hold_import'):
+                continue
             stale = bool(allowed and sid.startswith(allowed) and sid not in active_ids)
             if not sid and extra.get("source") == "auto_wikidata":
                 text = old.question_text or ""
                 legacy_group = "countries" if text.startswith(("دولة عاصمتها ", "عاصمة دولة ", "العملة الرسمية لدولة ")) else ("elements" if text.startswith(("عنصر كيميائي رمزه ", "العنصر الكيميائي ذو العدد الذري ")) else None)
                 stale = legacy_group in complete_groups and canonical(text) not in active_texts
-            retired = is_language_code_question(old.question_text, extra)
+            retired = (is_language_code_question(old.question_text, extra)
+                       or (rules.get(sid, {}).get('active') is False
+                           and extra.get('source') in ('auto_wikidata', 'auto_curated')))
             if (retired or (stale and extra.get("source") in ("auto_wikidata", "auto_curated"))) and extra.get("active", True):
                 extra["active"] = False
                 old.extra_data = json.dumps(extra, ensure_ascii=False, sort_keys=True)
@@ -413,7 +476,25 @@ def save_to_db(questions, complete_groups=()):
         db.close()
 
 
-def run_import():
+def _source_questions(name, rows):
+    if name == 'countries':
+        return prepare_questions(build_country_questions(rows))
+    if name == 'elements':
+        return prepare_questions(build_element_questions(rows))
+    return prepare_questions(build_extra_questions(rows, name))
+
+
+def _validate_source(name, rows, generated, previous):
+    """عدد الصفوف الخام لا يثبت اكتمال المصدر؛ نقيس حقائق مختلفة صالحة."""
+    minimum = {'countries': 200, 'elements': 180}.get(name, 1)
+    if len(generated) < minimum:
+        raise ValueError('عدد الحقائق الصالحة أقل من حد الأمان')
+    old_count = len(_source_questions(name, previous)) if previous else 0
+    if old_count and len(generated) < old_count * .70:
+        raise ValueError('انخفاض غير متوقع في تغطية المصدر')
+
+
+def run_import(*, dry_run=False, force_refresh=False):
     from app.core.paths import DATA_DIR
     from app.core.import_support import read_json, atomic_json
     # نتائج كل مصدر مستقلة؛ نجاح مصدر لا يمنع إعادة المصدر الذي فشل.
@@ -421,6 +502,7 @@ def run_import():
     cache = read_json(cache_path, {})
     questions = build_quran_questions() + build_curated_questions()
     failed = []
+    source_report = {}
     complete_groups = ["curated"]
     sources = {"countries": QUERY_COUNTRIES, "elements": QUERY_ELEMENTS, **EXTRA_QUERIES}
     # استعلام الكتب تجريبي وثقيل على Wikidata؛ لا يُفعّل في الإنتاج افتراضياً.
@@ -431,15 +513,15 @@ def run_import():
             import time
             entry = cache.get(name, {})
             if not isinstance(entry, dict): entry = {"rows": entry}
-            reused = isinstance(entry, dict) and entry.get("last_success", 0) > time.time() - 7 * 86400 and not entry.get("error")
+            reused = not force_refresh and entry.get("last_success", 0) > time.time() - 7 * 86400 and not entry.get("error")
             if reused:
                 rows = entry["rows"]
             else:
                 if name == "book":
                     query = query.replace("LIMIT 250 }", f"LIMIT 250 OFFSET {entry.get('offset', 0)} }}")
                 rows = fetch_rows(query)
-            if name != "book" and len(rows) < 50:
-                raise RuntimeError("نتائج المصدر أقل من حد الأمان")
+            if not isinstance(rows, list) or any(not isinstance(b, dict) for b in rows):
+                raise ValueError('صيغة مصدر غير صالحة')
             if not rows and not (name == "book" and entry.get("offset", 0) > 0):
                 raise RuntimeError("المصدر فارغ")
             next_offset = entry.get("offset", 0) if isinstance(entry, dict) else 0
@@ -449,31 +531,66 @@ def run_import():
                 merged = [b for b in previous if _g(b, "item") not in seen_items] + rows
                 next_offset = next_offset + 250 if len(seen_items) >= 250 else 0
                 rows = merged
+            generated = _source_questions(name, rows)
+            _validate_source(name, rows, generated, entry.get('rows', []))
             cache[name] = {"rows": rows, "last_success": entry["last_success"] if reused else time.time(), "offset": next_offset}
             complete_groups.append(name)
+            questions += generated
+            source_report[name] = {'status': 'cached' if reused else 'fetched',
+                                   'valid_questions': len(generated)}
         except Exception as exc:
             failed.append(name)
             print(f" [huroof-import] فشل المصدر {name}: {type(exc).__name__}")
             entry = cache.get(name, {})
             rows = entry.get("rows", []) if isinstance(entry, dict) else entry
             cache[name] = {**(entry if isinstance(entry, dict) else {}), "rows": rows, "last_success": entry.get("last_success", 0) if isinstance(entry, dict) else 0, "error": True}
-        if name == "countries":
-            questions += build_country_questions(rows)
-        elif name == "elements":
-            questions += build_element_questions(rows)
-        else:
-            questions += build_extra_questions(rows, name)
+            source_report[name] = {'status': 'failed', 'error': type(exc).__name__}
+            # لا نعيد تطبيق حقيقة من نسخة قديمة عند انقطاع المصدر؛ نترك المخزون الحالي.
+    if os.getenv('HUROOF_DIVERSE_IMPORT', '1') != '0':
+        # قائمة مواضيع مألوفة؛ مصدرها علاقات محددة، وليست أسماء عشوائية من وصف حر.
+        import time
+        from scripts.huroof_diverse_facts import fetch_questions, SOURCE_VERSION
+        name = 'familiar'
+        entry = cache.get(name, {})
+        if not isinstance(entry, dict):
+            entry = {}
+        try:
+            reused = (not force_refresh and entry.get('version') == SOURCE_VERSION
+                      and entry.get('last_success', 0) > time.time() - 7 * 86400
+                      and not entry.get('error'))
+            candidates = entry.get('questions', []) if reused else fetch_questions()
+            generated = prepare_questions(candidates)
+            if not generated or len(generated) != len(candidates):
+                raise ValueError('حقائق مألوفة ناقصة أو متعارضة')
+            questions += generated
+            cache[name] = {'questions': generated, 'version': SOURCE_VERSION,
+                           'last_success': entry['last_success'] if reused else time.time()}
+            source_report[name] = {'status': 'cached' if reused else 'fetched',
+                                   'valid_questions': len(generated)}
+        except Exception as exc:
+            failed.append(name)
+            cache[name] = {**entry, 'error': True}
+            source_report[name] = {'status': 'failed', 'error': type(exc).__name__}
+            print(f' [huroof-import] فشل المصدر {name}: {type(exc).__name__}')
     # الأسئلة المحلية المراجعة لا تعتمد على توافر Wikidata. المصادر التي فشلت
     # ليست complete_groups، لذلك لا نعطّل أسئلتها عند حفظ التوسعة المحلية.
-    from app.core.import_support import unambiguous_questions
-    questions = unambiguous_questions(questions, "question_text", "correct_answer")
-    stats = save_to_db(questions, complete_groups)
-    atomic_json(cache_path, cache)
+    questions = prepare_questions(questions)
+    stats = {'dry_run': True} if dry_run else save_to_db(questions, complete_groups)
+    if not dry_run:
+        atomic_json(cache_path, cache)
     from collections import Counter
-    stats.update(status="partial" if failed else "success", failed_sources=failed, generated=len(questions), coverage=dict(Counter(q["letter"] for q in questions)), categories=dict(Counter(q["category"] for q in questions)))
+    stats.update(status="partial" if failed else "success", failed_sources=failed,
+                 sources=source_report, generated=len(questions),
+                 coverage=dict(Counter(q["letter"] for q in questions)),
+                 categories=dict(Counter(q["category"] for q in questions)))
     print(f" [huroof-import] {stats}")
     return stats
 
 
 if __name__ == "__main__":
-    print(run_import())
+    import argparse
+    parser = argparse.ArgumentParser(description='استيراد محتوى حروف بعد التحقق')
+    parser.add_argument('--dry-run', action='store_true', help='فحص المصدر دون تعديل القاعدة أو حالة الاستيراد')
+    parser.add_argument('--force-refresh', action='store_true', help='فحص المصادر مباشرة دون الكاش')
+    options = parser.parse_args()
+    run_import(dry_run=options.dry_run, force_refresh=options.force_refresh)

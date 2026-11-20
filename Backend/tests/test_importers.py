@@ -54,7 +54,7 @@ class ImportTests(unittest.TestCase):
    huroof_importer.sync_curated_questions()
   self.assertTrue(json.loads(existing.extra_data)['active']);self.assertEqual(len(session.rows),2)
  def setUp(self):
-  self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name);self.ps=[patch.object(paths,'DATA_DIR',self.root),patch.object(support.time,'sleep',lambda _:None)]
+  self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name);self.ps=[patch.object(paths,'DATA_DIR',self.root),patch.object(support.time,'sleep',lambda _:None),patch.dict(os.environ,{'HUROOF_DIVERSE_IMPORT':'0'})]
   for p in self.ps:p.start()
   support.atomic_json(self.root/"career_fame_review.json", {"players": {}})
  def tearDown(self):

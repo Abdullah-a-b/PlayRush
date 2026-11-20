@@ -5,15 +5,18 @@ import os
 from app.core.paths import DATA_DIR
 from app.core.import_support import atomic_json, read_json, import_lock, positive_days, due, record_result
 STATE_FILE = str(DATA_DIR / "huroof_import_state.json")
+IMPORT_REVISION = 'huroof-quality-20261120'
 
 
 def sync_curated_questions():
     """توسعات الحزمة تصل فور النشر، لا تنتظر سبعة أيام أو خدمة خارجية."""
     import hashlib
     import json
+    from app.core.paths import SEED_DATA_DIR
     from scripts.huroof_questions_import import build_curated_questions, save_to_db
     questions = build_curated_questions()
-    version = hashlib.sha256(json.dumps(questions, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+    version = hashlib.sha256(json.dumps(questions, ensure_ascii=False, sort_keys=True).encode()
+                             + (SEED_DATA_DIR / 'huroof_review_rules.json').read_bytes()).hexdigest()
     state_file = DATA_DIR / 'huroof_curated_state.json'
     with import_lock(STATE_FILE) as acquired:
         if not acquired:
@@ -46,7 +49,10 @@ def _run_once():
         except Exception as exc:
             result = {"status": "error", "error": type(exc).__name__}
             print(f" [huroof-importer] فشلت الدورة؛ إعادة خلال ساعة: {type(exc).__name__}")
-        atomic_json(STATE_FILE, record_result(state, result))
+        state = record_result(state, result)
+        if result.get('status') == 'success':
+            state['import_revision'] = IMPORT_REVISION
+        atomic_json(STATE_FILE, state)
         print(f" [huroof-importer] {result}")
         return result
 
@@ -69,7 +75,8 @@ async def huroof_auto_import_loop():
     while True:
         try:
             state = read_json(STATE_FILE, {})
-            if state.get("schema_version") != 2 or due(state, positive_days("HUROOF_IMPORT_INTERVAL_DAYS")):
+            revised = state.get('import_revision') != IMPORT_REVISION and not state.get('retry_after')
+            if revised or due(state, positive_days("HUROOF_IMPORT_INTERVAL_DAYS")):
                 await asyncio.to_thread(_run_once)
         except Exception as exc:
             print(f" [huroof-importer] خطأ حالة: {type(exc).__name__}")
