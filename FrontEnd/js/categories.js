@@ -11,6 +11,7 @@
     const params = new URLSearchParams(window.location.search);
     const t = params.get('token');
     if (t) {
+        localStorage.removeItem('pr_mobile_resume');
         if (window.prSaveToken) window.prSaveToken(t);
         else sessionStorage.setItem('token', t);
         window.history.replaceState({}, document.title, window.location.pathname);
@@ -279,7 +280,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             // فلا نمسح "تذكّرني" — وإلا خرج المستخدم من حسابه بلا سبب حقيقي.
             if (res.status === 401 || res.status === 403) {
                 sessionStorage.removeItem('token');
-                try { localStorage.removeItem('token'); } catch (e) {}
+                try { localStorage.removeItem('pr_mobile_resume'); localStorage.removeItem('token'); } catch (e) {}
                 return window.location.replace('login.html');
             }
 
@@ -490,7 +491,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             // localStorage فيُعاد تسجيل الدخول تلقائياً عند فتح الصفحة.
             try {
                 sessionStorage.removeItem('token');
-                localStorage.removeItem('token');
+                localStorage.removeItem('pr_mobile_resume'); localStorage.removeItem('token');
                 sessionStorage.setItem('pr_logged_out', '1');
                 // 🎬 ليظهر أنيميشن المنصة مجدداً عند الدخول التالي
                 sessionStorage.removeItem('pr_splash_platform');

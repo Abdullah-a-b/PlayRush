@@ -36,9 +36,8 @@
             '<h3 style="margin:0 0 4px;color:#ffe14d;">الوضع الفردي</h3>' +
             '<p style="margin:0 0 16px;font-size:.9rem;color:#cbb8e6;">' +
             'العب خلية الحروف ضد الكمبيوتر — اختر مستوى التحدّي</p>';
-        title.querySelector('p').textContent = gameMode === 'career'
-            ? 'العب مسيرة لاعب ضد الكمبيوتر واختر مستوى التحدّي'
-            : 'العب خلية الحروف ضد الكمبيوتر واختر مستوى التحدّي';
+        title.querySelector('p').textContent = 'العب ' + ({ career: 'مسيرة لاعب', knowledge: 'ماذا تعرف', huroof: 'خلية الحروف' })[gameMode]
+            + ' ضد الكمبيوتر واختر مستوى التحدّي';
         box.className = 'pr-solo-picker';
         box.appendChild(title);
 

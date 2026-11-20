@@ -6,13 +6,15 @@
   const socket = io(API_URL, { transports: ['websocket', 'polling'], upgrade: true });
   if (typeof attachSessionExpiryHandler === 'function') attachSessionExpiryHandler(socket);
   window.socket = socket;
-  const roomCode     = sessionStorage.getItem('gameRoomCode');
+  const params = new URLSearchParams(location.search);
+  const isSolo = params.get('solo') === '1';
+  let roomCode = isSolo ? null : sessionStorage.getItem('gameRoomCode');
   const token        = localStorage.getItem('token') || sessionStorage.getItem('token');
   const playerName   = sessionStorage.getItem('playerName')   || sessionStorage.getItem('username') || 'لاعب';
   const playerAvatar = sessionStorage.getItem('playerAvatar') || sessionStorage.getItem('avatar')   || '';
   let mySid = null;
 
-  if (!token || !roomCode) { window.location.href = '../lobby.html'; return; }
+  if (!token || (!isSolo && !roomCode)) { window.location.href = '../lobby.html'; return; }
 
   const $ = (id) => document.getElementById(id);
   // نستخدم المساحة المرئية الفعلية عند فتح لوحة مفاتيح Android/iOS.
@@ -240,7 +242,14 @@
   }
 
   // ===== الاتصال =====
+  if (isSolo) document.body.classList.add('solo-mode');
+  socket.on('solo_started', ({room_code}) => { if (isSolo) roomCode = room_code; });
+  socket.on('solo_error', ({message}) => { if (isSolo) showToast(message); });
   socket.on('connect', () => {
+    if (isSolo) {
+      socket.emit('knowledge_start_solo', { token, difficulty: params.get('difficulty') });
+      return;
+    }
     // ملاحظة: لا نعتمد socket.id هنا (قد يختلف عن sid الخادم في
     // multiport/polling). mySid يُضبط من your_sid في room_joined.
     if (!mySid) mySid = socket.id;   // قيمة مبدئية فقط لحين وصول your_sid

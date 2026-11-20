@@ -72,6 +72,7 @@ async def login(
         username=form_data.username,
         password=form_data.password,
         client_ip=get_client_ip(request),
+        mobile_login=form_data.client_id == "playrush-android" or request.headers.get("origin") == "https://localhost",
     )
     if result.get("action") == "redirect_to_verify":
         return JSONResponse(status_code=403, content=result)
@@ -127,6 +128,31 @@ async def google_callback(
     response = RedirectResponse(url=target_url)
     response.delete_cookie('pr_oauth', path='/')
     return response
+
+
+@router.post("/mobile-resume")
+@limiter.limit("30/minute")
+async def mobile_resume(request: Request, credential: str = Form(...), repo: UserRepository = Depends(get_user_repo)):
+    from app.core.security import resume_mobile_user, issue_user_token
+    user = resume_mobile_user(repo.db, credential)
+    if not user:
+        return JSONResponse(status_code=401, content={"detail": "انتهت الجلسة"})
+    return JSONResponse({"token": issue_user_token(user)}, headers={"Cache-Control": "no-store"})
+
+
+@router.post("/mobile-enroll")
+async def mobile_enroll(request: Request, user: User = Depends(get_current_user)):
+    from app.core.security import mobile_resume_credential
+    from jose import jwt, JWTError
+    from app.core.security import SECRET_KEY, ALGORITHM
+    import time
+    try:
+        claims = jwt.decode(request.headers.get("Authorization", "").removeprefix("Bearer "), SECRET_KEY, algorithms=[ALGORITHM])
+    except JWTError:
+        claims = {}
+    if claims.get("mobile_enroll_until", 0) < time.time() or not user.session_token or user.is_banned:
+        return JSONResponse(status_code=403, content={"detail": "يلزم تسجيل الدخول"})
+    return JSONResponse({"credential": mobile_resume_credential(user)}, headers={"Cache-Control": "no-store"})
 
 
 @router.post("/logout")

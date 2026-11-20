@@ -343,7 +343,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     // الوضع الفردي (ضد الكمبيوتر) — خلية الحروف ومسيرة لاعب حالياً
-    const SOLO_SUPPORTED_MODES = ['huroof', 'career'];
+    const SOLO_SUPPORTED_MODES = ['huroof', 'career', 'knowledge'];
     const soloModeBtn = document.getElementById('soloModeBtn');
     if (soloModeBtn) {
         soloModeBtn.style.display = SOLO_SUPPORTED_MODES.includes(selectedGameMode) ? 'flex' : 'none';
@@ -366,7 +366,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             // 401/403 فقط تعني توكناً غير صالح؛ غيرها عطل مؤقت لا يستوجب الخروج
             if (res.status === 401 || res.status === 403) {
                 sessionStorage.removeItem('token');
-                try { localStorage.removeItem('token'); } catch (e) {}
+                try { localStorage.removeItem('pr_mobile_resume'); localStorage.removeItem('token'); } catch (e) {}
                 return redirectLobbyLogin();
             }
             if (typeof showToast === 'function') {
@@ -497,7 +497,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             // خروج حقيقي: نمسح "تذكرني" في localStorage أيضاً
             try {
                 sessionStorage.clear();            // يمسح أعلام الأنيميشن أيضاً
-                localStorage.removeItem('token');
+                localStorage.removeItem('pr_mobile_resume'); localStorage.removeItem('token');
                 sessionStorage.setItem('pr_logged_out', '1');
             } catch (e) {}
             window.location.replace('login.html');

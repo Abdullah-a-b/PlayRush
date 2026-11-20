@@ -54,6 +54,7 @@ window.addEventListener('load', () => {
             }
 
             const formData = new FormData();
+            if (window.PR_IS_APP) formData.append('client_id', 'playrush-android');
             formData.append('username', document.getElementById('email').value);
             formData.append('password', document.getElementById('password').value); //  الحل الصحيح
 
@@ -83,6 +84,7 @@ window.addEventListener('load', () => {
                             const remember = document.getElementById('rememberMe');
                             // 📱 التطبيق: الجلسة محفوظة دائماً (كما اتفقنا)
                             if (window.PR_IS_APP || (remember && remember.checked)) {
+                                localStorage.removeItem('pr_mobile_resume');
                                 localStorage.setItem('token', data.token);
                             } else {
                                 localStorage.removeItem('token');

@@ -144,7 +144,7 @@ def verify_account_code(repo: UserRepository, background_tasks: BackgroundTasks,
 
 
 async def login_user(repo: UserRepository, background_tasks: BackgroundTasks,
-                     username: str, password: str, client_ip: str) -> dict:
+                     username: str, password: str, client_ip: str, mobile_login: bool = False) -> dict:
     """يرجع dict فيه المفتاح action عند الحاجة لتوجيه خاص (حساب غير مفعّل)."""
     try:
         email_clean = validate_email_format(username)
@@ -177,7 +177,7 @@ async def login_user(repo: UserRepository, background_tasks: BackgroundTasks,
             "detail": "حسابك غير مفعل. تم إرسال كود تحقق جديد إلى بريدك، جاري التوجيه...",
         }
 
-    access_token = issue_user_token(user)
+    access_token = issue_user_token(user, mobile_login=True) if mobile_login else issue_user_token(user)
     repo.commit()
     log_login(user.email, client_ip, success=True)
     return {
@@ -329,7 +329,7 @@ async def handle_google_callback(repo: UserRepository, background_tasks: Backgro
     elif not user.player_name:
         needs_profile_setup = True
 
-    playrush_token = issue_user_token(user)
+    playrush_token = issue_user_token(user, mobile_login=True) if state == 'app' else issue_user_token(user)
     repo.commit()
     page = "profile-setup" if needs_profile_setup else "categories"
 

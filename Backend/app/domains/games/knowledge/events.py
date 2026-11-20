@@ -13,11 +13,17 @@
 import asyncio
 import json
 import os
+import random
+import secrets
 import time
 
 from app.domains.games.core_manager import get_room_state, rooms
 from app.domains.wallet.reward_service import record_match_result
 from app.core.text_processor import normalize_arabic
+from app.domains.games import trained_bot
+from app.domains.games.knowledge.engine import KnowledgeGameState
+from app.domains.games.knowledge.solo_bot import LEVELS, plan_turn
+from app.sockets.auth_helper import verify_socket_token
 
 _sio_ref = None
 _start_round_ref = None
@@ -282,6 +288,10 @@ def register_knowledge_events(sio):
             'retry_armed': gs.retry_armed,
             'double_round': gs.double_round,
         }, room=room_code)
+        if room.get('is_solo') and sid == gs.p2:
+            sio.start_background_task(_turn_timeout, room_code, version)
+            sio.start_background_task(_bot_turn, room_code, version)
+            return
         # 🎯 حدث موجّه حصري لصاحب الدور: يفتح صندوق الإجابة عنده مباشرة
         # بلا أي مطابقة sid/اسم بالواجهة — الحل الجذري لـ"الصندوق ما يطلع"
         await _sio_ref.emit('knowledge_your_turn', {
@@ -289,6 +299,77 @@ def register_knowledge_events(sio):
             'turn_ends_at': turn_ends_at,
         }, to=sid)
         sio.start_background_task(_turn_timeout, room_code, version)
+
+    async def _bot_turn(room_code, version):
+        room, gs = _room_gs(room_code)
+        if not room:
+            return
+        level = room['difficulty']
+        started = time.monotonic()
+        suggestion = await trained_bot.decide(
+            'knowledge', level, 'turn', ['answer', 'pass'],
+            question=gs.current_q['q'],
+            used_answers=[gs.answers_pool[i]['display'] for i in sorted(gs.used_answer_idx)],
+            strikes=gs.strikes[gs.p2],
+            opponent_strikes=gs.strikes[gs.p1],
+            seconds=gs.TURN_SECONDS,
+        )
+        current_room, current_state = _room_gs(room_code)
+        if current_room is not room or current_state.state_version != version or not gs.can_submit(gs.p2):
+            return
+
+        if suggestion and suggestion[0] == 'pass':
+            delay, index = gs.TURN_SECONDS, None
+        elif suggestion and (match := gs.match_answer(_norm(suggestion[1])))[0] == 'correct':
+            _, earliest, latest = LEVELS[level]
+            delay, index = random.uniform(earliest, latest), match[1]
+        else:
+            delay, index = plan_turn(gs.answers_pool, gs.used_answer_idx, level)
+
+        await asyncio.sleep(max(0, delay - (time.monotonic() - started)))
+        current_room, current_state = _room_gs(room_code)
+        if current_room is not room or current_state.state_version != version or not gs.can_submit(gs.p2):
+            return
+        if index is None:
+            await _apply_strike(room_code, gs.p2, 'timeout', '')
+            return
+        gs.consume_answer(index)
+        await _on_correct(room_code, gs.p2, gs.answers_pool[index]['display'])
+
+    @sio.event
+    async def knowledge_start_solo(sid, data):
+        data = data if isinstance(data, dict) else {}
+        user, db = await asyncio.to_thread(verify_socket_token, data.get('token'))
+        if not user:
+            await sio.emit('solo_error', {'message': 'سجّل الدخول لبدء مباراة فردية'}, to=sid)
+            return
+        try:
+            human = {'sid': sid, 'name': user.player_name or 'لاعب',
+                     'avatar': user.avatar or '../assets/avatars/avatar_1.svg', 'user_id': user.id}
+        finally:
+            db.close()
+        if any(room.get('is_solo') and room.get('game_mode') == 'knowledge'
+               and room.get('host') == sid for room in rooms.values()):
+            return
+        difficulty = data.get('difficulty')
+        if not isinstance(difficulty, str) or difficulty not in LEVELS:
+            difficulty = 'medium'
+        code = secrets.token_hex(6).upper()
+        bot = {'sid': 'bot:' + code, 'name': 'الكمبيوتر',
+               'avatar': '../assets/avatars/avatar_2.svg', 'user_id': None}
+        players = [human, bot]
+        gs = KnowledgeGameState(sid, bot['sid'], room_code=code, players=players)
+        rooms[code] = {'code': code, 'type': 'solo', 'is_solo': True, 'host': sid,
+                       'game_mode': 'knowledge', 'state': 'playing', 'created_at': time.time(),
+                       'difficulty': difficulty, 'players': players, 'game_state': gs}
+        from app.core import cluster
+        await cluster.claim_room(code)
+        await sio.enter_room(sid, code)
+        await sio.emit('solo_started', {'room_code': code}, to=sid)
+        await sio.emit('room_joined', {'your_sid': sid, 'players': [
+            {'sid': p['sid'], 'stats': {'name': p['name'], 'avatar': p['avatar']}} for p in players
+        ]}, to=sid)
+        sio.start_background_task(trigger_knowledge_start, sio, code)
 
     async def _turn_timeout(room_code, version):
         room, gs = _room_gs(room_code)
@@ -415,7 +496,7 @@ def register_knowledge_events(sio):
             if wp is None:
                 wp = players[0]  # ملاذ أخير: لا نفقد التسجيل
         lp = next((p for p in players if p is not wp), None)
-        if wp and lp:
+        if wp and lp and not room.get('is_solo'):
             try:
                 extra = {'winner_score': gs.points.get(winner_sid, 0),
                          'loser_score': gs.points.get(lp['sid'], 0),
@@ -425,7 +506,7 @@ def register_knowledge_events(sio):
                 await asyncio.to_thread(record_match_result, wp, lp, 'knowledge', extra=extra)
             except Exception as e:
                 print(f" [knowledge] تسجيل: {e}")
-        else:
+        elif not room.get('is_solo'):
             print(f" [knowledge] تعذّر تحديد الفائز/الخاسر — لم تُسجّل "
                   f"(winner_sid={winner_sid} players={[p['sid'] for p in players]})")
         # نسجّل أسئلة هذه المباراة كـ"مُشاهَدة" لكل لاعب (منع التكرار مستقبلاً)
@@ -442,7 +523,8 @@ def register_knowledge_events(sio):
         }, room=room_code)
         if room_code in rooms:
             from app.domains.games.sockets.lobby import return_players_to_lobby
-            await return_players_to_lobby(_sio_ref, room)
+            if not room.get('is_solo'):
+                await return_players_to_lobby(_sio_ref, room)
             del rooms[room_code]
 
     # ---------- أحداث اللاعبين ----------

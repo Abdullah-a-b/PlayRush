@@ -48,10 +48,30 @@ def session_is_valid(user, payload):
             and hmac.compare_digest(epoch, claimed))
 
 
-def issue_user_token(user):
+def issue_user_token(user, mobile_login=False):
     if not user.session_token:
         user.session_token = secrets.token_urlsafe(32)
-    return create_access_token({'sub': user.email, 'sv': user.session_token})
+    claims = {'sub': user.email, 'sv': user.session_token}
+    if mobile_login:
+        claims['mobile_enroll_until'] = int(datetime.now(timezone.utc).timestamp()) + 600
+    return create_access_token(claims)
+
+
+def mobile_resume_credential(user):
+    # نوع مستقل بلا sub حتى لا يقبل أي مسار لعب هذا الرمز كتوكن دخول.
+    return jwt.encode({'aud': 'mobile-resume', 'uid': str(user.id), 'sv': user.session_token},
+                      SECRET_KEY, algorithm=ALGORITHM)
+
+
+def resume_mobile_user(db, credential):
+    try:
+        claims = jwt.decode(credential, SECRET_KEY, algorithms=[ALGORITHM], audience='mobile-resume')
+        if claims.get('aud') != 'mobile-resume' or not claims.get('sv'):
+            return None
+        user = db.get(User, int(claims['uid']))
+        return user if user and not user.is_banned and session_is_valid(user, claims) else None
+    except (JWTError, KeyError, TypeError, ValueError):
+        return None
 
 
 def revoke_user_sessions(user):

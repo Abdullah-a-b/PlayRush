@@ -409,7 +409,7 @@ function attachForceLogoutHandler(socketInstance) {
         try {
             sessionStorage.setItem('banReason', message);
             sessionStorage.removeItem('token');
-            localStorage.removeItem('token');
+            localStorage.removeItem('pr_mobile_resume'); localStorage.removeItem('token');
         } catch (e) {}
 
         // صفحة حظر لائقة بدل رسالة خام
@@ -465,7 +465,7 @@ function attachSessionExpiryHandler(socketInstance) {
                 } catch (error) { return; }
             }
             try {
-                localStorage.removeItem('token');
+                localStorage.removeItem('pr_mobile_resume'); localStorage.removeItem('token');
                 sessionStorage.removeItem('token');
                 sessionStorage.setItem('pr_logged_out', '1');
             } catch (error) {}
