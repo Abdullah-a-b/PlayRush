@@ -27,15 +27,15 @@ class MobileAndKnowledgeTests(unittest.TestCase):
         user.session_token = 'logged-out'
         self.assertIsNone(env['resume_mobile_user'](db, credential))
 
-    def test_bot_never_repeats_and_levels_differ(self):
+    def test_bot_can_repeat_guess_wrong_or_timeout_and_levels_differ(self):
         totals = []
         for level in ('beginner','medium','hard','expert'):
             rng = random.Random(91)
-            correct = 0
+            outcomes = []
             for _ in range(1000):
-                seconds, idx = plan_turn(['one','two','three'], {0,1}, level, rng)
-                self.assertIn(idx, (None,2))
+                seconds, answer = plan_turn([{'display': v} for v in ('one','two','three')], {0,1}, level, rng, distractors=['four'])
+                outcomes.append(answer)
                 self.assertTrue(0 < seconds <= 10)
-                correct += idx is not None
-            totals.append(correct)
+            self.assertEqual(set(outcomes), {None,"one","two","three","four"})
+            totals.append(outcomes.count("three"))
         self.assertEqual(sorted(set(totals)), totals)

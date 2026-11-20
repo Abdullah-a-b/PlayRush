@@ -107,7 +107,7 @@ class IntegrityTests(unittest.TestCase):
             room={'game_state':gs,'players':[{'sid':'a','user_id':1},{'sid':'b','user_id':2}]};out=[]
             async def correct(*a):out.append('correct')
             async def strike(*a):out.append('strike')
-            env=functions('app/domains/games/knowledge/events.py',{'knowledge_submit_answer'},{'_room_gs':lambda c:(room,gs),'_norm':normalize_arabic,'_on_correct':correct,'_apply_strike':strike})
+            env=functions('app/domains/games/knowledge/events.py',{'knowledge_submit_answer','_judge_submission'},{'_room_gs':lambda c:(room,gs),'_norm':normalize_arabic,'_on_correct':correct,'_apply_strike':strike})
             await env['knowledge_submit_answer']('a',{'roomCode':'LOCAL','answer':'ألبانيا'});self.assertEqual(out,['strike']);self.assertEqual(gs.used_answer_idx,set())
         asyncio.run(exercise())
 

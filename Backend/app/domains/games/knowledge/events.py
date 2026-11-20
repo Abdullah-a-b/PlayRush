@@ -319,22 +319,27 @@ def register_knowledge_events(sio):
             return
 
         if suggestion and suggestion[0] == 'pass':
-            delay, index = gs.TURN_SECONDS, None
-        elif suggestion and (match := gs.match_answer(_norm(suggestion[1])))[0] == 'correct':
+            delay, answer = gs.TURN_SECONDS, None
+        elif suggestion and suggestion[0] == 'answer' and isinstance(suggestion[1], str) and suggestion[1].strip():
             _, earliest, latest = LEVELS[level]
-            delay, index = random.uniform(earliest, latest), match[1]
+            delay, answer = random.uniform(earliest, latest), suggestion[1].strip()[:60]
         else:
-            delay, index = plan_turn(gs.answers_pool, gs.used_answer_idx, level)
+            related = [q for q in _load_questions() if q['cat'] == gs.current_q['cat']
+                       and q['id'] != gs.current_q['id']]
+            distractors = []
+            if related:
+                distractors = [item['display'] for item in random.choice(related)['pool']
+                               if gs.match_answer(_norm(item['display']))[0] == 'none']
+            delay, answer = plan_turn(gs.answers_pool, gs.used_answer_idx, level, distractors=distractors)
 
         await asyncio.sleep(max(0, delay - (time.monotonic() - started)))
         current_room, current_state = _room_gs(room_code)
         if current_room is not room or current_state.state_version != version or not gs.can_submit(gs.p2):
             return
-        if index is None:
+        if answer is None:
             await _apply_strike(room_code, gs.p2, 'timeout', '')
             return
-        gs.consume_answer(index)
-        await _on_correct(room_code, gs.p2, gs.answers_pool[index]['display'])
+        await _judge_submission(room_code, gs, gs.p2, answer)
 
     @sio.event
     async def knowledge_start_solo(sid, data):
@@ -551,6 +556,9 @@ def register_knowledge_events(sio):
                 gs.remap_sid(gs.turn, sid)
         if not gs.can_submit(sid):
             return
+        await _judge_submission(room_code, gs, sid, answer)
+
+    async def _judge_submission(room_code, gs, sid, answer):
         # الإرسال يلتزم: يبطل مؤقّت الدور فوراً + قفل التحكيم
         gs.judging = True
         gs.bump_version()

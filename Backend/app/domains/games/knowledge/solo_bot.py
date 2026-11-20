@@ -10,12 +10,18 @@ LEVELS = {
 }
 
 
-def plan_turn(pool, used, difficulty, rng=random):
+def plan_turn(pool, used, difficulty, rng=random, *, distractors=()):
     accuracy, earliest, latest = LEVELS[difficulty]
-    remaining = [index for index in range(len(pool)) if index not in used]
-    recall_pressure = len(used) / max(1, len(pool))
-    chance = accuracy * (1 - recall_pressure * (1 - accuracy))
-    if not remaining or rng.random() >= chance:
-        return 10, None
-    delay = rng.uniform(earliest, latest)
-    return delay, rng.choice(remaining)
+    remaining = [item['display'] for i, item in enumerate(pool) if i not in used]
+    pressure = len(used) / max(1, len(pool))
+    if remaining and rng.random() < accuracy * (1 - pressure * (1 - accuracy)):
+        answer = rng.choice(remaining)
+    else:
+        roll = rng.random()
+        if used and roll < .25 + .20 * pressure:
+            answer = pool[rng.choice(sorted(used))]['display']
+        elif distractors and roll < .75:
+            answer = rng.choice(distractors)
+        else:
+            return 10, None
+    return rng.uniform(earliest, latest), answer
