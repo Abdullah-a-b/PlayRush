@@ -5,6 +5,9 @@
 نافذة كتابة 10 ثوانٍ، تحكيم نصّي بطبقات + حكم ذكي للحالات الحدّية،
 سترايكان يقصيان من الشخصية، وكشف الإجابة والانتقال عند عجز الطرفين.
 """
+from collections import Counter
+from functools import lru_cache
+from pathlib import Path
 import json
 import secrets
 import time
@@ -41,6 +44,33 @@ def _load_pool():
     return _chars_cache
 
 
+@lru_cache(maxsize=1)
+def _reviewed_cards():
+    with Path(__file__).with_name("playable.json").open(encoding="utf8") as file:
+        return json.load(file)
+
+
+def _playable_pool():
+    # المرشح المستورد يدخل اللعب بعد مراجعة شهرته وتلميحاته.
+    live = _load_pool()
+    live_ids = {c['id'] for c in live}
+    cards = {c['id']: c for c in _reviewed_cards()
+             if not c.get('requires_active_source') or c['id'] in live_ids}
+    for card in live:
+        if card.get('_curation', {}).get('whoami_playable') and card['id'] not in cards:
+            cards[card['id']] = card
+    return list(cards.values())
+
+
+def _topic(card):
+    category = card['category']
+    if category in ('علماء', 'مخترعون', 'شخصيات تاريخية', 'شخصيات تاريخية وعلمية'):
+        return 'علوم وتاريخ'
+    if category in ('سينما ومسرح', 'رسوم متحركة', 'قصص مصورة'):
+        return 'فنون بصرية'
+    return category
+
+
 async def trigger_whoami_start(sio, room_code):
     """يبدأ المباراة (يُستدعى من room_events عند انضمام الطرفين)."""
     room = get_room_state(room_code)
@@ -71,9 +101,22 @@ def register_whoami_events(sio):
         from app.domains.games.models import WhoamiSeen
         from sqlalchemy.dialects.postgresql import insert
         user_ids = [u for u in (user_ids or []) if u]
-        pool = [c for c in _load_pool() if c.get('id') not in set(used_ids)]
+        cards = _playable_pool()
+        by_id = {c['id']: c for c in cards}
+        used = set(used_ids)
+        pool = [c for c in cards if c['id'] not in used]
+        if not pool and used_ids:
+            # إذا طال اللعب نعيد فتح أقدم الأسماء مع تجنّب آخر شخصية.
+            recent = set(used_ids[-max(1, len(cards) // 2):])
+            pool = [c for c in cards if c['id'] not in recent]
+        counts = Counter(_topic(by_id[i]) for i in used_ids if i in by_id)
+
+        def choose(options):
+            least = min(counts[_topic(c)] for c in options)
+            return dict(random.choice([c for c in options if counts[_topic(c)] == least]))
+
         if not pool or not user_ids:
-            return dict(random.choice(pool)) if pool else None
+            return choose(pool) if pool else None
         db = SessionLocal()
         try:
             seen = db.query(WhoamiSeen).filter(WhoamiSeen.user_id.in_(user_ids)).all()
@@ -87,7 +130,7 @@ def register_whoami_events(sio):
                 db.flush()
                 blocked = {x for (x,) in db.query(WhoamiSeen.character_id).filter(WhoamiSeen.user_id.in_(user_ids)).all()}
                 eligible = [c for c in pool if str(c['id']) not in blocked]
-            chosen = dict(random.choice(eligible or pool))
+            chosen = choose(eligible or pool)
             for uid in user_ids:
                 db.execute(insert(WhoamiSeen).values(user_id=uid, character_id=str(chosen['id']))
                            .on_conflict_do_nothing(index_elements=['user_id','character_id']))
@@ -137,7 +180,7 @@ def register_whoami_events(sio):
             return
         answer = gs.current['name']
         if random.random() > skill + (1 - skill) * progress * .7:
-            alternatives = [c['name'] for c in _load_pool() if c['category'] == gs.current['category'] and c['name'] != answer]
+            alternatives = [c['name'] for c in _playable_pool() if c['category'] == gs.current['category'] and c['name'] != answer]
             if not alternatives:
                 return
             answer = random.choice(alternatives)
@@ -222,6 +265,8 @@ def register_whoami_events(sio):
             room = get_room_state(room_code)
             if room and room.get('game_state'):
                 gs = room['game_state']
+                gs.stage = 'replacing'
+                gs.bump_version()
                 await sio.emit('whoami_reveal_answer', {
                     'name': (gs.current or {}).get('name', ''),
                     'scores': gs.scores,
@@ -231,10 +276,8 @@ def register_whoami_events(sio):
             if not room or not room.get('game_state'):
                 return
             gs = room['game_state']
-            if gs.char_index >= gs.TOTAL_CHARACTERS and not gs.tiebreaker:
-                await _resolve_end(room_code)
-            else:
-                await _start_character(room_code, advance=True)
+            if room.get('state') == 'playing' and gs.stage == 'replacing':
+                await _start_character(room_code, advance=False)
         finally:
             _advancing.discard(room_code)
 

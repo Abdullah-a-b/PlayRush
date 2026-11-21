@@ -463,7 +463,7 @@ socket.on('room_joined', (data) => {
   });
 
   socket.on('whoami_reveal_answer', (d) => {
-    setStatus(`🎭 الشخصية كانت: ${d.name}`, 'reveal');
+    setStatus(`🎭 الشخصية كانت ${d.name} — شخصية جديدة في نفس الجولة`, 'reveal');
     stopRevealBar();
     buzzBtn.disabled = true;
   });
