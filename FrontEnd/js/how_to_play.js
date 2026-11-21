@@ -313,12 +313,21 @@
     title.textContent = 'كيف تلعب ' + GUIDES[mode].title + '؟';
     const video = document.createElement('video');
     video.src = 'assets/guides/' + mode + '.mp4';
-    video.playsInline = video.muted = video.controls = true;
+    video.playsInline = video.muted = true;
+    const playback = document.createElement('button');
+    playback.type = 'button';
+    playback.textContent = 'تشغيل';
+    video.onplaying = () => { playback.textContent = 'إيقاف مؤقت'; };
+    video.onpause = () => { playback.textContent = 'تشغيل'; };
+    playback.onclick = () => {
+      if (video.paused) video.play().catch(() => {});
+      else video.pause();
+    };
     const skip = document.createElement('button');
     skip.type = 'button';
     skip.textContent = 'إلى اللوبي';
     skip.onclick = () => dialog.close();
-    dialog.append(title, video, skip);
+    dialog.append(title, video, playback, skip);
     dialog.addEventListener('close', () => { video.pause(); dialog.remove(); }, {once:true});
     document.body.appendChild(dialog);
     dialog.showModal();

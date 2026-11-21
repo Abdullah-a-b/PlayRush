@@ -328,6 +328,8 @@ socket.on('huroof_hex_locked', (data) => {
         const turnBadge = document.getElementById('turn-status-badge');
         if (turnBadge) turnBadge.textContent = 'الحرف الأول بالقرعة';
     }
+    if (!cells[data.hexIndex]) return;
+    cells.forEach(cell => cell.classList.remove('active'));
     activeHexIndex = data.hexIndex;
     cells[activeHexIndex].classList.add('active');
     currentLetterDisplay.textContent = `حرف ( ${data.letter} )`;
