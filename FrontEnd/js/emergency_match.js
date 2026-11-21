@@ -28,7 +28,7 @@ window.startEmergencyMatch = function(socket, game, checkpoint, resume) {
     const color=i=>i===0?state.color:(state.color==='green'?'orange':'green');
     const colors=()=>({[color(0)]:state.points[0],[color(1)]:state.points[1]});
     function save(){try{localStorage.setItem(key,JSON.stringify(state));}catch{}}
-    function after(ms,fn){clearTimeout(timer);timer=setTimeout(fn,ms);}
+    function after(ms,fn){clearTimeout(timer);deadline=Date.now()+ms;onDeadline=fn;timer=setTimeout(fn,ms);}
     function newRound() {
         state.strikes=[0,0];state.used=[];state.step=0;state.turn=0;state.phase='play';
         if(game==='huroof'){
@@ -78,11 +78,72 @@ window.startEmergencyMatch = function(socket, game, checkpoint, resume) {
             }
         }return false;
     }
+    const aids = [{"id": "extend_time", "name": "تمديد الوقت", "desc": "يضيف 10 ثوانٍ إضافية لمؤقّت إجابتك. يُستخدم بعد اختيار الحرف.", "icon": "⏱️", "rarity": "common", "timing": "post"}, {"id": "change_question", "name": "تغيير السؤال", "desc": "يحذف السؤال الحالي ويجلب سؤالاً جديداً لنفس الحرف.", "icon": "🔄", "rarity": "common", "timing": "post"}, {"id": "count_letters", "name": "كاشف عدد الحروف", "desc": "يكشف عدد حروف الإجابة المطلوبة، مما يضيّق نطاق التفكير.", "icon": "🔢", "rarity": "common", "timing": "post"}];
+    state.aidsUsed ??= checkpoint.aidsUsed || [];
+    let deadline, onDeadline, questionDeadline;
+    function showAids(){
+        const ids=aids.map(h=>h.id);
+        event('helps_catalog',{catalog:aids,loadout:ids,used:state.aidsUsed,
+            inventory:Object.fromEntries(ids.map(id=>[id,state.aidsUsed.includes(id)?0:1]))});
+    }
+    function useAid(id){
+        if(!aids.some(h=>h.id===id)||state.aidsUsed.includes(id)||!['typing','play'].includes(state.phase))return;
+        const cell=state.cells[state.selected], q=deck[cell.q];
+        const result={ok:true,helpId:id,effect:id};
+        if(id==='change_question'){
+            if(state.phase!=='play')return;
+            const options=deck.map((item,i)=>i!==cell.q && norm(item.a)[0]===norm(q.a)[0]?i:null).filter(i=>i!==null);
+            if(!options.length){event('help_result',{ok:false,msg:'لا يوجد سؤال بديل لهذا الحرف'});return;}
+            cell.q=pick(options);present(false);
+        }else if(id==='count_letters')result.count=norm(q.a).length;
+        else {
+            if(!onDeadline)return;
+            const end=state.phase==='play'?questionDeadline:deadline;
+            result.new_total=Math.max(0,Math.ceil((end-Date.now())/1000))+10;
+            after(deadline-Date.now()+10000,onDeadline);
+        }
+        state.aidsUsed.push(id);save();event('help_result',result);
+    }
+    function pathCost(owner){
+        const distance=Array(25).fill(26),todo=[],vertical=color(owner)==='green';
+        function visit(i,base){
+            const held=state.cells[i].owner;
+            if(held!==null && held!==owner)return;
+            const cost=base+(held===null?1:0);
+            if(cost<distance[i]){distance[i]=cost;todo.push(i);}
+        }
+        for(let n=0;n<5;n++)visit(vertical?n:n*5,0);
+        while(todo.length){
+            const i=todo.pop(),r=Math.floor(i/5),c=i%5,d=r%2?1:-1;
+            for(const [y,x] of [[r,c-1],[r,c+1],[r-1,c],[r+1,c],[r-1,c+d],[r+1,c+d]])
+                if(y>=0&&y<5&&x>=0&&x<5)visit(y*5+x,distance[i]);
+        }
+        return Math.min(...Array.from({length:5},(_,n)=>distance[vertical?20+n:5*n+4]));
+    }
+    function chooseCell(){
+        const open=state.cells.map((c,i)=>c.owner===null?i:null).filter(i=>i!==null);
+        if(Math.random()>skill)return pick(open);
+        let best=-Infinity,choice;
+        for(const i of open){
+            state.cells[i].owner=1;
+            const score=pathCost(0)-2*pathCost(1)+Math.random()*.5;
+            state.cells[i].owner=null;
+            if(score>best){best=score;choice=i;}
+        }
+        return choice;
+    }
+    function botAnswer(){
+        state.phase='botTyping';save();event('buzzed',{sid:bot,time:10});
+        after(1800+Math.random()*2200,()=>claim(1));
+    }
     function claim(owner){
         const i=state.selected;state.cells[i].owner=owner;
         event('answer_result',{correct:true,hexIndex:i,color:color(owner),answer:deck[state.cells[i].q].a});
-        if(connectedPath(owner))return nextRound(owner,1);
-        state.selected=null;state.turn=owner;state.phase='choose';present(false);
+        const won=connectedPath(owner);
+        state.selected=null;state.turn=owner;state.phase='choose';save();
+        if(won)return nextRound(owner,1);
+        state.phase='feedback';
+        after(2300,()=>{state.phase='choose';present(false);});
     }
     function showBoard(initial){
         if(initial){
@@ -91,21 +152,20 @@ window.startEmergencyMatch = function(socket, game, checkpoint, resume) {
         }
         event('turn_changed',{turn_sid:state.turn?bot:me,turn_color:color(state.turn)});
         if(state.phase==='choose'){
-            if(state.turn)after(1600,()=>{state.selected=pick(state.cells.map((c,i)=>c.owner===null?i:null).filter(i=>i!==null));state.phase='play';present(false);});
+            if(state.turn)after(2000+Math.random()*1800,()=>{state.selected=chooseCell();state.phase='play';present(false);});
             return;
         }
         const q=deck[state.cells[state.selected].q];
         event('hex_locked',{hexIndex:state.selected,letter:q.a[0]});
+        questionDeadline=Date.now()+30000;
         event('new_question',{timer:30,questionData:{question:q.q}});
         if(state.phase==='typing'){event('buzzed',{sid:me,time:10});after(10000,()=>letterMiss(''));return;}
-        after(3500+Math.random()*3500,()=>{
-            if(Math.random()<skill){event('buzzed',{sid:bot,time:10});after(1200,()=>claim(1));}
-            else after(22000,()=>letterMiss(''));
-        });
+        if(Math.random()<skill)after(4500+(1-skill)*5000+Math.random()*4500,botAnswer);
+        else after(30000,()=>letterMiss(''));
     }
     function letterMiss(text){
         event('answer_result',{correct:false,hexIndex:state.selected,answer:text});
-        if(Math.random()<skill){claim(1);return;}
+        if(text && Math.random()<skill){state.phase='feedback';after(2300,botAnswer);return;}
         state.phase='choose';state.selected=null;state.turn=0;present(false);
     }
     function listAnswer(owner,text){
@@ -167,8 +227,10 @@ window.startEmergencyMatch = function(socket, game, checkpoint, resume) {
     function handleAction(name,data={}){
         if(!name.startsWith(game+'_') || state.phase==='done')return socket;
         const action=name.slice(game.length+1);
+        if(game==='huroof' && action==='get_helps_catalog'){showAids();return socket;}
         if(preparing && action!=='surrender')return socket;
         if(action==='surrender')finish(1);
+        else if(game==='huroof' && action==='use_help')useAid(data.helpId);
         else if(action==='buzz'&&state.phase==='play'&&game!=='knowledge'&&(game==='huroof'||state.strikes[0]<2)){
             state.phase='typing';save();clearTimeout(timer);event('buzzed',{sid:me,time:10,answerWindow:10});after(10000,()=>game==='huroof'?letterMiss(''):clueResult(0,false));
         }else if(action==='submit_answer'&&data.answer){
@@ -220,6 +282,7 @@ window.startEmergencyMatch = function(socket, game, checkpoint, resume) {
     }
     function begin() {
         preparing = false;
+        if(game==='huroof')showAids();
         if(state.phase==='done')return;
         if(state.phase==='new')newRound();
         else if(['ending','between'].includes(state.phase))advanceRound();

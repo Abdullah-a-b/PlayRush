@@ -9,6 +9,7 @@ window.attachPracticeRecovery = function(socket, game) {
     function transfer() {
         if (leaving || finished) return;
         leaving=true;
+        window.PRPracticeAllowed=true;
         socket.disconnect();
         socket.sendBuffer.length=0;
         checkpoint.color=color;
@@ -40,6 +41,8 @@ window.attachPracticeRecovery = function(socket, game) {
     });
     socket.onAny((name,d={})=>{
         if(leaving)return;
+        if(name==='huroof_helps_catalog')checkpoint.aidsUsed=[...(d.used||[])];
+        if(name==='huroof_help_result' && d.ok && d.helpId)(checkpoint.aidsUsed??=[]).push(d.helpId);
         if(name===game+'_new_character'||name===game+'_new_player'||name==='knowledge_round_start'){
             checkpoint.clues=null;checkpoint.typing=false;checkpoint.strikes=[0,0];
             checkpoint.question=d.q;checkpoint.said=[];

@@ -14,6 +14,13 @@
     function launch(gameMode, difficulty) {
         // نمرّر الوضع الفردي عبر رابط صفحة اللعبة
         if (!navigator.onLine || window.PRPracticeLobby) {
+            if(gameMode==='huroof'){
+                const key='pr.match.local.2.huroof.'+difficulty;
+                if(localStorage.getItem(key) && !window.confirm('تريد استئناف المباراة المحفوظة؟ اختر إلغاء لبدء مباراة جديدة.')){
+                    localStorage.removeItem(key);
+                    localStorage.removeItem('pr.practice.v1.huroof');
+                }
+            }
             window.location.href = 'games/'+gameMode+'.html?solo=1&practice=1&difficulty=' + difficulty;
             return;
         }

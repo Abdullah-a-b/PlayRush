@@ -21,7 +21,10 @@
         return;
     }
     if(!practice && !navigator.onLine){location.replace('categories.html?practice=1');return;}
-    if(!practice)return;
+    if(!practice){
+        window.addEventListener('offline',()=>location.replace('categories.html?practice=1'),{once:true});
+        return;
+    }
     window.PRPracticeLobby=true;
     document.addEventListener('DOMContentLoaded',()=>{
         document.documentElement.classList.remove('pr-app-resuming','pr-resume-recovery');
