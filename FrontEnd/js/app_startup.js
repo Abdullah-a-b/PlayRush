@@ -1,6 +1,7 @@
 // مسار بدء تطبيق أندرويد قبل تحميل بقية الواجهة.
 (() => {
     if (!window.Capacitor?.isNativePlatform?.()) return;
+    if (window.PRPracticeLobby || !navigator.onLine) return;
     let savedToken;
     try {
         if (sessionStorage.getItem('pr_logged_out') === '1') return;
@@ -75,7 +76,12 @@
         user: response.ok ? await response.json() : null,
     })).catch(() => ({ status: 0, user: null }));
     const account = Promise.race([request, timeout]).finally(() => clearTimeout(deadline));
-    account.then(result => { if (!result.user) showRecovery(); });
+    account.then(result => {
+        if (!result.user && (result.status === 0 || result.status >= 500)) {
+            clearTimeout(watchdog);
+            location.replace('categories.html?practice=1');
+        } else if (!result.user) showRecovery();
+    });
     watchdog = setTimeout(showRecovery, 10000);
 
     window.PRAppStartup = {

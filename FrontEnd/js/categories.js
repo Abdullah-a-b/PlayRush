@@ -20,7 +20,7 @@
 
 // حماية المسار
 const token = getToken();
-if (!token) window.location.replace('login.html');
+if (!token && !window.PRPracticeLobby && navigator.onLine) window.location.replace('login.html');
 
 // الاتصال بالسوكيت (يحتاج API_URL من utils.js)
 const socket = io(API_URL, { transports: ['websocket', 'polling'], upgrade: true });
@@ -112,6 +112,7 @@ let customAvatarFile = null;
 //  بدء التشغيل
 // ============================================================
 window.addEventListener('DOMContentLoaded', async () => {
+    if (window.PRPracticeLobby) return;
 
     // ----------------------------------------
     //  السوكيت: اللاعبين المتصلين والدردشة

@@ -27,7 +27,7 @@ function activeRoom() { return soloRoomCode || roomCode; }
 
 
 // في الأونلاين نحتاج roomCode؛ في الفردي لا (الخادم ينشئ الغرفة)
-if (!token || (!roomCode && !IS_SOLO)) window.location.href = '../lobby.html';
+if ((!token && !window.PRPracticeAllowed) || (!roomCode && !IS_SOLO)) window.location.href = '../lobby.html';
 
 
 // ============================================================

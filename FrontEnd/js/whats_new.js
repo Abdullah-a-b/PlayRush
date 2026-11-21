@@ -28,6 +28,7 @@
     }
 
     function show() {
+        if (window.PRPracticeLobby) return;
         if (document.getElementById('whatsNewOverlay')) return;
 
         var overlay = document.createElement('div');

@@ -15,7 +15,7 @@
   const playerAvatar = sessionStorage.getItem('playerAvatar') || sessionStorage.getItem('avatar')   || '';
   let mySid = null;
 
-  if (!token || (!isSolo && !roomCode)) { window.location.href = '../lobby.html'; return; }
+  if ((!token && !window.PRPracticeAllowed) || (!isSolo && !roomCode)) { window.location.href = '../lobby.html'; return; }
 
   const $ = (id) => document.getElementById(id);
   // نستخدم المساحة المرئية الفعلية عند فتح لوحة مفاتيح Android/iOS.
