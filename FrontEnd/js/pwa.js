@@ -48,7 +48,7 @@
     // ---- زر التثبيت (أندرويد/كروم) ----
     var deferred = null;
     window.addEventListener('beforeinstallprompt', function (e) {
-        e.preventDefault();
+        // Let Chrome offer installation through its own UI.
         deferred = e;
         window.dispatchEvent(new CustomEvent('pr-install-available'));
     });
