@@ -335,6 +335,19 @@
         //  داخل الألعاب: زر عائم دائماً (جوال + ديسكتوب) بطبقة عالية جداً
         //  حتى يبقى ظاهراً فوق شاشات الفوز/الخسارة/الاستسلام.
         //  الأنماط المضمّنة تضمن ظهوره في كل الألعاب؛ وحروف تعدّل موضعه عبر CSS.
+        const matchTitle = IS_GAME && document.querySelector('.game-center-head .game-title');
+        if (matchTitle) {
+            btn.type = 'button';
+            btn.setAttribute('aria-label', 'تبديل كتم الصوت');
+            btn.style.cssText = 'position:static;display:inline-grid;place-items:center;vertical-align:middle;'
+                + 'margin-inline-start:4px;width:32px;height:32px;padding:0;border:0;'
+                + 'border-radius:50%;background:transparent;color:inherit;cursor:pointer;';
+            btn.addEventListener('click', clickHandler);
+            _updBtn();
+            matchTitle.appendChild(btn);
+            return;
+        }
+
         if (IS_GAME) {
             btn.className = 'pr-sound-float';
             btn.style.cssText = 'position:fixed;bottom:20px;left:18px;z-index:99999;'
