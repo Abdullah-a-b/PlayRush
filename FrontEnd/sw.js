@@ -12,7 +12,7 @@
    • التحديث فوري (skipWaiting + clients.claim) بلا انتظار.
    ============================================================ */
 
-const VERSION     = 'playrush-v2';
+const VERSION     = 'playrush-v3-practice';
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 
@@ -20,13 +20,17 @@ const ASSET_CACHE = `${VERSION}-assets`;
 const SHELL = [
     '/',
     '/index.html',
+    '/offline.html',
+    '/js/offline_deck.js',
+    '/js/offline_game.js',
+    '/js/offline_entry.js',
     '/manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(SHELL_CACHE)
-            .then((c) => c.addAll(SHELL).catch(() => null))
+            .then((c) => c.addAll(SHELL))
             .then(() => self.skipWaiting())
     );
 });
@@ -110,6 +114,6 @@ self.addEventListener('fetch', (event) => {
                 }
                 return res;
             })
-            .catch(() => caches.match(req).then((hit) => hit || caches.match('/index.html')))
+            .catch(() => caches.match(req).then((hit) => hit || caches.match(url.pathname === '/offline.html' ? '/offline.html' : '/index.html')))
     );
 });

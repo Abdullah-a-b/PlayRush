@@ -4,6 +4,7 @@
   window.CURRENT_GAME = 'knowledge';
 
   const socket = io(API_URL, { transports: ['websocket', 'polling'], upgrade: true });
+  window.attachPracticeRecovery(socket, 'knowledge');
   if (typeof attachSessionExpiryHandler === 'function') attachSessionExpiryHandler(socket);
   window.socket = socket;
   const params = new URLSearchParams(location.search);

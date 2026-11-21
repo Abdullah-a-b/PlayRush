@@ -13,6 +13,10 @@
 
     function launch(gameMode, difficulty) {
         // نمرّر الوضع الفردي عبر رابط صفحة اللعبة
+        if (!navigator.onLine) {
+            window.location.href = 'offline.html?game=' + gameMode + '&difficulty=' + difficulty;
+            return;
+        }
         window.location.href = 'games/' + gameMode + '.html?solo=1&difficulty=' + difficulty;
     }
 
@@ -75,6 +79,11 @@
             'width:100%;margin-top:6px;padding:11px;border:none;border-radius:12px;' +
             'background:rgba(255,255,255,.1);color:#e8dcff;font-family:inherit;cursor:pointer;';
         cancel.onclick = function () { overlay.remove(); };
+        const practice = document.createElement('a');
+        practice.href = 'offline.html?game=' + gameMode;
+        practice.textContent = 'تدريب دون اتصال';
+        practice.style.cssText = 'display:block;text-align:center;color:#d6e6ff;padding:8px';
+        box.appendChild(practice);
         box.appendChild(cancel);
 
         overlay.appendChild(box);

@@ -4,6 +4,7 @@
   window.CURRENT_GAME = 'whoami';
 
   const socket = io(API_URL, { transports: ['websocket', 'polling'], upgrade: true });
+  window.attachPracticeRecovery(socket, 'whoami');
   if (typeof attachSessionExpiryHandler === 'function') attachSessionExpiryHandler(socket);
   window.socket = socket;  // لنظام الإيموجيات (game_emojis.js)
   const params = new URLSearchParams(location.search);

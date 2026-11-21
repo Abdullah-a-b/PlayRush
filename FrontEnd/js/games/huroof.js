@@ -8,6 +8,7 @@
 //  الاتصال والجلسة
 // ============================================================
 const socket = io(API_URL, { transports: ['websocket', 'polling'], upgrade: true });
+  window.attachPracticeRecovery(socket, 'huroof');
   if (typeof attachSessionExpiryHandler === 'function') attachSessionExpiryHandler(socket);
 
 const token        = getToken();

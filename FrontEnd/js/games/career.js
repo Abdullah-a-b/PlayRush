@@ -4,6 +4,7 @@
   window.CURRENT_GAME = 'career';
 
   const socket = io(API_URL, { transports: ['websocket', 'polling'], upgrade: true });
+  window.attachPracticeRecovery(socket, 'career');
   if (typeof attachSessionExpiryHandler === 'function') attachSessionExpiryHandler(socket);
   window.socket = socket;  // لنظام الإيموجيات (career_emojis.js)
   const roomCode     = sessionStorage.getItem('gameRoomCode');
