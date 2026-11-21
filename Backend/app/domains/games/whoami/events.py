@@ -6,15 +6,17 @@
 سترايكان يقصيان من الشخصية، وكشف الإجابة والانتقال عند عجز الطرفين.
 """
 import json
+import secrets
 import time
 import random
 import asyncio
 
-from app.domains.games.core_manager import get_room_state
+from app.domains.games.core_manager import get_room_state, rooms
 from app.domains.games.whoami.engine import WhoamiGameState
 from app.domains.wallet.reward_service import record_match_result
 from app.core.text_processor import check_answer
 from app.core.paths import DATA_DIR
+from app.sockets.auth_helper import verify_socket_token
 
 _start_first_character = None
 _CHARS_FILE = str(DATA_DIR / "whoami_characters.json")
@@ -116,6 +118,34 @@ def register_whoami_events(sio):
         if extra:
             payload.update(extra)
         await sio.emit('whoami_reveal_state', payload, room=room_code)
+        room = get_room_state(room_code)
+        if room and room.get('is_solo') and gs.can_buzz(gs.p2):
+            sio.start_background_task(_solo_guess, room_code, gs, gs.state_version)
+
+    async def _solo_guess(room_code, gs, version):
+        room = get_room_state(room_code)
+        if not room:
+            return
+        level = room['difficulty']
+        speed, skill = {'beginner': (5, .36), 'medium': (4, .55),
+                       'hard': (3, .73), 'expert': (2, .85)}[level]
+        progress = gs.revealed_count / max(1, len(gs.current['hints']))
+        await asyncio.sleep(random.uniform(speed, speed + 2))
+        if get_room_state(room_code) is not room or room['state'] != 'playing' or gs.state_version != version or not gs.can_buzz(gs.p2) or room_code in _advancing:
+            return
+        if random.random() > skill * progress ** (1.5 - skill):
+            return
+        answer = gs.current['name']
+        if random.random() > skill + (1 - skill) * progress * .7:
+            alternatives = [c['name'] for c in _load_pool() if c['category'] == gs.current['category'] and c['name'] != answer]
+            if not alternatives:
+                return
+            answer = random.choice(alternatives)
+        await whoami_buzz(gs.p2, {'roomCode': room_code})
+        await asyncio.sleep(random.uniform(1.1, 2.8))
+        if get_room_state(room_code) is room and room['state'] == 'playing' and gs.state_version == version + 1:
+            await whoami_submit_answer(gs.p2, {'roomCode': room_code, 'answer': answer})
+
 
     async def _reveal_loop(room_code, version, resume_seconds=None):
         room = get_room_state(room_code)
@@ -230,7 +260,7 @@ def register_whoami_events(sio):
         gs.winner = winner_sid
         gs.stage = 'finished'
         room['state'] = 'finished'
-        if winner_sid:
+        if winner_sid and not room.get('is_solo'):
             wp = next((p for p in room['players'] if p['sid'] == winner_sid), None)
             lp = next((p for p in room['players'] if p['sid'] != winner_sid), None)
             if wp and lp:
@@ -253,6 +283,42 @@ def register_whoami_events(sio):
                        room=room_code)
 
     # ================= أحداث اللاعبين =================
+
+    @sio.event
+    async def whoami_start_solo(sid, data):
+        data = data if isinstance(data, dict) else {}
+        user, db = await asyncio.to_thread(verify_socket_token, data.get('token'))
+        if not user:
+            await sio.emit('solo_error', {'message': 'سجّل الدخول لبدء مباراة فردية'}, to=sid)
+            return
+        try:
+            human = {'sid': sid, 'name': user.player_name or 'لاعب',
+                     'avatar': user.avatar or '../assets/avatars/avatar_1.svg', 'user_id': user.id}
+        finally:
+            db.close()
+        if any(room.get('is_solo') and room.get('game_mode') == 'whoami'
+               and room.get('host') == sid for room in rooms.values()):
+            return
+        difficulty = data.get('difficulty')
+        if not isinstance(difficulty, str) or difficulty not in ('beginner', 'medium', 'hard', 'expert'):
+            difficulty = 'medium'
+        code = secrets.token_hex(6).upper()
+        bot = {'sid': 'bot:' + code, 'name': 'الكمبيوتر',
+               'avatar': '../assets/avatars/avatar_2.svg', 'user_id': None}
+        players = [human, bot]
+        gs = WhoamiGameState(sid, bot['sid'], room_code=code, players=players)
+        rooms[code] = {'code': code, 'type': 'solo', 'is_solo': True, 'host': sid,
+                       'game_mode': 'whoami', 'state': 'playing', 'created_at': time.time(),
+                       'difficulty': difficulty, 'players': players, 'game_state': gs}
+        gs.is_solo = True
+        from app.core import cluster
+        await cluster.claim_room(code)
+        await sio.enter_room(sid, code)
+        await sio.emit('solo_started', {'room_code': code}, to=sid)
+        await sio.emit('room_joined', {'your_sid': sid, 'players': [
+            {'sid': p['sid'], 'stats': {'name': p['name'], 'avatar': p['avatar']}} for p in players
+        ]}, to=sid)
+        sio.start_background_task(trigger_whoami_start, sio, code)
 
     @sio.event
     async def whoami_start(sid, data):

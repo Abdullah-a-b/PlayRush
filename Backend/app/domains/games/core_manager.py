@@ -269,7 +269,7 @@ def leave_room(sid):
 
         for p in room['players']:
             if p.get('sid') == sid:
-                if room.get('is_solo') and room.get('game_mode') == 'knowledge':
+                if room.get('is_solo') and room.get('game_mode') in ('knowledge', 'whoami'):
                     del rooms[room_code]
                     return room_code, None
                 if room['state'] == 'waiting':

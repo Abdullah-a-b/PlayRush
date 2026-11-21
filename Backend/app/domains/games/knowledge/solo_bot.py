@@ -1,5 +1,10 @@
 """Difficulty policy for the list-game opponent."""
 import random
+import math
+import json
+from pathlib import Path
+
+WEIGHTS = json.loads(Path(__file__).with_name("recall_weights.json").read_text("utf8"))
 
 # Accuracy before the commonly recalled answers have been used, and response times.
 LEVELS = {
@@ -10,11 +15,16 @@ LEVELS = {
 }
 
 
+def recall_probability(difficulty, pressure):
+    base, linear, quadratic = WEIGHTS[difficulty]
+    return 1 / (1 + math.exp(-(base + linear * pressure + quadratic * pressure ** 2)))
+
+
 def plan_turn(pool, used, difficulty, rng=random, *, distractors=()):
-    accuracy, earliest, latest = LEVELS[difficulty]
+    _, earliest, latest = LEVELS[difficulty]
     remaining = [item['display'] for i, item in enumerate(pool) if i not in used]
     pressure = len(used) / max(1, len(pool))
-    if remaining and rng.random() < accuracy * (1 - pressure * (1 - accuracy)):
+    if remaining and rng.random() < recall_probability(difficulty, pressure):
         answer = rng.choice(remaining)
     else:
         roll = rng.random()

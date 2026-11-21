@@ -343,7 +343,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     // الوضع الفردي (ضد الكمبيوتر) — خلية الحروف ومسيرة لاعب حالياً
-    const SOLO_SUPPORTED_MODES = ['huroof', 'career', 'knowledge'];
+    const SOLO_SUPPORTED_MODES = ['huroof', 'career', 'knowledge', 'whoami'];
     const soloModeBtn = document.getElementById('soloModeBtn');
     if (soloModeBtn) {
         soloModeBtn.style.display = SOLO_SUPPORTED_MODES.includes(selectedGameMode) ? 'flex' : 'none';

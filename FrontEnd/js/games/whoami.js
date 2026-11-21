@@ -6,13 +6,15 @@
   const socket = io(API_URL, { transports: ['websocket', 'polling'], upgrade: true });
   if (typeof attachSessionExpiryHandler === 'function') attachSessionExpiryHandler(socket);
   window.socket = socket;  // لنظام الإيموجيات (game_emojis.js)
-  const roomCode     = sessionStorage.getItem('gameRoomCode');
+  const params = new URLSearchParams(location.search);
+  const isSolo = params.get("solo") === "1";
+  let roomCode     = sessionStorage.getItem('gameRoomCode');
   const token        = localStorage.getItem('token') || sessionStorage.getItem('token');
   const playerName   = sessionStorage.getItem('playerName')   || sessionStorage.getItem('username') || 'لاعب';
   const playerAvatar = sessionStorage.getItem('playerAvatar') || sessionStorage.getItem('avatar')   || '';
   let mySid = null;
 
-  if (!token || !roomCode) { window.location.href = '../lobby.html'; return; }
+  if (!token || (!isSolo && !roomCode)) { window.location.href = '../lobby.html'; return; }
 
   const $ = (id) => document.getElementById(id);
   const hintsStage      = $('hintsStage');
@@ -218,7 +220,15 @@
   }
 
   // ===== الاتصال والانضمام =====
+  socket.on('solo_started', ({room_code}) => { if (isSolo) { roomCode = room_code; socket.emit('get_help_loadout', {token, game: 'whoami', roomCode}); } });
+  socket.on('solo_error', ({message}) => { if (isSolo) showToast(message); });
   socket.on('connect', () => {
+    if (isSolo) {
+      document.body.classList.add('solo-mode');
+      mySid = socket.id;
+      socket.emit('whoami_start_solo', {token, difficulty: params.get('difficulty')});
+      return;
+    }
     mySid = socket.id;
     socket.emit('join_room', { room_code: roomCode, token, player_name: playerName, avatar: playerAvatar });
     socket.emit('get_help_loadout', { token, game: 'whoami', roomCode });
@@ -303,9 +313,10 @@ function showMatchReveal(myName, myAvatarSrc, oppName, oppAvatarSrc) {
 }
 
 socket.on('room_joined', (data) => {
+    mySid = data.your_sid || socket.id;
     const players = data.players || [];
-    const me       = players.find(p => p.sid === socket.id || p.name === playerName);
-    const opponent = players.find(p => p.sid !== socket.id && p.name !== playerName);
+    const me       = players.find(p => p.sid === mySid || p.name === playerName);
+    const opponent = players.find(p => p.sid !== mySid && p.name !== playerName);
 
     if (me?.stats)       playersStatsData.me       = { ...me.stats,       avatar: getValidAvatar(me.stats.avatar) };
     if (opponent?.stats) playersStatsData.opponent = { ...opponent.stats, avatar: getValidAvatar(opponent.stats.avatar) };

@@ -22,7 +22,7 @@ from app.domains.wallet.reward_service import record_match_result
 from app.core.text_processor import normalize_arabic
 from app.domains.games import trained_bot
 from app.domains.games.knowledge.engine import KnowledgeGameState
-from app.domains.games.knowledge.solo_bot import LEVELS, plan_turn
+from app.domains.games.knowledge.solo_bot import LEVELS, plan_turn, recall_probability
 from app.sockets.auth_helper import verify_socket_token
 
 _sio_ref = None
@@ -320,9 +320,16 @@ def register_knowledge_events(sio):
 
         if suggestion and suggestion[0] == 'pass':
             delay, answer = gs.TURN_SECONDS, None
-        elif suggestion and suggestion[0] == 'answer' and isinstance(suggestion[1], str) and suggestion[1].strip():
+        elif suggestion and suggestion[0] == 'answer':
+            answer = suggestion[1].strip()[:60]
+            pressure = len(gs.used_answer_idx) / max(1, len(gs.answers_pool))
             _, earliest, latest = LEVELS[level]
-            delay, answer = random.uniform(earliest, latest), suggestion[1].strip()[:60]
+            delay = random.uniform(earliest, latest)
+            if gs.match_answer(_norm(answer))[0] == 'correct' and random.random() > recall_probability(level, pressure):
+                if gs.used_answer_idx and random.random() < .4:
+                    answer = gs.answers_pool[random.choice(sorted(gs.used_answer_idx))]['display']
+                else:
+                    delay, answer = gs.TURN_SECONDS, None
         else:
             related = [q for q in _load_questions() if q['cat'] == gs.current_q['cat']
                        and q['id'] != gs.current_q['id']]
