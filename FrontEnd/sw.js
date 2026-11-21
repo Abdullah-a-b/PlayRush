@@ -12,7 +12,7 @@
    • التحديث فوري (skipWaiting + clients.claim) بلا انتظار.
    ============================================================ */
 
-const VERSION     = 'playrush-v7-native-handoff';
+const VERSION     = 'playrush-v8-bank-practice';
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 
@@ -85,6 +85,7 @@ const SHELL = [
     "/js/loadout.js",
     "/js/music.js",
     "/js/offline_deck.js",
+    "/games/bank.html", "/js/games/bank.js", "/js/bank_practice.js", "/js/bank_practice_data.js",
     "/js/offline_entry.js",
     "/js/platform_guide.js",
     "/js/player_profile.js",

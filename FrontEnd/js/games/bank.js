@@ -3,8 +3,11 @@
   'use strict';
   window.CURRENT_GAME = 'bank';
 
-  const socket = io(API_URL, { transports: ['websocket', 'polling'], upgrade: true });
-  if (typeof attachSessionExpiryHandler === 'function') attachSessionExpiryHandler(socket);
+  const params = new URLSearchParams(location.search);
+  const solo = params.get("solo") === "1";
+  const socket = io(API_URL, { autoConnect: !solo, forceNew: solo, transports: ['websocket', 'polling'], upgrade: true });
+  if (solo) attachBankPractice(socket, params.get('difficulty'));
+  if (!solo && typeof attachSessionExpiryHandler === 'function') attachSessionExpiryHandler(socket);
   window.socket = socket;
   const roomCode     = sessionStorage.getItem('gameRoomCode');
   const token        = localStorage.getItem('token') || sessionStorage.getItem('token');
@@ -12,7 +15,7 @@
   const playerAvatar = sessionStorage.getItem('playerAvatar') || sessionStorage.getItem('avatar')   || '';
   let mySid = null;
 
-  if (!token || !roomCode) { window.location.href = '../lobby.html'; return; }
+  if (!solo && (!token || !roomCode)) { window.location.href = '../lobby.html'; return; }
 
   const $ = (id) => document.getElementById(id);
   const answerBox     = $('answerBox');
@@ -202,6 +205,7 @@ socket.on('room_joined', (data) => {
     banner.className = 'turn-banner mine';
     $('turnText').textContent = `🔥 الجولة ${d.round}/${d.totalRounds} — كلاكما يلعب الآن!`;
     playReadyAnimation(() => {
+      if (solo) socket.emit('bank_practice_ready');
       startTurnTimer(d.turnSeconds);
       $('actionButtons').style.display = 'flex';
     });
@@ -209,6 +213,7 @@ socket.on('room_joined', (data) => {
 
   // ===== سؤال جديد =====
   socket.on('bank_question', (d) => {
+    hQShown=true; hAnswering=false; renderHelpsBar();
     //  لا صعوبة ولا نقاط — الفئة فقط (مثل الأصل)
     $('qMeta').innerHTML = `<span class="q-cat">${d.category}</span>`;
     $('qText').textContent = d.text;
@@ -380,12 +385,13 @@ socket.on('room_joined', (data) => {
     socket.emit('bank_surrender', { roomCode });
     $('surrenderModal').style.display = 'none';
   });
-  $('backToLobbyBtn').addEventListener('click', () => window.location.assign('../lobby.html?game=bank'));
+  $('backToLobbyBtn').addEventListener('click', () => window.location.assign(solo?'../categories.html':'../lobby.html?game=bank'));
 
   // رسائل جاهزة
   (function initQuickChat() {
     const btn = $('gameQuickChatBtn');
-    if (btn && window.QuickChat) {
+    if (solo && btn) btn.hidden=true;
+    if (!solo && btn && window.QuickChat) {
       QuickChat.init({ socket, triggerBtn: btn, event: 'send_room_chat_message',
         extra: () => ({ roomCode }), context: 'game', game: 'bank' });
     }
