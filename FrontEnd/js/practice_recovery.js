@@ -22,6 +22,7 @@ window.attachPracticeRecovery = function(socket, game) {
         url.searchParams.set('practice','1');
         history.replaceState(null,'',url);
         window.startEmergencyMatch(socket,game,checkpoint,!active);
+        if(!localRequested)window.showToast?.('انقطع الاتصال. تتابع الآن ضد الكمبيوتر بدون إنترنت.');
         if(draft && checkpoint.typing && field && field.offsetWidth)field.value=draft;
     }
     socket.on('solo_started', data=>{active=true;sid=socket.id;color=data.your_color;});
@@ -67,6 +68,7 @@ window.attachPracticeRecovery = function(socket, game) {
     socket.on(game+'_match_over',()=>{finished=true;});
     socket.on('disconnect',()=>{if(active)transfer();});
     window.addEventListener('offline',transfer);
+    window.addEventListener('pr-native-offline',transfer);
     // قد يظهر الهاتف متصلاً بالواي فاي مع تعذر الوصول إلى الخادم نفسه.
     socket.on('connect_error',()=>{ if(!finished && !leaving)transfer(); });
     if(localRequested)setTimeout(transfer,0);

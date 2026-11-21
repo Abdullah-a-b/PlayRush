@@ -3,6 +3,13 @@
     const params=new URLSearchParams(location.search);
     const entry=document.currentScript.hasAttribute('data-entry');
     const practice=params.get('practice')==='1';
+    const enterPractice=()=>location.replace('categories.html?practice=1');
+    if(!practice)window.addEventListener('pr-native-offline',enterPractice,{once:true});
+    if(document.currentScript.hasAttribute('data-auth')){
+        if(!navigator.onLine)enterPractice();
+        else window.addEventListener('offline',enterPractice,{once:true});
+        return;
+    }
     if(entry && (!navigator.onLine || practice)){
         location.replace('categories.html?practice=1');return;
     }
@@ -23,6 +30,13 @@
     if(!practice && !navigator.onLine){location.replace('categories.html?practice=1');return;}
     if(!practice){
         window.addEventListener('offline',()=>location.replace('categories.html?practice=1'),{once:true});
+        window.watchPracticeLobbySocket=socket=>{
+            let timeout;
+            const check=()=>{ if(!timeout)timeout=setTimeout(()=>{if(!socket.connected)enterPractice();},5000); };
+            socket.on('disconnect',check);
+            socket.on('connect_error',check);
+            socket.on('connect',()=>{clearTimeout(timeout);timeout=null;});
+        };
         return;
     }
     window.PRPracticeLobby=true;
@@ -31,6 +45,10 @@
         const container=document.getElementById('mainLobbyContainer');
         container.inert=false;container.style.visibility='visible';
         document.getElementById('appResume').hidden=true;
+        const heading=container.querySelector('h1');
+        if(heading)heading.textContent='ساحة التدريب دون اتصال';
+        const presence=document.querySelector('#globalPlayersList p');
+        if(presence)presence.textContent='تظهر قائمة اللاعبين عند عودة الاتصال.';
         const avatar=document.querySelector('.player-profile img, #playerAvatar');
         if(avatar && !avatar.getAttribute('src'))avatar.src='assets/avatars/avatar_1.svg';
         const name=document.getElementById('playerName');
@@ -43,6 +61,13 @@
                 else window.showToast?.('هذه اللعبة تحتاج اتصالاً بالإنترنت');
             },true);
         }
-        window.addEventListener('online',()=>{ if(navigator.onLine)location.replace('index.html'); },{once:true});
+        async function reconnect(){
+            try {
+                const response=await fetch(CONFIG.API_URL+'/health',{cache:'no-store',signal:AbortSignal.timeout(4000)});
+                if(response.ok)location.replace('index.html');
+            }catch{}
+        }
+        window.addEventListener('online',reconnect);
+
     });
 })();

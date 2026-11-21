@@ -24,6 +24,7 @@ if (!token && !window.PRPracticeLobby && navigator.onLine) window.location.repla
 
 // الاتصال بالسوكيت (يحتاج API_URL من utils.js)
 const socket = io(API_URL, { transports: ['websocket', 'polling'], upgrade: true, autoConnect: !window.PRPracticeLobby && navigator.onLine });
+window.watchPracticeLobbySocket?.(socket);
 
 // بروفايل الإشعارات في categories: إحصائيات عامة فقط (لا لعبة محددة)
 window.PROFILE_GAME_MODE = null;

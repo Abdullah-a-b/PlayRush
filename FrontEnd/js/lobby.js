@@ -19,6 +19,7 @@ if (!token) redirectLobbyLogin();
 
 // الاتصال بالسوكيت
 const socket = io(API_URL, { transports: ['websocket', 'polling'], upgrade: true });
+window.watchPracticeLobbySocket?.(socket);
 
 // ============================================================
 //  رمز جلسة ثابت لوضع الجمعات — ينجو من إعادة اتصال السوكت

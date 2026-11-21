@@ -12,7 +12,7 @@
    • التحديث فوري (skipWaiting + clients.claim) بلا انتظار.
    ============================================================ */
 
-const VERSION     = 'playrush-v6-practice-helps';
+const VERSION     = 'playrush-v7-native-handoff';
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 
