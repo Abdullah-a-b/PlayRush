@@ -327,7 +327,18 @@
     skip.type = 'button';
     skip.textContent = 'إلى اللوبي';
     skip.onclick = () => dialog.close();
-    dialog.append(title, video, playback, skip);
+    const sound = document.createElement('button');
+    sound.type = 'button';
+    sound.textContent = 'صوت المقطع';
+    sound.setAttribute('aria-pressed', 'false');
+    sound.onclick = () => {
+      video.muted = !video.muted;
+      sound.setAttribute('aria-pressed', String(!video.muted));
+    };
+    const controls = document.createElement('div');
+    controls.className = 'clip-controls';
+    controls.append(playback, sound, skip);
+    dialog.append(title, video, controls);
     dialog.addEventListener('close', () => { video.pause(); dialog.remove(); }, {once:true});
     document.body.appendChild(dialog);
     dialog.showModal();

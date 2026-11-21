@@ -231,3 +231,7 @@
 #gameClip h2 {font-size:1.15rem;margin:0 0 12px}
 #gameClip video {max-height:66dvh;object-fit:contain;background:#0b1018;width:100%;display:block;border-radius:12px}
 #gameClip button {margin-top:12px;padding:10px 24px;border:0;border-radius:12px;background:#ffcf54;color:#172032;font:inherit;cursor:pointer}
+
+#gameClip .clip-controls {display:flex;justify-content:center;gap:6px;flex-wrap:wrap}
+#gameClip .clip-controls button {padding:8px 12px;min-height:44px}
+#gameClip .clip-controls button[aria-pressed="false"] {background:#28364a;color:#fff}
