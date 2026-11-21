@@ -13,7 +13,7 @@ MANUAL_IDS = {"messi", "ronaldo", "pele", "maradona", "zidane", "salah"}
 def approved_character(character):
     source = character.get("source")
     occupation = source.get("occupation") if isinstance(source, dict) else None
-    if occupation not in SPORTS_STARS and "رياض" not in character.get("category", ""):
+    if occupation not in SPORTS_STARS and character.get("category") not in {"رياضة", "رياضيون", "الرياضة"}:
         return True
     qid = character.get("wikidata_id") or character.get("_curation", {}).get("wikidata_id")
     return qid in APPROVED_IDS if qid else character.get("id") in MANUAL_IDS

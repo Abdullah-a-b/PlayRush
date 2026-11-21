@@ -182,6 +182,7 @@ class ImportTests(unittest.TestCase):
   self.assertTrue(approved_character({"id":"salah","category":"رياضة"}))
   self.assertFalse(approved_character({"wikidata_id":"Q999","category":"رياضيون"}))
   self.assertTrue(approved_character({"id":"writer","category":"أدباء"}))
+  self.assertTrue(approved_character({"id":"mathematician","category":"رياضيات"}))
 
  def test_whoami_unknown_death(self):self.assertNotIn('قيد الحياة',who.build_hints('اسم','دولة','مهنة',1800,None)[0])
  def test_whoami_multiple_nationalities(self):
