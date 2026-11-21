@@ -202,12 +202,18 @@ def _senior_spells(career, club_entities):
     return list(senior.values())
 
 
+# أيقونات معروفة خارج الدوريات الكبرى؛ الهوية مرتبطة بكيان اللاعب لا بتهجئة اسمه.
+ICON_CANDIDATES = {"Q180642": "Garrincha", "Q167828": "Lev Yashin"}
+
+
 def _eligible_for_review(player, career, club_entities):
     sex = player.get("claims", {}).get("P21", [])
     if not any(claim.get("rank") != "deprecated"
                and claim.get("mainsnak", {}).get("datavalue", {}).get("value", {}).get("id") == "Q6581097"
                for claim in sex):
         return False
+    if career and player.get("id") in ICON_CANDIDATES:
+        return True
     for spell in career:
         club_id = spell["club"]
         if club_id in _PORTUGUESE_CLUBS:

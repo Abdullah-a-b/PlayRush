@@ -158,7 +158,10 @@ def build_curated_questions():
     qs = []
     from pathlib import Path
     starter = json.loads((Path(__file__).resolve().parents[1] / 'data/huroof_starter_questions.json').read_text(encoding='utf-8'))
-    for f in CURATED_FACTS + starter['questions']:
+    from scripts.sports_facts import SPORTS_FACTS
+    sports = [{"q": q, "a": a, "cat": "رياضة", "accepted_answers": aliases}
+              for _, q, a, aliases in SPORTS_FACTS]
+    for f in CURATED_FACTS + starter['questions'] + sports:
         letter = _answer_letter(f["a"])
         if not letter:
             continue

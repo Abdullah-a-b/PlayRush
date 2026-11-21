@@ -2122,5 +2122,75 @@
       "https://www.indiansuperleague.com/press-releases/del-piero-chooses-india-joins-delhi-dynamos"
     ],
     "arab_audience_approved": true
+  },
+  {
+    "id": 1018,
+    "wikidata_id": "Q180642",
+    "name": "غارينشا",
+    "status": "retired",
+    "nationality": "البرازيل",
+    "era": "1953-1972",
+    "position": "جناح",
+    "difficulty": "hard",
+    "recognition": "hard",
+    "anchor": 1,
+    "clubs": [
+      {
+        "name": "بوتافوغو"
+      },
+      {
+        "name": "كورينثيانز"
+      },
+      {
+        "name": "بورتوغيزا ريو دي جانيرو"
+      },
+      {
+        "name": "أتلتيكو جونيور"
+      },
+      {
+        "name": "فلامنغو"
+      },
+      {
+        "name": "أولاريا"
+      }
+    ],
+    "accepted_answers": [
+      "غارينشيا",
+      "غارينشا",
+      "جارينشا",
+      "Garrincha",
+      "Mané Garrincha"
+    ],
+    "sources": [
+      "https://botafogo.com.br/idolos/garrincha"
+    ],
+    "arab_audience_approved": true
+  },
+  {
+    "id": 1019,
+    "wikidata_id": "Q167828",
+    "name": "ليف ياشين",
+    "status": "retired",
+    "nationality": "الاتحاد السوفيتي",
+    "era": "1950-1970",
+    "position": "حارس مرمى",
+    "difficulty": "hard",
+    "recognition": "hard",
+    "anchor": 1,
+    "clubs": [
+      {
+        "name": "دينامو موسكو"
+      }
+    ],
+    "accepted_answers": [
+      "ياشين",
+      "ليف ياشين",
+      "Lev Yashin",
+      "Yashin"
+    ],
+    "sources": [
+      "https://inside.fifa.com/tournaments/mens/worldcup/1966england/news/the-spider-against-the-panther-2790523"
+    ],
+    "arab_audience_approved": true
   }
 ]

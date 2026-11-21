@@ -376,6 +376,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
 
         userDataCache = await res.json();
+        window.offerGameClip?.(selectedGameMode, userDataCache.player_id);
 
         // الاسم
         const nameEl = document.getElementById('playerName');

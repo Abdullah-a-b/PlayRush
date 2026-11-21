@@ -91,8 +91,14 @@ def run_import():
     if len(qs) < 30:
         raise RuntimeError(f"نتائج قليلة ({len(qs)})؛ لم يُمس الملف الحالي")
     old = read_json(out_path, [])
-    if old and len(qs) < .8 * len(old):
+    if old and len(qs) < .8 * sum(q.get("source") != "curated" for q in old):
         raise RuntimeError("تراجع كبير في تغطية المصدر؛ احتفظنا بالنسخة السابقة")
+    from scripts.sports_facts import SPORTS_FACTS
+    for key, question, answer, aliases in SPORTS_FACTS:
+        identity = "sport_" + key
+        qs.append({"id": identity, "source_id": identity, "q": question, "a": answer,
+                   "accepted": list(dict.fromkeys([answer, *aliases])), "cat": "رياضة",
+                   "diff": "easy", "source": "curated"})
     by_text = {canonical(q.get("q")): q for q in old}
     by_identity = {q["source_id"]: q for q in old if q.get("source_id")}
     added = updated = unchanged = 0

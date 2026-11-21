@@ -65,7 +65,7 @@ def _run_once():
         state = read_json(STATE_FILE, {})
         sources = state.setdefault("sources", {})
         results = {}; failed = []
-        for lane in ("refresh", "discover"):
+        for lane in ("refresh", "icons", "discover"):
             source = sources.setdefault(lane, {})
             if lane == "discover" and source.get("query_version") != 2:
                 source.clear()
@@ -88,6 +88,9 @@ def _run_once():
                         result = {"fetched": 0, "added": 0, "updated": 0}
                     else:
                         result = run_import(refresh=True, player_qids=qids, log=lambda m: print(f" [auto-import] {m}"))
+                elif lane == "icons":
+                    from scripts.wikidata_import import ICON_CANDIDATES
+                    result = run_import(player_qids=list(ICON_CANDIDATES), log=lambda m: print(f" [icons] {m}"))
                 else:
                     result = run_import(limit=batch, min_sitelinks=45, offset=offset, log=lambda m: print(f" [auto-import] {m}"))
                 source["offset"] = offset + result.get("fetched", 0) if result.get("fetched", 0) >= batch else 0

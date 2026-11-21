@@ -64,6 +64,16 @@ SELECT DISTINCT ?eAr WHERE {
 # 🆕 قوالب أسئلة قوائم جديدة تُنشأ كاملة إن لم تكن موجودة
 # (سؤال جاهز + استعلامه) — حقائق ثابتة لا تتقادم
 NEW_QUESTION_TEMPLATES = {
+    "kq_summer_olympic_hosts_2024": {
+        "q": "اذكر مدينة كانت المضيف الرئيسي للألعاب الأولمبية الصيفية حتى 2024",
+        "cat": "رياضة",
+        "answers": ["أثينا", "باريس", "سانت لويس|سانت لويز", "لندن", "ستوكهولم",
+                      "أنتويرب|أنتورب|أنفير", "أمستردام", "لوس أنجلوس|لوس أنجليس",
+                      "برلين", "هلسنكي|هيلسينكي", "ملبورن|ملبورن الأسترالية", "روما",
+                      "طوكيو", "مكسيكو سيتي|مدينة مكسيكو", "ميونخ|ميونيخ", "مونتريال",
+                      "موسكو", "سيول|سول", "برشلونة", "أتلانتا|أطلنطا", "سيدني",
+                      "بكين|بيجين", "ريو دي جانيرو|ريو دي جانيرو البرازيلية"],
+    },
     "kq_african_countries": {
         "q": "اذكر دول قارة أفريقيا", "cat": "جغرافيا",
         "sparql": """
@@ -84,13 +94,6 @@ SELECT DISTINCT ?cAr WHERE {
 SELECT DISTINCT ?cAr WHERE {
   ?c wdt:P30 wd:Q18 . ?c wdt:P31 wd:Q3624078 .
   SERVICE wikibase:label { bd:serviceParam wikibase:language "ar". ?c rdfs:label ?cAr . }
-}"""},
-    "kq_world_currencies": {
-        "q": "اذكر عملات رسمية لدول العالم", "cat": "عام",
-        "sparql": """
-SELECT DISTINCT ?curAr WHERE {
-  ?c wdt:P31 wd:Q3624078 . ?c wdt:P38 ?cur .
-  SERVICE wikibase:label { bd:serviceParam wikibase:language "ar". ?cur rdfs:label ?curAr . }
 }"""},
     "kq_epl_clubs": {
         "q": "اذكر أندية لعبت في الدوري الإنجليزي الممتاز", "cat": "رياضة",
@@ -195,7 +198,7 @@ def _run_once():
         sources = state.setdefault("sources", {})
         stats = {"status": "success", "added": 0, "updated": 0, "answers_added": 0, "failed_sources": [], "ineligible_sources": [], "held_sources": []}
         all_queries = dict(QUERIES)
-        all_queries.update({qid: t["sparql"] for qid, t in NEW_QUESTION_TEMPLATES.items()})
+        all_queries.update({qid: t.get("sparql") for qid, t in NEW_QUESTION_TEMPLATES.items()})
         for qid, query in all_queries.items():
             source = sources.setdefault(qid, {})
             # لا يعيد المصدر الآلي نشر قائمة معزولة أو معتمدة بمراجعة بشرية.
@@ -207,7 +210,7 @@ def _run_once():
             if not due(source, positive_days("KNOWLEDGE_IMPORT_INTERVAL_DAYS")): continue
             if qid not in by_id and qid not in NEW_QUESTION_TEMPLATES: continue
             try:
-                fetched = _run_query(query)
+                fetched = _run_query(query) if query else NEW_QUESTION_TEMPLATES[qid]["answers"]
                 if not fetched: raise RuntimeError("المصدر فارغ")
                 previous_auto = by_id.get(qid, {}).get("auto_answers", [])
                 if previous_auto and len(fetched) < .8 * len(previous_auto):
@@ -222,7 +225,7 @@ def _run_once():
                 question = by_id.get(qid)
                 if question is None:
                     tmpl = NEW_QUESTION_TEMPLATES[qid]
-                    question = {"id": qid, "q": tmpl["q"], "cat": tmpl["cat"], "manual_answers": [], "source": "wikidata"}
+                    question = {"id": qid, "q": tmpl["q"], "cat": tmpl["cat"], "manual_answers": [], "source": "wikidata" if query else "curated"}
                     doc["questions"].append(question);by_id[qid] = question;stats["added"] += 1
                 before = json.dumps(question, ensure_ascii=False, sort_keys=True)
                 manual = question.get("manual_answers")

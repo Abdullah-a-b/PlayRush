@@ -25,13 +25,14 @@ _chars_stamp = None
 def _load_pool():
     """تحميل قاعدة الشخصيات (مرة واحدة لكل عملية)."""
     global _chars_cache, _chars_stamp
+    from app.domains.games.whoami.sports import approved_character
     from pathlib import Path
     stamp = Path(_CHARS_FILE).stat().st_mtime_ns if Path(_CHARS_FILE).exists() else None
     if _chars_cache is None or stamp != _chars_stamp:
         _chars_stamp = stamp
         try:
             with open(_CHARS_FILE, encoding="utf-8") as f:
-                _chars_cache = [c for c in (json.load(f) or {}).get("characters", []) if c.get("active", True)]
+                _chars_cache = [c for c in (json.load(f) or {}).get("characters", []) if c.get("active", True) and approved_character(c)]
         except Exception as e:
             print(f" [whoami] فشل تحميل الشخصيات: {e}")
             _chars_cache = []

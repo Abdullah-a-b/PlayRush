@@ -118,7 +118,10 @@ class ImportTests(unittest.TestCase):
  def test_bank_keeps_seen_identity_updates_answer(self):
   rows=[row(c=f'Q{i+1}',cLabelAr=f'دولة {i}',cap=f'Q{i+101}',capAr=f'مدينة {i}') for i in range(31)];old=bank.build_questions(rows);old[0]['id']='legacy-id';old[0]['a']='قديم';support.atomic_json(self.root/'bank_questions_auto.json',old)
   with patch.object(bank,'fetch_rows',return_value=rows):result=bank.run_import()
-  self.assertEqual(support.read_json(self.root/'bank_questions_auto.json')[0]['id'],'legacy-id');self.assertEqual(result['updated'],1);self.assertEqual(result['added'],0)
+  self.assertEqual(support.read_json(self.root/'bank_questions_auto.json')[0]['id'],'legacy-id');self.assertEqual(result['updated'],1)
+  from scripts.sports_facts import SPORTS_FACTS
+  self.assertEqual(result['added'],len(SPORTS_FACTS))
+  with patch.object(bank,'fetch_rows',return_value=rows):self.assertEqual(bank.run_import()['added'],0)
  def test_bank_small_response_preserves_file(self):
   p=self.root/'bank_questions_auto.json';support.atomic_json(p,[{'id':'keep'}])
   with patch.object(bank,'fetch_rows',return_value=[]):
@@ -170,6 +173,16 @@ class ImportTests(unittest.TestCase):
  def test_career_wiki_failure_unknown(self):
   with patch.object(career,'_get_with_retry',side_effect=RuntimeError('offline')):out=career._ar_article_lengths(['عنوان'])
   self.assertIsNone(out['عنوان'])
+ def test_whoami_sports_discovery_and_existing_pool_are_restricted(self):
+  from app.domains.games.whoami.sports import approved_character
+  query=who._query_for("Q937857",qids=["Q1354960","Q999"])
+  self.assertIn("wd:Q1354960",query)
+  self.assertNotIn("wd:Q999",query)
+  self.assertNotIn("OFFSET",who._query_for("Q3665646",60))
+  self.assertTrue(approved_character({"id":"salah","category":"رياضة"}))
+  self.assertFalse(approved_character({"wikidata_id":"Q999","category":"رياضيون"}))
+  self.assertTrue(approved_character({"id":"writer","category":"أدباء"}))
+
  def test_whoami_unknown_death(self):self.assertNotIn('قيد الحياة',who.build_hints('اسم','دولة','مهنة',1800,None)[0])
  def test_whoami_multiple_nationalities(self):
   rows=[row(p='http://www.wikidata.org/entity/Q1',pAr='اسم تجريبي',natAr='دولة أولى',occAr='عالم',birth='+1800-01-01T00:00:00Z'),row(p='http://www.wikidata.org/entity/Q1',pAr='اسم تجريبي',natAr='دولة ثانية',occAr='عالم',birth='+1800-01-01T00:00:00Z')];a=who._character_rows(rows,'Q901','علماء');self.assertEqual(a,who._character_rows(rows[::-1],'Q901','علماء'));self.assertEqual(len(a),1);self.assertIn('دولة ثانية',a[0]['hints'][1])

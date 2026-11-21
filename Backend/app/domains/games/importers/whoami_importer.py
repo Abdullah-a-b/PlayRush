@@ -22,6 +22,7 @@ SPARQL_URL = "https://query.wikidata.org/sparql"
 HEADERS = {"User-Agent": "PlayRushWhoami/1.0 (educational game)",
            "Accept": "application/sparql-results+json"}
 
+from app.domains.games.whoami.sports import SPORTS_STARS
 from app.core.paths import DATA_DIR
 from app.core.import_support import atomic_json, read_json, import_lock, canonical, stable_id, positive_days, due, record_result, sparql_rows
 _DATA_FILE = str(DATA_DIR / "whoami_characters.json")
@@ -32,6 +33,9 @@ OCCUPATIONS = {
     "Q36180":   "كتّاب وأدباء",     # writer
     "Q901":     "علماء",            # scientist
     "Q937857":  "رياضيون",          # association football player
+    "Q10833314": "رياضيون",          # tennis player
+    "Q3665646":  "رياضيون",          # basketball player
+    "Q11338576": "رياضيون",          # boxer
     "Q82955":   "قادة وسياسيون",    # politician
     "Q33999":   "فنانون وممثلون",   # actor
     "Q177220":  "فنانون وممثلون",   # singer
@@ -54,6 +58,9 @@ SELECT ?p ?pAr ?pEn ?natAr ?occAr ?birth ?death ?links WHERE {
 
 
 def _query_for(occupation, offset=0, qids=None):
+    if occupation in SPORTS_STARS:
+        allowed = SPORTS_STARS[occupation]
+        qids = allowed if qids is None else [q for q in qids if q in allowed]
     if qids is not None:
         import re
         safe = [q for q in qids if re.fullmatch(r"Q[1-9][0-9]*", q)]
@@ -124,6 +131,8 @@ def _character_rows(rows, occupation, category):
     for b in rows:
         def g(k): return (b.get(k) or {}).get("value", "").strip()
         qid = g("p").rsplit("/", 1)[-1]
+        if occupation in SPORTS_STARS and qid not in SPORTS_STARS[occupation]:
+            continue
         if not qid.startswith("Q") or not _is_arabic(g("pAr")) or not _is_arabic(g("natAr")) or not _is_arabic(g("occAr")):
             continue
         group = groups.setdefault(qid, {"name": g("pAr"), "en": g("pEn"), "nations": set(), "births": set(), "deaths": set(), "occupation": g("occAr")})
@@ -194,7 +203,7 @@ def _run_once():
                             by_name[canonical(new["name"])] = old
                         else:
                             chars.append(new);by_qid[new["wikidata_id"]] = new;by_name[canonical(new["name"])] = new;stats["added"] += 1
-                    if lane == "discover": source["offset"] = source.get("offset", 0) + 60 if rows else 0
+                    if lane == "discover" and occ not in SPORTS_STARS: source["offset"] = source.get("offset", 0) + 60 if rows else 0
                     source["last_run"] = time.time();source.pop("retry_after", None)
                 except Exception as exc:
                     source["retry_after"] = time.time() + 3600

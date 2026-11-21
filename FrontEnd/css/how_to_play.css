@@ -225,3 +225,9 @@
   .htp-modal { max-height: 92vh; }
   .htp-helps, .htp-fair { grid-template-columns: 1fr; }
 }
+
+#gameClip {width:min(90vw,620px);max-height:90dvh;box-sizing:border-box;margin:auto;padding:16px;background:#141e30;color:#fff;border:1px solid #47566c;border-radius:18px;text-align:center}
+#gameClip::backdrop {background:#080c15db}
+#gameClip h2 {font-size:1.15rem;margin:0 0 12px}
+#gameClip video {max-height:66dvh;object-fit:contain;background:#0b1018;width:100%;display:block;border-radius:12px}
+#gameClip button {margin-top:12px;padding:10px 24px;border:0;border-radius:12px;background:#ffcf54;color:#172032;font:inherit;cursor:pointer}

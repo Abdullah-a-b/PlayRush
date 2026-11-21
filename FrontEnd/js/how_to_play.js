@@ -291,7 +291,10 @@
     var foot = el('div', 'htp-foot');
     var okBtn = el('button', 'htp-ok', 'فهمت — إلى اللعب! 🎮');
     okBtn.addEventListener('click', close);
-    foot.appendChild(okBtn);
+    const replay = el('button', 'htp-ok', 'شاهد شرح اللعبة');
+    replay.type = 'button';
+    replay.onclick = () => { close(); playClip(mode); };
+    foot.append(replay, okBtn);
     modal.appendChild(foot);
 
     overlay.appendChild(modal);
@@ -299,6 +302,38 @@
     document.addEventListener('keydown', onEsc);
     return overlay;
   }
+
+  function playClip(mode) {
+    if (!GUIDES[mode] || document.getElementById('gameClip')) return false;
+    const dialog = document.createElement('dialog');
+    dialog.id = 'gameClip';
+    dialog.setAttribute('aria-labelledby', 'gameClipTitle');
+    const title = document.createElement('h2');
+    title.id = 'gameClipTitle';
+    title.textContent = 'كيف تلعب ' + GUIDES[mode].title + '؟';
+    const video = document.createElement('video');
+    video.src = 'assets/guides/' + mode + '.mp4';
+    video.playsInline = video.muted = video.controls = true;
+    const skip = document.createElement('button');
+    skip.type = 'button';
+    skip.textContent = 'إلى اللوبي';
+    skip.onclick = () => dialog.close();
+    dialog.append(title, video, skip);
+    dialog.addEventListener('close', () => { video.pause(); dialog.remove(); }, {once:true});
+    document.body.appendChild(dialog);
+    dialog.showModal();
+    video.onended = () => dialog.close();
+    video.play().catch(() => {});
+    return true;
+  }
+
+  window.offerGameClip = function (mode, playerId) {
+    if (!playerId) return;
+    const key = 'pr_guide_seen:' + playerId + ':' + mode;
+    try {
+      if (!localStorage.getItem(key) && playClip(mode)) localStorage.setItem(key, '1');
+    } catch (_) {}
+  };
 
   function onEsc(e) { if (e.key === 'Escape') close(); }
 
