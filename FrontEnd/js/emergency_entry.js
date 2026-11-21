@@ -45,8 +45,8 @@
         const container=document.getElementById('mainLobbyContainer');
         container.inert=false;container.style.visibility='visible';
         document.getElementById('appResume').hidden=true;
-        const heading=container.querySelector('h1');
-        if(heading)heading.textContent='ساحة التدريب دون اتصال';
+        const headings=container.querySelectorAll('h1');
+        for(const heading of headings)heading.textContent='ساحة التدريب دون اتصال';
         const presence=document.querySelector('#globalPlayersList p');
         if(presence)presence.textContent='تظهر قائمة اللاعبين عند عودة الاتصال.';
         const avatar=document.querySelector('.player-profile img, #playerAvatar');
