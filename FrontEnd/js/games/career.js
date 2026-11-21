@@ -5,6 +5,10 @@
 
   const socket = io(API_URL, { transports: ['websocket', 'polling'], upgrade: true });
   window.attachPracticeRecovery(socket, 'career');
+  socket.on('practice_ready', done => {
+    _readyShown = true;
+    playReadyAnimation(done);
+  });
   if (typeof attachSessionExpiryHandler === 'function') attachSessionExpiryHandler(socket);
   window.socket = socket;  // لنظام الإيموجيات (career_emojis.js)
   const roomCode     = sessionStorage.getItem('gameRoomCode');

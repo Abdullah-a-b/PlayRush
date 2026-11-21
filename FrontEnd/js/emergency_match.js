@@ -10,6 +10,7 @@ window.startEmergencyMatch = function(socket, game, checkpoint, resume) {
     const event=(name,data)=>send(game+'_'+name,data);
     const keyed=values=>({[me]:values[0],[bot]:values[1]});
     let state,timer;
+    let preparing = !checkpoint.live;
     if(resume)try{state=JSON.parse(localStorage.getItem(key));}catch{}
     if(resume && !state)try{
         const legacyKey='pr.practice.v1.'+game;
@@ -166,6 +167,7 @@ window.startEmergencyMatch = function(socket, game, checkpoint, resume) {
     function handleAction(name,data={}){
         if(!name.startsWith(game+'_') || state.phase==='done')return socket;
         const action=name.slice(game.length+1);
+        if(preparing && action!=='surrender')return socket;
         if(action==='surrender')finish(1);
         else if(action==='buzz'&&state.phase==='play'&&game!=='knowledge'&&(game==='huroof'||state.strikes[0]<2)){
             state.phase='typing';save();clearTimeout(timer);event('buzzed',{sid:me,time:10,answerWindow:10});after(10000,()=>game==='huroof'?letterMiss(''):clueResult(0,false));
@@ -216,9 +218,25 @@ window.startEmergencyMatch = function(socket, game, checkpoint, resume) {
     send('solo_started',{room_code:'local',your_color:color(0)});
     send('room_joined',{your_sid:me,players:people});
     }
-    if(state.phase==='new')newRound();
-    else if(['ending','between'].includes(state.phase))advanceRound();
-    else {if(state.phase==='botTyping')state.phase='play';present(true);}
+    function begin() {
+        preparing = false;
+        if(state.phase==='done')return;
+        if(state.phase==='new')newRound();
+        else if(['ending','between'].includes(state.phase))advanceRound();
+        else {if(state.phase==='botTyping')state.phase='play';present(true);}
+    }
+    if(preparing){
+        const reveal=document.getElementById('matchRevealOverlay');
+        const ready=()=>send('practice_ready',begin);
+        if(reveal?.classList.contains('show')){
+            const observer=new MutationObserver(()=>{
+                if(reveal.classList.contains('show'))return;
+                observer.disconnect();
+                ready();
+            });
+            observer.observe(reveal,{attributes:true,attributeFilter:['class']});
+        }else ready();
+    }else begin();
     const exit=document.getElementById('backToLobbyBtn') || document.querySelector('#winMessageOverlay button[onclick]');
     exit?.addEventListener('click',e=>{e.stopImmediatePropagation();location.assign('../categories.html?practice=1');},true);
 };

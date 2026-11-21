@@ -5,6 +5,9 @@
 
   const socket = io(API_URL, { transports: ['websocket', 'polling'], upgrade: true });
   window.attachPracticeRecovery(socket, 'knowledge');
+  socket.on('practice_ready', done => {
+    playReadyAnimation(done);
+  });
   if (typeof attachSessionExpiryHandler === 'function') attachSessionExpiryHandler(socket);
   window.socket = socket;
   const params = new URLSearchParams(location.search);

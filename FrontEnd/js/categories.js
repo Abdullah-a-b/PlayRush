@@ -23,7 +23,7 @@ const token = getToken();
 if (!token && !window.PRPracticeLobby && navigator.onLine) window.location.replace('login.html');
 
 // الاتصال بالسوكيت (يحتاج API_URL من utils.js)
-const socket = io(API_URL, { transports: ['websocket', 'polling'], upgrade: true });
+const socket = io(API_URL, { transports: ['websocket', 'polling'], upgrade: true, autoConnect: !window.PRPracticeLobby && navigator.onLine });
 
 // بروفايل الإشعارات في categories: إحصائيات عامة فقط (لا لعبة محددة)
 window.PROFILE_GAME_MODE = null;
@@ -353,7 +353,10 @@ window.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('localAuthFields').style.display = isGoogle ? 'none'  : 'block';
 
 
-    } catch {
+    } catch (error) {
+        if (!navigator.onLine || (error instanceof TypeError && !userDataCache)) {
+            return window.location.replace('categories.html?practice=1');
+        }
         if (startup) return startup.retry();
         showToast('خطأ في الاتصال بالسيرفر', 'error');
     }

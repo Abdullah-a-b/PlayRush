@@ -12,7 +12,7 @@
    • التحديث فوري (skipWaiting + clients.claim) بلا انتظار.
    ============================================================ */
 
-const VERSION     = 'playrush-v4-native-match';
+const VERSION     = 'playrush-v5-practice-ready';
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 
