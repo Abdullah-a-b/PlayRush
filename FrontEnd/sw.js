@@ -114,6 +114,13 @@ self.addEventListener('fetch', (event) => {
                 }
                 return res;
             })
-            .catch(() => caches.match(req).then((hit) => hit || caches.match(url.pathname === '/offline.html' ? '/offline.html' : '/index.html')))
+            .catch(async () => {
+                const practice = ['/offline', '/offline.html'].includes(url.pathname);
+                const hit = await caches.match(req) || await caches.match(practice ? '/offline.html' : '/index.html');
+                if (hit?.redirected && req.mode === 'navigate') {
+                    return new Response(hit.body, {status:hit.status, headers:hit.headers});
+                }
+                return hit || Response.error();
+            })
     );
 });
