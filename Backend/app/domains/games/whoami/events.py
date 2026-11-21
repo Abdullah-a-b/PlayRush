@@ -169,21 +169,24 @@ def register_whoami_events(sio):
         room = get_room_state(room_code)
         if not room:
             return
-        level = room['difficulty']
-        speed, skill = {'beginner': (5, .36), 'medium': (4, .55),
-                       'hard': (3, .73), 'expert': (2, .85)}[level]
-        progress = gs.revealed_count / max(1, len(gs.current['hints']))
-        await asyncio.sleep(random.uniform(speed, speed + 2))
+        from app.domains.games.whoami.solo_bot import decide
+        names = {c['id']: c['name'] for c in _playable_pool()}
+        hints = gs.revealed_hints()
+        attempted = room.setdefault('bot_guesses', [])
+        if room.get('bot_hint_count') == len(hints):
+            return
+        room['bot_hint_count'] = len(hints)
+        decision = decide(hints, names, room['difficulty'], attempted)
+        if decision is None:
+            return
+        candidate, delay = decision
+        await asyncio.sleep(delay)
         if get_room_state(room_code) is not room or room['state'] != 'playing' or gs.state_version != version or not gs.can_buzz(gs.p2) or room_code in _advancing:
+            if room.get('bot_guesses') is attempted and room.get('bot_hint_count') == len(hints):
+                room.pop('bot_hint_count', None)
             return
-        if random.random() > skill * progress ** (1.5 - skill):
-            return
-        answer = gs.current['name']
-        if random.random() > skill + (1 - skill) * progress * .7:
-            alternatives = [c['name'] for c in _playable_pool() if c['category'] == gs.current['category'] and c['name'] != answer]
-            if not alternatives:
-                return
-            answer = random.choice(alternatives)
+        answer = names[candidate]
+        attempted.append(candidate)
         await whoami_buzz(gs.p2, {'roomCode': room_code})
         await asyncio.sleep(random.uniform(1.1, 2.8))
         if get_room_state(room_code) is room and room['state'] == 'playing' and gs.state_version == version + 1:
@@ -243,6 +246,9 @@ def register_whoami_events(sio):
         if not char:
             await _resolve_end(room_code, forced=True)
             return
+        if room.get("is_solo"):
+            room["bot_guesses"] = []
+            room.pop("bot_hint_count", None)
         gs.start_new_character(char, advance_index=advance)
         await sio.emit('whoami_new_character', {
             'category': '',  # 🙈 حصرية لمساعدة كشف الفئة
