@@ -12,7 +12,7 @@
    • التحديث فوري (skipWaiting + clients.claim) بلا انتظار.
    ============================================================ */
 
-const VERSION     = 'playrush-v8-bank-practice';
+const VERSION     = 'playrush-v9-solo-recall';
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 
@@ -84,7 +84,7 @@ const SHELL = [
     "/js/index.js",
     "/js/loadout.js",
     "/js/music.js",
-    "/js/offline_deck.js",
+    "/js/offline_deck.js", "/js/solo_recall.js", "/js/bank_risk_model.js",
     "/games/bank.html", "/js/games/bank.js", "/js/bank_practice.js", "/js/bank_practice_data.js",
     "/js/offline_entry.js",
     "/js/platform_guide.js",

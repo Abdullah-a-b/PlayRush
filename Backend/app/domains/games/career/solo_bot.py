@@ -31,6 +31,7 @@
 نتائج الوضع الفردي لا تمسّ التصنيف إطلاقاً (يُضمن في طبقة الربط).
 """
 import random
+from app.domains.games.recall_calibration import calibrated
 
 
 # ============================================================
@@ -126,7 +127,7 @@ def knowledge_probability(difficulty_name, player_difficulty="medium", career_me
     p = max(0.02, min(0.97, p))
     if career_memory == "specialist":
         p *= 0.6  # فصل معرفة الاسم عن معرفة تاريخ اللعب الأقل شهرة.
-    return max(0.02, min(0.97, p))
+    return max(0.02, min(0.97, calibrated("career", difficulty_name, p)))
 
 
 def bot_knows_player(difficulty_name, player_difficulty="medium", career_memory="standard"):

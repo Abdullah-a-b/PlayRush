@@ -3,6 +3,7 @@ window.startEmergencyMatch = function(socket, game, checkpoint, resume) {
     const me=checkpoint.sid || socket.id || 'practice-human', bot='practice-cpu';
     const levels={beginner:.34, medium:.53, hard:.72, expert:.86};
     const skill=levels[checkpoint.level] || levels.medium;
+    const recall=prior=>practiceRecall(game,checkpoint.level,prior);
     const deck=OFFLINE_DECK[game], key='pr.match.local.2.'+game+'.'+checkpoint.level;
     const pick=items=>items[Math.floor(Math.random()*items.length)];
     const norm=x=>String(x||'').trim().toLowerCase().replace(/[\u064b-\u065fـ]/g,'').replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/[\s-]+/g,'');
@@ -160,12 +161,12 @@ window.startEmergencyMatch = function(socket, game, checkpoint, resume) {
         questionDeadline=Date.now()+30000;
         event('new_question',{timer:30,questionData:{question:q.q}});
         if(state.phase==='typing'){event('buzzed',{sid:me,time:10});after(10000,()=>letterMiss(''));return;}
-        if(Math.random()<skill)after(4500+(1-skill)*5000+Math.random()*4500,botAnswer);
+        if(Math.random()<recall(skill))after(4500+(1-skill)*5000+Math.random()*4500,botAnswer);
         else after(30000,()=>letterMiss(''));
     }
     function letterMiss(text){
         event('answer_result',{correct:false,hexIndex:state.selected,answer:text});
-        if(text && Math.random()<skill){state.phase='feedback';after(2300,botAnswer);return;}
+        if(text && Math.random()<recall(skill)){state.phase='feedback';after(2300,botAnswer);return;}
         state.phase='choose';state.selected=null;state.turn=0;present(false);
     }
     function listAnswer(owner,text){
@@ -188,7 +189,7 @@ window.startEmergencyMatch = function(socket, game, checkpoint, resume) {
         if(!state.turn){event('your_turn',data);after(10000,()=>listAnswer(0,''));}
         else after(2200+Math.random()*1800,()=>{
             const choices=q.answers.filter((_,i)=>!state.used.includes(i));
-            listAnswer(1,Math.random()<skill?pick(choices)[0]:state.used.length?q.answers[pick(state.used)][0]:'');
+            listAnswer(1,choices.length && Math.random()<recall(skill*(1-.55*state.used.length/q.answers.length))?pick(choices)[0]:state.used.length?q.answers[pick(state.used)][0]:'');
         });
     }
     const points=()=>game==='career'?(state.step===0?2:1):Math.max(1,4-state.step);
@@ -210,7 +211,7 @@ window.startEmergencyMatch = function(socket, game, checkpoint, resume) {
         event('reveal_state',data);
         if(state.phase==='typing'){event('buzzed',{sid:me,answerWindow:10});after(10000,()=>clueResult(0,false));return;}
         after(8000,()=>{
-            if(Math.random()<skill*clues.length/card.clues.length){
+            if(Math.random()<recall(skill*clues.length/card.clues.length)){
                 event('buzzed',{sid:bot,answerWindow:10});state.phase='botTyping';save();
                 after(1400,()=>clueResult(1,true));return;
             }

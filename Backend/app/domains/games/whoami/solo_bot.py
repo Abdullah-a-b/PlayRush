@@ -1,6 +1,7 @@
 """مصنف شخصيات خفيف يتعلم أوزان المفردات من ملفات تعريف مستقلة عن تلميحات المباراة."""
 import math
 import random
+from app.domains.games.recall_calibration import calibrated
 import re
 from collections import Counter
 from functools import lru_cache
@@ -102,6 +103,6 @@ def decide(hints, candidates, level, attempted, rng=random):
     best,score = ranked[0]
     runner = ranked[1][1] if len(ranked)>1 else 0
     evidence = score - .65*runner
-    if evidence < threshold or rng.random() > recall * min(1, evidence/(threshold*2)):
+    if evidence < threshold or rng.random() > calibrated("whoami", level, recall * min(1, evidence/(threshold*2))):
         return None
     return best, rng.uniform(delay, delay+1.8)

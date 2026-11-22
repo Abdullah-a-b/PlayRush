@@ -1,5 +1,6 @@
 """Difficulty policy for the list-game opponent."""
 import random
+from app.domains.games.recall_calibration import calibrated
 import math
 import json
 from pathlib import Path
@@ -17,7 +18,8 @@ LEVELS = {
 
 def recall_probability(difficulty, pressure):
     base, linear, quadratic = WEIGHTS[difficulty]
-    return 1 / (1 + math.exp(-(base + linear * pressure + quadratic * pressure ** 2)))
+    prior = 1 / (1 + math.exp(-(base + linear * pressure + quadratic * pressure ** 2)))
+    return calibrated("knowledge", difficulty, prior)
 
 
 def plan_turn(pool, used, difficulty, rng=random, *, distractors=()):

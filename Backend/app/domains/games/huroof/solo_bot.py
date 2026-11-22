@@ -21,6 +21,7 @@ import hashlib
 import json
 import math
 import random
+from app.domains.games.recall_calibration import calibrated
 import re
 
 from .learned_policy import reaction_parameters
@@ -151,7 +152,7 @@ def bot_knows_answer(difficulty_name, question_difficulty, attempt=1):
     يجمع احتمال المستوى وصعوبة السؤال. انتقال الدور وحده ليس معلومة جديدة.
     """
     cfg = get_difficulty(difficulty_name)
-    p = cfg["know_base"] * _difficulty_factor(question_difficulty)
+    p = calibrated("huroof", difficulty_name, min(.98, cfg["know_base"] * _difficulty_factor(question_difficulty)))
     if question_difficulty == "rare":
         p = min(p, RARE_KNOWLEDGE_LIMITS.get(difficulty_name, RARE_KNOWLEDGE_LIMITS["medium"]))
     if difficulty_name == "beginner" and question_difficulty == "hard":

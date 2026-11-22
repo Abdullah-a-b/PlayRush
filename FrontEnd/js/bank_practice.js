@@ -2,10 +2,10 @@
 function attachBankPractice(socket, difficulty) {
     const human = 'local-player', bot = 'local-bank-bot';
     const profiles = {
-        beginner: { knowledge: [.57,.30,.12], think: 5.5, target: 2 },
-        medium:   { knowledge: [.72,.48,.24], think: 4.6, target: 3 },
-        hard:     { knowledge: [.84,.66,.40], think: 3.8, target: 4 },
-        expert:   { knowledge: [.93,.80,.58], think: 3.2, target: 5 }
+        beginner: { knowledge: [.57,.30,.12], think: 5.5 },
+        medium:   { knowledge: [.72,.48,.24], think: 4.6 },
+        hard:     { knowledge: [.84,.66,.40], think: 3.8 },
+        expert:   { knowledge: [.93,.80,.58], think: 3.2 }
     };
     const profile = profiles[difficulty] || profiles.medium;
     const safe = { [human]: 0, [bot]: 0 };
@@ -71,7 +71,7 @@ function attachBankPractice(socket, difficulty) {
             later(8,()=>{if(p.phase==='writing' && p.card===card)judge(id,false,true);});
         }else{
             activity('answering');
-            later(1.3+Math.random()*2.5,()=>judge(id,Math.random()<profile.knowledge[p.tier],false));
+            later(1.3+Math.random()*2.5,()=>judge(id,Math.random()<practiceRecall("bank",difficulty,profile.knowledge[p.tier]),false));
         }
     }
     function bank(id) {
@@ -100,8 +100,15 @@ function attachBankPractice(socket, difficulty) {
             if(id===human)notify('decision',{temp:p.temp,remaining:remaining(p)});
             else {
                 const behind=safe[human]-safe[bot];
-                const target=profile.target+(behind>3?2:0)-(remaining(p)<12?1:0);
-                if(Math.random()<(p.temp>=target?.8:.18))later(.8+Math.random(),()=>bank(id));
+                const gapBin=behind>2?2:behind< -1?0:1;
+                const timeBin=remaining(p)<13?0:remaining(p)<30?1:2;
+                const row=(gapBin*3+timeBin)*3+p.tier;
+                const riskModel=BANK_RISK[difficulty] || BANK_RISK.medium;
+                const preferredBalance=({beginner:2,medium:3,hard:4,expert:5}[difficulty] || 3)
+                    +(behind>3?2:0)-(remaining(p)<12?1:0);
+                const baseline=p.temp>=preferredBalance?.8:.18;
+                const bankChance=.65*baseline+.35*riskModel[row][Math.min(8,p.temp)-1];
+                if(Math.random()<bankChance)later(.8+Math.random(),()=>bank(id));
             }
             later(5,()=>{if(players[id]===p && p.card===card && p.phase==='decision')question(id);});
         });
