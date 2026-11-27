@@ -1425,7 +1425,7 @@
         "ذهب زيمبابوي"
       ],
       "auto_answers": [],
-      "active": true,
+      "active": false,
       "_curation": {
         "reviewed_at": "2026-11-06",
         "evidence": "Reviewed identities and category membership; unsafe legacy aliases removed",

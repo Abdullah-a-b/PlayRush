@@ -97,6 +97,7 @@
     color: #e9edf6;
     text-align: center;
 }
+.pr-app-resuming #prSplash { z-index: 100001; }
 .app-resume img { border-radius: 20px; }
 .app-resume strong { font-size: 2rem; line-height: 1; letter-spacing: -.04em; }
 .app-resume strong span { color: #facc15; }
@@ -110,7 +111,7 @@
     color: #fff;
     font: inherit;
 }
-.pr-app-resuming .categories-page > :not(.app-resume) { visibility: hidden; }
+.pr-app-resuming .categories-page > :not(.app-resume):not(#prSplash) { visibility: hidden; }
 
 .pr-app .categories-page .background-animation,
 .pr-app .categories-page .pr-unified-bar,
@@ -373,4 +374,30 @@ html {
     @keyframes pr-touch-press {
         to { scale: var(--pr-press-scale, .975); }
     }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .pr-app-resuming:not(.pr-resume-recovery) .app-resume img {
+        animation: resume-breathe 1.6s ease-in-out infinite alternate;
+    }
+    .pr-resume-arrived #mainLobbyContainer {
+        animation: resume-arrival .35s ease-out backwards;
+    }
+    @keyframes resume-breathe {
+        to { transform: translateY(-3px) scale(1.04); }
+    }
+    @keyframes resume-arrival {
+        from { opacity: .6; transform: translateY(6px); }
+    }
+}
+
+.resume-emblem { position:relative; padding:14px; }
+.resume-emblem img { display:block; }
+.resume-emblem i { position:absolute; inset:0; pointer-events:none; }
+.resume-emblem i::after { content:''; display:block; margin:auto; width:10px; height:11px; background:#facb38; clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%); }
+.resume-emblem i:nth-child(2) { rotate:120deg; }
+.resume-emblem i:nth-child(3) { rotate:240deg; }
+@media (prefers-reduced-motion:no-preference) {
+    .pr-app-resuming:not(.pr-resume-recovery) .resume-emblem i { animation:resume-orbit 3s linear infinite; }
+    @keyframes resume-orbit { to { transform:rotate(360deg); } }
 }

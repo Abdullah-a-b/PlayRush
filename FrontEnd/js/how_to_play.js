@@ -57,13 +57,14 @@
       tagline: 'اجمع.. خاطر.. أو أمّن رصيدك',
       overview: 'أربع جولات من الأسئلة المتصاعدة الصعوبة. كل إجابة صحيحة تكبر رصيدك المؤقت — لكن خطأً واحداً يمسحه. قل «بنك!» في اللحظة الصحيحة لتحوّل المؤقت إلى نقاط محمية.',
       steps: [
-        'تلعب أنت وخصمك في الوقت نفسه، لكل جولة 60 ثانية.',
+        'تبدآن الجولة معًا. لكل لاعب أسئلته ومؤقته الخاص (٦٠ ثانية). اضغط «إجابة» عندما تعرف جواب سؤالك؛ خصمك يجيب عن سؤاله في نفس الوقت.',
         'كل إجابة صحيحة تضيف لرصيدك المؤقت — والأسئلة الأصعب تمنح أكثر.',
         'خطأ واحد يمسح الرصيد المؤقت بالكامل ويعيد سلّمك للبداية.',
         'اضغط «بنك» لتنقل المؤقت إلى رصيدك المحمي — ثم تابع البناء من جديد.',
       ],
       scoring: [
-        'يفوز صاحب الرصيد المحمي الأعلى بعد الجولات الأربع.',
+        'عند انتهاء وقتك تُضاف نقاطك المؤقتة الباقية إلى البنك. تبدأ الجولة التالية بعد انتهاء اللاعبين.',
+        'بعد أربع جولات يفوز صاحب أعلى مجموع في البنك. إذا تساوى الرصيدان تنتهي المباراة بالتعادل.',
         'سلّم الصعوبة: سهل نقطة، متوسط نقطتان، صعب 3 نقاط.',
       ],
       helps: [
@@ -303,7 +304,7 @@
     return overlay;
   }
 
-  function playClip(mode) {
+  function playClip(mode, onClose, markSeen) {
     if (!GUIDES[mode] || document.getElementById('gameClip')) return false;
     const dialog = document.createElement('dialog');
     dialog.id = 'gameClip';
@@ -325,8 +326,8 @@
     };
     const skip = document.createElement('button');
     skip.type = 'button';
-    skip.textContent = 'إلى اللوبي';
-    skip.onclick = () => dialog.close();
+    skip.textContent = onClose ? 'إلى اختيار المستوى' : 'إلى اللوبي';
+    skip.onclick = () => { markSeen?.(); dialog.close(); };
     const sound = document.createElement('button');
     sound.type = 'button';
     sound.textContent = 'صوت المقطع';
@@ -338,20 +339,35 @@
     const controls = document.createElement('div');
     controls.className = 'clip-controls';
     controls.append(playback, sound, skip);
-    dialog.append(title, video, controls);
-    dialog.addEventListener('close', () => { video.pause(); dialog.remove(); }, {once:true});
+    dialog.append(title, video);
+    if (mode === 'bank') {
+      const hint = document.createElement('p');
+      hint.textContent = 'معك ٣ نقاط في البنك ونقطتان مؤقتتان. اضغط «بنك» لتضمن الخمس، أو واصل الإجابة لتزيد رصيدك. إذا أخطأت قبل التبنيك تخسر النقطتين وتبقى لك الثلاث.';
+      const rules = document.createElement('ol');
+      rules.className = 'bank-intro-rules';
+      for (const text of [GUIDES.bank.steps[0], hint.textContent, ...GUIDES.bank.scoring.slice(0,2)]) {
+        const item = document.createElement('li');
+        item.textContent = text;
+        rules.append(item);
+      }
+      dialog.insertBefore(rules, video);
+    }
+    dialog.append(controls);
+    video.addEventListener('playing', () => markSeen?.(), {once:true});
+    dialog.addEventListener('close', () => { video.pause(); dialog.remove(); onClose?.(); }, {once:true});
     document.body.appendChild(dialog);
     dialog.showModal();
-    video.onended = () => dialog.close();
+    video.onended = () => { if (mode !== 'bank') dialog.close(); };
     video.play().catch(() => {});
     return true;
   }
 
-  window.offerGameClip = function (mode, playerId) {
+  window.playGameGuide = playClip;
+  window.offerGameClip = function (mode, playerId, onClose) {
     if (!playerId) return;
-    const key = 'pr_guide_seen:' + playerId + ':' + mode;
+    const key = 'pr_guide_seen:' + playerId + ':' + mode + (mode === 'bank' ? ':rules2' : '');
     try {
-      if (!localStorage.getItem(key) && playClip(mode)) localStorage.setItem(key, '1');
+      if (!localStorage.getItem(key)) return playClip(mode, onClose, () => localStorage.setItem(key, '1'));
     } catch (_) {}
   };
 

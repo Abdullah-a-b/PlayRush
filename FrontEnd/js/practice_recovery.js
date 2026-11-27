@@ -1,7 +1,7 @@
 /* انتقال فردي فقط. تبقى النقاط المحلية خارج حساب اللاعب. */
 window.attachPracticeRecovery = function(socket, game) {
     const params = new URLSearchParams(location.search);
-    if (params.get('solo') !== '1') return;
+    if (params.get('solo') !== '1') { window.watchNetworkLoss(()=>false,socket); return; }
     let active=false, finished=false, leaving=false, sid, color;
     const checkpoint={game, level:params.get('difficulty') || 'medium',round:1,points:[0,0]};
     const localRequested = params.get('practice')==='1' || !navigator.onLine;
@@ -66,10 +66,6 @@ window.attachPracticeRecovery = function(socket, game) {
         if(name===game+'_answer_result'||name===game+'_strike')checkpoint.typing=false;
     });
     socket.on(game+'_match_over',()=>{finished=true;});
-    socket.on('disconnect',()=>{if(active)transfer();});
-    window.addEventListener('offline',transfer);
-    window.addEventListener('pr-native-offline',transfer);
-    // قد يظهر الهاتف متصلاً بالواي فاي مع تعذر الوصول إلى الخادم نفسه.
-    socket.on('connect_error',()=>{ if(!finished && !leaving)transfer(); });
+    if(!localRequested)window.watchNetworkLoss(transfer,socket);
     if(localRequested)setTimeout(transfer,0);
 };

@@ -4,10 +4,10 @@
     const entry=document.currentScript.hasAttribute('data-entry');
     const practice=params.get('practice')==='1';
     const enterPractice=()=>location.replace('categories.html?practice=1');
-    if(!practice)window.addEventListener('pr-native-offline',enterPractice,{once:true});
+    if(!practice && (entry || document.currentScript.hasAttribute('data-auth')))window.watchNetworkLoss(enterPractice);
     if(document.currentScript.hasAttribute('data-auth')){
         if(!navigator.onLine)enterPractice();
-        else window.addEventListener('offline',enterPractice,{once:true});
+
         return;
     }
     if(entry && (!navigator.onLine || practice)){
@@ -21,7 +21,7 @@
                 try{
                     const res=await fetch(CONFIG.API_URL+'/health',{signal:controller.signal,cache:'no-store'});
                     if(!res.ok)throw new Error();
-                }catch{location.replace('categories.html?practice=1');}
+                }catch{if(!document.hidden && !navigator.onLine)enterPractice();}
                 finally{clearTimeout(timeout);}
             },{once:true});
         }
@@ -29,14 +29,7 @@
     }
     if(!practice && !navigator.onLine){location.replace('categories.html?practice=1');return;}
     if(!practice){
-        window.addEventListener('offline',()=>location.replace('categories.html?practice=1'),{once:true});
-        window.watchPracticeLobbySocket=socket=>{
-            let timeout;
-            const check=()=>{ if(!timeout)timeout=setTimeout(()=>{if(!socket.connected)enterPractice();},5000); };
-            socket.on('disconnect',check);
-            socket.on('connect_error',check);
-            socket.on('connect',()=>{clearTimeout(timeout);timeout=null;});
-        };
+        window.watchPracticeLobbySocket=socket=>window.watchNetworkLoss(enterPractice,socket);
         return;
     }
     window.PRPracticeLobby=true;
@@ -67,7 +60,8 @@
                 if(response.ok)location.replace('index.html');
             }catch{}
         }
-        window.addEventListener('online',reconnect);
+        for(const event of ['online','pr-native-online','pr-native-resume'])window.addEventListener(event,reconnect);
+        document.addEventListener('visibilitychange',()=>{if(!document.hidden && navigator.onLine)reconnect();});
 
     });
 })();

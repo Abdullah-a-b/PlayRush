@@ -28,6 +28,10 @@
     }
 
     function openLevelPicker(gameMode) {
+        const account = (typeof userDataCache !== 'undefined' && userDataCache?.player_id) || localStorage.getItem('pr_last_player') || 'guest';
+        if (!window.offerGameClip?.(gameMode, account, () => showLevels(gameMode))) showLevels(gameMode);
+    }
+    function showLevels(gameMode) {
         if (document.getElementById('soloPickerOverlay')) return;
 
         var overlay = document.createElement('div');
@@ -51,6 +55,11 @@
             + ' ضد الكمبيوتر واختر مستوى التحدّي';
         box.className = 'pr-solo-picker';
         box.appendChild(title);
+        const replay = document.createElement('button');
+        replay.type = 'button';
+        replay.textContent = 'شاهد شرح اللعبة';
+        replay.onclick = () => window.playGameGuide?.(gameMode);
+        box.appendChild(replay);
 
         LEVELS.forEach(function (lv) {
             var btn = document.createElement('button');

@@ -240,3 +240,5 @@
     #gameClip {width:96vw;max-height:96dvh;padding:10px}
     #gameClip video {max-height:calc(94dvh - 120px)}
 }
+
+.bank-intro-rules {text-align:start;line-height:1.55;padding-inline-start:1.5rem;margin:.5rem 0 .8rem}.bank-intro-rules li+li{margin-top:.35rem}

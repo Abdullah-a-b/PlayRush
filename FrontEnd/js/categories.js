@@ -321,6 +321,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (avatarEl) avatarEl.src = avatarUrl;
 
         // حفظ البيانات للصفحات الأخرى
+        if(userDataCache.player_id)localStorage.setItem('pr_last_player',userDataCache.player_id);
         sessionStorage.setItem('playerName',   userDataCache.player_name);
         sessionStorage.setItem('playerAvatar', userDataCache.avatar);
 
@@ -355,7 +356,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 
     } catch (error) {
-        if (!navigator.onLine || (error instanceof TypeError && !userDataCache)) {
+        if (!document.hidden && !navigator.onLine) {
             return window.location.replace('categories.html?practice=1');
         }
         if (startup) return startup.retry();

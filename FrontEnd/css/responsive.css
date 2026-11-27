@@ -717,3 +717,5 @@ body.mm-active .pr-unified-bar {
     font-size: 22px !important;
   }
 }
+
+@media (max-width:900px) { #categoryNavigation .nav-btn > span:first-of-type { display:inline-block !important; font-size:.84rem; color:inherit; } }

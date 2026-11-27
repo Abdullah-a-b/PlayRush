@@ -1,0 +1,9 @@
+#rushWarmup[hidden]{display:none}
+#rushWarmup{margin-block-start:12px;text-align:start;border-top:1px solid #ffffff20;padding-block-start:10px}
+#rushWarmup small{color:#f9ce63;font-weight:700}
+#rushWarmup #warmPrompt{color:#edf2fa;font-size:1rem;margin:5px 0 10px}
+#warmChoices{display:flex;gap:8px;flex-wrap:wrap}
+#warmChoices button{min-height:44px;min-width:78px;padding:5px 15px;background:#22374d;color:#fff;border:1px solid #69839a;border-radius:12px;font:inherit;cursor:pointer}
+#warmChoices button.warm-correct{background:#195946;border-color:#77dcae}
+#warmResult:not(:empty){display:block;color:#fff;margin-block-start:8px}
+@media(prefers-reduced-motion:no-preference){#warmChoices button{animation:warm-deal .36s ease-out backwards;transition:transform .14s}#warmChoices button:nth-child(2){animation-delay:.09s}#warmChoices button:active{transform:translateY(2px)}@keyframes warm-deal{from{opacity:0;transform:translateY(5px) rotate(-2deg)}to{opacity:1;transform:none}}}

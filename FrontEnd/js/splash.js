@@ -186,7 +186,7 @@
                     blip(880, 0.12, 0.08, 1.00, 'triangle');
                     blip(1047, 0.40, 0.10, 1.20, 'triangle');
                     el.addEventListener('click', close);
-                    setTimeout(close, 2400);
+                    setTimeout(close, 3100);
                 };
 
                 // بوابة «المس للبدء» — تظهر فقط لو رفض المتصفح فتح الصوت
@@ -217,7 +217,7 @@
                 // الأنيميشن فوق ذلك الازدحام ويتقطّع ثم ينتقل. البوابة تفصل
                 // المرحلتين: ينتهي التحميل بهدوء أثناء انتظار لمستك، ثم ينطلق
                 // الأنيميشن على جهاز فارغ الشغل — بلا تقطّع وبصوت كامل.
-                if (IS_APP) { showGate(); return; }
+                if (IS_APP) { run(); return; }
 
                 let waited = 0;
                 const poll = setInterval(() => {
@@ -234,7 +234,7 @@
                 blip(392, 0.5, 0.07, 0.25, 'sine');
                 blip(587, 0.7, 0.07, 0.70, 'sine');
                 el.addEventListener('click', close);
-                setTimeout(close, 1400);
+                setTimeout(close, 2150);
                 return;
             }
             // على الويب: index مستند بكر أيضاً → شاشة «المس للبدء» تمنح الإذن
@@ -256,7 +256,7 @@
                 anims.forEach((a) => { a.style.animationPlayState = 'running'; });
                 blip(392, 0.5, 0.07, 0.35, 'sine');
                 blip(587, 0.7, 0.07, 0.90, 'sine');
-                setTimeout(close, 2400);
+                setTimeout(close, 3100);
             });
         };
 
@@ -268,7 +268,7 @@
         show: show,
         // يُستدعى من login/profile-setup/session_resume قبل الانتقال
         playPlatformThen: function (redirect) {
-            if (window.Capacitor?.isNativePlatform?.()) return redirect();
+            if (window.Capacitor?.isNativePlatform?.()) { sessionStorage.setItem('pr_splash_ticket', '1'); return redirect(); }
             // التذكرة تُستهلك عند العرض الفعلي فقط؛ لو تعذّر العرض هنا تبقى
             // فيظهر الأنيميشن في categories بدل ضياعه.
             try { sessionStorage.setItem('pr_splash_ticket', '1'); } catch (e) {}
@@ -291,7 +291,27 @@
     // ============================================================
     // التشغيل التلقائي حسب الصفحة (شبكة أمان: OAuth، فتح مباشر…)
     // ============================================================
-    if (window.Capacitor?.isNativePlatform?.()) return;
+    if (window.Capacitor?.isNativePlatform?.()) {
+        const page = location.pathname.split('/').pop() || 'index.html';
+        if ((page === 'index.html' || (page === 'login.html' && sessionStorage.getItem('pr_logged_out') === '1')) && !document.documentElement.classList.contains('pr-app-resuming')) {
+            if (!matchMedia('(prefers-reduced-motion: reduce)').matches) show('company');
+            return;
+        }
+        if (window.PRAppStartup) {
+            if (matchMedia('(prefers-reduced-motion: reduce)').matches) window.PRAppStartup.companyFinished();
+            else show('company', window.PRAppStartup.companyFinished);
+        }
+        const playArrival = () => {
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) show('platform');
+        };
+        if (page === 'categories.html' && (document.documentElement.classList.contains('pr-resume-arrived') ||
+            sessionStorage.getItem('pr_splash_ticket') || new URLSearchParams(location.search).has('token'))) {
+            sessionStorage.removeItem('pr_splash_ticket');
+            playArrival();
+        }
+        else window.addEventListener('pr-session-arrived', playArrival, {once:true});
+        return;
+    }
     const page = (location.pathname.split('/').pop() || '')
         .toLowerCase().replace(/\.html$/, '') || 'index';
     let mode = null;

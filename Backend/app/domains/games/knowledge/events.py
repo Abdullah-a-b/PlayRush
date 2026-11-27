@@ -57,7 +57,7 @@ def _load_questions():
         with open(_DATA_FILE, encoding='utf-8') as f:
             raw = json.load(f).get('questions', [])
         for q in raw:
-            if not q.get("active", True):
+            if not q.get("active", True) or q.get("id") == "kq_world_currencies":
                 continue
             pool = []
             for entry in q.get('answers', []):
@@ -248,13 +248,31 @@ def register_knowledge_events(sio):
         gs.begin_round({'id': q['id'], 'q': q['q'], 'cat': q['cat']}, pool, starter)
         gs.first_turn_round = starter
         is_tb = gs.round_index > gs.TOTAL_ROUNDS
+        confirm = gs.round_index == 1 and room.get('confirm_first_question', False)
+        if confirm:
+            room['awaiting_first_view'] = True
         await _sio_ref.emit('knowledge_round_start', {
+            'confirmFirstQuestion': confirm,
             'index': gs.round_index, 'total': gs.TOTAL_ROUNDS,
             'tiebreak': is_tb, 'q': q['q'], 'category': q['cat'],
             'pool_size': len(pool),
         }, room=room_code)
+        if confirm:
+            return
         await asyncio.sleep(1.2)  # لحظة قراءة السؤال
         await _begin_turn(room_code, starter)
+
+    @sio.event
+    async def knowledge_question_visible(sid, data):
+        if not isinstance(data, dict) or not isinstance(data.get('roomCode'), str):
+            return
+        code = data['roomCode']
+        room, gs = _room_gs(code)
+        if not room or not room.get('is_solo') or room.get('host') != sid:
+            return
+        if gs.round_index == 1 and room.pop('awaiting_first_view', False):
+            await asyncio.sleep(1.2)
+            await _begin_turn(code, gs.first_turn_round)
 
     async def _begin_turn(room_code, sid):
         room, gs = _room_gs(room_code)
@@ -373,7 +391,8 @@ def register_knowledge_events(sio):
         gs = KnowledgeGameState(sid, bot['sid'], room_code=code, players=players)
         rooms[code] = {'code': code, 'type': 'solo', 'is_solo': True, 'host': sid,
                        'game_mode': 'knowledge', 'state': 'playing', 'created_at': time.time(),
-                       'difficulty': difficulty, 'players': players, 'game_state': gs}
+                       'difficulty': difficulty, 'players': players, 'game_state': gs,
+                       'confirm_first_question': data.get('confirmFirstQuestion') is True}
         from app.core import cluster
         await cluster.claim_room(code)
         await sio.enter_room(sid, code)

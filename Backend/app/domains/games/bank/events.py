@@ -221,7 +221,8 @@ def register_bank_events(sio):
         gs.pstate[sid]['question'] = q
         gs.pstate[sid]['question_diff'] = diff  # الصعوبة المعروضة (النقاط منها!)
         # نتتبع أسئلة هذا اللاعب لتسجيلها بالجملة عند نهاية المباراة
-        gs.pstate[sid].setdefault('asked_ids', []).append(q['id'])
+        if _uid:
+            asyncio.create_task(asyncio.to_thread(_record_seen_bulk, _uid, [q['id']]))
         # المضاعفة تلتصق بهذا السؤال
         if gs.pstate[sid].pop('double_next', False):
             gs.pstate[sid]['double_active'] = True

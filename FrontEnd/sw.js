@@ -12,7 +12,7 @@
    • التحديث فوري (skipWaiting + clients.claim) بلا انتظار.
    ============================================================ */
 
-const VERSION     = 'playrush-v9-solo-recall';
+const VERSION     = 'playrush-v10-offline-guides';
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 
@@ -46,6 +46,8 @@ const SHELL = [
     "/css/games/knowledge.css",
     "/css/games/mobile_match.css",
     "/css/games/whoami.css",
+    "/css/how_to_play.css", "/js/how_to_play.js",
+    ...["bank","career","huroof","knowledge","whoami"].map(mode => "/assets/guides/" + mode + ".mp4"),
     "/css/guide_hint.css",
     "/css/index.css",
     "/css/leaderboard.css",
@@ -68,7 +70,7 @@ const SHELL = [
     "/js/brand.js",
     "/js/categories.js",
     "/js/categories_hub.js",
-    "/js/config.js",
+    "/js/config.js", "/js/network_recovery.js",
     "/js/email_copy.js",
     "/js/emergency_entry.js",
     "/js/emergency_match.js",
@@ -163,6 +165,22 @@ self.addEventListener('fetch', (event) => {
     if (url.pathname.startsWith('/socket.io')) return;
 
     // الصور/الخطوط: الكاش أولاً
+    if (url.pathname.startsWith('/assets/guides/')) {
+        event.respondWith((async () => {
+            const hit=await caches.match(url.pathname);
+            if (!hit) return fetch(req);
+            const range=/^bytes=(\d+)-(\d*)$/.exec(req.headers.get('range') || '');
+            if (!range) return hit;
+            const blob=await hit.blob(), start=Number(range[1]);
+            const end=range[2]?Math.min(Number(range[2]),blob.size-1):blob.size-1;
+            if(start>end)return new Response(null,{status:416});
+            return new Response(blob.slice(start,end+1),{status:206,headers:{
+                'Content-Type':'video/mp4','Content-Length':String(end-start+1),
+                'Content-Range':'bytes '+start+'-'+end+'/'+blob.size
+            }});
+        })());
+        return;
+    }
     if (isAsset(url)) {
         event.respondWith(
             caches.match(req).then((hit) => hit || fetch(req).then((res) => {

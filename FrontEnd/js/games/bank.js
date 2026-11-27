@@ -6,6 +6,7 @@
   const params = new URLSearchParams(location.search);
   const solo = params.get("solo") === "1";
   const socket = io(API_URL, { autoConnect: !solo, forceNew: solo, transports: ['websocket', 'polling'], upgrade: true });
+  if (!solo) window.watchNetworkLoss(()=>false,socket);
   if (solo) attachBankPractice(socket, params.get('difficulty'));
   if (!solo && typeof attachSessionExpiryHandler === 'function') attachSessionExpiryHandler(socket);
   window.socket = socket;
@@ -227,7 +228,7 @@ socket.on('room_joined', (data) => {
 
   //  نافذة القرار: "تبنّك أم تغامر؟" (ثانيتان بين الأسئلة)
   socket.on('bank_decision', (d) => {
-    $('qMeta').textContent = '';
+    $('qMeta').textContent = 'اضغط بنك لحفظ رصيدك المؤقت. إذا انتظرت، ستغامر به في السؤال التالي.';
     $('qText').textContent = `🏦 معك ${d.temp} — تبنّك أم تغامر؟`;
     $('actionButtons').style.display = 'flex';
     $('answerActionBtn').style.display = 'none';

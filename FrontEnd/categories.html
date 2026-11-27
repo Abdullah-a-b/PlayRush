@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <script src="js/config.js"></script>
-  <script src="js/emergency_entry.js"></script>
+  <script src="js/network_recovery.js"></script>
+    <script src="js/emergency_entry.js"></script>
   <script src="js/app_startup.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <link rel="manifest" href="manifest.json">
@@ -41,12 +42,14 @@
       color:#facc15; font-family:inherit; font-weight:700; cursor:pointer; font-size:.9rem; }
     .solo-btn:hover { background:rgba(250,204,21,.25); }
   </style>
+<link rel="stylesheet" href="css/warmup.css">
+<script defer src="js/warmup.js"></script>
 <link rel="stylesheet" href="css/android_download.css">
 <style>.practice-recovery-link{display:none}.pr-resume-recovery .practice-recovery-link{display:inline-block;color:#c7dcf6;padding:8px}</style>
 </head>
 <body class="categories-page">
   <div id="appResume" class="app-resume">
-    <img src="assets/icons/icon-192.png" width="76" height="76" alt="">
+    <div class="resume-emblem" aria-hidden="true"><i></i><i></i><i></i><img src="assets/icons/icon-192.png" width="76" height="76" alt=""></div>
     <strong dir="ltr">Play<span>Rush</span></strong>
     <p id="appResumeStatus" role="status">جارٍ استئناف جلستك…</p>
     <button type="button" id="appResumeRetry" hidden>إعادة المحاولة</button>
@@ -136,7 +139,12 @@
         <div class="app-home-heading">
           <span class="app-home-mark" dir="ltr">PLAY<span>RUSH</span></span>
           <h1>ساحة الألعاب</h1>
-          <p>اختر لعبتك وابدأ التحدي</p>
+          <div id="rushWarmup" hidden>
+            <small>جرس الإحماء</small>
+            <p id="warmPrompt"></p>
+            <div id="warmChoices"></div>
+            <span id="warmResult" role="status"></span>
+          </div>
         </div>
 
         <div class="games-grid">
@@ -487,6 +495,8 @@
     <script src="js/store.js" defer></script>
     <script src="js/loadout.js" defer></script>
   <script src="js/guide_hint.js" defer></script>
+  <link rel="stylesheet" href="css/how_to_play.css">
+  <script src="js/how_to_play.js" defer></script>
   <script src="js/solo_mode.js" defer></script>
   <script src="js/anti_cheat.js" defer></script>
   <script src="js/email_copy.js" defer></script>

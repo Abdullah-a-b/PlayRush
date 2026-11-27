@@ -40,6 +40,11 @@ public class MainActivity extends BridgeActivity {
         networkHandler.removeCallbacks(notifyConnection);
         networkHandler.postDelayed(notifyConnection, 1000);
     }
+    @Override public void onResume() {
+        super.onResume();
+        if (getBridge() != null) getBridge().getWebView().evaluateJavascript(
+            "window.dispatchEvent(new Event('pr-native-resume'))", null);
+    }
     @Override public void onStart() {
         super.onStart();
         connectivity = getSystemService(android.net.ConnectivityManager.class);

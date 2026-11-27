@@ -25,6 +25,11 @@
         location.replace('categories.html?resume=1');
         return;
     }
+    const arrivalKey = 'pr_resume_arrival';
+    if (sessionStorage.getItem(arrivalKey)) {
+        sessionStorage.removeItem(arrivalKey);
+        document.documentElement.classList.add('pr-resume-arrived');
+    }
     if (params.get('resume') !== '1' || params.has('token')) {
         document.addEventListener('DOMContentLoaded', () => {
             const access = current();
@@ -36,10 +41,16 @@
     document.documentElement.classList.add('pr-app-resuming');
     const abort = new AbortController();
     let complete = false;
+    let companyFinished;
+    const companyIntro = new Promise(resolve => { companyFinished = resolve; });
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!window.PRSplash) companyFinished();
+    }, {once:true});
     let watchdog;
     function showRecovery() {
         const status = document.getElementById('appResumeStatus');
         if (!status || complete) return;
+        document.documentElement.classList.add('pr-resume-recovery');
         status.textContent = 'تعذّر الاتصال. جلستك محفوظة، حاول الاستئناف مرة أخرى.';
         document.getElementById('appResumeRetry').hidden = false;
     }
@@ -61,6 +72,8 @@
                 if (data.token && current() === savedToken) {
                     localStorage.setItem('token', data.token);
                     sessionStorage.setItem('token', data.token);
+                    sessionStorage.setItem(arrivalKey, '1');
+                    await companyIntro;
                     location.replace('categories.html');
                     return new Promise(() => {});
                 }
@@ -79,15 +92,21 @@
     account.then(result => {
         if (!result.user && (result.status === 0 || result.status >= 500)) {
             clearTimeout(watchdog);
-            location.replace('categories.html?practice=1');
+            if (!document.hidden && !navigator.onLine) location.replace('categories.html?practice=1');
+            else showRecovery();
         } else if (!result.user) showRecovery();
     });
     watchdog = setTimeout(showRecovery, 10000);
 
     window.PRAppStartup = {
         account,
-        finish() {
+        companyFinished,
+        async finish() {
+            await companyIntro;
+            if (complete) return;
             complete = true;
+            window.dispatchEvent(new Event('pr-session-arrived'));
+            document.documentElement.classList.add('pr-resume-arrived');
             clearTimeout(watchdog);
             document.documentElement.classList.remove('pr-app-resuming');
             document.getElementById('mainLobbyContainer').inert = false;

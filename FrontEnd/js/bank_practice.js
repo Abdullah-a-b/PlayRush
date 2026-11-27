@@ -55,9 +55,19 @@ function attachBankPractice(socket, difficulty) {
         const tier=Math.min(2,Math.max(0,Math.floor((p.tierStart+p.bonus-remaining(p))/20)));
         const pool=BANK_PRACTICE.questions[['easy','medium','hard'][tier]];
         let choices=pool.filter(q=>!seen.has(q));
-        if(!choices.length){pool.forEach(q=>seen.delete(q));choices=pool;}
+        if(id===human && !choices.length){pool.forEach(q=>seen.delete(q));choices=pool;}
+        const key='pr.bank.recent.'+(globalThis.localStorage?.getItem('pr_last_player')||'guest')+'.'+tier;
+        let history=[];
+        if(id===human){
+            try{history=JSON.parse(localStorage.getItem(key)||'[]');}catch{}
+            const fresh=choices.filter(q=>!history.includes(q.q));
+            choices=fresh.length ? fresh : [choices.reduce((a,b)=>history.indexOf(a.q)<history.indexOf(b.q)?a:b)];
+        } else choices=pool;
         const card=choices[Math.floor(Math.random()*choices.length)];
-        seen.add(card); p.card=card;p.tier=tier;p.phase='question';
+        if(id===human){
+            seen.add(card);
+            try{localStorage.setItem(key,JSON.stringify([...history.filter(q=>q!==card.q),card.q].slice(-pool.length)));}catch{}
+        } p.card=card;p.tier=tier;p.phase='question';
         if(id===human)notify('question',{category:card.cat,text:card.q,remaining:remaining(p)});
         else later(profile.think+Math.random()*3,()=>{if(players[id]===p && p.phase==='question')write(id);});
     }

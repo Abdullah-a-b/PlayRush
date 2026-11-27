@@ -249,9 +249,21 @@
   if (isSolo) document.body.classList.add('solo-mode');
   socket.on('solo_started', ({room_code}) => { if (isSolo) roomCode = room_code; });
   socket.on('solo_error', ({message}) => { if (isSolo) showToast(message); });
-  socket.on('connect', () => {
+  async function whenGameVisible() {
+    if (document.readyState !== 'complete') {
+      await new Promise(resolve => window.addEventListener('load', resolve, {once:true}));
+    }
+    while (document.hidden) {
+      await new Promise(resolve => document.addEventListener('visibilitychange', resolve, {once:true}));
+    }
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  }
+  socket.on('connect', async () => {
     if (isSolo) {
-      socket.emit('knowledge_start_solo', { token, difficulty: params.get('difficulty') });
+      const connection = socket.id;
+      await whenGameVisible();
+      if (!socket.connected || socket.id !== connection) return;
+      socket.emit('knowledge_start_solo', { token, confirmFirstQuestion: true, difficulty: params.get('difficulty') });
       return;
     }
     // ملاحظة: لا نعتمد socket.id هنا (قد يختلف عن sid الخادم في
@@ -375,6 +387,12 @@ socket.on('room_joined', (data) => {
     $('turnText').textContent = d.tiebreak ? '🔥 جولة حسم!' : `الجولة ${d.index} / ${d.total}`;
     $('qMeta').textContent = d.category || '';
     $('qText').textContent = d.q;
+    if (isSolo && d.confirmFirstQuestion) {
+      const code = roomCode;
+      whenGameVisible().then(() => {
+        if (socket.connected && roomCode === code) socket.emit('knowledge_question_visible', {roomCode: code});
+      });
+    }
     setStatus('');
     updateStrikes({});
   });
