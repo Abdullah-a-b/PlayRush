@@ -660,6 +660,24 @@ window.addEventListener('DOMContentLoaded', async () => {
     const mmStatusDesc        = document.getElementById('mmStatusDesc');
     const mmCountdown         = document.getElementById('mmCountdown');
 
+    let searchTimer = null;
+    function stopSearchClock() {
+        clearInterval(searchTimer);
+        searchTimer = null;
+    }
+
+    function startSearchClock() {
+        stopSearchClock();
+        const deadline = Date.now() + 30000;
+        const digits = new Intl.NumberFormat('ar-EG');
+        function render() {
+            const seconds = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+            mmStatusDesc.textContent = seconds ? `الوقت المتبقي · ${digits.format(seconds)} ث` : 'اكتمل العدّ التنازلي';
+            if (!seconds) stopSearchClock();
+        }
+        render();
+        searchTimer = setInterval(render, 250);
+    }
     quickPlayBtn?.addEventListener('click', () => {
         lobbyMainContent.style.display   = 'none';
         matchmakingScreen.style.display  = 'flex';
@@ -669,8 +687,9 @@ window.addEventListener('DOMContentLoaded', async () => {
         mmCountdown.style.display        = 'none';
         cancelMatchmakingBtn.style.display = 'block';
         mmStatusTitle.textContent = 'البحث عن منافس...';
-        mmStatusDesc.textContent  = 'جاري البحث عن لاعبين في نفس مستواك';
-        mmStatusDesc.textContent = 'بحث حتى ٣٠ ثانية. ضد نفس الخصم خلال ٦ ساعات: أول مباراتين بمكاسب كاملة، الثالثة بالنصف والرابعة بالربع. من الخامسة بلا تصنيف أو مكاسب.';
+        mmStatusTitle.style.color = '';
+        cancelMatchmakingBtn.textContent = 'إلغاء البحث';
+        startSearchClock();
         socket.emit('quick_play_search', {
             token:       token,
             player_name: userDataCache.player_name,
@@ -680,6 +699,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     cancelMatchmakingBtn?.addEventListener('click', () => {
+        stopSearchClock();
         socket.emit('cancel_quick_play');
         matchmakingScreen.style.display = 'none';
         document.body.classList.remove('mm-active');
@@ -688,6 +708,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     // 🆕 معالج الخطأ — يطلع للاعب بدل ما يبقى عالق في "جاري البحث"
     socket.on('quick_play_error', (data) => {
+        stopSearchClock();
         const msg = (data && data.msg) ? data.msg : 'تعذّر البحث عن مباراة';
         mmStatusTitle.textContent = 'تعذّر البحث';
         mmStatusTitle.style.color = '#f44336';
@@ -715,6 +736,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         return `assets/avatars/${name.includes('.') ? name : name + '.svg'}`;
     }
     socket.on('match_found', (data) => {
+        stopSearchClock();
         try {
             sessionStorage.setItem('gameRoomCode', data.room_code);
             sessionStorage.setItem('myRole', data.role || 'guest');
