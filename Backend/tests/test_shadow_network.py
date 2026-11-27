@@ -26,3 +26,13 @@ class NetworkReview(unittest.TestCase):
         losses = [(1, 2, True)] * 2 + [(1, 2, False)] * 3
         self.assertEqual(detect(losses), [])
         self.assertIn("selective_losses_to_one_opponent", detect(losses + [(2, 3, False)] * 5))
+
+class GeminiReviewContract(unittest.TestCase):
+    def test_batch_labels_are_validated_before_use(self):
+        from unittest.mock import Mock, patch
+        from app.core.match_review import classify_batch
+        model = Mock()
+        with patch("app.infrastructure.gemini_model.load_gemini_model", return_value=model):
+            for payload, expected in [('["review"]', ["review"]), ('["ban"]', None), ('[]', None)]:
+                model.generate_content.return_value.text = payload
+                self.assertEqual(classify_batch([{"game":"bank"}]), expected)

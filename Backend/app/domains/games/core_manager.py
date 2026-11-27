@@ -111,7 +111,21 @@ def remove_from_queue(sid):
     return False
 
 
-def candidate_pairs(entries, blocked, friends, previous, now):
+# Initial calibration: noisier single-answer formats need more observations.
+SKILL_PRIOR_MATCHES = {"huroof": 8, "career": 14, "whoami": 16, "bank": 10, "knowledge": 12}
+
+
+def estimated_strength(wins, losses, mode):
+    prior = SKILL_PRIOR_MATCHES.get(mode, 12)
+    return (wins + prior / 2) / (wins + losses + prior)
+
+
+def alternatives(choices, i, j):
+    """Other eligible opponents at decision time, independently for each player."""
+    return {k: sum(k in pair for pair in choices) - 1 for k in (i, j)}
+
+
+def candidate_pairs(entries, blocked, friends, previous, now, strengths=None):
     """Rank eligible pairs by unlocked class, then by the older request."""
     eligible = []
     for i, first in enumerate(entries):
@@ -133,11 +147,12 @@ def candidate_pairs(entries, blocked, friends, previous, now):
             else:
                 threshold = 5 if pair in previous else 0
             if elapsed >= threshold:
-                eligible.append((threshold, oldest, max(first['time'], second['time']), i, j))
-    return [(i,j) for _,_,_,i,j in sorted(eligible)]
+                gap = abs(strengths.get(ids[0], .5) - strengths.get(ids[1], .5)) if strengths else 0
+                eligible.append((threshold, oldest, gap, max(first['time'], second['time']), i, j))
+    return [(i,j) for *_,i,j in sorted(eligible)]
 
 
-def ranked_pairs(entries):
+def ranked_pairs(entries, game_mode):
     if len(entries) < 2:
         return []
     from sqlalchemy import text, bindparam
@@ -147,7 +162,7 @@ def ranked_pairs(entries):
     ids = list({p['user_id'] for p in entries if p.get('user_id')})
     social._init()
     with SessionLocal() as db:
-        from app.domains.users.models import User
+        from app.domains.users.models import GameStat, User
         from app.domains.games.models import FairPlayAccount
         from datetime import datetime
         allowed = set(row[0] for row in db.query(User.id).outerjoin(FairPlayAccount, FairPlayAccount.user_id==User.id)
@@ -161,9 +176,12 @@ def ranked_pairs(entries):
                 blocked.add(pair)
             elif status == 'accepted':
                 friends.add(pair)
+        strengths = {uid: estimated_strength(w or 0, l or 0, game_mode)
+                     for uid, w, l in db.query(GameStat.user_id, GameStat.wins, GameStat.losses)
+                     .filter(GameStat.user_id.in_(ids), GameStat.game_mode == game_mode)}
         previous = set(tuple(row) for row in db.query(PairSettlement.low_id, PairSettlement.high_id)
                        .filter(PairSettlement.low_id.in_(ids), PairSettlement.high_id.in_(ids)).distinct())
-    return [(i,j) for i,j in candidate_pairs(entries, blocked, friends, previous, time.time())
+    return [(i,j) for i,j in candidate_pairs(entries, blocked, friends, previous, time.time(), strengths)
             if entries[i]["user_id"] in allowed and entries[j]["user_id"] in allowed]
 
 
@@ -186,9 +204,9 @@ def create_match_room(p1, p2, game_mode, room_code=None):
         'created_at': time.time(),
         'players': [
             {'sid': p1['sid'], 'name': p1['name'], 'avatar': p1['avatar'],
-             'token': p1.get('token'), 'user_id': p1.get('user_id'), 'role': 'host', 'color': 'green'},
+             'token': p1.get('token'), 'user_id': p1.get('user_id'), 'role': 'host', 'color': 'green', 'alternatives': p1.get('alternatives')},
             {'sid': p2['sid'], 'name': p2['name'], 'avatar': p2['avatar'],
-             'token': p2.get('token'), 'user_id': p2.get('user_id'), 'role': 'guest', 'color': 'orange'},
+             'token': p2.get('token'), 'user_id': p2.get('user_id'), 'role': 'guest', 'color': 'orange', 'alternatives': p2.get('alternatives')},
         ],
         'game_state': _create_game_state(game_mode, room_code, p1, p2),
     }
@@ -211,7 +229,7 @@ async def check_queue_for_match(game_mode):
     if len(queue) < 2:
         return False,None,None,None
     snapshot = list(queue)
-    choices = await asyncio.to_thread(ranked_pairs,snapshot)
+    choices = await asyncio.to_thread(ranked_pairs,snapshot,game_mode)
     # Cancellations/other searches can run during the database read.
     live_queue = matchmaking_queue.get(game_mode, [])
     live_ids = {id(entry) for entry in live_queue}
@@ -221,7 +239,8 @@ async def check_queue_for_match(game_mode):
             continue
         if time.time()-min(p1['time'],p2['time']) >= 30:
             continue
-        room_code,matched,rp_data = create_match_room(p1,p2,game_mode)
+        counts = alternatives(choices, i, j)
+        room_code,matched,rp_data = create_match_room(dict(p1, alternatives=counts[i]), dict(p2, alternatives=counts[j]), game_mode)
         live_queue.remove(p1)
         live_queue.remove(p2)
         return True,room_code,matched,rp_data

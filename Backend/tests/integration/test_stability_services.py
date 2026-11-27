@@ -25,6 +25,46 @@ class WalletIntegration(unittest.TestCase):
             db.add_all(users);db.flush()
             self.ids=[u.id for u in users]
 
+    def test_hybrid_matchmaking_and_background_review_all_modes(self):
+        from app.core import match_review
+        from app.domains.games.core_manager import ranked_pairs
+        from app.domains.games.models import MatchReview
+        from app.domains.users.models import GameStat, User
+        from app.domains.wallet.reward_service import save_match_sync
+        modes = ["bank", "knowledge", "career", "whoami", "huroof"]
+        with self.db.begin() as db:
+            third = User(email=uuid.uuid4().hex+"@test.invalid", is_verified=True)
+            db.add(third)
+            db.flush()
+            ids = [*self.ids, third.id]
+            for i, mode in enumerate(modes):
+                close = 1 + i % 2
+                for j, uid in enumerate(ids):
+                    db.add(GameStat(user_id=uid, game_mode=mode, wins=10 if j in (0, close) else 0,
+                                    losses=0 if j in (0, close) else 10))
+        mids = []
+        for i, mode in enumerate(modes):
+            now = time.time()
+            entries = [dict(user_id=uid, time=now - (2 if j==0 else 1), ip=str(uid)) for j, uid in enumerate(ids)]
+            self.assertEqual(ranked_pairs(entries, mode)[0], (0, 1+i%2))
+        for mode in modes:
+            mid = uuid.uuid4().hex
+            mids.append(mid)
+            save_match_sync(dict(user_id=ids[0], alternatives=1), dict(user_id=ids[1], alternatives=2),
+                            mode, dict(match_id=mid))
+        with patch.object(match_review, "classify_batch", side_effect=TimeoutError):
+            match_review.run_batch()
+        with self.db() as db:
+            for mid in mids:
+                review = db.get(MatchReview, mid)
+                self.assertEqual((review.local_label, review.status, review.alternatives), ("ordinary","local",1))
+        mid = uuid.uuid4().hex
+        save_match_sync(dict(user_id=ids[0]), dict(user_id=ids[1]), "bank", dict(match_id=mid))
+        with patch.object(match_review, "classify_batch", side_effect=lambda features: ["insufficient"]*len(features)):
+            match_review.run_batch()
+        with self.db() as db:
+            self.assertEqual(db.get(MatchReview, mid).ai_label, "insufficient")
+
     def test_entire_pass_and_cosmetic_ownership(self):
         from app.domains.wallet import pass_service as service
         from app.domains.wallet import economy_config as ec

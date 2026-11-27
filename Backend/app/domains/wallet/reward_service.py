@@ -85,7 +85,9 @@ def save_match_sync(winner_player: dict, loser_player: dict, game_mode: str, ext
         db.add(PairSettlement(match_id=match_id, low_id=low, high_id=high, settled_at=now))
         from app.core.shadow_play import observe
         observe(db, match_id, low, high, now, None if extra.get("draw") else ids[0],
-                extra.get("reason") == "surrender", game_mode)
+                extra.get("reason") == "surrender", game_mode,
+                min((p.get("alternatives") for p in (winner_player, loser_player)
+                     if isinstance(p.get("alternatives"), int)), default=None))
         multiplier = (1., 1., .5, .25, 0.)[min(previous, 4)]
         if not multiplier or extra.get("draw"):
             db.commit()

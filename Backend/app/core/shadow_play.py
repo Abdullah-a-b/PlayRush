@@ -18,7 +18,7 @@ def review_reason(outcomes):
     return None
 
 
-def observe(db, match_id, low, high, now, winner, surrendered, mode):
+def observe(db, match_id, low, high, now, winner, surrendered, mode, alternatives=None):
     history = db.query(ShadowOutcome.winner_id, ShadowOutcome.surrendered).filter(
         ShadowOutcome.low_id == low, ShadowOutcome.high_id == high,
         ShadowOutcome.settled_at > now - timedelta(hours=6),
@@ -27,3 +27,10 @@ def observe(db, match_id, low, high, now, winner, surrendered, mode):
     db.add(ShadowOutcome(match_id=match_id, low_id=low, high_id=high, settled_at=now,
                          winner_id=winner, surrendered=surrendered, game_mode=mode,
                          review_reason=reason))
+
+    from app.domains.games.models import MatchReview
+    import json
+    db.flush()
+    db.add(MatchReview(match_id=match_id, alternatives=alternatives,
+                       local_label="review" if reason else "ordinary", status="pending",
+                       signals=json.dumps([reason] if reason else [])))

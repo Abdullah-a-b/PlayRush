@@ -4,7 +4,7 @@ import json
 import asyncio
 import time
 from app.domains.games.core_manager import (add_to_queue, remove_from_queue,
-                                    check_queue_for_match, ranked_pairs,
+                                    check_queue_for_match, ranked_pairs, alternatives,
                                     create_match_room)
 from app.domains.wallet.reward_service import get_clean_avatar
 from app.sockets.auth_helper import verify_socket_token
@@ -57,7 +57,7 @@ async def _cluster_try_match(sio, r, game_mode):
                 continue
             entries.append((item, e))
 
-        choices = await asyncio.to_thread(ranked_pairs, [entry for _,entry in entries])
+        choices = await asyncio.to_thread(ranked_pairs, [entry for _,entry in entries], game_mode)
         for i,j in choices:
             p1_item,p1 = entries[i]
             p2_item,p2 = entries[j]
@@ -79,6 +79,8 @@ async def _cluster_try_match(sio, r, game_mode):
                 continue
             # الغرفة تُنشأ هنا — هذا الـ worker مالكها
             try:
+                counts = alternatives(choices, i, j)
+                p1["alternatives"], p2["alternatives"] = counts[i], counts[j]
                 room_code, matched, rp_data = create_match_room(p1,p2,game_mode,room_code)
             except Exception:
                 for key in active_keys:

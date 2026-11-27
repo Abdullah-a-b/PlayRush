@@ -121,3 +121,13 @@ class ShadowOutcome(Base):
     game_mode = Column(String(24), nullable=False)
     review_reason = Column(String(160))
     __table_args__ = (Index("ix_shadow_pair_time", "low_id", "high_id", "settled_at"),)
+
+
+class MatchReview(Base):
+    __tablename__ = "match_reviews"
+    match_id = Column(String(64), ForeignKey("shadow_outcomes.match_id"), primary_key=True)
+    alternatives = Column(Integer)
+    local_label = Column(String(24), nullable=False)
+    ai_label = Column(String(24))
+    status = Column(String(24), nullable=False, index=True)
+    signals = Column(Text, nullable=False, default="[]")
