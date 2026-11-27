@@ -89,6 +89,22 @@ class WalletIntegration(unittest.TestCase):
             self.assertEqual(get_or_create_pass(db,uid).pass_xp,300)
             self.assertFalse(claim_tier(db,uid,1,"other")["ok"])
 
+    def test_shadow_case_survives_unrewarded_fifth_match_and_retry(self):
+        from app.domains.wallet.reward_service import save_match_sync
+        from app.domains.games.models import ShadowOutcome, FairPlayAccount
+        a, b = [dict(user_id=i) for i in self.ids]
+        for _ in range(5):
+            result = dict(match_id=uuid.uuid4().hex, reason="surrender")
+            save_match_sync(a, b, "bank", result)
+            save_match_sync(a, b, "bank", result)
+        with self.db() as db:
+            rows = db.query(ShadowOutcome).filter_by(low_id=min(self.ids)).all()
+            self.assertEqual(len(rows), 5)
+            self.assertEqual([r.review_reason for r in rows if r.review_reason],
+                             ["five_same_winner_with_repeated_surrenders"])
+            self.assertIsNone(db.get(FairPlayAccount, self.ids[0]))
+            self.assertIsNone(db.get(FairPlayAccount, self.ids[1]))
+
     def test_five_matches_duplicate_and_partial_failure(self):
         from app.domains.wallet.reward_service import save_match_sync
         from app.domains.games.models import PairSettlement

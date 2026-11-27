@@ -108,3 +108,16 @@ class FairPlayAccount(Base):
     updated = Column(DateTime, nullable=False)
     suspended_until = Column(DateTime)
     permanent_reason = Column(String(200))
+
+class ShadowOutcome(Base):
+    """Server-observed results for retrospective fair-play review."""
+    __tablename__ = "shadow_outcomes"
+    match_id = Column(String(64), ForeignKey("match_settlements.match_id"), primary_key=True)
+    low_id = Column(Integer, nullable=False)
+    high_id = Column(Integer, nullable=False)
+    settled_at = Column(DateTime, nullable=False)
+    winner_id = Column(Integer)
+    surrendered = Column(Boolean, nullable=False)
+    game_mode = Column(String(24), nullable=False)
+    review_reason = Column(String(160))
+    __table_args__ = (Index("ix_shadow_pair_time", "low_id", "high_id", "settled_at"),)

@@ -26,3 +26,17 @@ class QueueBoundaries(unittest.TestCase):
         self.assertEqual(candidate_pairs(entries,{(1,2),(1,3)},set(),set(),1),[(1,2)])
 
 
+
+class ShadowPlayTests(unittest.TestCase):
+    def test_flags_patterns_but_not_regular_rematches(self):
+        from app.core.shadow_play import review_reason
+        self.assertIsNone(review_reason([(1, False)] * 5))
+        self.assertIsNone(review_reason([(1, True)] * 4))
+        self.assertIsNone(review_reason([(1, True)] * 4 + [(None, False)]))
+        self.assertEqual(review_reason([(1, True)] * 5), "five_same_winner_with_repeated_surrenders")
+        self.assertEqual(review_reason([(i % 2, True) for i in range(5)]),
+                         "five_alternating_winners_with_repeated_surrenders")
+
+    def test_new_players_can_match_immediately(self):
+        players = [dict(user_id=i, time=100, ip=str(i)) for i in (1, 2)]
+        self.assertEqual(candidate_pairs(players, set(), set(), set(), 100), [(0, 1)])
