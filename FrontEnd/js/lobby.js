@@ -670,6 +670,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         cancelMatchmakingBtn.style.display = 'block';
         mmStatusTitle.textContent = 'البحث عن منافس...';
         mmStatusDesc.textContent  = 'جاري البحث عن لاعبين في نفس مستواك';
+        mmStatusDesc.textContent = 'بحث حتى ٣٠ ثانية. ضد نفس الخصم خلال ٦ ساعات: أول مباراتين بمكاسب كاملة، الثالثة بالنصف والرابعة بالربع. من الخامسة بلا تصنيف أو مكاسب.';
         socket.emit('quick_play_search', {
             token:       token,
             player_name: userDataCache.player_name,

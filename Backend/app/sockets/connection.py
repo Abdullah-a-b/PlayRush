@@ -15,12 +15,9 @@ def register_connection_events(sio):
                     print(f"⏰ [Timeout] إعلان فوز الخصم في الغرفة {room_code}.")
                     winner_player = next((p for p in room['players'] if p.get('old_sid') != old_sid), None)
                     winner_color = winner_player['color'] if winner_player else 'green'
-                    from app.domains.games.anti_collusion import get_reward_multiplier
-                    uids = list((room.get('user_ids') or {}).values())
-                    mult = get_reward_multiplier(uids[0], uids[1]) if len(uids) == 2 else 1.0
                     await asyncio.to_thread(
                         record_match_result, winner_player, missing_player, room.get('game_mode', 'huroof'),
-                        extra={'reason': 'surrender', 'collusion_multiplier': mult,
+                        extra={'reason': 'surrender',
                                'friendly': room.get('type') == 'friendly'})
                     await sio.emit('show_winner', {'color': winner_color, 'reason': 'surrender'}, room=room_code)
                     room['state'] = 'finished'

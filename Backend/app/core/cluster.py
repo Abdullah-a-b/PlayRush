@@ -38,7 +38,13 @@ _K_SIDROOM = 'pr:sid_room:'   # sid  room_code
 _TTL = 120
 
 # أحداث الغرف/الألعاب التي تُحوَّل للمالك
-_FWD_PREFIXES = ('huroof_', 'bank_', 'career_', 'knowledge_')
+_FWD_PREFIXES = (
+    'huroof_',
+    'bank_',
+    'career_',
+    'knowledge_',
+    'whoami_'
+)
 _FWD_EVENTS = {
     'join_room', 'start_game', 'send_room_chat_message',
     'request_ai_question', 'join_party_mode',
@@ -135,8 +141,8 @@ async def _send(worker_id, payload):
     if r is None:
         return False
     try:
-        await r.publish(_CH + worker_id, json.dumps(payload, ensure_ascii=False))
-        return True
+        subscribers = await r.publish(_CH + worker_id, json.dumps(payload, ensure_ascii=False))
+        return subscribers > 0
     except Exception as e:
         print(f" [cluster] إرسال فشل: {e}")
         return False
@@ -177,8 +183,9 @@ def patch(sio):
                 if owner and owner != WORKER_ID:
                     ok = await _send(owner, {'t': 'ev', 'e': event,
                                              'sid': sid, 'd': data})
-                    if ok:
-                        return  # سيعالجه المالك
+                    if not ok:
+                        await sio.emit('match_connection_lost', {'msg':'تعذر الوصول إلى خادم المباراة. حاول إعادة الاتصال.'}, to=sid)
+                    return
             except Exception as e:
                 print(f" [cluster] تحويل {event}: {e} — معالجة محلية")
         return await _orig_trigger(event, namespace, *args)
@@ -211,6 +218,20 @@ def patch(sio):
                     return
         return await _orig_leave(sid, room, namespace)
 
+    original_emit = sio.emit
+    async def emit(event, data=None, *args, **kwargs):
+        code = kwargs.get("room")
+        if code and event in {"huroof_match_over","show_winner","career_match_over","bank_match_over","whoami_match_over","knowledge_match_over"}:
+            from app.domains.games.core_manager import rooms
+            room = rooms.get(code,{})
+            if room.get("type") == "public":
+                client = await _r()
+                if client:
+                    for player in room.get("players",[]):
+                        key = "pr:mm_active:"+str(player.get("user_id"))
+                        await client.eval("if redis.call('get',KEYS[1])==ARGV[1] then return redis.call('del',KEYS[1]) end",1,key,code)
+        return await original_emit(event,data,*args,**kwargs)
+    sio.emit = emit
     sio._trigger_event = _trigger
     sio.enter_room = _enter
     sio.leave_room = _leave
@@ -240,7 +261,16 @@ async def cluster_subscriber_loop(sio):
                     p = json.loads(msg['data'])
                     t = p.get('t')
                     if t == 'ev':
+                        event = p.get('e','')
+                        if not is_forwardable(event) or event not in sio.handlers.get('/',{}):
+                            continue
                         d = p.get('d')
+                        if event.startswith(_FWD_PREFIXES):
+                            from app.domains.games.core_manager import rooms
+                            code = ((d.get('room_code') or d.get('roomCode')) if isinstance(d,dict) else None) or await sid_room(p['sid'])
+                            room = rooms.get(code)
+                            if not room or not any(player.get('sid')==p['sid'] for player in room.get('players',[])):
+                                continue
                         args = (p['sid'], d) if d is not None else (p['sid'],)
                         await _orig_trigger(p['e'], '/', *args)
                     elif t == 'enter':
@@ -282,6 +312,8 @@ async def cluster_heartbeat_loop(*_):
             for code, room in list(rooms.items()):
                 pipe.set(_K_OWNER + code, WORKER_ID, ex=_TTL)
                 for pl in room.get('players', []):
+                    if room.get('type')=='public' and room.get('state') in ('starting','playing') and pl.get('user_id'):
+                        pipe.eval("if redis.call('get',KEYS[1])==ARGV[1] then return redis.call('expire',KEYS[1],ARGV[2]) end",1,'pr:mm_active:'+str(pl['user_id']),code,_TTL)
                     if pl.get('sid'):
                         pipe.set(_K_SIDROOM + pl['sid'], code, ex=_TTL)
             await pipe.execute()

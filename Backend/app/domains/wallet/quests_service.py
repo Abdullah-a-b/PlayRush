@@ -55,7 +55,7 @@ def ensure_quests(db: Session, user_id: int, scope: str):
         )
         db.add(q)
         created.append(q)
-    db.commit()
+    db.flush()
     return created
 
 
@@ -75,6 +75,7 @@ def get_quests(db: Session, user_id: int) -> dict:
                 "reward": t.get("reward", {}),
             })
         out[scope] = items
+    db.commit()
     return out
 
 
@@ -111,7 +112,7 @@ def progress_event(db: Session, user_id: int, event: str, amount: int = 1,
                 q.progress += amount
                 if q.progress >= q.target:
                     newly_done.append(q.quest_key)
-    db.commit()
+    db.flush()
     return newly_done
 
 
@@ -146,10 +147,10 @@ def claim_quest(db: Session, user_id: int, quest_key: str) -> dict:
     if reward.get("gems"):
         user.gems = (user.gems or 0) + reward["gems"]; applied["gems"] = reward["gems"]
     q.claimed = True
-    db.commit()
 
     if reward.get("pass_xp"):
         add_pass_xp(db, user_id, reward["pass_xp"])
         applied["pass_xp"] = reward["pass_xp"]
 
+    db.commit()
     return {"ok": True, "reward": applied, "title": t.get("title", quest_key)}

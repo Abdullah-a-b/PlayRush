@@ -324,9 +324,13 @@ def register_career_events(sio):
                 from app.infrastructure.ai_judge import judge_answer
                 clubs = [c['name'] for c in (gs.current_player or {}).get('clubs', [])]
                 judged = await judge_answer(f"لاعب كرة مسيرته: {clubs}", correct_name, answer, timeout=2.0)
-                is_correct = bool(judged.get('accept', False))  # الافتراضي: رفض
+                is_correct = judged.get('accept')
             except Exception:
-                is_correct = False  # فشل AI  رفض آمن (لا نمنح نقطة بالخطأ)
+                is_correct = None
+            if is_correct is None:
+                await sio.emit('judge_unavailable', {'msg':'تعذّر التحقق من الإجابة. سنبدل السؤال دون خصم نقاط.'}, room=room_code)
+                await _start_player(room_code,advance=False,replace=True)
+                return
         await _process_answer_result(room_code, sid, is_correct)
 
     async def _process_answer_result(room_code, sid, is_correct):

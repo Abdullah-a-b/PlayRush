@@ -50,6 +50,8 @@ def is_dev_mode() -> bool:
     تعديل .env (تعليق/إلغاء تعليق ALLOW_SAME_IP=1) يسري خلال ثانية،
     بدون إعادة تشغيل السيرفر.
     """
+    if os.environ.get("WEBSITE_INSTANCE_ID") or os.environ.get("FLY_APP_NAME") or os.environ.get("APP_ENV","").lower() == "production":
+        return False
     global _cache_value, _cache_time
     now = time.time()
     if now - _cache_time >= _CACHE_TTL:

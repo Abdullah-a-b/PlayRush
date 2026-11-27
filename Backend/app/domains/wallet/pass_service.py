@@ -41,10 +41,10 @@ def _build_pass_rewards():
         # Premium
         if tier in premium_gem_tiers:
             premium.append({"type": "gems", "amount": gem_each, "icon": "💎"})
-        elif tier % 10 == 0:
+        elif tier in (9, 19, 29):
             premium.append({"type": "cosmetic", "amount": 1, "icon": "🎨",
-                            "note": "تجميل حصري"})
-        elif tier % 5 == 0:
+                            "item_id": {9:"avatar_16", 19:"avatar_17", 29:"avatar_18"}[tier], "note": "أفاتار"})
+        elif tier in (4, 14, 24):
             premium.append({"type": "coins", "amount": 250, "icon": "🪙"})
         else:
             premium.append({"type": "coins", "amount": 120, "icon": "🪙"})
@@ -52,18 +52,27 @@ def _build_pass_rewards():
 
 
 FREE_REWARDS, PREMIUM_REWARDS = _build_pass_rewards()
+# Existing November passes keep the rewards displayed when they were sold.
+def premium_rewards(season):
+    if season >= "2026-S12":
+        return PREMIUM_REWARDS
+    return [reward if i % 5 == 0 else {"type":"coins","amount":120,"icon":"🪙"}
+            for i,reward in enumerate(PREMIUM_REWARDS,1)]
+
 
 
 def get_or_create_pass(db: Session, user_id: int) -> PlayerPass:
     skey = season_key()
-    p = (db.query(PlayerPass)
+    from app.domains.users.models import User
+    db.query(User.id).filter(User.id == user_id).with_for_update().one()
+    p = (db.query(PlayerPass).populate_existing()
            .filter(PlayerPass.user_id == user_id, PlayerPass.season_key == skey)
            .first())
     if not p:
         p = PlayerPass(user_id=user_id, season_key=skey, pass_xp=0,
                        is_premium=False, claimed_free="[]", claimed_premium="[]")
         db.add(p)
-        db.commit()
+        db.flush()
     return p
 
 
@@ -79,7 +88,7 @@ def add_pass_xp(db: Session, user_id: int, amount: int) -> dict:
     before = _tier_from_xp(p.pass_xp)
     p.pass_xp = (p.pass_xp or 0) + amount
     after = _tier_from_xp(p.pass_xp)
-    db.commit()
+    db.flush()
     return {"added": amount, "pass_xp": p.pass_xp,
             "tier_before": before, "tier_after": after,
             "tiers_gained": after - before}
@@ -92,6 +101,7 @@ def get_pass_state(db: Session, user_id: int) -> dict:
     claimed_free = set(json.loads(p.claimed_free or "[]"))
     claimed_premium = set(json.loads(p.claimed_premium or "[]"))
 
+    premium = premium_rewards(p.season_key)
     tiers = []
     for i in range(1, EC.PASS_TIERS + 1):
         tiers.append({
@@ -99,7 +109,7 @@ def get_pass_state(db: Session, user_id: int) -> dict:
             "unlocked": i <= tier,
             "free": FREE_REWARDS[i - 1],
             "free_claimed": i in claimed_free,
-            "premium": PREMIUM_REWARDS[i - 1],
+            "premium": premium[i - 1],
             "premium_claimed": i in claimed_premium,
         })
 
@@ -141,6 +151,8 @@ def buy_premium(db: Session, user_id: int) -> dict:
 def claim_tier(db: Session, user_id: int, tier: int, track: str) -> dict:
     """يستلم جائزة محطة من مسار (free/premium). track=premium يتطلب is_premium."""
     from app.domains.users.models import User
+    if track not in {"premium", "free"}:
+        return {"ok": False, "msg": "مسار غير صالح"}
     if tier < 1 or tier > EC.PASS_TIERS:
         return {"ok": False, "msg": "محطة غير صالحة"}
     p = get_or_create_pass(db, user_id)
@@ -158,7 +170,7 @@ def claim_tier(db: Session, user_id: int, tier: int, track: str) -> dict:
     if tier in claimed:
         return {"ok": False, "msg": "استلمتها مسبقاً"}
 
-    reward = (FREE_REWARDS if track == "free" else PREMIUM_REWARDS)[tier - 1]
+    reward = (FREE_REWARDS if track == "free" else premium_rewards(p.season_key))[tier - 1]
     user = db.query(User).filter(User.id == user_id).with_for_update().first()
     if not user:
         return {"ok": False, "msg": "المستخدم غير موجود"}
@@ -169,8 +181,12 @@ def claim_tier(db: Session, user_id: int, tier: int, track: str) -> dict:
     elif reward["type"] == "gems":
         user.gems = (user.gems or 0) + reward["amount"]; applied = {"gems": reward["amount"]}
     elif reward["type"] == "cosmetic":
-        applied = {"cosmetic": reward.get("note", "تجميل")}
-        # منح التجميل الحصري يُدار عبر نظام cosmetics عند ربطه بمحتوى فعلي
+        from sqlalchemy import text
+        from app.domains.wallet.cosmetics import _init
+        _init()
+        db.execute(text("INSERT INTO player_cosmetics (user_id,item_id,category) VALUES (:uid,:item,'avatar') ON CONFLICT (user_id,item_id) DO NOTHING"),
+                   {"uid": user_id, "item": reward["item_id"]})
+        applied = {"cosmetic": reward["item_id"]}
 
     claimed.add(tier)
     setattr(p, field, json.dumps(sorted(claimed)))

@@ -71,6 +71,7 @@ def _load_huroof_questions_cached():
                 'chemistry': is_chemistry_question(q.question_text or '', str(extra.get('source_id') or '')),
                 'accepted_answers': extra.get('accepted_answers', []),
                 'letter_extra': normalize_letter(extra.get('letter', '') or ''),
+                'ranked_approved': extra.get('ranked_approved',extra.get('source') not in ('auto_wikidata','gemini','ai_generated')),
                 'letter_ans': main_letter,
                 'valid_letters': valid_letters,
             })
@@ -427,6 +428,8 @@ def register_huroof_events(sio):
 
         # حدود المستوى تسبق منع التكرار: السهل المرئي أفضل من معلومة نادرة جديدة.
         level = getattr(gs, 'bot_difficulty', 'medium') if getattr(gs, 'is_solo', False) else 'online'
+        if level == 'online' and room.get('type') == 'public':
+            all_qs = [q for q in all_qs if q.get('ranked_approved',True)]
         pref_map = getattr(gs, 'preferred_category', None) or {}
         wanted = pref_map.pop(gs.turn, None)
         chosen = choose_question(all_qs, norm_letter, getattr(gs, 'used_questions', []),
@@ -520,9 +523,6 @@ def register_huroof_events(sio):
                         loser_color = 'orange' if player_color == 'green' else 'green'
 
                         # معامل مكافحة التواطؤ من user_ids الغرفة
-                        from app.domains.games.anti_collusion import get_reward_multiplier
-                        uids = list((room.get('user_ids') or {}).values())
-                        mult = get_reward_multiplier(uids[0], uids[1]) if len(uids) == 2 else 1.0
 
                         # في thread — لا يحجب event loop
                         await asyncio.to_thread(
@@ -530,7 +530,6 @@ def register_huroof_events(sio):
                             room.get('game_mode', 'huroof'), extra={
                                 'winner_rounds': gs.points[player_color],
                                 'loser_rounds':  gs.points[loser_color],
-                                'collusion_multiplier': mult,
                                 'friendly': room.get('type') == 'friendly',
                             })
 
@@ -1214,12 +1213,9 @@ def register_huroof_events(sio):
             
             loser_player = next((p for p in room['players'] if p['sid'] == sid), None)
             winner_player = next((p for p in room['players'] if p['sid'] != sid), None)
-            from app.domains.games.anti_collusion import get_reward_multiplier
-            uids = list((room.get('user_ids') or {}).values())
-            mult = get_reward_multiplier(uids[0], uids[1]) if len(uids) == 2 else 1.0
             await asyncio.to_thread(
                 record_match_result, winner_player, loser_player, room.get('game_mode', 'huroof'),
-                extra={'reason': 'surrender', 'collusion_multiplier': mult,
+                extra={'reason': 'surrender',
                        'friendly': room.get('type') == 'friendly'})
 
             # عقوبة الانسحاب المتكرر (للمنسحب) + مكافأة الفائز (سلوك جيد)

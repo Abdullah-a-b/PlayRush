@@ -427,6 +427,15 @@ def save_to_db(questions, complete_groups=()):
                     aliases.update(a for a in previous_aliases if isinstance(a, str) and a.strip())
             # نحفظ المراجعات السابقة؛ تبديل المصدر لا يمحو صعوبة أو كتابة اسم معتمدة.
             data = {**extra, "letter": q["letter"], "accepted_answers": sorted(aliases), "source": "auto_wikidata" if q.get("source_id") else "auto_curated", "source_id": sid, "active": True}
+            # Bind approval to the precise wording and answer reviewed by the editor.
+            source_changed = row is None or (row.question_text,row.correct_answer) != (q['question_text'],q['correct_answer'])
+            if q.get('source_id'):
+                review = rules.get(sid,{})
+                explicitly_reviewed = (review.get('ranked_approved') is True and
+                    review.get('question_text') == q['question_text'] and review.get('correct_answer') == q['correct_answer'])
+                data['ranked_approved'] = explicitly_reviewed or (not source_changed and extra.get('ranked_approved') is True)
+            else:
+                data['ranked_approved'] = True
             if q.get('difficulty') in ('easy', 'medium', 'hard', 'rare'):
                 data['difficulty'] = q['difficulty']
             elif data.get('difficulty') not in ('easy', 'medium', 'hard', 'rare'):

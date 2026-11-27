@@ -452,6 +452,14 @@ async function revokeCurrentSession() {
 /** يميز الجلسة الملغاة عن توكن جديد أعادته عملية تغيير بيانات الأمان. */
 function attachSessionExpiryHandler(socketInstance) {
     if (!socketInstance) return;
+    socketInstance.on('judge_unavailable', data => window.showToast?.(data.msg));
+    socketInstance.on('match_connection_lost', data => window.showToast?.(data.msg));
+    socketInstance.on('match_unavailable', () => {
+        if(!location.pathname.includes('/games/')) return;
+        sessionStorage.removeItem('gameRoomCode');
+        window.alert('تعذّر استعادة المباراة. عُد إلى اللوبي لبدء مباراة جديدة.');
+        location.replace('../lobby.html');
+    });
     socketInstance.on('session_expired', () => {
         setTimeout(async () => {
             const current = (typeof getToken === 'function') ? getToken() : localStorage.getItem('token');
@@ -474,3 +482,21 @@ function attachSessionExpiryHandler(socketInstance) {
         }, 250);
     });
 }
+
+(() => {
+    const plugin = window.Capacitor?.Plugins?.RankedPrivacy;
+    if(!window.Capacitor?.isNativePlatform?.() || !plugin) return;
+    const game = /\/games\/(bank|huroof|career|whoami|knowledge)\.html$/.test(location.pathname);
+    const ranked = game && new URLSearchParams(location.search).get('solo') !== '1'
+        && sessionStorage.getItem('isFriendly') === '0';
+    plugin.setRanked({enabled:ranked}).catch(()=>{});
+    if(!ranked)return;
+    const cover = document.createElement('div');
+    cover.textContent = 'ارجع إلى المباراة لعرض السؤال';
+    cover.style.cssText='position:fixed;inset:0;z-index:2147483647;background:#101526;color:white;place-items:center;display:none';
+    document.body.appendChild(cover);
+    const update = () => {cover.style.display=document.hidden || !document.hasFocus() ? 'grid':'none';};
+    for(const event of ['focus','blur','pr-native-focus'])window.addEventListener(event,update);
+    document.addEventListener('visibilitychange',update);
+    update();
+})();

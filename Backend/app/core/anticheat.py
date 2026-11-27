@@ -17,6 +17,7 @@
 - مخالفة خطيرة: permanent ban في DB
 """
 import time
+import asyncio
 import statistics
 import logging
 from collections import defaultdict, deque
@@ -251,15 +252,46 @@ def validate_huroof_answer(sid: str, room: dict, expected_buzzer_sid: Optional[s
 # Violation Handler — يقرر العقوبة
 # ==========================================
 
+def _account_violation(uid, severity, reason):
+    from app.infrastructure.database import SessionLocal
+    from app.domains.games.models import FairPlayAccount
+    from app.domains.users.models import User
+    now = datetime.utcnow()
+    with SessionLocal.begin() as db:
+        user = db.query(User).filter_by(id=uid).with_for_update().one()
+        row = db.get(FairPlayAccount,uid)
+        if row is None:
+            row = FairPlayAccount(user_id=uid,score=0,updated=now)
+            db.add(row)
+        if row.updated < now-timedelta(hours=1):
+            row.score = 0
+        row.score += severity
+        row.updated = now
+        if severity >= Severity.CRITICAL or row.score >= 50:
+            row.permanent_reason = reason[:200]
+            user.is_banned = True
+        elif row.score >= 20:
+            row.suspended_until = now+timedelta(minutes=5)
+        return row.score
+
+
 async def report_violation(sid: str, sio, reason: str, severity: int = Severity.MEDIUM,
                             user_id: Optional[int] = None) -> bool:
     """
     يسجّل مخالفة ويطبق العقوبة المناسبة.
     Returns True if banned (caller should disconnect).
     """
-    violation_scores[sid] += severity
-
-    score = violation_scores[sid]
+    if reason.startswith(('token_shared:', 'superhuman_reaction:', 'bot_pattern:')):
+        logger.info("Timing/network signal only: %s",reason)
+        return False
+    from app.sockets.state import connected_players
+    uid = user_id or connected_players.get(sid,{}).get('user_id')
+    if uid:
+        score = await asyncio.to_thread(_account_violation,uid,severity,reason)
+        user_id = uid
+    else:
+        violation_scores[sid] += severity
+        score = violation_scores[sid]
     logger.warning(f" [anti-cheat] sid={sid[:8]} reason={reason} severity={severity} total_score={score}")
 
     # ==========================================

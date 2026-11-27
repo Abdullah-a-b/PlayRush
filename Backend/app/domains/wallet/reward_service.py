@@ -63,6 +63,30 @@ def save_match_sync(winner_player: dict, loser_player: dict, game_mode: str, ext
                     .on_conflict_do_nothing(index_elements=['match_id']).returning(MatchSettlement.match_id)).first()
         if claimed is None:
             return
+        from app.domains.games.models import PairSettlement
+        ids = []
+        for player in (winner_player, loser_player):
+            uid = (player or {}).get("user_id")
+            if not uid and player:
+                account = get_user_from_token(db, player.get("token"))
+                uid = account.id if account else None
+            if not uid:
+                return
+            ids.append(uid)
+        low, high = sorted(ids)
+        if low == high:
+            return
+        accounts = db.query(User).filter(User.id.in_(ids)).order_by(User.id).populate_existing().with_for_update().all()
+        if len(accounts) != 2:
+            return
+        now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+        previous = db.query(PairSettlement).filter(PairSettlement.low_id == low,
+            PairSettlement.high_id == high, PairSettlement.settled_at > now - datetime.timedelta(hours=6)).count()
+        db.add(PairSettlement(match_id=match_id, low_id=low, high_id=high, settled_at=now))
+        multiplier = (1., 1., .5, .25, 0.)[min(previous, 4)]
+        if not multiplier or extra.get("draw"):
+            db.commit()
+            return
         for (is_winner, player) in [(True, winner_player), (False, loser_player)]:
             if not player: continue
             token = player.get('token')
@@ -179,7 +203,7 @@ def save_match_sync(winner_player: dict, loser_player: dict, game_mode: str, ext
                     rewards_log.append('🏅 مكافأة الخماسي اليومية! (+200🪙)')
             
             # تطبيق معامل مكافحة التواطؤ (يقلّل الجائزة لو المواجهة متكررة)
-            collusion_mult = extra.get('collusion_multiplier', 1.0)
+            collusion_mult = multiplier
             if collusion_mult < 1.0:
                 xp_gain = int(xp_gain * collusion_mult)
                 coins_gain = int(coins_gain * collusion_mult)
@@ -215,11 +239,7 @@ def save_match_sync(winner_player: dict, loser_player: dict, game_mode: str, ext
             print(f" [{name}] مكافآت: {' | '.join(rewards_log)}")
 
         # ===== التصنيف (Elo) + Pass XP + أحداث المهام =====
-        try:
-            _apply_progression(db, winner_player, loser_player, game_mode, extra)
-        except Exception as _pe:
-            print(f" [progression] خطأ: {_pe}")
-
+        _apply_progression(db, winner_player, loser_player, game_mode, extra, multiplier)
         db.commit()
     except Exception as e:
         print(' خطأ في حفظ النتيجة:', e)
@@ -227,7 +247,7 @@ def save_match_sync(winner_player: dict, loser_player: dict, game_mode: str, ext
     finally:
         db.close()
 
-def _apply_progression(db, winner_player, loser_player, game_mode, extra):
+def _apply_progression(db, winner_player, loser_player, game_mode, extra, multiplier=1.0):
     """يطبّق Elo + Pass XP + أحداث المهام للطرفين بعد المباراة التنافسية.
 
     لا يعمل في الودية (تُرفض قبل الوصول هنا). صفر جواهر من المباراة نفسها؛
@@ -271,8 +291,8 @@ def _apply_progression(db, winner_player, loser_player, game_mode, extra):
             print(f" [rank] {u.player_name} ترقّى إلى {award['tier_name']} (+{award['gems']}💎)")
 
     # Pass XP: لكل مباراة + بونص الفائز
-    add_pass_xp(db, wu.id, EC.PASS_XP_PER_MATCH + EC.PASS_XP_WIN_BONUS)
-    add_pass_xp(db, lu.id, EC.PASS_XP_PER_MATCH)
+    add_pass_xp(db, wu.id, int(multiplier * (EC.PASS_XP_PER_MATCH + EC.PASS_XP_WIN_BONUS)))
+    add_pass_xp(db, lu.id, int(multiplier * EC.PASS_XP_PER_MATCH))
 
     # أحداث المهام
     surrender = extra.get("reason") == "surrender"

@@ -28,11 +28,11 @@ class IntegrityTests(unittest.TestCase):
     def test_ai_failure_negative_output_and_timeout_fail_closed(self):
         async def exercise():
             with ThreadPoolExecutor(max_workers=2) as pool:
-                env=functions('app/infrastructure/ai_judge.py',{'judge_answer'},{'asyncio':asyncio,'_JUDGE_EXECUTOR':pool,'_get_model':lambda:None,'_JUDGE_PROMPT':'{question} {correct} {player}'})
+                env=functions('app/infrastructure/ai_judge.py',{'judge_answer'},{'asyncio':asyncio,'_JUDGE_EXECUTOR':pool,'_slots':__import__('threading').BoundedSemaphore(2),'time':time,'json':__import__('json'),'_retry_after':0,'_get_model':lambda:None,'_JUDGE_PROMPT':'{question} {correct} {player}'})
                 self.assertFalse((await env['judge_answer']('q','a','x'))['accept'])
                 class Model:
-                    def generate_content(self,p):return types.SimpleNamespace(text='لا، غير صحيح')
-                env['_get_model']=lambda:Model();self.assertFalse((await env['judge_answer']('q','a','x'))['accept'])
+                    def generate_content(self,p,**kwargs):return types.SimpleNamespace(text='لا، غير صحيح')
+                env['_retry_after']=0;env['_get_model']=lambda:Model();self.assertFalse((await env['judge_answer']('q','a','x'))['accept'])
                 def slow():time.sleep(.08);return Model()
                 env['_get_model']=slow;t=time.perf_counter();result=await env['judge_answer']('q','a','x',timeout=.005)
                 self.assertEqual(result['source'],'timeout');self.assertLess(time.perf_counter()-t,.06)

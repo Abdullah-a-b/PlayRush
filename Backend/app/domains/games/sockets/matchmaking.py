@@ -4,7 +4,7 @@ import json
 import asyncio
 import time
 from app.domains.games.core_manager import (add_to_queue, remove_from_queue,
-                                    check_queue_for_match, pair_is_valid,
+                                    check_queue_for_match, ranked_pairs,
                                     create_match_room)
 from app.domains.wallet.reward_service import get_clean_avatar
 from app.sockets.auth_helper import verify_socket_token
@@ -35,7 +35,8 @@ async def _redis_mm():
 async def _cluster_try_match(sio, r, game_mode):
     """يحاول مطابقة زوج صالح من الطابور العالمي (تحت قفل قصير)."""
     from app.core import cluster
-    got_lock = await r.set(_MMQ_LOCK + game_mode, cluster.WORKER_ID, nx=True, ex=3)
+    lease = secrets.token_hex(16)
+    got_lock = await r.set(_MMQ_LOCK + game_mode, lease, nx=True, ex=10)
     if not got_lock:
         return
     try:
@@ -52,44 +53,51 @@ async def _cluster_try_match(sio, r, game_mode):
                 await r.lrem(_MMQ + game_mode, 1, item)
                 await r.delete(_MMQ_SID + e.get('sid', ''))
                 if e.get('user_id'):
-                    await r.delete(_MMQ_UID + str(e['user_id']))
+                    await _release_uid(r,e)
                 continue
             entries.append((item, e))
 
-        for i in range(len(entries)):
-            for j in range(i + 1, len(entries)):
-                p1_item, p1 = entries[i]
-                p2_item, p2 = entries[j]
-                # فحوصات الصلاحية نفسها (نفس المستخدم/IP/تقابل حديث/حظر/صداقة)
-                if not await asyncio.to_thread(pair_is_valid, p1, p2, game_mode):
-                    continue
-                # نخرجهما ذرّياً — لو أحدهما أُخرج قبلنا نتراجع
-                if await r.lrem(_MMQ + game_mode, 1, p1_item) == 0:
-                    break  # p1 اختفى — أعد من طابور محدث بالدورة القادمة
-                if await r.lrem(_MMQ + game_mode, 1, p2_item) == 0:
-                    await r.rpush(_MMQ + game_mode, p1_item)  # نرجع p1
-                    continue
-                for e in (p1, p2):
-                    await r.delete(_MMQ_SID + e['sid'])
-                    if e.get('user_id'):
-                        await r.delete(_MMQ_UID + str(e['user_id']))
-
-                # الغرفة تُنشأ هنا — هذا الـ worker مالكها
-                room_code, matched, rp_data = await asyncio.to_thread(
-                    create_match_room, p1, p2, game_mode)
-                await cluster.claim_room(room_code)
-                players_list = list(rp_data.values())
-                for p in matched:
-                    role = 'host' if p['sid'] == matched[0]['sid'] else 'guest'
-                    await sio.emit('match_found',
-                                   {'room_code': room_code, 'role': role,
-                                    'players': players_list}, to=p['sid'])
-                print(f" [matchmaking] تطابق عنقودي {room_code} "
-                      f"(مالكها worker {cluster.WORKER_ID})")
-                return
+        choices = await asyncio.to_thread(ranked_pairs, [entry for _,entry in entries])
+        for i,j in choices:
+            p1_item,p1 = entries[i]
+            p2_item,p2 = entries[j]
+            room_code = "".join(secrets.choice(string.ascii_uppercase+string.digits) for _ in range(6))
+            active_keys = ["pr:mm_active:"+str(p["user_id"]) for p in (p1,p2)]
+            reserved = await r.eval("""
+                if redis.call('GET',KEYS[2]) ~= ARGV[1] then return 0 end
+                if redis.call('GET',KEYS[3]) ~= ARGV[4] or redis.call('GET',KEYS[4]) ~= ARGV[5] then return 0 end
+                if not redis.call('LPOS',KEYS[1],ARGV[2]) or not redis.call('LPOS',KEYS[1],ARGV[3]) then return 0 end
+                if redis.call('EXISTS',KEYS[7],KEYS[8],KEYS[9])~=0 then return 0 end
+                redis.call('SET',KEYS[7],ARGV[6],'EX',120);redis.call('SET',KEYS[8],ARGV[6],'EX',120)
+                redis.call('SET',KEYS[9],ARGV[7],'EX',120)
+                redis.call('LREM',KEYS[1],1,ARGV[2]);redis.call('LREM',KEYS[1],1,ARGV[3])
+                redis.call('DEL',KEYS[3],KEYS[4],KEYS[5],KEYS[6])
+                return 1
+            """,9,_MMQ+game_mode,_MMQ_LOCK+game_mode,_MMQ_UID+str(p1['user_id']),_MMQ_UID+str(p2['user_id']),
+                _MMQ_SID+p1['sid'],_MMQ_SID+p2['sid'],*active_keys,'pr:room_owner:'+room_code,lease,p1_item,p2_item,p1['sid'],p2['sid'],room_code,cluster.WORKER_ID)
+            if not reserved:
+                continue
+            # الغرفة تُنشأ هنا — هذا الـ worker مالكها
+            try:
+                room_code, matched, rp_data = create_match_room(p1,p2,game_mode,room_code)
+            except Exception:
+                for key in active_keys:
+                    await r.eval("if redis.call('get',KEYS[1])==ARGV[1] then return redis.call('del',KEYS[1]) end",1,key,room_code)
+                for player in (p1,p2):
+                    await sio.emit('quick_play_error',{'msg':'تعذر إنشاء المباراة. أعد البحث.'},to=player['sid'])
+                raise
+            players_list = list(rp_data.values())
+            for p in matched:
+                role = 'host' if p['sid'] == matched[0]['sid'] else 'guest'
+                await sio.emit('match_found',
+                               {'room_code': room_code, 'role': role,
+                                'players': players_list}, to=p['sid'])
+            print(f" [matchmaking] تطابق عنقودي {room_code} "
+                  f"(مالكها worker {cluster.WORKER_ID})")
+            return
     finally:
         try:
-            await r.delete(_MMQ_LOCK + game_mode)
+            await r.eval("if redis.call('get',KEYS[1]) == ARGV[1] then return redis.call('del',KEYS[1]) end return 0",1,_MMQ_LOCK+game_mode,lease)
         except Exception:
             pass
 
@@ -97,33 +105,24 @@ async def _cluster_try_match(sio, r, game_mode):
 async def _cluster_join_queue(sio, sid, entry, game_mode):
     """إدخال للطابور العالمي + محاولة مطابقة فورية."""
     r = await _redis_mm()
-    # حمايات التكرار (عبر كل الـ workers)
-    if not await r.set(_MMQ_SID + sid, '1', nx=True, ex=120):
-        # نفس الـsid يبحث مرتين بسرعة — نسمح (تحديث) بدل الرفض القاسي
-        await r.set(_MMQ_SID + sid, '1', ex=120)
-    if entry.get('user_id'):
-        uid_key = _MMQ_UID + str(entry['user_id'])
-        if not await r.set(uid_key, sid, nx=True, ex=120):
-            # القفل محجوز — نتحقق: هل صاحبه (sid قديم) ما زال حياً؟
-            holder = await r.get(uid_key)
-            holder = holder.decode() if isinstance(holder, bytes) else holder
-            holder_alive = holder and await r.get('pr:conn:' + holder)
-            if holder_alive and holder != sid:
-                # جلسة حيّة فعلاً من جهاز/تبويب آخر  نرفض
-                await r.delete(_MMQ_SID + sid)
-                return False, "أنت بالفعل في البحث من جهاز آخر!"
-            # القفل عالق من جلسة ميتة  نحرّره ونأخذه (تنظيف ذاتي)
-            await r.set(uid_key, sid, ex=120)
-    await r.rpush(_MMQ + game_mode, json.dumps(entry, ensure_ascii=False))
+    if r is None:
+        return False, "البحث غير متاح مؤقتاً"
+    inserted = await r.eval("""
+        if redis.call('EXISTS',KEYS[2],KEYS[3],KEYS[4])~=0 then return 0 end
+        redis.call('SET',KEYS[2],ARGV[1],'EX',120)
+        redis.call('SET',KEYS[3],ARGV[1],'EX',120)
+        redis.call('RPUSH',KEYS[1],ARGV[2])
+        return 1
+    """,4,_MMQ+game_mode,_MMQ_SID+sid,_MMQ_UID+str(entry['user_id']),"pr:mm_active:"+str(entry["user_id"]),sid,json.dumps(entry,ensure_ascii=False))
+    if not inserted:
+        return False, "أنت بالفعل في البحث"
     await _cluster_try_match(sio, r, game_mode)
-    # لو القفل كان محجوزاً لحظتها — محاولة مؤجلة قصيرة تضمن عدم التعليق
-    async def _retry():
-        await asyncio.sleep(0.7)
-        rr = await _redis_mm()
-        if rr is not None:
-            await _cluster_try_match(sio, rr, game_mode)
-    asyncio.get_event_loop().create_task(_retry())
     return True, "تم الانضمام لطابور البحث"
+
+
+async def _release_uid(r,entry):
+    await r.eval("if redis.call('GET',KEYS[1])==ARGV[1] then return redis.call('DEL',KEYS[1]) end return 0",
+                 1,_MMQ_UID+str(entry['user_id']),entry['sid'])
 
 
 async def _cluster_leave_queue(sid):
@@ -132,7 +131,9 @@ async def _cluster_leave_queue(sid):
         return False
     removed = False
     try:
-        for key in await r.keys(_MMQ + '*'):
+        from app.domains.games.core_manager import _get_valid_modes
+        for mode in _get_valid_modes():
+            key = _MMQ+mode
             for item in await r.lrange(key, 0, -1):
                 try:
                     e = json.loads(item)
@@ -141,7 +142,7 @@ async def _cluster_leave_queue(sid):
                 if e.get('sid') == sid:
                     await r.lrem(key, 1, item)
                     if e.get('user_id'):
-                        await r.delete(_MMQ_UID + str(e['user_id']))
+                        await _release_uid(r,e)
                     removed = True
         await r.delete(_MMQ_SID + sid)
     except Exception as ex:
@@ -150,6 +151,41 @@ async def _cluster_leave_queue(sid):
 
 
 def register_matchmaking_events(sio):
+
+    tasks = {}
+    async def service(mode, clustered):
+        from app.domains.games.core_manager import matchmaking_queue
+        try:
+            while True:
+                if clustered:
+                    r = await _redis_mm()
+                    if r is None:
+                        return
+                    items = await r.lrange(_MMQ+mode,0,-1)
+                    if not items:
+                        return
+                    for raw in items:
+                        entry = json.loads(raw)
+                        if time.time()-entry['time'] >= 30 and await r.lrem(_MMQ+mode,1,raw):
+                            await r.eval("if redis.call('get',KEYS[1])==ARGV[1] then redis.call('del',KEYS[1],KEYS[2]) end",2,_MMQ_UID+str(entry['user_id']),_MMQ_SID+entry['sid'],entry['sid'])
+                            await sio.emit('quick_play_error',{'msg':'انتهى البحث. يمكنك المحاولة مجدداً.'},to=entry['sid'])
+                    await _cluster_try_match(sio,r,mode)
+                else:
+                    queue = matchmaking_queue.get(mode,[])
+                    for entry in list(queue):
+                        if time.time()-entry['time'] >= 30:
+                            remove_from_queue(entry['sid'])
+                            await sio.emit('quick_play_error',{'msg':'انتهى البحث. يمكنك المحاولة مجدداً.'},to=entry['sid'])
+                    if not queue:
+                        return
+                    await local_match(mode)
+                await asyncio.sleep(1)
+        finally:
+            tasks.pop(mode,None)
+
+    def schedule(mode, clustered):
+        if mode not in tasks:
+            tasks[mode] = asyncio.create_task(service(mode,clustered))
 
     @sio.on('quick_play_search')
     async def quick_play_search(sid, data):
@@ -186,17 +222,24 @@ def register_matchmaking_events(sio):
 
         # المسار العنقودي: مع Redis نستخدم الطابور العالمي بدل المحلي
         r = await _redis_mm()
+        from app.infrastructure.redis_client import redis_enabled
+        if r is None and redis_enabled():
+            if success: remove_from_queue(sid)
+            await sio.emit('quick_play_error',{'msg':'البحث غير متاح مؤقتاً'},to=sid)
+            return
         if r is not None:
             # add_to_queue أعلاه تحقق من صحة الوضع؛ نُخرجه من المحلي
             if success:
                 remove_from_queue(sid)
-            elif "غير مدعوم" in (msg or ""):
+            else:
                 await sio.emit('quick_play_error', {'msg': msg}, to=sid)
                 return
             entry = {'sid': sid, 'name': player_name, 'avatar': avatar,
                      'token': token, 'user_id': user_id, 'ip': client_ip,
                      'time': time.time()}
             ok, cmsg = await _cluster_join_queue(sio, sid, entry, game_mode)
+            if ok:
+                schedule(game_mode,True)
             if not ok:
                 await sio.emit('quick_play_error', {'msg': cmsg}, to=sid)
             return
@@ -206,9 +249,11 @@ def register_matchmaking_events(sio):
             await sio.emit('quick_play_error', {'msg': msg}, to=sid)
             return
 
-        match_found, room_code, matched_players, rp_data = check_queue_for_match(game_mode)
-        from app.domains.games.core_manager import matchmaking_queue
-        qsize = len(matchmaking_queue.get(game_mode, []))
+        schedule(game_mode,False)
+        await local_match(game_mode)
+
+    async def local_match(game_mode):
+        match_found, room_code, matched_players, rp_data = await check_queue_for_match(game_mode)
 
         if match_found:
             # هذا الـ worker أنشأ الغرفة — نسجّله مالكاً (no-op بلا Redis)

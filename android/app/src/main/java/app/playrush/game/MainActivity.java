@@ -12,6 +12,7 @@ public class MainActivity extends BridgeActivity {
             getWindow().setAttributes(layout);
         }
         getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        registerPlugin(RankedPrivacy.class);
         super.onCreate(savedInstanceState);
         getWindow().setBackgroundDrawable(
             new android.graphics.drawable.ColorDrawable(0xff0b1018));

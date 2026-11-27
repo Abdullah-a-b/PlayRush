@@ -449,9 +449,13 @@ def register_whoami_events(sio):
                 hints = (gs.current or {}).get('hints', [])
                 judged = await judge_answer(
                     f"شخصية وصفها: {hints}", correct_name, answer, timeout=2.0)
-                is_correct = bool(judged.get('accept', False))
+                is_correct = judged.get('accept')
             except Exception:
-                is_correct = False
+                is_correct = None
+            if is_correct is None:
+                await sio.emit('judge_unavailable', {'msg':'تعذّر التحقق من الإجابة. سنبدل السؤال دون خصم نقاط.'}, room=room_code)
+                await _start_character(room_code,advance=False)
+                return
         if is_correct:
             points = gs.score_for_current(sid)
             gs.award(sid, points)

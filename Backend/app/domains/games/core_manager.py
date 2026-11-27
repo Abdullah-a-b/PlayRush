@@ -1,3 +1,4 @@
+import asyncio
 import os
 import secrets
 import random
@@ -68,6 +69,9 @@ def add_to_queue(sid, name, avatar, game_mode, token=None, user_id=None, ip=None
     if not game_mode or game_mode not in valid:
         return False, f"وضع لعب غير مدعوم: {game_mode!r} (المتاح: {', '.join(sorted(valid))})"
 
+    if any(room.get('state') in ('starting','playing') and any(player.get('user_id') == user_id
+               for player in room.get('players',[])) for room in rooms.values()) and user_id:
+        return False, 'لديك مباراة جارية'
     if game_mode not in matchmaking_queue:
         matchmaking_queue[game_mode] = []
     from app.sockets.state import connected_players
@@ -107,45 +111,72 @@ def remove_from_queue(sid):
     return False
 
 
-def pair_is_valid(p1, p2, game_mode=None):
-    """ كل فحوصات صلاحية التطابق (مستخرجة لتشاركها المسار المحلي
-    والمسار العنقودي على Redis): نفس المستخدم/IP، تقابل حديث،
-    حظر متبادل، صداقة (منع تواطؤ)."""
-    from app.domains.games.anti_collusion import were_recently_matched
-    same_user = (p1.get('user_id') is not None and
-                 p1.get('user_id') == p2.get('user_id'))
-    same_ip = (not _allow_same_ip() and
-               p1.get('ip') not in (None, 'unknown') and
-               p1.get('ip') == p2.get('ip'))
-    recently_matched = (not _allow_same_ip() and
-                        were_recently_matched(p1.get('user_id'), p2.get('user_id'), game_mode))
-    is_blocked = False
-    are_friends_pair = False
-    if p1.get('user_id') and p2.get('user_id'):
-        from app.domains.users.friends import is_blocked_between, are_friends
-        is_blocked = is_blocked_between(p1['user_id'], p2['user_id'])
-        are_friends_pair = (not _allow_same_ip() and
-                            are_friends(p1['user_id'], p2['user_id']))
-    ok = (not same_user and not same_ip and not recently_matched
-          and not is_blocked and not are_friends_pair)
-    if not ok:
-        print(f" [matchmaking] لم يتطابق p1={p1.get('user_id')} مع cand={p2.get('user_id')} | "
-              f"same_user={same_user} same_ip={same_ip} recently={recently_matched} "
-              f"blocked={is_blocked} friends={are_friends_pair} dev={_allow_same_ip()}")
-    return ok
+def candidate_pairs(entries, blocked, friends, previous, now):
+    """Rank eligible pairs by unlocked class, then by the older request."""
+    eligible = []
+    for i, first in enumerate(entries):
+        for j in range(i + 1, len(entries)):
+            second = entries[j]
+            ids = first.get('user_id'), second.get('user_id')
+            if not all(ids) or ids[0] == ids[1]:
+                continue
+            pair = tuple(sorted(ids))
+            oldest = min(first['time'], second['time'])
+            elapsed = now - oldest
+            if pair in blocked or elapsed >= 30:
+                continue
+            same_net = first.get('ip') not in (None, 'unknown') and first['ip'] == second.get('ip')
+            if pair in friends:
+                threshold = 20
+            elif same_net:
+                threshold = 15 if pair in previous else 10
+            else:
+                threshold = 5 if pair in previous else 0
+            if elapsed >= threshold:
+                eligible.append((threshold, oldest, max(first['time'], second['time']), i, j))
+    return [(i,j) for _,_,_,i,j in sorted(eligible)]
 
 
-def create_match_room(p1, p2, game_mode):
+def ranked_pairs(entries):
+    if len(entries) < 2:
+        return []
+    from sqlalchemy import text, bindparam
+    from app.domains.games.models import PairSettlement
+    from app.domains.users import friends as social
+    from app.infrastructure.database import SessionLocal
+    ids = list({p['user_id'] for p in entries if p.get('user_id')})
+    social._init()
+    with SessionLocal() as db:
+        from app.domains.users.models import User
+        from app.domains.games.models import FairPlayAccount
+        from datetime import datetime
+        allowed = set(row[0] for row in db.query(User.id).outerjoin(FairPlayAccount, FairPlayAccount.user_id==User.id)
+            .filter(User.id.in_(ids),User.is_banned.is_(False),User.is_verified.is_(True),
+                    (FairPlayAccount.suspended_until.is_(None)) | (FairPlayAccount.suspended_until<=datetime.utcnow())))
+        blocked, friends = set(), set()
+        query = text("SELECT user_id,friend_id,status FROM friendships WHERE user_id IN :ids AND friend_id IN :ids").bindparams(bindparam("ids", expanding=True))
+        for a,b,status in db.execute(query, {'ids':ids}):
+            pair = tuple(sorted((a,b)))
+            if status == 'blocked':
+                blocked.add(pair)
+            elif status == 'accepted':
+                friends.add(pair)
+        previous = set(tuple(row) for row in db.query(PairSettlement.low_id, PairSettlement.high_id)
+                       .filter(PairSettlement.low_id.in_(ids), PairSettlement.high_id.in_(ids)).distinct())
+    return [(i,j) for i,j in candidate_pairs(entries, blocked, friends, previous, time.time())
+            if entries[i]["user_id"] in allowed and entries[j]["user_id"] in allowed]
+
+
+def create_match_room(p1, p2, game_mode, room_code=None):
     """ينشئ غرفة مباراة لزوج متطابق (مستخرجة للمشاركة مع المسار
     العنقودي). الغرفة تعيش بذاكرة هذا الـ worker = هو مالكها."""
-    from app.domains.games.anti_collusion import record_matchup
     players = [p1, p2]
     random.shuffle(players)
     p1, p2 = players[0], players[1]
 
     # room_code بـ secrets بدل random
     alphabet = string.ascii_uppercase + string.digits
-    room_code = ''.join(secrets.choice(alphabet) for _ in range(6))
+    room_code = room_code or ''.join(secrets.choice(alphabet) for _ in range(6))
 
     rooms[room_code] = {
         'code': room_code,
@@ -168,7 +199,6 @@ def create_match_room(p1, p2, game_mode):
     }
 
     # نسجّل المواجهة (anti-collusion) + نمرّر user_ids للغرفة للمكافآت
-    record_matchup(p1.get('user_id'), p2.get('user_id'), game_mode)
     rooms[room_code]['user_ids'] = {
         p1['sid']: p1.get('user_id'),
         p2['sid']: p2.get('user_id'),
@@ -176,31 +206,26 @@ def create_match_room(p1, p2, game_mode):
     return room_code, [p1, p2], room_players_data
 
 
-def check_queue_for_match(game_mode):
+async def check_queue_for_match(game_mode):
     queue = matchmaking_queue.get(game_mode, [])
     if len(queue) < 2:
-        return False, None, None, None
-
-    # نبحث عن أول زوج صالح (الفحوصات في pair_is_valid المشتركة)
-    p1 = queue[0]
-    p2_index = None
-    for i in range(1, len(queue)):
-        if pair_is_valid(p1, queue[i], game_mode):
-            p2_index = i
-            break
-
-    # ما لقينا خصم صالح لـ p1 الآن (كلهم نفس المستخدم/الشبكة)  ننتظر
-    if p2_index is None:
-        print(f" [matchmaking] لا يوجد خصم صالح لـ p1={p1.get('user_id')} (طابور={len(queue)})")
-        return False, None, None, None
-    print(f" [matchmaking]  تطابق! p1={p1.get('user_id')} مع cand رقم {p2_index}")
-
-    # نخرج الزوج الصالح من الطابور
-    p2 = queue.pop(p2_index)
-    p1 = queue.pop(0)
-
-    room_code, matched, rp_data = create_match_room(p1, p2, game_mode)
-    return True, room_code, matched, rp_data
+        return False,None,None,None
+    snapshot = list(queue)
+    choices = await asyncio.to_thread(ranked_pairs,snapshot)
+    # Cancellations/other searches can run during the database read.
+    live_queue = matchmaking_queue.get(game_mode, [])
+    live_ids = {id(entry) for entry in live_queue}
+    for i,j in choices:
+        p1,p2 = snapshot[i],snapshot[j]
+        if id(p1) not in live_ids or id(p2) not in live_ids:
+            continue
+        if time.time()-min(p1['time'],p2['time']) >= 30:
+            continue
+        room_code,matched,rp_data = create_match_room(p1,p2,game_mode)
+        live_queue.remove(p1)
+        live_queue.remove(p2)
+        return True,room_code,matched,rp_data
+    return False,None,None,None
 
 
 def create_room(room_code, sid, host_name, max_players, game_mode, ip_address, avatar, room_type="private"):

@@ -59,7 +59,11 @@ def register_room_events(sio):
             return
 
         waiting_room = get_room_state(room_code)
-        if waiting_room and waiting_room['state'] == 'waiting' and any(
+        if not waiting_room:
+            await sio.emit('match_unavailable',{},to=sid)
+            await sio.emit('error_message','الغرفة غير موجودة أو انتهت صلاحيتها',to=sid)
+            return
+        if waiting_room['state'] == 'waiting' and any(
             player.get('user_id') == joining_user_id for player in waiting_room['players']
         ):
             await sio.emit('error_message', 'أنت موجود بالفعل في هذه الغرفة', to=sid)

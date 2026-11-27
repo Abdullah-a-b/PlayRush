@@ -333,9 +333,14 @@ def register_bank_events(sio):
                     await sio.emit('bank_judging', {}, to=sid)
                     from app.infrastructure.ai_judge import judge_answer
                     judged = await judge_answer(q.get('q', ''), correct, answer, timeout=2.0)
-                    is_correct = bool(judged.get('accept', False))
+                    is_correct = judged.get('accept')
                 except Exception:
-                    is_correct = False  # فشل AI  رفض آمن
+                    is_correct = None
+                if is_correct is None:
+                    await sio.emit('judge_unavailable', {'msg':'تعذّر التحقق من الإجابة. سنبدل السؤال دون خصم نقاط.'}, to=sid)
+                    gs.unfreeze(sid)
+                    await _next_question(room_code,sid)
+                    return
         # النقاط من السلّم الذي رآه اللاعب (لا تصنيف السؤال بالملف —
         # الـfallback عند نفاد صعوبة قد يسحب سؤالاً من فئة أخرى)
         diff = gs.pstate[sid].get('question_diff') or q.get('diff', 'easy')
@@ -502,6 +507,8 @@ def register_bank_events(sio):
             _qids = list(gs.pstate.get(_sid, {}).get('asked_ids', []))
             if _u and _qids:
                 asyncio.create_task(asyncio.to_thread(_record_seen_bulk, _u, _qids))
+        if winner_sid is None and room.get("type") == "public" and len(room["players"]) == 2:
+            await asyncio.to_thread(record_match_result,*room["players"],"bank",{"draw":True})
         if winner_sid:
             wp = next((p for p in room['players'] if p['sid'] == winner_sid), None)
             lp = next((p for p in room['players'] if p['sid'] != winner_sid), None)

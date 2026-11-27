@@ -22,4 +22,10 @@ def verify_socket_token(token: str | None) -> tuple:
     if getattr(user, 'is_banned', False):
         db.close()
         return None, None
+    from datetime import datetime
+    from app.domains.games.models import FairPlayAccount
+    penalty = db.get(FairPlayAccount,user.id)
+    if penalty and penalty.suspended_until and penalty.suspended_until > datetime.utcnow():
+        db.close()
+        return None,None
     return user, db

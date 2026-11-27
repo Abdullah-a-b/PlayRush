@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Text, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Text, UniqueConstraint, Index
 from app.infrastructure.database import Base
 
 class Question(Base):
@@ -91,3 +91,20 @@ class MatchSettlement(Base):
     __tablename__ = 'match_settlements'
     match_id = Column(String(64), primary_key=True)
     settled_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class PairSettlement(Base):
+    __tablename__ = "pair_settlements"
+    match_id = Column(String(64), ForeignKey("match_settlements.match_id"), primary_key=True)
+    low_id = Column(Integer, nullable=False)
+    high_id = Column(Integer, nullable=False)
+    settled_at = Column(DateTime, nullable=False)
+    __table_args__ = (Index("ix_pair_settlement_window", "low_id", "high_id", "settled_at"),)
+
+class FairPlayAccount(Base):
+    __tablename__ = "fair_play_accounts"
+    user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
+    score = Column(Integer, nullable=False, default=0)
+    updated = Column(DateTime, nullable=False)
+    suspended_until = Column(DateTime)
+    permanent_reason = Column(String(200))
