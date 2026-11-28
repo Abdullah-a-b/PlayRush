@@ -131,7 +131,10 @@
         const itemId = btn.dataset.buy;
         btn.disabled = true;
         btn.textContent = '...';
-        socket.emit('purchase_item', { token: _token(), itemId });
+        const pendingKey = 'purchase:' + itemId + ':' + (sessionStorage.getItem('userId') || '');
+        const requestId = sessionStorage.getItem(pendingKey) || crypto.randomUUID();
+        sessionStorage.setItem(pendingKey, requestId);
+        socket.emit('purchase_item', { token: _token(), itemId, requestId });
       });
     });
   }
@@ -142,6 +145,8 @@
 
   socket.on('purchase_result', (data) => {
     if (!data) { renderStore(); return; }
+    const pendingKey = 'purchase:' + data.itemId + ':' + (sessionStorage.getItem('userId') || '');
+    if (data.itemId && (!data.requestId || sessionStorage.getItem(pendingKey) === data.requestId)) sessionStorage.removeItem(pendingKey);
     _toast((data.ok ? '✅ ' : '⚠️ ') + (data.msg || ''));
     if (data.ok) {
       // نحدّث المحفظة محلياً

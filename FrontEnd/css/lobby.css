@@ -350,3 +350,11 @@ body {
 .store-scope { font-size: 11px; padding: 3px 8px; border-radius: 10px; margin: 4px auto; display: inline-block; }
 .store-scope.game { background: rgba(155,89,182,0.2); color: #c39bd3; }
 .store-scope.general { background: rgba(52,152,219,0.2); color: #5dade2; }
+
+@media (max-width: 900px) {
+  #gameLobbyNav { display: grid !important; grid-template-columns: repeat(4,minmax(0,1fr)); height: auto; }
+  #gameLobbyNav .nav-btn { flex-direction: column; min-width: 0; width: 100%; height: auto; gap: .25rem; padding: .4rem .1rem; }
+  #gameLobbyNav .nav-btn > span:not([id]) { display: block !important; font-size: .7rem; white-space: normal; }
+}
+
+#mmStart[hidden], #mmNextActions[hidden], #mmSolo[hidden] { display: none !important; }

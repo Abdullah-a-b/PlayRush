@@ -660,15 +660,32 @@ window.addEventListener('DOMContentLoaded', async () => {
     const mmStatusDesc        = document.getElementById('mmStatusDesc');
     const mmCountdown         = document.getElementById('mmCountdown');
 
+    const nextActions = document.getElementById('mmNextActions');
+    let searching = false;
+    function showExpired() {
+        if (!searching) return;
+        stopSearchClock();
+        searching = false;
+        mmRadar.style.display = 'none';
+        mmStatusTitle.textContent = 'لم نجد منافسًا هذه المرة';
+        mmStatusDesc.textContent = 'كيف تحب أن تكمل؟';
+        nextActions.hidden = false;
+        document.getElementById('mmSolo').hidden = !SOLO_SUPPORTED_MODES.includes(selectedGameMode);
+    }
+    document.getElementById('mmRetry').onclick = beginSearch;
+    document.getElementById('mmSolo').onclick = () => {
+        cancelMatchmakingBtn.click();
+        soloModeBtn.click();
+    };
     let searchTimer = null;
     function stopSearchClock() {
         clearInterval(searchTimer);
         searchTimer = null;
     }
 
-    function startSearchClock() {
+    function startSearchClock(duration = 30000) {
         stopSearchClock();
-        const deadline = Date.now() + 30000;
+        const deadline = Date.now() + duration;
         const digits = new Intl.NumberFormat('ar-EG');
         function render() {
             const seconds = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
@@ -678,7 +695,30 @@ window.addEventListener('DOMContentLoaded', async () => {
         render();
         searchTimer = setInterval(render, 250);
     }
+    socket.on('quick_play_started', data => {
+        if (searching) startSearchClock(Math.max(0, (data.expires_at - data.server_time) * 1000));
+    });
+    const mmStart = document.getElementById('mmStart');
     quickPlayBtn?.addEventListener('click', () => {
+        lobbyMainContent.style.display = 'none';
+        matchmakingScreen.style.display = 'flex';
+        document.body.classList.add('mm-active');
+        mmStatusTitle.style.color = '';
+        mmStatusTitle.textContent = 'اللعب السريع';
+        mmStatusDesc.textContent = 'نبحث لمدة تصل إلى ٣٠ ثانية عن منافس مناسب في هذه اللعبة. تبدأ المباراة فور العثور عليه، وقد تقل المكاسب عند تكرار المواجهة.';
+        nextActions.hidden = true;
+        mmStart.hidden = false;
+        mmRadar.style.display = mmTeamsPreview.style.display = mmCountdown.style.display = 'none';
+        cancelMatchmakingBtn.style.display = 'block';
+        cancelMatchmakingBtn.textContent = 'رجوع';
+        mmStart.focus();
+    });
+    mmStart.onclick = beginSearch;
+    function beginSearch() {
+        if (searching) return;
+        mmStart.hidden = true;
+        searching = true;
+        nextActions.hidden = true;
         lobbyMainContent.style.display   = 'none';
         matchmakingScreen.style.display  = 'flex';
         document.body.classList.add('mm-active');
@@ -696,11 +736,13 @@ window.addEventListener('DOMContentLoaded', async () => {
             game_mode:   selectedGameMode,
             avatar:      userDataCache.avatar,
         });
-    });
+    }
 
     cancelMatchmakingBtn?.addEventListener('click', () => {
         stopSearchClock();
-        socket.emit('cancel_quick_play');
+        if (searching) socket.emit('cancel_quick_play');
+        searching = false;
+        nextActions.hidden = true;
         matchmakingScreen.style.display = 'none';
         document.body.classList.remove('mm-active');
         lobbyMainContent.style.display  = 'block';
@@ -708,6 +750,9 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     // 🆕 معالج الخطأ — يطلع للاعب بدل ما يبقى عالق في "جاري البحث"
     socket.on('quick_play_error', (data) => {
+        if (!searching) return;
+        if (data?.code === 'expired' || data?.msg?.startsWith('انتهى البحث')) return showExpired();
+        searching = false;
         stopSearchClock();
         const msg = (data && data.msg) ? data.msg : 'تعذّر البحث عن مباراة';
         mmStatusTitle.textContent = 'تعذّر البحث';
@@ -736,6 +781,9 @@ window.addEventListener('DOMContentLoaded', async () => {
         return `assets/avatars/${name.includes('.') ? name : name + '.svg'}`;
     }
     socket.on('match_found', (data) => {
+        mmStart.hidden = true;
+        searching = false;
+        nextActions.hidden = true;
         stopSearchClock();
         try {
             sessionStorage.setItem('gameRoomCode', data.room_code);

@@ -80,8 +80,8 @@
       </div>
     </header>
 
-    <nav class="main-navigation">
-      <button class="nav-btn active" onclick="window.location.href='categories.html'"><i class="fa-solid fa-gamepad"></i> <span>ساحة الألعاب</span></button>
+    <nav class="main-navigation" id="gameLobbyNav">
+      <button class="nav-btn active" onclick="document.getElementById('lobbyMainTitle').scrollIntoView({block:'center'})"><i class="fa-solid fa-gamepad"></i> <span>لوبي اللعبة</span></button>
       <button class="nav-btn nav-btn-guide" id="guideNavBtn" onclick="if(window.openHowToPlay)window.openHowToPlay()"><i class="fa-solid fa-circle-question"></i> <span>كيف ألعب؟</span></button>
       <button class="nav-btn" onclick="openStoreModal()"><i class="fa-solid fa-store"></i> <span>المتجر</span></button>
       <button class="nav-btn" onclick="if(window.openLoadout)window.openLoadout()"><i class="fa-solid fa-wand-magic-sparkles"></i> <span>المساعدات</span></button>
@@ -110,7 +110,7 @@
         <div class="quick-actions">
           <button class="action-btn primary" id="quickPlayBtn" style="background: linear-gradient(45deg, #a855f7, #9333ea); color: #fff; box-shadow: 0 10px 20px rgba(168, 85, 247, 0.4);">
               <i class="fa-solid fa-bolt" style="font-size: 26px;"></i> 
-              <div class="lobby-action-copy"><span>اللعب السريع</span><small>ابحث عن منافس وابدأ المباراة</small></div>
+              <div class="lobby-action-copy"><span>اللعب السريع</span><small>نبحث حتى ٣٠ ثانية عن خصم مناسب. قد تقل المكاسب عند تكرار نفس الخصم.</small></div>
           </button>
 
           <button class="action-btn primary" id="localPartyBtn" style="display: none; background: linear-gradient(45deg, #f59e0b, #ea580c); color: #fff; box-shadow: 0 10px 20px rgba(245, 158, 11, 0.4);">
@@ -177,6 +177,8 @@
 
         <div class="countdown-timer" id="mmCountdown">3</div>
 
+        <button id="mmStart" class="play-btn" hidden>بدء البحث</button>
+        <div id="mmNextActions" hidden><button class="play-btn" id="mmRetry">استمرار البحث</button> <button class="play-btn" id="mmSolo">اللعب ضد البوت</button></div>
         <button id="cancelMatchmakingBtn" class="play-btn" style="width: auto; padding: 12px 40px; background: #f43f5e; color: #fff; margin-top: 30px;">إلغاء البحث</button>
     </div>
 

@@ -454,10 +454,14 @@ function attachSessionExpiryHandler(socketInstance) {
     if (!socketInstance) return;
     socketInstance.on('judge_unavailable', data => window.showToast?.(data.msg));
     socketInstance.on('match_connection_lost', data => window.showToast?.(data.msg));
-    socketInstance.on('match_unavailable', () => {
+    socketInstance.on('match_unavailable', data => {
         if(!location.pathname.includes('/games/')) return;
         sessionStorage.removeItem('gameRoomCode');
-        window.alert('تعذّر استعادة المباراة. عُد إلى اللوبي لبدء مباراة جديدة.');
+        const results = {win:'فوز', loss:'خسارة', draw:'تعادل'};
+        const msg = data?.status === 'cancelled' ? 'أُلغيت المباراة بسبب تعطل الخادم. أُعيدت المساعدات المستهلكة ولم يتغير تصنيفك.'
+            : data?.status === 'settled' ? 'حُفظت نتيجة المباراة: ' + results[data.result]
+            : 'تعذّر استعادة المباراة. عُد إلى اللوبي لبدء مباراة جديدة.';
+        window.alert(msg);
         location.replace('../lobby.html');
     });
     socketInstance.on('session_expired', () => {
