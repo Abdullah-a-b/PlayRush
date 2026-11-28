@@ -128,10 +128,10 @@ async def judge_answer(question_text, correct_answer, player_answer, timeout=2.0
                 local ms=t[1]*1000+math.floor(t[2]/1000)
                 redis.call('ZREMRANGEBYSCORE',KEYS[1],'-inf',ms)
                 if redis.call('ZCARD',KEYS[1])>=2 then return 0 end
-                redis.call('ZADD',KEYS[1],ms+30000,ARGV[1])
-                redis.call('PEXPIRE',KEYS[1],31000)
+                redis.call('ZADD',KEYS[1],ms+tonumber(ARGV[2]),ARGV[1])
+                redis.call('PEXPIRE',KEYS[1],math.max(redis.call('PTTL',KEYS[1]),tonumber(ARGV[2])+1000))
                 return 1
-            """, 1, "pr:judge:slots", lease), min(timeout, .25))
+            """, 1, "pr:judge:slots", lease, max(30000, int(timeout*1000)+5000)), min(timeout, .25))
         except asyncio.CancelledError:
             _slots.release()
             raise
@@ -155,6 +155,8 @@ async def judge_answer(question_text, correct_answer, player_answer, timeout=2.0
         future = _JUDGE_EXECUTOR.submit(_sync_call)
     except Exception:
         _slots.release()
+        if client is not None:
+            await release_remote()
         raise
     def finished(_):
         _slots.release()

@@ -165,12 +165,12 @@
         var col = el('div', 'pass-col' + (t.unlocked ? ' unlocked' : ''));
         col.appendChild(el('div', 'pass-col-num', String(t.tier)));
         col.appendChild(passRewardBox(t.free, t.free_claimed, t.unlocked, async function () {
-          var r = await ProgressionAPI.claimPassTier(t.tier, 'free');
+          var r = await ProgressionAPI.claimPassTier(t.tier, 'free', data.pass.season);
           if (r && r.ok) { toast('🎁 استلمت مكافأة المحطة ' + t.tier); renderPass(); refreshWallet(); }
           else toast('⚠️ ' + ((r && r.msg) || 'تعذّر الاستلام'));
         }));
         var premClaim = p.is_premium ? async function () {
-          var r = await ProgressionAPI.claimPassTier(t.tier, 'premium');
+          var r = await ProgressionAPI.claimPassTier(t.tier, 'premium', data.pass.season);
           if (r && r.ok) { toast('👑 استلمت مكافأة Premium للمحطة ' + t.tier); renderPass(); refreshWallet(); }
           else toast('⚠️ ' + ((r && r.msg) || 'تعذّر الاستلام'));
         } : null;

@@ -155,6 +155,18 @@ class PublicMatchLease(Base):
     __table_args__ = (Index("ix_public_lease_expiry", "status", "heartbeat"),)
 
 
+class ActiveMatchMember(Base):
+    __tablename__ = "active_match_members"
+    user_id = Column(Integer, primary_key=True)
+    match_id = Column(String(64), ForeignKey("public_match_leases.match_id"), nullable=False, index=True)
+
+
+class MatchCancellationNotice(Base):
+    __tablename__ = "match_cancellation_notices"
+    match_id = Column(String(64), ForeignKey("public_match_leases.match_id"), primary_key=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
+
+
 class MatchHelpDebit(Base):
     __tablename__ = "match_help_debits"
     id = Column(Integer, primary_key=True)

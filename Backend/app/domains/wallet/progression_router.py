@@ -102,4 +102,4 @@ async def claim_pass_tier(request: Request, current_user: User = Depends(get_cur
     track = (body or {}).get("track", "free")
     if track not in ("free", "premium"):
         return {"ok": False, "msg": "مسار غير صالح"}
-    return PS.claim_tier(db, current_user.id, tier, track)
+    return PS.claim_tier(db, current_user.id, tier, track, body.get('season'))

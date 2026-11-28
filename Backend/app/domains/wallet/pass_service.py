@@ -62,9 +62,9 @@ def premium_rewards(season):
 
 
 def get_or_create_pass(db: Session, user_id: int) -> PlayerPass:
-    skey = season_key()
     from app.domains.users.models import User
     db.query(User.id).filter(User.id == user_id).with_for_update().one()
+    skey = season_key()
     p = (db.query(PlayerPass).populate_existing()
            .filter(PlayerPass.user_id == user_id, PlayerPass.season_key == skey)
            .first())
@@ -127,6 +127,8 @@ def get_pass_state(db: Session, user_id: int) -> dict:
 
 
 def buy_premium(db: Session, user_id: int, request_id=None, intended_season=None) -> dict:
+    if not request_id or not intended_season:
+        return {'ok': False, 'msg': 'معرف الشراء والموسم مطلوبان'}
     from app.domains.users.models import User
     p = get_or_create_pass(db, user_id)
     user = db.query(User).filter(User.id == user_id).populate_existing().with_for_update().first()
@@ -165,7 +167,7 @@ def buy_premium(db: Session, user_id: int, request_id=None, intended_season=None
     return {"ok": True, "gems_left": user.gems, "price": price}
 
 
-def claim_tier(db: Session, user_id: int, tier: int, track: str) -> dict:
+def claim_tier(db: Session, user_id: int, tier: int, track: str, intended_season=None) -> dict:
     """يستلم جائزة محطة من مسار (free/premium). track=premium يتطلب is_premium."""
     from app.domains.users.models import User
     if track not in {"premium", "free"}:
@@ -177,6 +179,8 @@ def claim_tier(db: Session, user_id: int, tier: int, track: str) -> dict:
     if not user:
         return {"ok": False, "msg": "المستخدم غير موجود"}
     db.refresh(p, with_for_update=True)
+    if intended_season != p.season_key:
+        return {'ok': False, 'msg': 'تغير الموسم. افتح البطاقة الحالية.'}
     if _tier_from_xp(p.pass_xp) < tier:
         return {"ok": False, "msg": "لم تبلغ هذه المحطة بعد"}
     if track == "premium" and not p.is_premium:

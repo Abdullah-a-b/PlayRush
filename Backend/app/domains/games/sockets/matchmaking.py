@@ -102,16 +102,30 @@ async def _cluster_try_match(sio, r, game_mode):
                 rooms.pop(room_code, None)
                 await r.eval("if redis.call('get',KEYS[1])==ARGV[1] then return redis.call('del',KEYS[1]) end",
                              1, "pr:room_owner:"+room_code, cluster.WORKER_ID)
-                for key in active_keys:
-                    await r.eval("if redis.call('get',KEYS[1])==ARGV[1] then return redis.call('del',KEYS[1]) end",1,key,room_code)
-                for player in (p1,p2):
-                    await sio.emit('quick_play_error',{'msg':'تعذر إنشاء المباراة. أعد البحث.'},to=player['sid'])
-                raise
+                for player, raw, active in zip((p1,p2), (p1_item,p2_item), active_keys):
+                    restored = await r.eval("""
+                        if redis.call('GET',KEYS[1]) ~= ARGV[1] then return 0 end
+                        redis.call('DEL',KEYS[1])
+                        local t=redis.call('TIME')
+                        if t[1]+t[2]/1000000 >= cjson.decode(ARGV[2]).time+30 then return 0 end
+                        if redis.call('EXISTS',KEYS[3],KEYS[4],KEYS[5])>0 then return 0 end
+                        if redis.call('EXISTS',KEYS[6])==0 then return 0 end
+                        redis.call('SET',KEYS[3],ARGV[3],'EX',120)
+                        redis.call('SET',KEYS[4],ARGV[3],'EX',120)
+                        redis.call('LPUSH',KEYS[2],ARGV[2])
+                        return 1
+                    """,6,active,_MMQ+game_mode,_MMQ_SID+player['sid'],_MMQ_UID+str(player['user_id']),
+                        _cancel_key(player['sid'],player.get('requestId')),'pr:conn:'+player['sid'],
+                        room_code,raw,player['sid'])
+                    if not restored:
+                        await sio.emit('quick_play_error',{'requestId':player.get('requestId'),
+                            'msg':'تعذر إنشاء المباراة. أعد البحث.'},to=player['sid'])
+                return
             players_list = list(rp_data.values())
             for p in matched:
                 role = 'host' if p['sid'] == matched[0]['sid'] else 'guest'
                 await sio.emit('match_found',
-                               {'room_code': room_code, 'role': role,
+                               {'requestId': p.get('requestId'), 'room_code': room_code, 'role': role,
                                 'players': players_list}, to=p['sid'])
             print(f" [matchmaking] تطابق عنقودي {room_code} "
                   f"(مالكها worker {cluster.WORKER_ID})")
@@ -152,10 +166,16 @@ async def _discard(r, key, raw, entry):
     """,3,key,_MMQ_SID+entry["sid"],_MMQ_UID+str(entry["user_id"]),raw,entry["sid"])
 
 
+def _cancel_key(sid, request_id):
+    return f"pr:mm_cancel:{sid}:{request_id or chr(45)}"
+
+
 async def _cluster_leave_queue(sid, request_id=None):
     r = await _redis_mm()
     if r is None:
         return False
+    if request_id:
+        await r.set(_cancel_key(sid,str(request_id)[:64]), "1", ex=120)
     from app.domains.games.core_manager import _get_valid_modes
     for mode in _get_valid_modes():
         key = _MMQ+mode
@@ -287,7 +307,7 @@ def register_matchmaking_events(sio):
             players_list = list(rp_data.values())
             for p in matched_players:
                 role = 'host' if p['sid'] == matched_players[0]['sid'] else 'guest'
-                await sio.emit('match_found', {'room_code': room_code, 'role': role, 'players': players_list}, to=p['sid'])
+                await sio.emit('match_found', {'requestId': p.get('requestId'), 'room_code': room_code, 'role': role, 'players': players_list}, to=p['sid'])
 
     @sio.on('cancel_quick_play')
     async def cancel_quick_play(sid, data=None):
@@ -296,4 +316,4 @@ def register_matchmaking_events(sio):
         if await _redis_mm() is not None:
             removed = (await _cluster_leave_queue(sid, request_id)) or removed
         if removed:
-            await sio.emit('quick_play_cancelled', {}, to=sid)
+            await sio.emit('quick_play_cancelled', {'requestId': request_id}, to=sid)

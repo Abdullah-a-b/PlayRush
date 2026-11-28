@@ -20,7 +20,7 @@ import time
 import asyncio
 import statistics
 import logging
-from collections import defaultdict, deque
+from collections import OrderedDict, defaultdict, deque
 from typing import Optional
 from datetime import datetime, timedelta
 
@@ -46,7 +46,8 @@ MAX_IPS_PER_TOKEN_PER_HOUR = 3  # token من 3 IPs مختلفة في ساعة = 
 # ==========================================
 
 # {sid: deque of timestamps for each event type}
-event_timeline: dict = defaultdict(lambda: defaultdict(lambda: deque(maxlen=100)))
+event_timeline = OrderedDict()
+_last_rate_warning = float("-inf")
 
 # {token: {ip: last_seen_ts}}
 token_ip_history: dict = defaultdict(dict)
@@ -81,6 +82,11 @@ def check_action_rate(sid: str, event_type: str, max_per_second: int = MAX_EVENT
     يرجع None لو طبيعي، أو reason string لو spam.
     """
     now = time.time()
+    if sid not in event_timeline:
+        if len(event_timeline) >= 8192:
+            event_timeline.popitem(last=False)
+        event_timeline[sid] = defaultdict(lambda: deque(maxlen=128))
+    event_timeline.move_to_end(sid)
     timeline = event_timeline[sid][event_type]
     timeline.append(now)
 
@@ -113,7 +119,12 @@ async def check_account_rate(sid, event_type, max_per_second, room=None):
             return count
         """, 1, f"pr:rate:{uid}:{event_type}", uuid4().hex)
     except Exception:
-        return None
+        global _last_rate_warning
+        now = time.monotonic()
+        if now - _last_rate_warning >= 60:
+            logger.warning("تعذر فحص المعدل الموزع؛ يعمل الفحص المحلي")
+            _last_rate_warning = now
+        return check_action_rate(str(uid), event_type, max_per_second)
     if count > max_per_second:
         return f"spam_detected:{event_type}={count}/s"
     return None

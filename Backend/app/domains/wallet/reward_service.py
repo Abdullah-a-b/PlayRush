@@ -87,6 +87,8 @@ def save_match_sync(winner_player: dict, loser_player: dict, game_mode: str, ext
         if lease:
             if sorted((lease.first_uid, lease.second_uid)) != [low, high]:
                 return
+            from app.domains.games.models import ActiveMatchMember
+            db.query(ActiveMatchMember).filter_by(match_id=match_id).delete()
             lease.status = "settled"
             lease.winner_id = None if extra.get("draw") else ids[0]
         now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)

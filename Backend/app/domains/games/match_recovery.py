@@ -1,13 +1,15 @@
 """Neutral cancellation and aid reimbursement for public matches with expired owners."""
 import asyncio
 import os
+import logging
+import time
 from datetime import timedelta
 
 from sqlalchemy import func, text
 from sqlalchemy.dialects.postgresql import insert
 
 from app.core.cluster import WORKER_ID
-from app.domains.games.models import MatchHelpDebit, MatchSettlement, PublicMatchLease
+from app.domains.games.models import ActiveMatchMember, MatchCancellationNotice, MatchHelpDebit, MatchSettlement, PublicMatchLease
 from app.infrastructure.database import SessionLocal
 
 GRACE = max(60, int(os.environ.get("MATCH_OWNER_GRACE_SEC", "150")))
@@ -30,6 +32,20 @@ def register(room, mid, reserved=False):
         row = db.get(PublicMatchLease, mid, with_for_update=True)
         if not owns_live_lease(db, row, ("reserved", "active")):
             raise RuntimeError("match owner expired")
+        uids = sorted((a['user_id'], b['user_id']))
+        if row.room_code != room['code'] or sorted((row.first_uid, row.second_uid)) != uids or uids[0] == uids[1]:
+            raise RuntimeError("invalid match membership")
+        # يعالج أيضاً المباريات القديمة التي سبقت إضافة جدول العضوية.
+        other = db.query(PublicMatchLease.match_id).filter(PublicMatchLease.match_id != mid,
+            PublicMatchLease.status.in_(("reserved", "active")),
+            PublicMatchLease.first_uid.in_(uids) | PublicMatchLease.second_uid.in_(uids)).first()
+        if other:
+            raise RuntimeError("account already matched")
+        for uid in uids:
+            db.execute(insert(ActiveMatchMember).values(user_id=uid, match_id=mid)
+                       .on_conflict_do_nothing(index_elements=['user_id']))
+            if db.get(ActiveMatchMember, uid).match_id != mid:
+                raise RuntimeError("account already matched")
         if not reserved:
             row.status = "active"
             row.heartbeat = func.timezone("UTC", func.now())
@@ -47,6 +63,7 @@ def maintain(active_ids):
         stale = db.query(PublicMatchLease).filter(PublicMatchLease.status.in_(("reserved","active")),
             PublicMatchLease.heartbeat <= cutoff).order_by(PublicMatchLease.heartbeat).limit(50).with_for_update(skip_locked=True)
         for row in stale:
+            db.query(ActiveMatchMember).filter_by(match_id=row.match_id).delete()
             if db.get(MatchSettlement, row.match_id):
                 row.status = "settled"
                 continue
@@ -56,6 +73,7 @@ def maintain(active_ids):
                 db.execute(text("""INSERT INTO player_help_inventory(user_id,help_id,quantity)
                     VALUES(:uid,:hid,1) ON CONFLICT(user_id,help_id) DO UPDATE SET
                     quantity=player_help_inventory.quantity+1"""), {"uid":debit.user_id,"hid":debit.help_id})
+            db.add(MatchCancellationNotice(match_id=row.match_id))
             cancelled.append((row.room_code, row.first_uid, row.second_uid))
     return cancelled
 
@@ -73,17 +91,46 @@ def last_result(code, uid):
                 "win" if row.winner_id == uid else "loss"}
 
 
+def pending_notices():
+    with SessionLocal() as db:
+        return db.query(PublicMatchLease.match_id, PublicMatchLease.room_code, PublicMatchLease.first_uid,
+                        PublicMatchLease.second_uid).join(MatchCancellationNotice,
+            MatchCancellationNotice.match_id == PublicMatchLease.match_id).order_by(
+            MatchCancellationNotice.created_at).limit(100).all()
+
+
+def acknowledge_notice(mid):
+    with SessionLocal.begin() as db:
+        db.query(MatchCancellationNotice).filter_by(match_id=mid).delete()
+
+
+last_successful_cycle = None
+
+
 async def recovery_loop(sio):
+    global last_successful_cycle
     from app.domains.games.core_manager import rooms
     from app.infrastructure.redis_client import get_redis
+    delay = 20
     while True:
-        await asyncio.sleep(20)
-        mids = [r["settlement_id"] for r in list(rooms.values()) if r.get("settlement_id")
-                and r.get("type") == "public" and r.get("state") != "finished"]
-        for code, a, b in await asyncio.to_thread(maintain, mids):
-            await sio.emit("match_unavailable", {"status":"cancelled"}, room=code)
-            client = get_redis()
-            if client is not None:
-                for uid in (a,b):
-                    await client.eval("if redis.call('GET',KEYS[1])==ARGV[1] then return redis.call('DEL',KEYS[1]) end",
-                                      1, "pr:mm_active:"+str(uid), code)
+        await asyncio.sleep(delay)
+        try:
+            mids = [r["settlement_id"] for r in list(rooms.values()) if r.get("settlement_id")
+                    and r.get("type") == "public" and r.get("state") != "finished"]
+            await asyncio.to_thread(maintain, mids)
+            for mid, code, a, b in await asyncio.to_thread(pending_notices):
+                try:
+                    client = get_redis()
+                    if client is not None:
+                        for uid in (a, b):
+                            await client.eval("if redis.call('GET',KEYS[1])==ARGV[1] then return redis.call('DEL',KEYS[1]) end",
+                                              1, "pr:mm_active:"+str(uid), code)
+                    await sio.emit("match_unavailable", {"status":"cancelled","matchId":mid}, room=code)
+                    await asyncio.to_thread(acknowledge_notice, mid)
+                except Exception:
+                    logging.exception("تعذر إرسال إشعار الإلغاء %s", mid)
+            last_successful_cycle = time.time()
+            delay = 20
+        except Exception:
+            logging.exception("تعذر إكمال دورة استعادة المباريات")
+            delay = min(60, delay * 2)

@@ -46,6 +46,6 @@
       if (typeof result.ok === 'boolean') sessionStorage.removeItem(key);
       return result;
     },
-    claimPassTier: (tier, track) => _post('/progression/pass/claim', { tier, track }),
+    claimPassTier: (tier, track, season) => _post('/progression/pass/claim', { tier, track, season }),
   };
 })();

@@ -135,41 +135,49 @@ def alternatives(choices, i, j):
     return {k: sum(k in pair for pair in choices) - 1 for k in (i, j)}
 
 
+def sampled_pairs(size, now):
+    # افحص كل الأزواج في الطوابير الصغيرة، ودوّر المرشحين في الطوابير الكبيرة.
+    from itertools import combinations
+    if size <= 25:
+        yield from combinations(range(size), 2)
+        return
+    half = size // 2
+    for step in range(min(12, half)):
+        distance = 1 + (int(now) * 12 + step) % half
+        count = half if distance * 2 == size else size
+        for i in range(count):
+            j = (i + distance) % size
+            yield (i, j) if i < j else (j, i)
+
+
 def candidate_pairs(entries, blocked, friends, previous, now, strengths=None):
     """Rank eligible pairs by unlocked class, then by the older request."""
     import heapq
     from collections import Counter
     counts = Counter()
     def scored():
-        size = len(entries)
-        budget = min(24, max(0, size - 1))
-        offset = int(now) * budget % max(1, size - 1)
-        for i, first in enumerate(entries):
-            for step in range(budget):
-                j = (i + 1 + (offset + step) % (size - 1)) % size
-                if j <= i:
-                    continue
-                second = entries[j]
-                ids = first.get('user_id'), second.get('user_id')
-                if not all(ids) or ids[0] == ids[1]:
-                    continue
-                pair = tuple(sorted(ids))
-                oldest = min(first['time'], second['time'])
-                elapsed = now - oldest
-                if pair in blocked or elapsed >= 30:
-                    continue
-                same_net = first.get('ip') not in (None, 'unknown') and first['ip'] == second.get('ip')
-                if pair in friends:
-                    threshold = 20
-                elif same_net:
-                    threshold = 15 if pair in previous else 10
-                else:
-                    threshold = 5 if pair in previous else 0
-                if elapsed >= threshold:
-                    gap = abs(strengths.get(ids[0], .5) - strengths.get(ids[1], .5)) if strengths else 0
-                    counts[i] += 1
-                    counts[j] += 1
-                    yield threshold, oldest, gap, max(first['time'], second['time']), i, j
+        for i, j in sampled_pairs(len(entries), now):
+            first, second = entries[i], entries[j]
+            ids = first.get('user_id'), second.get('user_id')
+            if not all(ids) or ids[0] == ids[1]:
+                continue
+            pair = tuple(sorted(ids))
+            oldest = min(first['time'], second['time'])
+            elapsed = now - oldest
+            if pair in blocked or elapsed >= 30:
+                continue
+            same_net = first.get('ip') not in (None, 'unknown') and first['ip'] == second.get('ip')
+            if pair in friends:
+                threshold = 20
+            elif same_net:
+                threshold = 15 if pair in previous else 10
+            else:
+                threshold = 5 if pair in previous else 0
+            if elapsed >= threshold:
+                gap = abs(strengths.get(ids[0], .5) - strengths.get(ids[1], .5)) if strengths else 0
+                counts[i] += 1
+                counts[j] += 1
+                yield threshold, oldest, gap, max(first['time'], second['time']), i, j
     choices = CandidateList((i,j) for *_,i,j in heapq.nsmallest(64, scored()))
     choices.counts = counts
     return choices
@@ -178,8 +186,7 @@ def candidate_pairs(entries, blocked, friends, previous, now, strengths=None):
 def ranked_pairs(entries, game_mode):
     if len(entries) < 2:
         return []
-    from sqlalchemy import text, bindparam
-    from app.domains.games.models import PairSettlement
+    from sqlalchemy import text
     from app.domains.users import friends as social
     from app.infrastructure.database import SessionLocal
     ids = list({p['user_id'] for p in entries if p.get('user_id')})
@@ -191,21 +198,37 @@ def ranked_pairs(entries, game_mode):
         allowed = set(row[0] for row in db.query(User.id).outerjoin(FairPlayAccount, FairPlayAccount.user_id==User.id)
             .filter(User.id.in_(ids),User.is_banned.is_(False),User.is_verified.is_(True),
                     (FairPlayAccount.suspended_until.is_(None)) | (FairPlayAccount.suspended_until<=datetime.utcnow())))
-        blocked, friends = set(), set()
-        query = text("SELECT user_id,friend_id,status FROM friendships WHERE user_id IN :ids AND friend_id IN :ids").bindparams(bindparam("ids", expanding=True))
-        for a,b,status in db.execute(query, {'ids':ids}):
-            pair = tuple(sorted((a,b)))
-            if status == 'blocked':
+        indices = sorted((i for i, entry in enumerate(entries) if entry.get('user_id') in allowed),
+                         key=lambda i: entries[i]['time'])
+        eligible = [entries[i] for i in indices]
+        now = time.time()
+        lows, highs = [], []
+        for i, j in sampled_pairs(len(eligible), now):
+            low, high = sorted((eligible[i]['user_id'], eligible[j]['user_id']))
+            lows.append(low)
+            highs.append(high)
+        query = text("""
+            SELECT p.lo, p.hi, f.status, r.status, EXISTS (
+                SELECT 1 FROM pair_settlements h WHERE h.low_id=p.lo AND h.high_id=p.hi)
+            FROM unnest(CAST(:lo AS integer[]), CAST(:hi AS integer[])) AS p(lo,hi)
+            LEFT JOIN friendships f ON f.user_id=p.lo AND f.friend_id=p.hi
+            LEFT JOIN friendships r ON r.user_id=p.hi AND r.friend_id=p.lo
+            WHERE f.status IN ('accepted','blocked') OR r.status IN ('accepted','blocked')
+               OR EXISTS (SELECT 1 FROM pair_settlements h WHERE h.low_id=p.lo AND h.high_id=p.hi)
+        """)
+        blocked, friends, previous = set(), set(), set()
+        for low, high, forward, reverse, played in db.execute(query, {'lo': lows, 'hi': highs}):
+            pair = (low, high)
+            if 'blocked' in (forward, reverse):
                 blocked.add(pair)
-            elif status == 'accepted':
+            elif 'accepted' in (forward, reverse):
                 friends.add(pair)
+            if played:
+                previous.add(pair)
         strengths = {uid: estimated_strength(w or 0, l or 0, game_mode)
                      for uid, w, l in db.query(GameStat.user_id, GameStat.wins, GameStat.losses)
                      .filter(GameStat.user_id.in_(ids), GameStat.game_mode == game_mode)}
-        previous = set(tuple(row) for row in db.query(PairSettlement.low_id, PairSettlement.high_id)
-                       .filter(PairSettlement.low_id.in_(ids), PairSettlement.high_id.in_(ids)).distinct())
-    indices = [i for i, p in enumerate(entries) if p.get("user_id") in allowed]
-    choices = candidate_pairs([entries[i] for i in indices], blocked, friends, previous, time.time(), strengths)
+    choices = candidate_pairs(eligible, blocked, friends, previous, now, strengths)
     mapped = CandidateList((indices[i], indices[j]) for i,j in choices)
     mapped.counts = {indices[i]: n for i,n in choices.counts.items()}
     return mapped

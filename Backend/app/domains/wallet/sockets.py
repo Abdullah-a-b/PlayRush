@@ -140,7 +140,7 @@ def register_store_events(sio):
             await sio.emit('purchase_result', {
                 'ok': True, 'msg': f"تم شراء {item['name']} ✅", 'itemId': item['id'],
                 'requestId': data.get('requestId'), 'category': item['category'], 'asset': item.get('asset'),
-                'wallet': result['wallet'],
+                'wallet': result['wallet'], 'receipt_wallet': result['receipt_wallet'],
             }, to=sid)
         finally:
             db.close()

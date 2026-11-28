@@ -785,6 +785,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         return `assets/avatars/${name.includes('.') ? name : name + '.svg'}`;
     }
     socket.on('match_found', (data) => {
+        if (data.requestId && data.requestId !== searchRequestId) return;
         mmStart.hidden = true;
         searching = false;
         nextActions.hidden = true;

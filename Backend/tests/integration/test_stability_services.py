@@ -195,6 +195,33 @@ else:
             self.assertEqual(last_result(room["code"], self.ids[0])["status"], "settled" if settled else "cancelled")
             self.assertEqual(get_quantity(self.ids[0], "test_recovery"), before-int(settled))
 
+    def test_concurrent_reservations_share_at_most_one_member(self):
+        from threading import Barrier
+        from app.domains.games.match_recovery import register
+        from app.domains.games.models import ActiveMatchMember, PublicMatchLease
+        from app.domains.users.models import User
+        with self.db.begin() as db:
+            third = User(email=uuid.uuid4().hex+"@test.invalid", is_verified=True)
+            db.add(third)
+            db.flush()
+            opponents = [self.ids[1], third.id]
+        barrier = Barrier(2)
+        def reserve(opponent):
+            mid = uuid.uuid4().hex
+            barrier.wait(5)
+            try:
+                register(dict(code=mid[:8], players=[dict(user_id=u) for u in (self.ids[0],opponent)]), mid, True)
+            except RuntimeError:
+                return None
+            return mid
+        with ThreadPoolExecutor(2) as pool:
+            results = list(pool.map(reserve, opponents))
+        self.assertEqual(results.count(None), 1)
+        with self.db() as db:
+            mid = next(result for result in results if result)
+            self.assertEqual(db.query(ActiveMatchMember).filter_by(match_id=mid).count(), 2)
+            self.assertEqual(db.query(PublicMatchLease).filter_by(first_uid=self.ids[0]).count(), 1)
+
     def test_fifty_purchase_retries(self):
         from app.domains.wallet.purchase_service import purchase
         from app.domains.users.models import User
@@ -204,6 +231,8 @@ else:
                     unlock_level=0, category="help")
         with self.db.begin() as db:
             db.get(User, uid).coins = 10
+        with self.db() as db:
+            self.assertFalse(purchase(db, uid, item)["ok"])
         key = str(uuid.uuid4())
         def buy(_):
             with self.db() as db:
@@ -213,6 +242,11 @@ else:
         self.assertTrue(all(r["ok"] and r["wallet"]["coins"] == 7 for r in results))
         with self.db() as db:
             self.assertEqual(db.get(User, uid).coins, 7)
+            db.get(User, uid).coins = 17
+            db.commit()
+            replay = purchase(db, uid, item, key)
+            self.assertEqual(replay['receipt_wallet']['coins'], 7)
+            self.assertEqual(replay['wallet']['coins'], 17)
             self.assertFalse(purchase(db, uid, dict(item, id="another_item"), key)["ok"])
             self.assertEqual(db.execute(text("select quantity from player_help_inventory where user_id=:u and help_id='test_help'"), {"u":uid}).scalar(), 1)
 
@@ -230,10 +264,10 @@ else:
             for track in ("free","premium"):
                 gems[track]=0
                 for tier in range(1,31):
-                    result=service.claim_tier(db,uid,tier,track)
+                    result=service.claim_tier(db,uid,tier,track,'2026-S12')
                     self.assertTrue(result["ok"])
                     gems[track]+=result["reward"].get("gems",0)
-                    self.assertFalse(service.claim_tier(db,uid,tier,track)["ok"])
+                    self.assertFalse(service.claim_tier(db,uid,tier,track,'2026-S12')["ok"])
             self.assertEqual(gems,{"free":30,"premium":ec.PREMIUM_PASS_GEM_PAYBACK})
             owned=db.execute(text("select count(*) from player_cosmetics where user_id=:u"),{"u":uid}).scalar()
             self.assertEqual(owned,3)

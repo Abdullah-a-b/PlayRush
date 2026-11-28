@@ -4,6 +4,8 @@ from app.domains.users.models import User
 
 
 def purchase(db, user_id, item, request_id=None):
+    if not request_id:
+        return {'ok': False, 'msg': 'معرف طلب الشراء مطلوب'}
     from uuid import UUID
     from app.domains.games.models import StoreReceipt
     # تهيئة جداول الملكية تسبق معاملة الشراء، ولا يحدث خصم خارجها.
@@ -20,7 +22,8 @@ def purchase(db, user_id, item, request_id=None):
             if receipt:
                 if receipt.item_id != item["id"]:
                     raise ValueError("طلب شراء مختلف بنفس المعرّف")
-                return {"ok": True, "wallet": {"coins": receipt.coins, "gems": receipt.gems}}
+                return {"ok": True, "receipt_wallet": {"coins": receipt.coins, "gems": receipt.gems},
+                        "wallet": {"coins": user.coins or 0, "gems": user.gems or 0}}
         if (user.level or 0) < item['unlock_level']:
             raise ValueError(f"يفتح في المستوى {item['unlock_level']}")
         currency, price = item['currency'], item['price']
@@ -48,7 +51,7 @@ def purchase(db, user_id, item, request_id=None):
         if request_id:
             db.add(StoreReceipt(user_id=user_id, request_id=request_id, item_id=item["id"], **wallet))
         db.commit()
-        return {'ok':True,'wallet':wallet}
+        return {'ok':True,'wallet':wallet,'receipt_wallet':wallet}
     except ValueError as exc:
         db.rollback()
         return {'ok':False,'msg':str(exc)}
