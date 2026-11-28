@@ -38,7 +38,14 @@
     quests: () => _get('/progression/quests'),
     claimQuest: (key) => _post('/progression/quests/claim', { quest_key: key }),
     pass: () => _get('/progression/pass'),
-    buyPremium: () => _post('/progression/pass/buy-premium', {}),
+    buyPremium: async (season) => {
+      const key = 'pr:premium:' + season;
+      const requestId = sessionStorage.getItem(key) || crypto.randomUUID();
+      sessionStorage.setItem(key, requestId);
+      const result = await _post('/progression/pass/buy-premium', {season, requestId});
+      if (typeof result.ok === 'boolean') sessionStorage.removeItem(key);
+      return result;
+    },
     claimPassTier: (tier, track) => _post('/progression/pass/claim', { tier, track }),
   };
 })();

@@ -51,6 +51,7 @@ async def _cluster_try_match(sio, r, game_mode):
             start = 64 + page * 64
             raw.extend(await r.lrange(key, start, start + 63))
         entries = []
+        parsed = []
         for item in raw:
             try:
                 e = json.loads(item)
@@ -58,11 +59,11 @@ async def _cluster_try_match(sio, r, game_mode):
                 await r.lrem(_MMQ + game_mode, 1, item)
                 continue
             # مدخل ميت (اتصاله انتهى)؟ ننظفه
-            if not await r.get('pr:conn:' + e.get('sid', '')):
-                await r.lrem(_MMQ + game_mode, 1, item)
-                await r.delete(_MMQ_SID + e.get('sid', ''))
-                if e.get('user_id'):
-                    await _release_uid(r,e)
+            parsed.append((item,e))
+        live = await r.mget(["pr:conn:" + e["sid"] for _, e in parsed]) if parsed else []
+        for (item,e), connected in zip(parsed, live):
+            if not connected:
+                await _discard(r, key, item, e)
                 continue
             entries.append((item, e))
 
@@ -75,6 +76,9 @@ async def _cluster_try_match(sio, r, game_mode):
             reserved = await r.eval("""
                 if redis.call('GET',KEYS[2]) ~= ARGV[1] then return 0 end
                 if redis.call('GET',KEYS[3]) ~= ARGV[4] or redis.call('GET',KEYS[4]) ~= ARGV[5] then return 0 end
+                local t=redis.call('TIME')
+                local now=t[1]+t[2]/1000000
+                if now>=math.min(cjson.decode(ARGV[2]).time,cjson.decode(ARGV[3]).time)+30 then return 0 end
                 if not redis.call('LPOS',KEYS[1],ARGV[2]) or not redis.call('LPOS',KEYS[1],ARGV[3]) then return 0 end
                 if redis.call('EXISTS',KEYS[7],KEYS[8],KEYS[9])~=0 then return 0 end
                 redis.call('SET',KEYS[7],ARGV[6],'EX',120);redis.call('SET',KEYS[8],ARGV[6],'EX',120)
@@ -91,7 +95,13 @@ async def _cluster_try_match(sio, r, game_mode):
                 counts = alternatives(choices, i, j)
                 p1["alternatives"], p2["alternatives"] = counts[i], counts[j]
                 room_code, matched, rp_data = create_match_room(p1,p2,game_mode,room_code)
+                from app.domains.games.core_manager import persist_reservation
+                await persist_reservation(room_code, matched)
             except Exception:
+                from app.domains.games.core_manager import rooms
+                rooms.pop(room_code, None)
+                await r.eval("if redis.call('get',KEYS[1])==ARGV[1] then return redis.call('del',KEYS[1]) end",
+                             1, "pr:room_owner:"+room_code, cluster.WORKER_ID)
                 for key in active_keys:
                     await r.eval("if redis.call('get',KEYS[1])==ARGV[1] then return redis.call('del',KEYS[1]) end",1,key,room_code)
                 for player in (p1,p2):
@@ -127,43 +137,38 @@ async def _cluster_join_queue(sio, sid, entry, game_mode):
     """,4,_MMQ+game_mode,_MMQ_SID+sid,_MMQ_UID+str(entry['user_id']),"pr:mm_active:"+str(entry["user_id"]),sid,json.dumps(entry,ensure_ascii=False))
     if not inserted:
         return False, "أنت بالفعل في البحث"
-    await search_started(sio, sid, entry["time"])
+    await search_started(sio, sid, entry)
     await _cluster_try_match(sio, r, game_mode)
     return True, "تم الانضمام لطابور البحث"
 
 
-async def _release_uid(r,entry):
-    await r.eval("if redis.call('GET',KEYS[1])==ARGV[1] then return redis.call('DEL',KEYS[1]) end return 0",
-                 1,_MMQ_UID+str(entry['user_id']),entry['sid'])
+async def _discard(r, key, raw, entry):
+    # Compare and remove the serialized request before releasing its markers.
+    return await r.eval("""
+        if redis.call('LREM',KEYS[1],1,ARGV[1]) == 0 then return 0 end
+        if redis.call('GET',KEYS[2]) == ARGV[2] then redis.call('DEL',KEYS[2]) end
+        if redis.call('GET',KEYS[3]) == ARGV[2] then redis.call('DEL',KEYS[3]) end
+        return 1
+    """,3,key,_MMQ_SID+entry["sid"],_MMQ_UID+str(entry["user_id"]),raw,entry["sid"])
 
 
-async def _cluster_leave_queue(sid):
+async def _cluster_leave_queue(sid, request_id=None):
     r = await _redis_mm()
     if r is None:
         return False
-    removed = False
-    try:
-        from app.domains.games.core_manager import _get_valid_modes
-        for mode in _get_valid_modes():
-            key = _MMQ+mode
-            for item in await r.lrange(key, 0, -1):
-                try:
-                    e = json.loads(item)
-                except Exception:
-                    continue
-                if e.get('sid') == sid:
-                    await r.lrem(key, 1, item)
-                    if e.get('user_id'):
-                        await _release_uid(r,e)
-                    removed = True
-        await r.delete(_MMQ_SID + sid)
-    except Exception as ex:
-        print(f" [matchmaking] إلغاء عنقودي: {ex}")
-    return removed
+    from app.domains.games.core_manager import _get_valid_modes
+    for mode in _get_valid_modes():
+        key = _MMQ+mode
+        for raw in await r.lrange(key, 0, -1):
+            entry = json.loads(raw)
+            if entry["sid"] == sid and (request_id is None or entry.get("requestId") == request_id):
+                if await _discard(r, key, raw, entry):
+                    return True
+    return False
 
 
-async def search_started(sio, sid, queued_at):
-    await sio.emit("quick_play_started", {"expires_at": queued_at + 30, "server_time": time.time()}, to=sid)
+async def search_started(sio, sid, entry):
+    await sio.emit("quick_play_started", {"requestId":entry.get("requestId"), "expires_at": entry["time"] + 30, "server_time": time.time()}, to=sid)
 
 
 def register_matchmaking_events(sio):
@@ -177,21 +182,20 @@ def register_matchmaking_events(sio):
                     r = await _redis_mm()
                     if r is None:
                         return
-                    items = await r.lrange(_MMQ+mode,0,-1)
+                    items = await r.lrange(_MMQ+mode,0,127)
                     if not items:
                         return
                     for raw in items:
                         entry = json.loads(raw)
-                        if time.time()-entry['time'] >= 30 and await r.lrem(_MMQ+mode,1,raw):
-                            await r.eval("if redis.call('get',KEYS[1])==ARGV[1] then redis.call('del',KEYS[1],KEYS[2]) end",2,_MMQ_UID+str(entry['user_id']),_MMQ_SID+entry['sid'],entry['sid'])
-                            await sio.emit('quick_play_error',{'code':'expired','msg':'انتهى البحث. يمكنك المحاولة مجدداً.'},to=entry['sid'])
+                        if time.time()-entry['time'] >= 30 and await _discard(r,_MMQ+mode,raw,entry):
+                            await sio.emit('quick_play_error',{'requestId':entry.get('requestId'),'code':'expired','msg':'انتهى البحث. يمكنك المحاولة مجدداً.'},to=entry['sid'])
                     await _cluster_try_match(sio,r,mode)
                 else:
                     queue = matchmaking_queue.get(mode,[])
                     for entry in list(queue):
                         if time.time()-entry['time'] >= 30:
                             remove_from_queue(entry['sid'])
-                            await sio.emit('quick_play_error',{'code':'expired','msg':'انتهى البحث. يمكنك المحاولة مجدداً.'},to=entry['sid'])
+                            await sio.emit('quick_play_error',{'requestId':entry.get('requestId'),'code':'expired','msg':'انتهى البحث. يمكنك المحاولة مجدداً.'},to=entry['sid'])
                     if not queue:
                         return
                     await local_match(mode)
@@ -206,11 +210,12 @@ def register_matchmaking_events(sio):
     @sio.on('quick_play_search')
     async def quick_play_search(sid, data):
         # التحقق من هوية اللاعب قبل إدخاله الطابور
+        request_id = str(data.get('requestId') or '')[:64] or None
         token = data.get('token')
         user, db = verify_socket_token(token)
         if not user:
             print(f" [matchmaking] توكن غير صالح لـ sid={sid}")
-            await sio.emit('quick_play_error', {'msg': 'يجب تسجيل الدخول أولاً'}, to=sid)
+            await sio.emit('quick_play_error', {'requestId':request_id,'msg': 'يجب تسجيل الدخول أولاً'}, to=sid)
             return
 
         game_mode = data.get('game_mode')
@@ -229,11 +234,11 @@ def register_matchmaking_events(sio):
         leaver_ban = get_leaver_ban(user_id)
         if leaver_ban:
             print(f" [matchmaking]  uid={user_id} محظور (انسحاب متكرر): {leaver_ban['msg']}")
-            await sio.emit('quick_play_error', {'msg': leaver_ban['msg']}, to=sid)
+            await sio.emit('quick_play_error', {'requestId':request_id,'msg': leaver_ban['msg']}, to=sid)
             return
 
         success, msg = add_to_queue(sid, player_name, avatar, game_mode,
-                                     token=token, user_id=user_id, ip=client_ip)
+                                     token=token, user_id=user_id, ip=client_ip, request_id=request_id)
         print(f" [matchmaking] uid={user_id} دخل الطابور؟ {success} | {msg}")
 
         # المسار العنقودي: مع Redis نستخدم الطابور العالمي بدل المحلي
@@ -241,34 +246,34 @@ def register_matchmaking_events(sio):
         from app.infrastructure.redis_client import redis_enabled
         if r is None and redis_enabled():
             if success: remove_from_queue(sid)
-            await sio.emit('quick_play_error',{'msg':'البحث غير متاح مؤقتاً'},to=sid)
+            await sio.emit('quick_play_error',{'requestId':request_id,'msg':'البحث غير متاح مؤقتاً'},to=sid)
             return
         if r is not None:
             # add_to_queue أعلاه تحقق من صحة الوضع؛ نُخرجه من المحلي
             if success:
                 remove_from_queue(sid)
             else:
-                await sio.emit('quick_play_error', {'msg': msg}, to=sid)
+                await sio.emit('quick_play_error', {'requestId':request_id,'msg': msg}, to=sid)
                 return
             entry = {'sid': sid, 'name': player_name, 'avatar': avatar,
                      'token': token, 'user_id': user_id, 'ip': client_ip,
-                     'time': time.time()}
+                     'requestId': request_id, 'time': time.time()}
             ok, cmsg = await _cluster_join_queue(sio, sid, entry, game_mode)
             if ok:
                 schedule(game_mode,True)
             if not ok:
-                await sio.emit('quick_play_error', {'msg': cmsg}, to=sid)
+                await sio.emit('quick_play_error', {'requestId':request_id,'msg': cmsg}, to=sid)
             return
 
         if not success:
             print(f" [matchmaking] رُفض الدخول: {msg}")
-            await sio.emit('quick_play_error', {'msg': msg}, to=sid)
+            await sio.emit('quick_play_error', {'requestId':request_id,'msg': msg}, to=sid)
             return
 
         from app.domains.games.core_manager import matchmaking_queue
         entry = next((p for p in matchmaking_queue.get(game_mode, []) if p["sid"] == sid), None)
         if entry:
-            await search_started(sio, sid, entry["time"])
+            await search_started(sio, sid, entry)
         schedule(game_mode,False)
         await local_match(game_mode)
 
@@ -285,9 +290,10 @@ def register_matchmaking_events(sio):
                 await sio.emit('match_found', {'room_code': room_code, 'role': role, 'players': players_list}, to=p['sid'])
 
     @sio.on('cancel_quick_play')
-    async def cancel_quick_play(sid):
-        removed = remove_from_queue(sid)
+    async def cancel_quick_play(sid, data=None):
+        request_id = (data or {}).get("requestId")
+        removed = remove_from_queue(sid, request_id)
         if await _redis_mm() is not None:
-            removed = (await _cluster_leave_queue(sid)) or removed
+            removed = (await _cluster_leave_queue(sid, request_id)) or removed
         if removed:
             await sio.emit('quick_play_cancelled', {}, to=sid)

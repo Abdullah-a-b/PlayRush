@@ -161,3 +161,12 @@ class MatchHelpDebit(Base):
     match_id = Column(String(64), ForeignKey("public_match_leases.match_id"), nullable=False, index=True)
     user_id = Column(Integer, nullable=False)
     help_id = Column(String(40), nullable=False)
+
+
+class PremiumReceipt(Base):
+    __tablename__ = "premium_receipts"
+    user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
+    request_id = Column(String(36), primary_key=True)
+    season = Column(String(16), nullable=False)
+    gems_left = Column(Integer, nullable=False)
+    price = Column(Integer, nullable=False)

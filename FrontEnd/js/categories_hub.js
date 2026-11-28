@@ -143,7 +143,7 @@
           '<i class="fa-solid fa-crown"></i> ترقية Premium · 💎 ' + esc(p.premium_price));
         buyBtn.addEventListener('click', async function () {
           buyBtn.disabled = true;
-          var r = await ProgressionAPI.buyPremium();
+          var r = await ProgressionAPI.buyPremium(data.pass.season);
           if (r && r.ok) { toast('👑 تم تفعيل Premium Pass!'); renderPass(); refreshWallet(); }
           else { toast('⚠️ ' + ((r && r.msg) || 'تعذّر الشراء')); buyBtn.disabled = false; }
         });

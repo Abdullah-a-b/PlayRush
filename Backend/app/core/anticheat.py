@@ -108,7 +108,9 @@ async def check_account_rate(sid, event_type, max_per_second, room=None):
             redis.call('ZREMRANGEBYSCORE',KEYS[1],'-inf',ms-1000)
             redis.call('ZADD',KEYS[1],ms,ARGV[1])
             redis.call('PEXPIRE',KEYS[1],2000)
-            return redis.call('ZCARD',KEYS[1])
+            local count=redis.call('ZCARD',KEYS[1])
+            if count>128 then redis.call('ZREMRANGEBYRANK',KEYS[1],0,count-129) end
+            return count
         """, 1, f"pr:rate:{uid}:{event_type}", uuid4().hex)
     except Exception:
         return None

@@ -662,6 +662,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     const nextActions = document.getElementById('mmNextActions');
     let searching = false;
+    let searchRequestId;
     function showExpired() {
         if (!searching) return;
         stopSearchClock();
@@ -696,7 +697,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         searchTimer = setInterval(render, 250);
     }
     socket.on('quick_play_started', data => {
-        if (searching) startSearchClock(Math.max(0, (data.expires_at - data.server_time) * 1000));
+        if (searching && (!data.requestId || data.requestId === searchRequestId)) startSearchClock(Math.max(0, (data.expires_at - data.server_time) * 1000));
     });
     const mmStart = document.getElementById('mmStart');
     quickPlayBtn?.addEventListener('click', () => {
@@ -718,6 +719,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (searching) return;
         mmStart.hidden = true;
         searching = true;
+        searchRequestId = crypto.randomUUID();
         nextActions.hidden = true;
         lobbyMainContent.style.display   = 'none';
         matchmakingScreen.style.display  = 'flex';
@@ -731,6 +733,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         cancelMatchmakingBtn.textContent = 'إلغاء البحث';
         startSearchClock();
         socket.emit('quick_play_search', {
+            requestId: searchRequestId,
             token:       token,
             player_name: userDataCache.player_name,
             game_mode:   selectedGameMode,
@@ -740,7 +743,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     cancelMatchmakingBtn?.addEventListener('click', () => {
         stopSearchClock();
-        if (searching) socket.emit('cancel_quick_play');
+        if (searching) socket.emit('cancel_quick_play', {requestId: searchRequestId});
         searching = false;
         nextActions.hidden = true;
         matchmakingScreen.style.display = 'none';
@@ -751,6 +754,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     // 🆕 معالج الخطأ — يطلع للاعب بدل ما يبقى عالق في "جاري البحث"
     socket.on('quick_play_error', (data) => {
         if (!searching) return;
+        if (data?.requestId && data.requestId !== searchRequestId) return;
         if (data?.code === 'expired' || data?.msg?.startsWith('انتهى البحث')) return showExpired();
         searching = false;
         stopSearchClock();

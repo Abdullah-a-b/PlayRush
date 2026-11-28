@@ -144,7 +144,8 @@ def consume_help(user_id: int, help_id: str, match_id=None) -> bool:
         if match_id:
             from app.domains.games.models import PublicMatchLease, MatchHelpDebit
             lease = db.get(PublicMatchLease, match_id, with_for_update=True)
-            if not lease or lease.status != "active" or user_id not in (lease.first_uid, lease.second_uid):
+            from app.domains.games.match_recovery import owns_live_lease
+            if not lease or not owns_live_lease(db, lease) or user_id not in (lease.first_uid, lease.second_uid):
                 return False
         # ننقص فقط لو الكمية > 0 (ذرّي)
         result = db.execute(text("""

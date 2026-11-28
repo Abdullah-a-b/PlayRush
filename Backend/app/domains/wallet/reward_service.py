@@ -61,7 +61,8 @@ def save_match_sync(winner_player: dict, loser_player: dict, game_mode: str, ext
             return
         from app.domains.games.models import PublicMatchLease
         lease = db.get(PublicMatchLease, match_id, with_for_update=True)
-        if lease and lease.status != "active":
+        from app.domains.games.match_recovery import owns_live_lease
+        if lease and not owns_live_lease(db, lease):
             return
         claimed = db.execute(insert(MatchSettlement).values(match_id=match_id)
                     .on_conflict_do_nothing(index_elements=['match_id']).returning(MatchSettlement.match_id)).first()

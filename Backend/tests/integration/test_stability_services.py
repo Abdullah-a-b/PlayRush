@@ -88,6 +88,54 @@ class WalletIntegration(unittest.TestCase):
             await client.aclose()
         asyncio.run(exercise())
 
+    def test_premium_retry_after_season_rollover(self):
+        from app.domains.wallet import pass_service as ps
+        from app.domains.users.models import User
+        uid = self.ids[0]
+        key = str(uuid.uuid4())
+        with self.db.begin() as db:
+            db.get(User,uid).gems = 3*ps.EC.PREMIUM_PASS_PRICE_GEMS
+        with self.db() as db, patch.object(ps, "season_key", return_value="2026-S11"):
+            original = ps.buy_premium(db, uid, key, "2026-S11")
+            self.assertTrue(original["ok"])
+        with self.db() as db, patch.object(ps, "season_key", return_value="2026-S12"):
+            self.assertEqual(ps.buy_premium(db,uid,key,"2026-S11"), original)
+            self.assertFalse(ps.buy_premium(db,uid,key,"2026-S12")["ok"])
+            self.assertFalse(ps.get_or_create_pass(db,uid).is_premium)
+            self.assertEqual(db.get(User,uid).gems,original["gems_left"])
+
+    def test_reservation_expires_before_either_player_joins(self):
+        from datetime import datetime, timedelta
+        from app.domains.games.match_recovery import register, maintain, last_result
+        from app.domains.games.models import PublicMatchLease
+        mid = uuid.uuid4().hex
+        room = dict(code=mid[:10], players=[dict(user_id=uid) for uid in self.ids])
+        register(room, mid, reserved=True)
+        with self.db.begin() as db:
+            row = db.get(PublicMatchLease, mid)
+            self.assertEqual(row.status, "reserved")
+            row.heartbeat = datetime.utcnow()-timedelta(days=1)
+        maintain([])
+        self.assertEqual(last_result(room["code"], self.ids[0]), {"status":"cancelled"})
+        with self.assertRaises(RuntimeError):
+            register(room, mid)
+
+    def test_independent_purchases_cannot_overdraw(self):
+        from app.domains.wallet.purchase_service import purchase
+        from app.domains.users.models import User
+        uid = self.ids[0]
+        with self.db.begin() as db:
+            db.get(User, uid).coins = 10
+        item = dict(id="budget_test", ref_id="budget_test", price=3, currency="coins",
+                    unlock_level=0, category="help")
+        def buy(_):
+            with self.db() as db:
+                return purchase(db, uid, item, str(uuid.uuid4()))["ok"]
+        with ThreadPoolExecutor(8) as pool:
+            self.assertEqual(sum(pool.map(buy, range(20))),3)
+        with self.db() as db:
+            self.assertEqual(db.get(User, uid).coins,1)
+
     def test_expired_owner_refund_and_settlement_are_exclusive(self):
         from datetime import datetime, timedelta
         from app.domains.games.match_recovery import register, maintain, last_result

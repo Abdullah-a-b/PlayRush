@@ -89,7 +89,8 @@ async def my_pass(request: Request, current_user: User = Depends(get_current_use
 @limiter.limit("10/minute")
 async def buy_premium(request: Request, current_user: User = Depends(get_current_user),
                       db: Session = Depends(get_db)):
-    return PS.buy_premium(db, current_user.id)
+    body = await request.json() if await request.body() else {}
+    return PS.buy_premium(db, current_user.id, body.get("requestId"), body.get("season"))
 
 
 @router.post("/pass/claim")

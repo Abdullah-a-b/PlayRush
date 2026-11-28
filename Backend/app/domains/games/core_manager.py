@@ -63,7 +63,7 @@ def _allow_same_ip() -> bool:
     return is_dev_mode()
 
 
-def add_to_queue(sid, name, avatar, game_mode, token=None, user_id=None, ip=None):
+def add_to_queue(sid, name, avatar, game_mode, token=None, user_id=None, ip=None, request_id=None):
     # رفض أوضاع اللعب غير المعروفة قبل الدخول للطابور
     valid = _get_valid_modes()
     if not game_mode or game_mode not in valid:
@@ -83,6 +83,9 @@ def add_to_queue(sid, name, avatar, game_mode, token=None, user_id=None, ip=None
                     and p.get('sid') != sid
                     and p.get('sid') not in connected_players)
         ]
+    if any(p["sid"] == sid or (user_id and p.get("user_id") == user_id)
+           for mode, queue in matchmaking_queue.items() if mode != game_mode for p in queue):
+        return False, "لديك طلب بحث جارٍ في لعبة أخرى"
     for p in matchmaking_queue[game_mode]:
         if p['sid'] == sid:
             return False, "أنت بالفعل في طابور البحث!"
@@ -97,15 +100,16 @@ def add_to_queue(sid, name, avatar, game_mode, token=None, user_id=None, ip=None
         'token': token,
         'user_id': user_id,
         'ip': ip,
+        'requestId': request_id,
         'time': time.time()
     })
     return True, "تم الانضمام لطابور البحث"
 
 
-def remove_from_queue(sid):
+def remove_from_queue(sid, request_id=None):
     for mode, queue in matchmaking_queue.items():
         for i, p in enumerate(queue):
-            if p['sid'] == sid:
+            if p['sid'] == sid and (request_id is None or p.get('requestId') == request_id):
                 queue.pop(i)
                 return True
     return False
@@ -120,36 +124,55 @@ def estimated_strength(wins, losses, mode):
     return (wins + prior / 2) / (wins + losses + prior)
 
 
+class CandidateList(list):
+    """Ordered reservation attempts and eligible counts within the evaluated sample."""
+
+
 def alternatives(choices, i, j):
     """Other eligible opponents at decision time, independently for each player."""
+    if isinstance(choices, CandidateList):
+        return {k: choices.counts[k] - 1 for k in (i, j)}
     return {k: sum(k in pair for pair in choices) - 1 for k in (i, j)}
 
 
 def candidate_pairs(entries, blocked, friends, previous, now, strengths=None):
     """Rank eligible pairs by unlocked class, then by the older request."""
-    eligible = []
-    for i, first in enumerate(entries):
-        for j in range(i + 1, len(entries)):
-            second = entries[j]
-            ids = first.get('user_id'), second.get('user_id')
-            if not all(ids) or ids[0] == ids[1]:
-                continue
-            pair = tuple(sorted(ids))
-            oldest = min(first['time'], second['time'])
-            elapsed = now - oldest
-            if pair in blocked or elapsed >= 30:
-                continue
-            same_net = first.get('ip') not in (None, 'unknown') and first['ip'] == second.get('ip')
-            if pair in friends:
-                threshold = 20
-            elif same_net:
-                threshold = 15 if pair in previous else 10
-            else:
-                threshold = 5 if pair in previous else 0
-            if elapsed >= threshold:
-                gap = abs(strengths.get(ids[0], .5) - strengths.get(ids[1], .5)) if strengths else 0
-                eligible.append((threshold, oldest, gap, max(first['time'], second['time']), i, j))
-    return [(i,j) for *_,i,j in sorted(eligible)]
+    import heapq
+    from collections import Counter
+    counts = Counter()
+    def scored():
+        size = len(entries)
+        budget = min(24, max(0, size - 1))
+        offset = int(now) * budget % max(1, size - 1)
+        for i, first in enumerate(entries):
+            for step in range(budget):
+                j = (i + 1 + (offset + step) % (size - 1)) % size
+                if j <= i:
+                    continue
+                second = entries[j]
+                ids = first.get('user_id'), second.get('user_id')
+                if not all(ids) or ids[0] == ids[1]:
+                    continue
+                pair = tuple(sorted(ids))
+                oldest = min(first['time'], second['time'])
+                elapsed = now - oldest
+                if pair in blocked or elapsed >= 30:
+                    continue
+                same_net = first.get('ip') not in (None, 'unknown') and first['ip'] == second.get('ip')
+                if pair in friends:
+                    threshold = 20
+                elif same_net:
+                    threshold = 15 if pair in previous else 10
+                else:
+                    threshold = 5 if pair in previous else 0
+                if elapsed >= threshold:
+                    gap = abs(strengths.get(ids[0], .5) - strengths.get(ids[1], .5)) if strengths else 0
+                    counts[i] += 1
+                    counts[j] += 1
+                    yield threshold, oldest, gap, max(first['time'], second['time']), i, j
+    choices = CandidateList((i,j) for *_,i,j in heapq.nsmallest(64, scored()))
+    choices.counts = counts
+    return choices
 
 
 def ranked_pairs(entries, game_mode):
@@ -181,8 +204,11 @@ def ranked_pairs(entries, game_mode):
                      .filter(GameStat.user_id.in_(ids), GameStat.game_mode == game_mode)}
         previous = set(tuple(row) for row in db.query(PairSettlement.low_id, PairSettlement.high_id)
                        .filter(PairSettlement.low_id.in_(ids), PairSettlement.high_id.in_(ids)).distinct())
-    return [(i,j) for i,j in candidate_pairs(entries, blocked, friends, previous, time.time(), strengths)
-            if entries[i]["user_id"] in allowed and entries[j]["user_id"] in allowed]
+    indices = [i for i, p in enumerate(entries) if p.get("user_id") in allowed]
+    choices = candidate_pairs([entries[i] for i in indices], blocked, friends, previous, time.time(), strengths)
+    mapped = CandidateList((indices[i], indices[j]) for i,j in choices)
+    mapped.counts = {indices[i]: n for i,n in choices.counts.items()}
+    return mapped
 
 
 def create_match_room(p1, p2, game_mode, room_code=None):
@@ -224,6 +250,16 @@ def create_match_room(p1, p2, game_mode, room_code=None):
     return room_code, [p1, p2], room_players_data
 
 
+async def persist_reservation(room_code, matched):
+    from uuid import uuid4
+    from app.domains.games.match_recovery import register
+    mid = uuid4().hex
+    await asyncio.to_thread(register, {"code":room_code, "players":matched}, mid, True)
+    room = rooms.get(room_code)
+    if room is not None:
+        room["settlement_id"] = mid
+
+
 async def check_queue_for_match(game_mode):
     queue = matchmaking_queue.get(game_mode, [])
     if len(queue) < 2:
@@ -243,6 +279,11 @@ async def check_queue_for_match(game_mode):
         room_code,matched,rp_data = create_match_room(dict(p1, alternatives=counts[i]), dict(p2, alternatives=counts[j]), game_mode)
         live_queue.remove(p1)
         live_queue.remove(p2)
+        try:
+            await persist_reservation(room_code, matched)
+        except Exception:
+            rooms.pop(room_code, None)
+            raise
         return True,room_code,matched,rp_data
     return False,None,None,None
 

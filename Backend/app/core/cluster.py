@@ -196,7 +196,7 @@ def patch(sio):
                     room_code = await sid_room(sid)
                 owner = await room_owner(room_code)
                 if owner and owner != WORKER_ID:
-                    ok = await _send(owner, {'t': 'ev', 'e': event,
+                    ok = await _send(owner, {'t': 'ev', 'e': event, 'event_id': uuid.uuid4().hex,
                                              'sid': sid, 'd': data})
                     if not ok:
                         await sio.emit('match_connection_lost', {'msg':'تعذر الوصول إلى خادم المباراة. حاول إعادة الاتصال.'}, to=sid)
@@ -295,6 +295,9 @@ async def cluster_subscriber_loop(sio):
                                 continue
                             if not await _admit_game_action(event, room, p['sid']):
                                 continue
+                        event_id = p.get("event_id")
+                        if event_id and not await r.set("pr:forwarded:"+event_id, "1", nx=True, ex=120):
+                            continue
                         args = (p['sid'], d) if d is not None else (p['sid'],)
                         await _orig_trigger(p['e'], '/', *args)
                     elif t == 'enter':

@@ -13,16 +13,26 @@ from app.infrastructure.database import SessionLocal
 GRACE = max(60, int(os.environ.get("MATCH_OWNER_GRACE_SEC", "150")))
 
 
-def register(room, mid):
+def owns_live_lease(db, row, states=("active",)):
+    if row.owner != WORKER_ID or row.status not in states:
+        return False
+    now = db.query(func.timezone("UTC", func.clock_timestamp())).scalar()
+    return row.heartbeat > now - timedelta(seconds=GRACE)
+
+
+def register(room, mid, reserved=False):
     a, b = room["players"]
     with SessionLocal.begin() as db:
         db.execute(insert(PublicMatchLease).values(
             match_id=mid, room_code=room["code"], first_uid=a["user_id"], second_uid=b["user_id"],
-            owner=WORKER_ID, status="active", heartbeat=func.timezone("UTC", func.now())
+            owner=WORKER_ID, status="reserved" if reserved else "active", heartbeat=func.timezone("UTC", func.now())
         ).on_conflict_do_nothing(index_elements=["match_id"]))
-        row = db.get(PublicMatchLease, mid)
-        if row.owner != WORKER_ID or row.status != "active":
+        row = db.get(PublicMatchLease, mid, with_for_update=True)
+        if not owns_live_lease(db, row, ("reserved", "active")):
             raise RuntimeError("match owner expired")
+        if not reserved:
+            row.status = "active"
+            row.heartbeat = func.timezone("UTC", func.now())
 
 
 def maintain(active_ids):
@@ -34,7 +44,7 @@ def maintain(active_ids):
             db.query(PublicMatchLease).filter(PublicMatchLease.owner == WORKER_ID,
                 PublicMatchLease.match_id.in_(active_ids), PublicMatchLease.status == "active",
                 PublicMatchLease.heartbeat > cutoff).update({"heartbeat": now}, synchronize_session=False)
-        stale = db.query(PublicMatchLease).filter(PublicMatchLease.status == "active",
+        stale = db.query(PublicMatchLease).filter(PublicMatchLease.status.in_(("reserved","active")),
             PublicMatchLease.heartbeat <= cutoff).order_by(PublicMatchLease.heartbeat).limit(50).with_for_update(skip_locked=True)
         for row in stale:
             if db.get(MatchSettlement, row.match_id):
@@ -55,7 +65,7 @@ def last_result(code, uid):
         row = db.query(PublicMatchLease).filter(PublicMatchLease.room_code == code,
             (PublicMatchLease.first_uid == uid) | (PublicMatchLease.second_uid == uid)
         ).order_by(PublicMatchLease.heartbeat.desc()).first()
-        if not row or row.status == "active":
+        if not row or row.status in ("active","reserved"):
             return {}
         if row.status == "cancelled":
             return {"status": "cancelled"}

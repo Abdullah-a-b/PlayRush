@@ -126,12 +126,26 @@ def get_pass_state(db: Session, user_id: int) -> dict:
     }
 
 
-def buy_premium(db: Session, user_id: int) -> dict:
+def buy_premium(db: Session, user_id: int, request_id=None, intended_season=None) -> dict:
     from app.domains.users.models import User
     p = get_or_create_pass(db, user_id)
     user = db.query(User).filter(User.id == user_id).populate_existing().with_for_update().first()
     if not user:
         return {"ok": False, "msg": "المستخدم غير موجود"}
+    from app.domains.games.models import PremiumReceipt
+    if request_id is not None:
+        from uuid import UUID
+        try:
+            request_id = str(UUID(str(request_id)))
+        except ValueError:
+            return {"ok": False, "msg": "معرف طلب الشراء غير صالح"}
+        existing = db.get(PremiumReceipt, (user_id, request_id))
+        if existing:
+            if intended_season != existing.season:
+                return {"ok": False, "msg": "طلب الشراء مرتبط بموسم آخر"}
+            return {"ok": True, "gems_left": existing.gems_left, "price": existing.price}
+        if intended_season != p.season_key:
+            return {"ok": False, "msg": "تغير الموسم. افتح البطاقة الجديدة قبل الشراء."}
     db.refresh(p, with_for_update=True)
     if p.is_premium:
         return {"ok": False, "msg": "لديك Premium بالفعل هذا الموسم"}
@@ -144,6 +158,9 @@ def buy_premium(db: Session, user_id: int) -> dict:
                 "have": user.gems or 0}
     user.gems -= price
     p.is_premium = True
+    if request_id:
+        db.add(PremiumReceipt(user_id=user_id, request_id=request_id, season=p.season_key,
+                              gems_left=user.gems, price=price))
     db.commit()
     return {"ok": True, "gems_left": user.gems, "price": price}
 
