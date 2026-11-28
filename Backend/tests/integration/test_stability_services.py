@@ -104,6 +104,41 @@ class WalletIntegration(unittest.TestCase):
             self.assertFalse(ps.get_or_create_pass(db,uid).is_premium)
             self.assertEqual(db.get(User,uid).gems,original["gems_left"])
 
+    def test_process_death_during_and_after_financial_commit(self):
+        import subprocess, sys
+        from datetime import datetime, timedelta
+        from app.domains.games.match_recovery import register, maintain, last_result
+        from app.domains.games.models import PublicMatchLease, PairSettlement
+        worker = """
+import os,sys
+from unittest.mock import patch
+from app.domains.wallet import reward_service as service
+a,b,mid,point = sys.argv[1:]
+players = [dict(user_id=int(uid)) for uid in (a,b)]
+if point == "before":
+    with patch.object(service, "_apply_progression", side_effect=lambda *a,**k:os._exit(45)):
+        service.save_match_sync(*players,"bank",dict(match_id=mid))
+else:
+    service.save_match_sync(*players,"bank",dict(match_id=mid))
+    os._exit(46)
+"""
+        players = [dict(user_id=uid) for uid in self.ids]
+        for point, expected_exit in (("before",45),("after",46)):
+            mid = uuid.uuid4().hex
+            room = dict(code=mid[:10], players=players)
+            register(room,mid)
+            from app.core.cluster import WORKER_ID
+            result = subprocess.run([sys.executable,"-c",worker,*map(str,self.ids),mid,point],
+                env={**os.environ, "WORKER_ID":WORKER_ID}, timeout=20)
+            self.assertEqual(result.returncode, expected_exit)
+            with self.db.begin() as db:
+                db.get(PublicMatchLease,mid).heartbeat = datetime.utcnow()-timedelta(days=1)
+            maintain([])
+            with self.db() as db:
+                self.assertEqual(db.get(PairSettlement,mid) is not None, point=="after")
+            self.assertEqual(last_result(room["code"],self.ids[0]),
+                             {"status":"settled","result":"win"} if point=="after" else {"status":"cancelled"})
+
     def test_reservation_expires_before_either_player_joins(self):
         from datetime import datetime, timedelta
         from app.domains.games.match_recovery import register, maintain, last_result
