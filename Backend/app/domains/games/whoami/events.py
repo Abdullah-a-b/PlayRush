@@ -45,7 +45,7 @@ def _load_pool():
 
 
 @lru_cache(maxsize=1)
-def _reviewed_cards():
+def _reviewed_cards(stamp):
     with Path(__file__).with_name("playable.json").open(encoding="utf8") as file:
         return json.load(file)
 
@@ -54,7 +54,7 @@ def _playable_pool():
     # المرشح المستورد يدخل اللعب بعد مراجعة شهرته وتلميحاته.
     live = _load_pool()
     live_ids = {c['id'] for c in live}
-    cards = {c['id']: c for c in _reviewed_cards()
+    cards = {c['id']: c for c in _reviewed_cards(Path(__file__).with_name('playable.json').stat().st_mtime_ns)
              if not c.get('requires_active_source') or c['id'] in live_ids}
     for card in live:
         if card.get('_curation', {}).get('whoami_playable') and card['id'] not in cards:

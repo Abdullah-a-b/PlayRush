@@ -40,3 +40,19 @@ class ShadowPlayTests(unittest.TestCase):
     def test_new_players_can_match_immediately(self):
         players = [dict(user_id=i, time=100, ip=str(i)) for i in (1, 2)]
         self.assertEqual(candidate_pairs(players, set(), set(), set(), 100), [(0, 1)])
+
+class MigratedQuizContent(unittest.TestCase):
+    def test_change_or_disablement_invalidates_grandfathered_entry(self):
+        import json
+        from app.core.paths import DATA_DIR
+        from app.domains.games.ranked_content import eligible, fingerprint
+        for mode in ("bank","knowledge"):
+            raw = json.loads((DATA_DIR/(mode+"_questions.json")).read_text(encoding="utf8"))
+            row = (raw["questions"] if isinstance(raw,dict) else raw)[0]
+            self.assertTrue(eligible(row,mode))
+            self.assertFalse(eligible(dict(row,active=False),mode))
+            edited = dict(row,q=row["q"]+" updated")
+            self.assertFalse(eligible(edited,mode))
+            approved = dict(edited,ranked_approved=True,reviewed_hash=fingerprint(edited),
+                            reviewed_at="2026-11-28",source="test editorial review")
+            self.assertTrue(eligible(approved,mode))

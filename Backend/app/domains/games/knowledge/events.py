@@ -56,6 +56,7 @@ def _load_questions():
     try:
         with open(_DATA_FILE, encoding='utf-8') as f:
             raw = json.load(f).get('questions', [])
+        from app.domains.games.ranked_content import eligible
         for q in raw:
             if not q.get("active", True) or q.get("id") == "kq_world_currencies":
                 continue
@@ -68,7 +69,7 @@ def _load_questions():
                              'norm': set().union(*(answer_forms(v) for v in variants))})
             if len(pool) >= 15:
                 out.append({'id': q['id'], 'q': q['q'],
-                            'cat': q.get('cat', 'عام'), 'pool': pool})
+                            'cat': q.get('cat', 'عام'), 'pool': pool, '_ranked': eligible(q,'knowledge')})
     except Exception as e:
         print(f" [knowledge] تحميل الأسئلة: {e}")
     # سؤال السور — يُبنى من القائمة المنسّقة نفسها (مصدر واحد للحقيقة)
@@ -77,7 +78,7 @@ def _load_questions():
         pool = [{'display': s, 'norm': answer_forms(s) | answer_forms('سورة ' + s)}
                 for s in SURAHS]
         out.append({'id': 'kq_surahs', 'q': 'اذكر سوراً من القرآن الكريم',
-                    'cat': 'دين', 'pool': pool})
+                    'cat': 'دين', 'pool': pool, '_ranked': True})
     except Exception as e:
         print(f" [knowledge] سؤال السور غير متاح: {e}")
     _QCACHE['questions'] = out
@@ -148,23 +149,24 @@ def _recycle_seen(user_id):
         print(f" [knowledge] seen recycle: {e}")
 
 
-def _pick_question(used_ids, uid1=None, uid2=None):
+def _pick_question(used_ids, uid1=None, uid2=None, ranked=False):
     """يختار سؤالاً غير مكرّر: بالمباراة (used_ids) + مشاهدات الطرفين.
     عند النفاد يعيد التدوير. الفلترة تستبعد ما شاهده أيّ طرف (عدالة)."""
     import random
+    pool = [q for q in _load_questions() if not ranked or q.get("_ranked")]
     seen = _seen_qids_for_user(uid1) | _seen_qids_for_user(uid2)
     blocked = set(used_ids) | seen
-    qs = [q for q in _load_questions() if q['id'] not in blocked]
+    qs = [q for q in pool if q['id'] not in blocked]
     if not qs and (uid1 or uid2):
         # نفدت لهذين المستخدمين  تدوير ثم إعادة
         _recycle_seen(uid1); _recycle_seen(uid2)
         seen = _seen_qids_for_user(uid1) | _seen_qids_for_user(uid2)
         blocked = set(used_ids) | seen
-        qs = [q for q in _load_questions() if q['id'] not in blocked]
+        qs = [q for q in pool if q['id'] not in blocked]
     if not qs:  # ملاذ أخير: بالمباراة فقط
-        qs = [q for q in _load_questions() if q['id'] not in set(used_ids)]
+        qs = [q for q in pool if q['id'] not in set(used_ids)]
     if not qs:
-        qs = _load_questions()
+        qs = pool
     return random.choice(qs) if qs else None
 
 
@@ -234,10 +236,12 @@ def register_knowledge_events(sio):
         # (شخصي لكل مستخدم عبر المباريات، نمط البنك). في thread لأن فيه DB.
         _u1 = getattr(gs, 'p1_uid', None)
         _u2 = getattr(gs, 'p2_uid', None)
-        q = await asyncio.to_thread(_pick_question, gs.used_question_ids, _u1, _u2)
+        q = await asyncio.to_thread(_pick_question, gs.used_question_ids, _u1, _u2, ranked=room.get("type") == "public")
         if not q:
-            import random
-            q = random.choice(_load_questions())
+            # Built-in reviewed reserve; independent of external data files.
+            q = {"id":"reserve_weekdays","q":"اذكر أيام الأسبوع","cat":"عام",
+                 "pool":[{"display":day,"norm":{_norm(day)}} for day in
+                         ("السبت","الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة")]}
         # تناوب البادئ بين الجولات (الجولة 1 حُسمت عشوائياً بالبداية)
         starter = gs.first_turn_round if gs.round_index == 0 else \
             gs.opponent(gs.first_turn_round)

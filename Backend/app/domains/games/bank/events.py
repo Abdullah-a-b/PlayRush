@@ -49,6 +49,9 @@ def _load_questions():
         except Exception as e:
             print(f" [bank] دمج المولّد: {e}")
         _QUESTIONS = [q for q in _QUESTIONS if q.get("active", True)]
+        from app.domains.games.ranked_content import eligible
+        for q in _QUESTIONS:
+            q["_ranked"] = eligible(q,"bank")
         print(f" [bank] حُمّل {len(_QUESTIONS)} سؤال (يدوي + مولّد)")
     return _QUESTIONS
 
@@ -113,22 +116,23 @@ def _recycle_seen(user_id):
         print(f" [bank] seen recycle: {e}")
 
 
-def _pick_question(difficulty, used_ids, user_id=None, _retried=False):
+def _pick_question(difficulty, used_ids, user_id=None, _retried=False, ranked=False):
     """يفلتر على: أسئلة المباراة الحالية + مشاهدات هذا اللاعب شخصياً."""
+    pool = [q for q in _load_questions() if not ranked or q.get("_ranked")]
     seen = _seen_ids_for_user(user_id)
     blocked = set(used_ids) | seen
-    qs = [q for q in _load_questions()
+    qs = [q for q in pool
           if q.get("diff") == difficulty and q.get("id") not in blocked]
     if not qs:  # نفس الصعوبة نفدت  أي صعوبة (النقاط تُحسب من السلّم المعروض)
-        qs = [q for q in _load_questions() if q.get("id") not in blocked]
+        qs = [q for q in pool if q.get("id") not in blocked]
     if not qs and user_id and not _retried:
         # نفدت القاعدة لهذا المستخدم  تدوير أقدم مشاهداته وإعادة المحاولة
         _recycle_seen(user_id)
-        return _pick_question(difficulty, used_ids, user_id, _retried=True)
+        return _pick_question(difficulty, used_ids, user_id, _retried=True, ranked=ranked)
     if not qs:  # آخر ملاذ (بلا user_id أو بعد التدوير): تجاهل seen
-        qs = [q for q in _load_questions() if q.get("id") not in used_ids]
+        qs = [q for q in pool if q.get("id") not in used_ids]
     if not qs:
-        qs = _load_questions()
+        qs = pool
     return random.choice(qs) if qs else None
 
 
@@ -212,9 +216,11 @@ def register_bank_events(sio):
         diff = gs.difficulty_now(sid)
         _uid = _uid_of(room, sid)
         # المنتقي يقرأ مشاهدات DB — في thread حتى لا يحجب event loop
-        q = await asyncio.to_thread(_pick_question, diff, gs.used_question_ids, _uid)
+        q = await asyncio.to_thread(_pick_question, diff, gs.used_question_ids, _uid, ranked=room.get("type") == "public")
         if not q:
-            return
+            q = {"id":"reserve_minutes","q":"كم دقيقة في الساعة؟","a":"60",
+                 "accepted":["60","٦٠"],"diff":"easy","cat":"عام"}
+            diff = "easy"
         sid = resolve_sid(room, sid)
         gs.pstate[sid]['question'] = q
         gs.pstate[sid]['question_diff'] = diff  # الصعوبة المعروضة (النقاط منها!)
