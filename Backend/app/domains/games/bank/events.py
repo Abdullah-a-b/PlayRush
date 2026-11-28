@@ -84,12 +84,10 @@ def _record_seen_bulk(user_id, question_ids):
         from app.domains.games.models import BankSeen
         db = SessionLocal()
         try:
-            existing = {qid for (qid,) in db.query(BankSeen.question_id).filter(
-                BankSeen.user_id == user_id,
-                BankSeen.question_id.in_(list(question_ids))).all()}
-            for qid in question_ids:
-                if qid not in existing:
-                    db.add(BankSeen(user_id=user_id, question_id=qid))
+            from sqlalchemy.dialects.postgresql import insert
+            values = [dict(user_id=user_id, question_id=qid) for qid in sorted(set(question_ids))]
+            db.execute(insert(BankSeen).values(values).on_conflict_do_nothing(
+                index_elements=["user_id", "question_id"]))
             db.commit()
         finally:
             db.close()
@@ -336,6 +334,9 @@ def register_bank_events(sio):
                     is_correct = judged.get('accept')
                 except Exception:
                     is_correct = None
+                if (get_room_state(room_code) is not room or room.get('state') == 'finished'
+                        or gs.pstate.get(sid) is not ps or ps.get('question') is not q):
+                    return
                 if is_correct is None:
                     await sio.emit('judge_unavailable', {'msg':'تعذّر التحقق من الإجابة. سنبدل السؤال دون خصم نقاط.'}, to=sid)
                     gs.unfreeze(sid)
@@ -612,7 +613,7 @@ def register_bank_events(sio):
         _is_solo = bool(getattr(gs, "is_solo", False))
         if not dev_mode and not _is_solo and user_id:
             from app.domains.wallet.help_inventory import consume_help
-            if not consume_help(user_id, help_id):
+            if not consume_help(user_id, help_id, room.get("settlement_id") if room.get("type") == "public" else None):
                 await sio.emit('bank_help_result', {'ok': False, 'msg': 'لا تملك هذه المساعدة'}, to=sid)
                 return
         used.add(help_id)
@@ -674,7 +675,7 @@ def register_bank_events(sio):
     @sio.event
     async def bank_send_emoji(sid, data):
         """إرسال إيموجي متحرك. data: { roomCode, emojiId }"""
-        from app.core.anticheat import check_action_rate
+        from app.core.anticheat import check_account_rate
         room_code = (data or {}).get('roomCode')
         emoji_id = (data or {}).get('emojiId')
         if not emoji_id or not isinstance(emoji_id, str) or len(emoji_id) > 40:
@@ -685,7 +686,7 @@ def register_bank_events(sio):
         gs = room['game_state']
         if sid not in (gs.p1, gs.p2):
             return
-        rate_issue = check_action_rate(sid, 'bank_send_emoji', max_per_second=1)
+        rate_issue = await check_account_rate(sid, 'bank_send_emoji', max_per_second=1, room=get_room_state((data or {}).get('roomCode') or (data or {}).get('room_code')))
         if rate_issue:
             return
         opp = gs.p2 if sid == gs.p1 else gs.p1

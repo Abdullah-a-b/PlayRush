@@ -65,6 +65,74 @@ class WalletIntegration(unittest.TestCase):
         with self.db() as db:
             self.assertEqual(db.get(MatchReview, mid).ai_label, "insufficient")
 
+    @unittest.skipUnless(os.environ.get("PLAYRUSH_TEST_REDIS"), "dedicated Redis required")
+    def test_rate_survives_new_session_and_db_suspension(self):
+        import asyncio
+        import redis.asyncio as redis
+        from datetime import datetime, timedelta
+        from app.core.anticheat import check_account_rate
+        from app.core.cluster import _admit_game_action
+        from app.domains.games.models import FairPlayAccount
+        uid = self.ids[0]
+        room = {"type":"public", "players":[{"sid":"second", "user_id":uid}],
+                "user_ids":{"first":uid, "second":uid}}
+        with self.db.begin() as db:
+            db.add(FairPlayAccount(user_id=uid, updated=datetime.utcnow(),
+                                   suspended_until=datetime.utcnow()+timedelta(minutes=5)))
+        async def exercise():
+            client = redis.Redis.from_url(os.environ["PLAYRUSH_TEST_REDIS"], decode_responses=True)
+            with patch("app.infrastructure.redis_client.get_redis", return_value=client):
+                self.assertIsNone(await check_account_rate("first", "test", 1, room))
+                self.assertIsNotNone(await check_account_rate("second", "test", 1, room))
+                self.assertFalse(await _admit_game_action("bank_buzz", room, "second"))
+            await client.aclose()
+        asyncio.run(exercise())
+
+    def test_expired_owner_refund_and_settlement_are_exclusive(self):
+        from datetime import datetime, timedelta
+        from app.domains.games.match_recovery import register, maintain, last_result
+        from app.domains.games.models import PublicMatchLease
+        from app.domains.wallet.help_inventory import add_help, consume_help, get_quantity
+        from app.domains.wallet.reward_service import save_match_sync
+        players = [dict(user_id=uid) for uid in self.ids]
+        for settled in (False, True):
+            mid = uuid.uuid4().hex
+            room = dict(code=mid[:10], players=players)
+            register(room, mid)
+            add_help(self.ids[0], "test_recovery", 1)
+            before = get_quantity(self.ids[0], "test_recovery")
+            self.assertTrue(consume_help(self.ids[0], "test_recovery", mid))
+            if settled:
+                save_match_sync(*players, "bank", dict(match_id=mid))
+            with self.db.begin() as db:
+                db.get(PublicMatchLease, mid).heartbeat = datetime.utcnow()-timedelta(days=1)
+            with ThreadPoolExecutor(2) as pool:
+                list(pool.map(maintain, [[], []]))
+            save_match_sync(*players, "bank", dict(match_id=mid))
+            self.assertEqual(last_result(room["code"], self.ids[0])["status"], "settled" if settled else "cancelled")
+            self.assertEqual(get_quantity(self.ids[0], "test_recovery"), before-int(settled))
+
+    def test_fifty_purchase_retries(self):
+        from app.domains.wallet.purchase_service import purchase
+        from app.domains.users.models import User
+        from sqlalchemy import text
+        uid = self.ids[0]
+        item = dict(id="test_help", ref_id="test_help", price=3, currency="coins",
+                    unlock_level=0, category="help")
+        with self.db.begin() as db:
+            db.get(User, uid).coins = 10
+        key = str(uuid.uuid4())
+        def buy(_):
+            with self.db() as db:
+                return purchase(db, uid, item, key)
+        with ThreadPoolExecutor(10) as pool:
+            results = list(pool.map(buy, range(50)))
+        self.assertTrue(all(r["ok"] and r["wallet"]["coins"] == 7 for r in results))
+        with self.db() as db:
+            self.assertEqual(db.get(User, uid).coins, 7)
+            self.assertFalse(purchase(db, uid, dict(item, id="another_item"), key)["ok"])
+            self.assertEqual(db.execute(text("select quantity from player_help_inventory where user_id=:u and help_id='test_help'"), {"u":uid}).scalar(), 1)
+
     def test_entire_pass_and_cosmetic_ownership(self):
         from app.domains.wallet import pass_service as service
         from app.domains.wallet import economy_config as ec

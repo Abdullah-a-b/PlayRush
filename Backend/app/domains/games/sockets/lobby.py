@@ -337,7 +337,7 @@ def register_lobby_events(sio):
         """ رسالة جاهزة عامة (Quick Chat). العميل يرسل معرّف عبارة فقط —
         لا نص حر. الخادم يحوّل المعرّف لنصّه المعتمد. (الدردشة الحرة مؤجّلة)."""
         from app.core.anticheat import (
-            check_action_rate, check_payload_safety,
+            check_account_rate, check_payload_safety,
             report_violation, is_temp_banned, Severity
         )
 
@@ -350,7 +350,7 @@ def register_lobby_events(sio):
             return
 
         # حد المعدّل (ضد السبام بالعبارات)
-        rate_issue = check_action_rate(sid, 'chat_message', max_per_second=2)
+        rate_issue = await check_account_rate(sid, 'chat_message', max_per_second=2)
         if rate_issue:
             await report_violation(sid, sio, f"chat_spam:{rate_issue}", severity=Severity.MEDIUM)
             return
@@ -390,7 +390,7 @@ def register_lobby_events(sio):
     async def send_game_chat_message(sid, data):
         """ رسالة جاهزة داخل لوبي اللعبة. معرّف عبارة فقط — لا نص حر."""
         from app.core.anticheat import (
-            check_action_rate, check_payload_safety,
+            check_account_rate, check_payload_safety,
             report_violation, is_temp_banned, Severity
         )
 
@@ -402,7 +402,7 @@ def register_lobby_events(sio):
             await report_violation(sid, sio, f"game_chat:{payload_issue}", severity=Severity.HIGH)
             return
 
-        rate_issue = check_action_rate(sid, 'game_chat_message', max_per_second=2)
+        rate_issue = await check_account_rate(sid, 'game_chat_message', max_per_second=2)
         if rate_issue:
             await report_violation(sid, sio, f"game_chat_spam:{rate_issue}", severity=Severity.MEDIUM)
             return
@@ -453,7 +453,7 @@ def register_lobby_events(sio):
         """ رسالة جاهزة داخل غرفة مباراة (Quick Chat). معرّف عبارة فقط — لا نص حر.
         تُبثّ لكل من في الغرفة عبر Socket.IO room."""
         from app.core.anticheat import (
-            check_action_rate, check_payload_safety,
+            check_account_rate, check_payload_safety,
             report_violation, is_temp_banned, Severity
         )
 
@@ -465,7 +465,7 @@ def register_lobby_events(sio):
             await report_violation(sid, sio, f"room_chat:{payload_issue}", severity=Severity.HIGH)
             return
 
-        rate_issue = check_action_rate(sid, 'room_chat_message', max_per_second=2)
+        rate_issue = await check_account_rate(sid, 'room_chat_message', max_per_second=2)
         if rate_issue:
             await report_violation(sid, sio, f"room_chat_spam:{rate_issue}", severity=Severity.MEDIUM)
             return

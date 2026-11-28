@@ -59,6 +59,10 @@ def save_match_sync(winner_player: dict, loser_player: dict, game_mode: str, ext
         if not match_id:
             print(' [reward] نتيجة بلا معرف مباراة؛ لم نصرف مكافأة')
             return
+        from app.domains.games.models import PublicMatchLease
+        lease = db.get(PublicMatchLease, match_id, with_for_update=True)
+        if lease and lease.status != "active":
+            return
         claimed = db.execute(insert(MatchSettlement).values(match_id=match_id)
                     .on_conflict_do_nothing(index_elements=['match_id']).returning(MatchSettlement.match_id)).first()
         if claimed is None:
@@ -79,6 +83,11 @@ def save_match_sync(winner_player: dict, loser_player: dict, game_mode: str, ext
         accounts = db.query(User).filter(User.id.in_(ids)).order_by(User.id).populate_existing().with_for_update().all()
         if len(accounts) != 2:
             return
+        if lease:
+            if sorted((lease.first_uid, lease.second_uid)) != [low, high]:
+                return
+            lease.status = "settled"
+            lease.winner_id = None if extra.get("draw") else ids[0]
         now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
         previous = db.query(PairSettlement).filter(PairSettlement.low_id == low,
             PairSettlement.high_id == high, PairSettlement.settled_at > now - datetime.timedelta(hours=6)).count()

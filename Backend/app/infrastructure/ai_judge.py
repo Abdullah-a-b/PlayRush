@@ -110,6 +110,36 @@ async def judge_answer(question_text, correct_answer, player_answer, timeout=2.0
     global _retry_after
     if time.monotonic() < _retry_after or not _slots.acquire(blocking=False):
         return {"accept": None, "source": "unavailable"}
+    from app.infrastructure.redis_client import get_redis
+    from uuid import uuid4
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + timeout
+    client = get_redis()
+    lease = uuid4().hex
+    async def release_remote():
+        try:
+            await client.zrem("pr:judge:slots", lease)
+        except Exception:
+            pass  # The lease also expires after a process failure.
+    if client is not None:
+        try:
+            acquired = await asyncio.wait_for(client.eval("""
+                local t=redis.call('TIME')
+                local ms=t[1]*1000+math.floor(t[2]/1000)
+                redis.call('ZREMRANGEBYSCORE',KEYS[1],'-inf',ms)
+                if redis.call('ZCARD',KEYS[1])>=2 then return 0 end
+                redis.call('ZADD',KEYS[1],ms+30000,ARGV[1])
+                redis.call('PEXPIRE',KEYS[1],31000)
+                return 1
+            """, 1, "pr:judge:slots", lease), min(timeout, .25))
+        except asyncio.CancelledError:
+            _slots.release()
+            raise
+        except Exception:
+            acquired = False
+        if not acquired:
+            _slots.release()
+            return {"accept": None, "source": "unavailable"}
     def _sync_call():
         model = _get_model()
         if model is None:
@@ -126,9 +156,13 @@ async def judge_answer(question_text, correct_answer, player_answer, timeout=2.0
     except Exception:
         _slots.release()
         raise
-    future.add_done_callback(lambda _: _slots.release())
+    def finished(_):
+        _slots.release()
+        if client is not None and not loop.is_closed():
+            loop.call_soon_threadsafe(lambda: asyncio.create_task(release_remote()))
+    future.add_done_callback(finished)
     try:
-        result = await asyncio.wait_for(asyncio.wrap_future(future),timeout)
+        result = await asyncio.wait_for(asyncio.wrap_future(future),max(.001, deadline-loop.time()))
         if result["source"] == "unavailable":
             _retry_after = time.monotonic() + 3
         return result

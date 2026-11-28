@@ -436,6 +436,13 @@ def save_to_db(questions, complete_groups=()):
                 data['ranked_approved'] = explicitly_reviewed or (not source_changed and extra.get('ranked_approved') is True)
             else:
                 data['ranked_approved'] = True
+            if source_changed or "content_version" not in extra:
+                data["content_version"] = int(extra.get("content_version", 0)) + 1
+            if data["ranked_approved"] and (source_changed or not extra.get("approval_recorded_at")):
+                from datetime import datetime, timezone
+                data["approval_recorded_at"] = datetime.now(timezone.utc).isoformat()
+            elif not data["ranked_approved"]:
+                data.pop("approval_recorded_at", None)
             if q.get('difficulty') in ('easy', 'medium', 'hard', 'rare'):
                 data['difficulty'] = q['difficulty']
             elif data.get('difficulty') not in ('easy', 'medium', 'hard', 'rare'):

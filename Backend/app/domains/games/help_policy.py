@@ -49,6 +49,9 @@ def load_match_loadout(room, gs, sid, game):
 def freeze_match_loadouts(room):
     import uuid
     match_id = room.setdefault('settlement_id', uuid.uuid4().hex)
+    if room.get("type") == "public":
+        from app.domains.games.match_recovery import register
+        register(room, match_id)
     for player in room.get('players', []):
         player['match_id'] = match_id
     gs = room.get('game_state')

@@ -3,7 +3,9 @@ from sqlalchemy import text
 from app.domains.users.models import User
 
 
-def purchase(db, user_id, item):
+def purchase(db, user_id, item, request_id=None):
+    from uuid import UUID
+    from app.domains.games.models import StoreReceipt
     # تهيئة جداول الملكية تسبق معاملة الشراء، ولا يحدث خصم خارجها.
     from app.domains.wallet.help_inventory import _init as init_inventory
     from app.domains.wallet.cosmetics import _init as init_cosmetics
@@ -12,6 +14,13 @@ def purchase(db, user_id, item):
         user = db.query(User).filter(User.id == user_id).populate_existing().with_for_update().first()
         if not user or user.is_banned:
             raise ValueError('الجلسة غير صالحة')
+        if request_id is not None:
+            request_id = str(UUID(str(request_id)))
+            receipt = db.get(StoreReceipt, (user_id, request_id))
+            if receipt:
+                if receipt.item_id != item["id"]:
+                    raise ValueError("طلب شراء مختلف بنفس المعرّف")
+                return {"ok": True, "wallet": {"coins": receipt.coins, "gems": receipt.gems}}
         if (user.level or 0) < item['unlock_level']:
             raise ValueError(f"يفتح في المستوى {item['unlock_level']}")
         currency, price = item['currency'], item['price']
@@ -36,6 +45,8 @@ def purchase(db, user_id, item):
                 raise ValueError('تملك هذا العنصر مسبقًا')
         setattr(user, currency, balance-price)
         wallet = {'coins':user.coins or 0,'gems':user.gems or 0}
+        if request_id:
+            db.add(StoreReceipt(user_id=user_id, request_id=request_id, item_id=item["id"], **wallet))
         db.commit()
         return {'ok':True,'wallet':wallet}
     except ValueError as exc:

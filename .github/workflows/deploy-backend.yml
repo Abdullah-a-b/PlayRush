@@ -4,7 +4,7 @@ name: ظ†ط´ط± ط§ظ„ط¨ط§ظƒ ط§ظ†ط¯ ط¥ظ„ظ‰ Azure
 # (طھط¹ط¯ظٹظ„ط§طھ ط§ظ„ظˆط§ط¬ظ‡ط© ظˆط­ط¯ظ‡ط§ ظ„ط§ طھظڈط´ط؛ظ‘ظ„ ظ‡ط°ط§ â€” Cloudflare Pages ظٹطھظƒظپظ‘ظ„ ط¨ظ‡ط§.)
 on:
   push:
-    branches: [ main ]
+    branches: [ main, stability/remaining-v2 ]
     paths:
       - 'Backend/**'
       - '.github/workflows/deploy-backend.yml'
@@ -50,6 +50,7 @@ jobs:
           PYTHONPATH=. python -m unittest discover -s tests/integration -v
 
       - name: ط§ظ„ظ†ط´ط± ط¥ظ„ظ‰ Azure App Service
+        if: github.ref == 'refs/heads/main'
         uses: azure/webapps-deploy@v3
         with:
           app-name: playrush-server

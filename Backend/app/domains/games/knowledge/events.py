@@ -116,12 +116,10 @@ def _record_seen_bulk(user_id, question_ids):
         from app.domains.games.models import KnowledgeSeen
         db = SessionLocal()
         try:
-            existing = {qid for (qid,) in db.query(KnowledgeSeen.question_id).filter(
-                KnowledgeSeen.user_id == user_id,
-                KnowledgeSeen.question_id.in_(list(question_ids))).all()}
-            for qid in question_ids:
-                if qid not in existing:
-                    db.add(KnowledgeSeen(user_id=user_id, question_id=qid))
+            from sqlalchemy.dialects.postgresql import insert
+            values = [dict(user_id=user_id, question_id=qid) for qid in sorted(set(question_ids))]
+            db.execute(insert(KnowledgeSeen).values(values).on_conflict_do_nothing(
+                index_elements=["user_id", "question_id"]))
             db.commit()
         finally:
             db.close()
@@ -651,8 +649,8 @@ def register_knowledge_events(sio):
         if turn_uid is not None and sender.get('user_id') == turn_uid and gs.turn != sid:
             if hasattr(gs, 'remap_sid'):
                 gs.remap_sid(gs.turn, sid)
-        from app.core.anticheat import check_action_rate
-        if check_action_rate(sid, 'knowledge_use_help', max_per_second=1):
+        from app.core.anticheat import check_account_rate
+        if await check_account_rate(sid, 'knowledge_use_help', max_per_second=1, room=get_room_state((data or {}).get('roomCode') or (data or {}).get('room_code'))):
             return
         h = get_help(help_id)
         if not h:
@@ -704,7 +702,7 @@ def register_knowledge_events(sio):
         _is_solo = bool(getattr(gs, "is_solo", False))
         if not dev_mode and not _is_solo and user_id:
             from app.domains.wallet.help_inventory import consume_help
-            if not consume_help(user_id, help_id):
+            if not consume_help(user_id, help_id, room.get("settlement_id") if room.get("type") == "public" else None):
                 await sio.emit('knowledge_help_result',
                                {'ok': False, 'msg': 'لا تملك هذه المساعدة'}, to=sid)
                 return

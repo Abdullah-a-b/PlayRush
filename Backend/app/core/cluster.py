@@ -159,6 +159,21 @@ async def broadcast_sid_gone(sid):
         pass
 
 
+async def _admit_game_action(event, room, sid):
+    if not room or not event.endswith(("_buzz", "_submit_answer", "_use_help", "_select_hex")):
+        return True
+    if room.get("type") != "public":
+        return True
+    uid = next((p.get("user_id") for p in room.get("players", []) if p.get("sid") == sid), None)
+    if not uid:
+        return False
+    from app.core.anticheat import account_is_suspended
+    try:
+        return not await asyncio.to_thread(account_is_suspended, uid)
+    except Exception:
+        return False
+
+
 # ---------- الترقيع ----------
 def patch(sio):
     """يرقّع sio: تحويل أحداث الغرف للمالك + توجيه enter/leave_room
@@ -186,6 +201,10 @@ def patch(sio):
                     if not ok:
                         await sio.emit('match_connection_lost', {'msg':'تعذر الوصول إلى خادم المباراة. حاول إعادة الاتصال.'}, to=sid)
                     return
+                if room_code and event.startswith(_FWD_PREFIXES):
+                    from app.domains.games.core_manager import rooms
+                    if not await _admit_game_action(event, rooms.get(room_code), sid):
+                        return
             except Exception as e:
                 print(f" [cluster] تحويل {event}: {e} — معالجة محلية")
         return await _orig_trigger(event, namespace, *args)
@@ -225,11 +244,14 @@ def patch(sio):
             from app.domains.games.core_manager import rooms
             room = rooms.get(code,{})
             if room.get("type") == "public":
-                client = await _r()
-                if client:
-                    for player in room.get("players",[]):
-                        key = "pr:mm_active:"+str(player.get("user_id"))
-                        await client.eval("if redis.call('get',KEYS[1])==ARGV[1] then return redis.call('del',KEYS[1]) end",1,key,code)
+                try:
+                    client = await _r()
+                    if client:
+                        for player in room.get("players",[]):
+                            key = "pr:mm_active:"+str(player.get("user_id"))
+                            await client.eval("if redis.call('get',KEYS[1])==ARGV[1] then return redis.call('del',KEYS[1]) end",1,key,code)
+                except Exception as exc:
+                    print(f"[cluster] deferred active reservation cleanup: {type(exc).__name__}")
         return await original_emit(event,data,*args,**kwargs)
     sio.emit = emit
     sio._trigger_event = _trigger
@@ -271,6 +293,8 @@ async def cluster_subscriber_loop(sio):
                             room = rooms.get(code)
                             if not room or not any(player.get('sid')==p['sid'] for player in room.get('players',[])):
                                 continue
+                            if not await _admit_game_action(event, room, p['sid']):
+                                continue
                         args = (p['sid'], d) if d is not None else (p['sid'],)
                         await _orig_trigger(p['e'], '/', *args)
                     elif t == 'enter':
@@ -310,7 +334,7 @@ async def cluster_heartbeat_loop(*_):
             for s in list(connected_players.keys()):
                 pipe.expire(_K_CONN + s, _TTL)
             for code, room in list(rooms.items()):
-                pipe.set(_K_OWNER + code, WORKER_ID, ex=_TTL)
+                pipe.eval("if redis.call('get',KEYS[1])==ARGV[1] then return redis.call('expire',KEYS[1],ARGV[2]) end", 1, _K_OWNER + code, WORKER_ID, _TTL)
                 for pl in room.get('players', []):
                     if room.get('type')=='public' and room.get('state') in ('starting','playing') and pl.get('user_id'):
                         pipe.eval("if redis.call('get',KEYS[1])==ARGV[1] then return redis.call('expire',KEYS[1],ARGV[2]) end",1,'pr:mm_active:'+str(pl['user_id']),code,_TTL)

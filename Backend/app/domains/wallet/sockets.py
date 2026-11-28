@@ -133,13 +133,13 @@ def register_store_events(sio):
             if not item:
                 await sio.emit('purchase_result', {'ok': False, 'msg': 'العنصر غير موجود'}, to=sid); return
             from app.domains.wallet.purchase_service import purchase
-            result = purchase(db, user.id, item)
+            result = purchase(db, user.id, item, data.get("requestId"))
             if not result['ok']:
-                await sio.emit('purchase_result', result, to=sid)
+                await sio.emit('purchase_result', dict(result, itemId=item['id'], requestId=data.get('requestId')), to=sid)
                 return
             await sio.emit('purchase_result', {
                 'ok': True, 'msg': f"تم شراء {item['name']} ✅", 'itemId': item['id'],
-                'category': item['category'], 'asset': item.get('asset'),
+                'requestId': data.get('requestId'), 'category': item['category'], 'asset': item.get('asset'),
                 'wallet': result['wallet'],
             }, to=sid)
         finally:

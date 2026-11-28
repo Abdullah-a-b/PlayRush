@@ -93,6 +93,40 @@ def check_action_rate(sid: str, event_type: str, max_per_second: int = MAX_EVENT
     return None
 
 
+async def check_account_rate(sid, event_type, max_per_second, room=None):
+    from app.sockets.state import connected_players
+    from app.infrastructure.redis_client import get_redis
+    from uuid import uuid4
+    uid = (room or {}).get("user_ids", {}).get(sid) or connected_players.get(sid, {}).get("user_id")
+    client = get_redis()
+    if not uid or client is None:
+        return check_action_rate(str(uid) if uid else sid, event_type, max_per_second)
+    try:
+        count = await client.eval("""
+            local t=redis.call('TIME')
+            local ms=t[1]*1000+math.floor(t[2]/1000)
+            redis.call('ZREMRANGEBYSCORE',KEYS[1],'-inf',ms-1000)
+            redis.call('ZADD',KEYS[1],ms,ARGV[1])
+            redis.call('PEXPIRE',KEYS[1],2000)
+            return redis.call('ZCARD',KEYS[1])
+        """, 1, f"pr:rate:{uid}:{event_type}", uuid4().hex)
+    except Exception:
+        return None
+    if count > max_per_second:
+        return f"spam_detected:{event_type}={count}/s"
+    return None
+
+
+def account_is_suspended(uid):
+    from app.infrastructure.database import SessionLocal
+    from app.domains.users.models import User
+    from app.domains.games.models import FairPlayAccount
+    with SessionLocal() as db:
+        row = db.query(User.is_banned, FairPlayAccount.suspended_until).outerjoin(
+            FairPlayAccount, FairPlayAccount.user_id == User.id).filter(User.id == uid).one_or_none()
+        return row is None or bool(row[0] or (row[1] and row[1] > datetime.utcnow()))
+
+
 def check_human_reaction(sid: str, question_shown_at: float) -> Optional[str]:
     """
     يكشف ردود فعل أسرع من بشري ممكن.

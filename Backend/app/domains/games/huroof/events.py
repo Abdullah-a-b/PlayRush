@@ -71,7 +71,7 @@ def _load_huroof_questions_cached():
                 'chemistry': is_chemistry_question(q.question_text or '', str(extra.get('source_id') or '')),
                 'accepted_answers': extra.get('accepted_answers', []),
                 'letter_extra': normalize_letter(extra.get('letter', '') or ''),
-                'ranked_approved': extra.get('ranked_approved',extra.get('source') not in ('auto_wikidata','gemini','ai_generated')),
+                'ranked_approved': extra.get('ranked_approved') is True,
                 'letter_ans': main_letter,
                 'valid_letters': valid_letters,
             })
@@ -80,6 +80,20 @@ def _load_huroof_questions_cached():
         return rows
     finally:
         db.close()
+
+
+def _still_approved(chosen):
+    """Check the chosen row on the primary before publishing cached ranked content."""
+    with SessionLocal() as db:
+        row = db.get(Question, chosen["id"])
+        try:
+            meta = json.loads(row.extra_data) if row else {}
+        except (ValueError, TypeError):
+            return False
+        return (isinstance(meta, dict) and meta.get("ranked_approved") is True
+                and meta.get("active") is not False and row.question_text == chosen["question_text"]
+                and row.correct_answer.strip() == chosen["correct_answer"]
+                and meta.get("accepted_answers", []) == chosen["accepted_answers"])
 
 
 def _fetch_combined_seen(uids):
@@ -107,7 +121,7 @@ def _mark_seen_thread(uids, qid):
     try:
         db = SessionLocal()
         try:
-            for u in db.query(User).filter(User.id.in_(uids)).all():
+            for u in db.query(User).filter(User.id.in_(uids)).order_by(User.id).with_for_update().all():
                 try:
                     seen = json.loads(u.seen_question_ids or "[]")
                 except Exception:
@@ -149,7 +163,7 @@ from app.core.huroof_answers import check_answer, answer_letter, is_language_cod
 
 # Anti-Cheat (server-side validation)
 from app.core.anticheat import (
-    check_action_rate, check_human_reaction, check_payload_safety,
+    check_account_rate, check_human_reaction, check_payload_safety,
     validate_huroof_buzz, validate_huroof_answer,
     report_violation, is_temp_banned, Severity,
 )
@@ -429,7 +443,7 @@ def register_huroof_events(sio):
         # حدود المستوى تسبق منع التكرار: السهل المرئي أفضل من معلومة نادرة جديدة.
         level = getattr(gs, 'bot_difficulty', 'medium') if getattr(gs, 'is_solo', False) else 'online'
         if level == 'online' and room.get('type') == 'public':
-            all_qs = [q for q in all_qs if q.get('ranked_approved',True)]
+            all_qs = [q for q in all_qs if q.get('ranked_approved') is True]
         pref_map = getattr(gs, 'preferred_category', None) or {}
         wanted = pref_map.pop(gs.turn, None)
         chosen = choose_question(all_qs, norm_letter, getattr(gs, 'used_questions', []),
@@ -455,6 +469,11 @@ def register_huroof_events(sio):
                 await emit_turn_changed(room_code, gs, gs.turn)
                 return
 
+        if level == "online" and room.get("type") == "public" and not await asyncio.to_thread(_still_approved, chosen):
+            _HUROOF_QCACHE["rows"] = None
+            advance_state(gs, "selecting")
+            await emit_turn_changed(room_code, gs, gs.turn)
+            return
         if hasattr(gs, 'used_questions'):
             gs.used_questions.append(chosen['id'])
             gs.used_answers.append(chosen['correct_answer'])
@@ -660,7 +679,7 @@ def register_huroof_events(sio):
             return
 
         # rate limiting (لا أحد يضغط buzz أكثر من 5/ثانية بشري)
-        rate_issue = check_action_rate(sid, 'huroof_buzz', max_per_second=5)
+        rate_issue = await check_account_rate(sid, 'huroof_buzz', max_per_second=5, room=get_room_state((data or {}).get('roomCode') or (data or {}).get('room_code')))
         if rate_issue:
             await report_violation(sid, sio, rate_issue, severity=Severity.HIGH)
             return
@@ -721,7 +740,7 @@ def register_huroof_events(sio):
         if is_temp_banned(sid):
             return
 
-        rate_issue = check_action_rate(sid, 'huroof_submit_answer', max_per_second=2)
+        rate_issue = await check_account_rate(sid, 'huroof_submit_answer', max_per_second=2, room=get_room_state((data or {}).get('roomCode') or (data or {}).get('room_code')))
         if rate_issue:
             await report_violation(sid, sio, rate_issue, severity=Severity.HIGH)
             return
@@ -893,7 +912,7 @@ def register_huroof_events(sio):
             return
         if not dev_mode and not _is_solo and user_id:
             from app.domains.wallet.help_inventory import consume_help
-            if not consume_help(user_id, help_id):
+            if not consume_help(user_id, help_id, room.get("settlement_id") if room.get("type") == "public" else None):
                 await sio.emit('huroof_help_result', {'ok': False, 'msg': 'نفد رصيدك من هذه المساعدة'}, to=sid)
                 return
 
@@ -1167,7 +1186,7 @@ def register_huroof_events(sio):
             return
 
         # معدّل الإرسال: نمنع السبام (إيموجي كل ثانية كحد)
-        rate_issue = check_action_rate(sid, 'huroof_send_emoji', max_per_second=1)
+        rate_issue = await check_account_rate(sid, 'huroof_send_emoji', max_per_second=1, room=get_room_state((data or {}).get('roomCode') or (data or {}).get('room_code')))
         if rate_issue:
             return
 

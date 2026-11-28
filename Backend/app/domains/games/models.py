@@ -131,3 +131,33 @@ class MatchReview(Base):
     ai_label = Column(String(24))
     status = Column(String(24), nullable=False, index=True)
     signals = Column(Text, nullable=False, default="[]")
+
+
+class StoreReceipt(Base):
+    __tablename__ = "store_receipts"
+    user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
+    request_id = Column(String(36), primary_key=True)
+    item_id = Column(String(128), nullable=False)
+    coins = Column(Integer, nullable=False)
+    gems = Column(Integer, nullable=False)
+
+
+class PublicMatchLease(Base):
+    __tablename__ = "public_match_leases"
+    match_id = Column(String(64), primary_key=True)
+    room_code = Column(String(16), nullable=False, index=True)
+    owner = Column(String(96), nullable=False)
+    first_uid = Column(Integer, nullable=False)
+    second_uid = Column(Integer, nullable=False)
+    status = Column(String(16), nullable=False)
+    heartbeat = Column(DateTime, nullable=False)
+    winner_id = Column(Integer)
+    __table_args__ = (Index("ix_public_lease_expiry", "status", "heartbeat"),)
+
+
+class MatchHelpDebit(Base):
+    __tablename__ = "match_help_debits"
+    id = Column(Integer, primary_key=True)
+    match_id = Column(String(64), ForeignKey("public_match_leases.match_id"), nullable=False, index=True)
+    user_id = Column(Integer, nullable=False)
+    help_id = Column(String(40), nullable=False)

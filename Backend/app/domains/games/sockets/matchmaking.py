@@ -40,7 +40,16 @@ async def _cluster_try_match(sio, r, game_mode):
     if not got_lock:
         return
     try:
-        raw = await r.lrange(_MMQ + game_mode, 0, -1)
+        key = _MMQ + game_mode
+        size = await r.llen(key)
+        raw = await r.lrange(key, 0, 63)
+        if size > 64:
+            # Retain the oldest requests and rotate through the remainder.
+            cursor = key + ":batch"
+            page = (await r.incr(cursor) - 1) % ((size - 64 + 63) // 64)
+            await r.expire(cursor, 120)
+            start = 64 + page * 64
+            raw.extend(await r.lrange(key, start, start + 63))
         entries = []
         for item in raw:
             try:
@@ -118,6 +127,7 @@ async def _cluster_join_queue(sio, sid, entry, game_mode):
     """,4,_MMQ+game_mode,_MMQ_SID+sid,_MMQ_UID+str(entry['user_id']),"pr:mm_active:"+str(entry["user_id"]),sid,json.dumps(entry,ensure_ascii=False))
     if not inserted:
         return False, "أنت بالفعل في البحث"
+    await search_started(sio, sid, entry["time"])
     await _cluster_try_match(sio, r, game_mode)
     return True, "تم الانضمام لطابور البحث"
 
@@ -152,6 +162,10 @@ async def _cluster_leave_queue(sid):
     return removed
 
 
+async def search_started(sio, sid, queued_at):
+    await sio.emit("quick_play_started", {"expires_at": queued_at + 30, "server_time": time.time()}, to=sid)
+
+
 def register_matchmaking_events(sio):
 
     tasks = {}
@@ -170,14 +184,14 @@ def register_matchmaking_events(sio):
                         entry = json.loads(raw)
                         if time.time()-entry['time'] >= 30 and await r.lrem(_MMQ+mode,1,raw):
                             await r.eval("if redis.call('get',KEYS[1])==ARGV[1] then redis.call('del',KEYS[1],KEYS[2]) end",2,_MMQ_UID+str(entry['user_id']),_MMQ_SID+entry['sid'],entry['sid'])
-                            await sio.emit('quick_play_error',{'msg':'انتهى البحث. يمكنك المحاولة مجدداً.'},to=entry['sid'])
+                            await sio.emit('quick_play_error',{'code':'expired','msg':'انتهى البحث. يمكنك المحاولة مجدداً.'},to=entry['sid'])
                     await _cluster_try_match(sio,r,mode)
                 else:
                     queue = matchmaking_queue.get(mode,[])
                     for entry in list(queue):
                         if time.time()-entry['time'] >= 30:
                             remove_from_queue(entry['sid'])
-                            await sio.emit('quick_play_error',{'msg':'انتهى البحث. يمكنك المحاولة مجدداً.'},to=entry['sid'])
+                            await sio.emit('quick_play_error',{'code':'expired','msg':'انتهى البحث. يمكنك المحاولة مجدداً.'},to=entry['sid'])
                     if not queue:
                         return
                     await local_match(mode)
@@ -251,6 +265,10 @@ def register_matchmaking_events(sio):
             await sio.emit('quick_play_error', {'msg': msg}, to=sid)
             return
 
+        from app.domains.games.core_manager import matchmaking_queue
+        entry = next((p for p in matchmaking_queue.get(game_mode, []) if p["sid"] == sid), None)
+        if entry:
+            await search_started(sio, sid, entry["time"])
         schedule(game_mode,False)
         await local_match(game_mode)
 

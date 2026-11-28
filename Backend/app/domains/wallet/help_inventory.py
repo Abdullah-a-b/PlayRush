@@ -134,19 +134,26 @@ def add_help(user_id: int, help_id: str, amount: int = 1) -> bool:
         db.close()
 
 
-def consume_help(user_id: int, help_id: str) -> bool:
+def consume_help(user_id: int, help_id: str, match_id=None) -> bool:
     """يستهلك 1 من مساعدة. يُرجع True لو نجح (كان عنده رصيد)."""
     if user_id is None:
         return False
     _init()
     db = SessionLocal()
     try:
+        if match_id:
+            from app.domains.games.models import PublicMatchLease, MatchHelpDebit
+            lease = db.get(PublicMatchLease, match_id, with_for_update=True)
+            if not lease or lease.status != "active" or user_id not in (lease.first_uid, lease.second_uid):
+                return False
         # ننقص فقط لو الكمية > 0 (ذرّي)
         result = db.execute(text("""
             UPDATE player_help_inventory
             SET quantity = quantity - 1
             WHERE user_id = :uid AND help_id = :hid AND quantity > 0
         """), {"uid": user_id, "hid": help_id})
+        if match_id and result.rowcount:
+            db.add(MatchHelpDebit(match_id=match_id, user_id=user_id, help_id=help_id))
         db.commit()
         return result.rowcount > 0
     except Exception as e:

@@ -60,7 +60,9 @@ def register_room_events(sio):
 
         waiting_room = get_room_state(room_code)
         if not waiting_room:
-            await sio.emit('match_unavailable',{},to=sid)
+            from app.domains.games.match_recovery import last_result
+            result = await asyncio.to_thread(last_result, room_code, joining_user_id)
+            await sio.emit('match_unavailable',result,to=sid)
             await sio.emit('error_message','الغرفة غير موجودة أو انتهت صلاحيتها',to=sid)
             return
         if waiting_room['state'] == 'waiting' and any(

@@ -135,7 +135,7 @@ class IntegrityTests(unittest.TestCase):
             gs=HuroofGameState('a','b');gs.stage='answer_r1';gs.buzzed_player='a';gs.current_question={'answer':'باريس','accepted_answers':[],'letter':'ب'};gs.active_hex={'index':0}
             room={'game_state':gs};out=[]
             async def process(*args):out.append(args);await asyncio.sleep(0)
-            env=functions('app/domains/games/huroof/events.py',{'huroof_submit_answer'},{'check_payload_safety':lambda d:None,'check_action_rate':lambda *a,**k:None,'is_temp_banned':lambda s:False,'html':__import__('html'),'validate_huroof_answer':lambda *a:None,'get_room_state':lambda c:room,'check_answer':check_answer,'process_answer_result':process})
+            env=functions('app/domains/games/huroof/events.py',{'huroof_submit_answer'},{'check_payload_safety':lambda d:None,'check_account_rate':__import__('unittest.mock').mock.AsyncMock(return_value=None),'is_temp_banned':lambda s:False,'html':__import__('html'),'validate_huroof_answer':lambda *a:None,'get_room_state':lambda c:room,'check_answer':check_answer,'process_answer_result':process})
             await asyncio.gather(*[env['huroof_submit_answer']('a',{'roomCode':'LOCAL','answer':'باريس'}) for _ in range(2)])
             self.assertEqual(len(out),1)
         asyncio.run(exercise())

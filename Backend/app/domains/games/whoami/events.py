@@ -442,6 +442,7 @@ def register_whoami_events(sio):
         result = check_answer(answer, correct_name, accepted, None)
         is_correct = result['verdict'] == 'accept'
         if result.get('verdict') == 'maybe':
+            original_question = gs.current
             # الحالة الحدّية: الحكم الذكي — وعند الفشل نرفض (لا نقاط بالخطأ)
             try:
                 await sio.emit('whoami_judging', {'sid': sid}, room=room_code)
@@ -452,6 +453,9 @@ def register_whoami_events(sio):
                 is_correct = judged.get('accept')
             except Exception:
                 is_correct = None
+            if (get_room_state(room_code) is not room or gs.stage != 'judging'
+                    or gs.current is not original_question or gs.buzzed_player != sid):
+                return
             if is_correct is None:
                 await sio.emit('judge_unavailable', {'msg':'تعذّر التحقق من الإجابة. سنبدل السؤال دون خصم نقاط.'}, room=room_code)
                 await _start_character(room_code,advance=False)
@@ -547,7 +551,7 @@ def register_whoami_events(sio):
         """
         from app.domains.games.whoami.helps import get_help
         from app.domains.games.core_manager import _allow_same_ip
-        from app.core.anticheat import check_action_rate
+        from app.core.anticheat import check_account_rate
         room_code = (data or {}).get('roomCode')
         help_id = (data or {}).get('helpId')
         room = get_room_state(room_code)
@@ -556,7 +560,7 @@ def register_whoami_events(sio):
         gs = room['game_state']
         if not gs.is_player_in_game(sid):
             return
-        if check_action_rate(sid, 'whoami_use_help', max_per_second=1):
+        if await check_account_rate(sid, 'whoami_use_help', max_per_second=1, room=get_room_state((data or {}).get('roomCode') or (data or {}).get('room_code'))):
             return
         h = get_help(help_id)
         if not h:
@@ -610,7 +614,7 @@ def register_whoami_events(sio):
         _is_solo = bool(getattr(gs, "is_solo", False))
         if not dev_mode and not _is_solo and user_id:
             from app.domains.wallet.help_inventory import consume_help
-            if not consume_help(user_id, help_id):
+            if not consume_help(user_id, help_id, room.get("settlement_id") if room.get("type") == "public" else None):
                 await sio.emit('whoami_help_result',
                                {'ok': False, 'msg': 'لا تملك هذه المساعدة'}, to=sid)
                 return
@@ -716,7 +720,7 @@ def register_whoami_events(sio):
     # ============ الإيموجيات (نفس نمط بقية الألعاب) ============
     @sio.event
     async def whoami_send_emoji(sid, data):
-        from app.core.anticheat import check_action_rate
+        from app.core.anticheat import check_account_rate
         room_code = (data or {}).get('roomCode')
         emoji_id = (data or {}).get('emojiId')
         if not emoji_id or not isinstance(emoji_id, str) or len(emoji_id) > 40:
@@ -727,7 +731,7 @@ def register_whoami_events(sio):
         gs = room['game_state']
         if sid not in (gs.p1, gs.p2):
             return
-        if check_action_rate(sid, 'whoami_send_emoji', max_per_second=1):
+        if await check_account_rate(sid, 'whoami_send_emoji', max_per_second=1, room=get_room_state((data or {}).get('roomCode') or (data or {}).get('room_code'))):
             return
         opp = gs.opponent(sid)
         await sio.emit('whoami_emoji', {'emojiId': emoji_id, 'isMine': True}, to=sid)

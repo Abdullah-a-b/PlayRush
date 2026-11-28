@@ -317,6 +317,7 @@ def register_career_events(sio):
         result = check_answer(answer, correct_name, accepted, None)
         is_correct = result['verdict'] == 'accept'
         if result.get('verdict') == 'maybe':
+            original_question = gs.current_player
             # الحالة الحدّية: نسأل AI. لو فشل أو شكّ  نرفض (لا نقبل إجابة خاطئة!)
             try:
                 # الطرفان يريان أن الحكم الذكي يراجع (شفافية + تفسير التوقف)
@@ -327,6 +328,9 @@ def register_career_events(sio):
                 is_correct = judged.get('accept')
             except Exception:
                 is_correct = None
+            if (get_room_state(room_code) is not room or gs.stage != 'judging'
+                    or gs.current_player is not original_question or gs.buzzed_player != sid):
+                return
             if is_correct is None:
                 await sio.emit('judge_unavailable', {'msg':'تعذّر التحقق من الإجابة. سنبدل السؤال دون خصم نقاط.'}, room=room_code)
                 await _start_player(room_code,advance=False,replace=True)
@@ -451,7 +455,7 @@ def register_career_events(sio):
     @sio.event
     async def career_send_emoji(sid, data):
         """إرسال إيموجي متحرك. data: { roomCode, emojiId }"""
-        from app.core.anticheat import check_action_rate
+        from app.core.anticheat import check_account_rate
         room_code = (data or {}).get('roomCode')
         emoji_id = (data or {}).get('emojiId')
         if not emoji_id or not isinstance(emoji_id, str) or len(emoji_id) > 40:
@@ -462,7 +466,7 @@ def register_career_events(sio):
         gs = room['game_state']
         if sid not in (gs.p1, gs.p2):
             return
-        rate_issue = check_action_rate(sid, 'career_send_emoji', max_per_second=1)
+        rate_issue = await check_account_rate(sid, 'career_send_emoji', max_per_second=1, room=get_room_state((data or {}).get('roomCode') or (data or {}).get('room_code')))
         if rate_issue:
             return
         opp = gs.p2 if sid == gs.p1 else gs.p1
@@ -545,7 +549,7 @@ def register_career_events(sio):
         _is_solo = bool(getattr(gs, "is_solo", False))
         if not dev_mode and not _is_solo and user_id:
             from app.domains.wallet.help_inventory import consume_help
-            if not consume_help(user_id, help_id):
+            if not consume_help(user_id, help_id, room.get("settlement_id") if room.get("type") == "public" else None):
                 await sio.emit('career_help_result', {'ok': False, 'msg': 'لا تملك هذه المساعدة'}, to=sid)
                 return
         used.add(help_id)

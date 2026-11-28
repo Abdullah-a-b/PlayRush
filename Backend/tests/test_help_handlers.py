@@ -31,9 +31,9 @@ class HelpHandlerTests(unittest.TestCase):
   functions(f'app/domains/games/{game}/events.py',{game+'_use_help'},env)
   core=types.ModuleType('app.domains.games.core_manager');core._allow_same_ip=lambda:False
   inv=types.ModuleType('app.domains.wallet.help_inventory')
-  def consume(uid,help_id):debits.append(help_id);return stock
+  def consume(uid,help_id,match_id=None):debits.append(help_id);return stock
   inv.consume_help=consume;inv.get_quantity=lambda *a:1 if stock else 0
-  ac=types.ModuleType('app.core.anticheat');ac.check_action_rate=lambda *a,**kw:None
+  ac=types.ModuleType('app.core.anticheat');ac.check_account_rate=noop
   return gs,env,calls,tasks,debits,{'app.domains.games.core_manager':core,'app.domains.wallet.help_inventory':inv,'app.core.anticheat':ac}
 
  def run_case(self,game,hid,**options):

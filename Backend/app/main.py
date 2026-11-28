@@ -136,8 +136,10 @@ async def lifespan(app: FastAPI):
     from app.domains.games.importers.knowledge_importer import knowledge_auto_import_loop
     from app.domains.games.importers.whoami_importer import whoami_auto_import_loop
     from app.domains.games.sockets.lobby import presence_heartbeat_loop as _presence_heartbeat
+    from app.domains.games.match_recovery import recovery_loop
     from app.core.match_review import review_loop
     tasks = [
+        _make_supervised_task(lambda: recovery_loop(sio), "public_match_recovery", restart_delay=20),
         _make_supervised_task(review_loop, "match_review", restart_delay=300),
         _make_supervised_task(cleanup_abandoned_accounts, "cleanup_accounts", restart_delay=60),
         _make_supervised_task(cleanup_waiting_rooms,      "cleanup_rooms",    restart_delay=30),
